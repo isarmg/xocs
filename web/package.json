@@ -16,7 +16,7 @@
     "test:public": "npm run build && node tests/public-layout.mjs && node tests/anonymous-comments.mjs"
   },
   "dependencies": {
-    "@xcss/web": "https://github.com/isarmg/xcss/releases/download/v1.0.1/xcss-web-1.0.1.tgz",
+    "@xcss/web": "https://github.com/isarmg/xcss/releases/download/v1.0.2/xcss-web-1.0.2.tgz",
     "dompurify": "3.4.16",
     "markdown-it": "15.0.2",
     "react": "19.3.0",
