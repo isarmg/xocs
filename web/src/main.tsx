@@ -1,3 +1,4 @@
+import { uploadFilename } from './upload-filename.ts';
 import { isArticle, isArticleAccess, isArticlePage, isCategories, isCategory, isEditorLabels, isHomeSections, isNews, isNewsEntry, isPublicLabels, isSiteInfo, isSiteStats, isWallPosts, type NewsEntry } from './public-contracts';
 import { publicErrorMessage } from './api';
 import { t } from '@xcss/web/admin-ui/i18n';
@@ -157,7 +158,7 @@ function ArticleEditor({id}: {id?: number}) {
     if(!articleReady||!file||uploadRequest.current||saveRequest.current)return;
     if(file.size>10*1024*1024||!['image/png','image/jpeg','image/gif','image/webp'].includes(file.type)){setFailure(t("请选择不超过 10 MB 的 PNG、JPEG、GIF 或 WebP 图片", "Choose a PNG, JPEG, GIF, or WebP image up to 10 MB"));return;}
     const controller=new AbortController();uploadRequest.current=controller;setUploading(true);setFailure('');
-    try{const result=await client.request('/api/v1/content/upload',(value):value is {path:string}=>typeof value==='object'&&value!==null&&'path'in value&&typeof value.path==='string',{method:'POST',signal:controller.signal,headers:{'Content-Type':file.type,'X-File-Name':file.name.replace(/[^\x20-\x7e]/g,'_').slice(0,200)},body:file});if(controller.signal.aborted||uploadRequest.current!==controller)return;if(target==='cover')change('article_cover',result.path);else setArticle(current=>({...current,article_content:`${current.article_content}\n\n![${file.name.replace(/[\[\]]/g,'')}](${result.path})\n`}));notify(t("图片已上传", "Image uploaded"));}catch(reason){if(!controller.signal.aborted)setFailure(publicErrorMessage(reason, t("图片上传失败", "Image upload failed")));}finally{if(uploadRequest.current===controller){uploadRequest.current=null;setUploading(false);}}
+    try{const result=await client.request('/api/v1/content/upload',(value):value is {path:string}=>typeof value==='object'&&value!==null&&'path'in value&&typeof value.path==='string',{method:'POST',signal:controller.signal,headers:{'Content-Type':file.type,'X-File-Name':uploadFilename(file.name)},body:file});if(controller.signal.aborted||uploadRequest.current!==controller)return;if(target==='cover')change('article_cover',result.path);else setArticle(current=>({...current,article_content:`${current.article_content}\n\n![${file.name.replace(/[\[\]]/g,'')}](${result.path})\n`}));notify(t("图片已上传", "Image uploaded"));}catch(reason){if(!controller.signal.aborted)setFailure(publicErrorMessage(reason, t("图片上传失败", "Image upload failed")));}finally{if(uploadRequest.current===controller){uploadRequest.current=null;setUploading(false);}}
   }
   async function save(event: React.FormEvent) {
     event.preventDefault();

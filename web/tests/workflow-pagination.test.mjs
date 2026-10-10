@@ -1,3 +1,5 @@
+import uploadNameFixtures from './fixtures/upload-names.json' with { type: 'json' };
+import { uploadFilename } from '../src/upload-filename.ts';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { HookHost, expand, textContent, walk } from './fixtures/hook-host.mjs';
@@ -19,7 +21,7 @@ const boundaries = {
 const { CommentReplies } = await originalModule(new URL('../src/PublicComments.tsx', import.meta.url), boundaries, ['CommentReplies']);
 const { PublicExtras } = await originalModule(new URL('../src/PublicExtras.tsx', import.meta.url), boundaries);
 const { LovePage } = await originalModule(new URL('../src/LovePage.tsx', import.meta.url), boundaries);
-const { LabelsPage, SitePage } = await originalModule(new URL('../src/AdminExtras.tsx', import.meta.url), { ...boundaries, '@xcss/web/admin-shell':'export const useAdminApplication=()=>globalThis.__WORKFLOW_APP;', './AdminLayout':'export const adminGroups=[];' });
+const { LabelsPage, SitePage, ResourcesPage } = await originalModule(new URL('../src/AdminExtras.tsx', import.meta.url), { ...boundaries, '@xcss/web/admin-shell':'export const useAdminApplication=()=>globalThis.__WORKFLOW_APP;', './AdminLayout':'export const adminGroups=[];' });
 const { HomeSectionsPage } = await originalModule(new URL('../src/HomeSections.tsx', import.meta.url), { ...boundaries, '@xcss/web/admin-shell':'export const useAdminApplication=()=>globalThis.__WORKFLOW_APP;' });
 const beforeImportWindow = globalThis.window;
 globalThis.window = { location: { pathname: '/admin' } };
@@ -304,3 +306,41 @@ for (const [zone, local, expected] of [
     requests.at(-1).resolve({ id: 1, content: 'Timed update', create_time: expected }); await settle(host);
   });
 }
+
+const uploadNames = uploadNameFixtures.map(fixture => fixture.name);
+for (const name of uploadNames) {
+  test(`resource upload preserves UTF-8 filename: ${name}`, async context => {
+    const {host,requests}=setup(context,ResourcesPage);
+    requests[0].resolve(page([],0,1,20));await settle(host);
+    const file=new File(['image'],name,{type:'image/png'});
+    walk(host.tree,node=>node.type==='input'&&node.props.type==='file')[0].props.onChange({target:{files:[file]}});host.render();
+    walk(host.tree,node=>node.type==='form')[0].props.onSubmit({preventDefault(){}});
+    const pending=requests.at(-1);
+    assert.equal(new Headers(pending.options.headers).get('X-File-Name'),encodeURIComponent(name));
+    assert.equal(pending.options.body,file);
+    pending.resolve({id:1,path:'/media/fixture.png'});await settle(host);
+    requests.at(-1).resolve(page([{id:1,original_name:name,path:'/media/fixture.png',resource_type:'image',size:5,status:1,create_time:null}],1,1,20));await settle(host);
+    assert.ok(text(host).includes(name));
+  });
+  for (const target of [0,1]) test(`article ${target===0?'cover':'content'} upload preserves UTF-8 filename: ${name}`, async context => {
+    const {host,requests}=await editor(context);
+    const file=new File(['image'],name,{type:'image/png'});
+    walk(host.tree,node=>node.type==='input'&&node.props.type==='file')[target].props.onChange({target:{files:[file],value:name}});
+    assert.equal(new Headers(requests.at(-1).options.headers).get('X-File-Name'),encodeURIComponent(name));
+    assert.equal(requests.at(-1).options.body,file);
+    requests.at(-1).resolve({path:'/media/fixture.png'});await settle(host);
+    save(host);const saved=JSON.parse(requests.at(-1).options.body);
+    if(target===0)assert.equal(saved.article_cover,'/media/fixture.png');
+    else assert.ok(saved.article_content.includes(`![${name}](/media/fixture.png)`));
+  });
+}
+
+test('upload filename metadata keeps the existing 200-byte limit without splitting UTF-8',()=>{
+  for(const [name,expected] of [
+    ['a'.repeat(201),'a'.repeat(200)],
+    ['a'.repeat(197)+'🌅.png','a'.repeat(197)],
+    ['a'.repeat(196)+'🌅.png','a'.repeat(196)+'🌅'],
+    ['旅'.repeat(67),'旅'.repeat(66)],
+  ]) assert.equal(decodeURIComponent(uploadFilename(name)),expected);
+  for(const fixture of uploadNameFixtures)assert.equal(uploadFilename(fixture.name),fixture.header);
+});

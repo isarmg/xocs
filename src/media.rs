@@ -67,6 +67,7 @@ async fn save_image(
     let original_name = headers
         .get("x-file-name")
         .and_then(|v| v.to_str().ok())
+        .and_then(|v| percent_encoding::percent_decode_str(v).decode_utf8().ok())
         .filter(|v| v.len() <= 200 && !v.contains('/') && !v.contains('\\'));
     let hash = hex::encode(Sha256::digest(&body));
     let filename = format!("{hash}.{extension}");
@@ -102,7 +103,7 @@ async fn save_image(
         .map_err(|_| AppError(StatusCode::INTERNAL_SERVER_ERROR, "图片保存失败"))?;
     sqlx::query("INSERT INTO resource(user_id,type,path,size,original_name,mime_type,status,store_type) VALUES(?,'image',?,?,?,?,1,'local') ON CONFLICT(path) DO NOTHING")
         .bind(owner)
-        .bind(&path).bind(body.len() as i64).bind(original_name).bind(mime_type)
+        .bind(&path).bind(body.len() as i64).bind(original_name.as_deref()).bind(mime_type)
         .execute(&state.pool).await.map_err(db_error)?;
     let id: i64 = sqlx::query_scalar("SELECT id FROM resource WHERE path=?")
         .bind(&path)

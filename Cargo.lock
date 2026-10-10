@@ -2917,6 +2917,7 @@ dependencies = [
  "chrono",
  "clap",
  "hex",
+ "percent-encoding",
  "serde",
  "serde_json",
  "sha2 0.11.0",
