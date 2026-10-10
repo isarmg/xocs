@@ -136,6 +136,13 @@ pub(super) async fn delete_category(
     if result.rows_affected() == 0 {
         return Err(absent());
     }
+    // Labels have no foreign-key cascade in the current database contract.
+    // Remove them in the same transaction so deleted category IDs can be reused safely.
+    sqlx::query("DELETE FROM label WHERE sort_id=?")
+        .bind(id)
+        .execute(&mut *transaction)
+        .await
+        .map_err(db_error)?;
     transaction.commit().await.map_err(db_error)?;
     Ok(Json(serde_json::json!({"deleted":true})))
 }

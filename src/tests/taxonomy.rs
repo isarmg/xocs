@@ -227,3 +227,78 @@ async fn concurrent_label_move_and_article_writes_cannot_commit_an_inconsistent_
         .fetch_one(&pool).await.unwrap();
     assert_eq!(inconsistent, 0);
 }
+
+#[tokio::test]
+async fn deleting_an_empty_category_removes_its_labels_before_id_reuse() {
+    let (_directory, app, pool) = setup().await;
+    let session = login(&app).await;
+    seed(&pool).await;
+    let deleted = write(
+        &app,
+        &session,
+        "DELETE",
+        "/api/v1/content/categories/2",
+        serde_json::json!({}),
+    )
+    .await;
+    assert_eq!(deleted.status(), StatusCode::OK);
+    let remaining: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM label WHERE sort_id=2")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        remaining, 0,
+        "Deleted categories must not leave visible orphan labels or attach them to a later category that reuses the ID"
+    );
+    let created = write(
+        &app,
+        &session,
+        "POST",
+        "/api/v1/content/categories",
+        serde_json::json!({"name":"Replacement","description":null,"priority":0}),
+    )
+    .await;
+    assert_eq!(created.status(), StatusCode::OK);
+    let id = body_json(created).await["id"].as_i64().unwrap();
+    let inherited: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM label WHERE sort_id=?")
+        .bind(id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(inherited, 0);
+}
+
+#[tokio::test]
+async fn category_deletion_and_label_creation_cannot_leave_orphan_labels() {
+    let (_directory, app, pool) = setup().await;
+    let session = login(&app).await;
+    seed(&pool).await;
+    let (deleted, created) = tokio::join!(
+        write(
+            &app,
+            &session,
+            "DELETE",
+            "/api/v1/content/categories/2",
+            serde_json::json!({})
+        ),
+        write(
+            &app,
+            &session,
+            "POST",
+            "/api/v1/content/labels",
+            serde_json::json!({"sort_id":2,"name":"New tag","description":null})
+        )
+    );
+    assert_eq!(deleted.status(), StatusCode::OK);
+    assert!(matches!(
+        created.status(),
+        StatusCode::OK | StatusCode::BAD_REQUEST
+    ));
+    let orphans: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM label l LEFT JOIN sort s ON s.id=l.sort_id WHERE s.id IS NULL",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(orphans, 0);
+}

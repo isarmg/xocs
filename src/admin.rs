@@ -305,9 +305,14 @@ async fn create_label(
     if input.name.trim().is_empty() || input.name.chars().count() > 32 {
         return Err(invalid("标签名称无效"));
     }
+    let mut transaction = state
+        .pool
+        .begin_with("BEGIN IMMEDIATE")
+        .await
+        .map_err(db_error)?;
     let exists: Option<i64> = sqlx::query_scalar("SELECT id FROM sort WHERE id=?")
         .bind(input.sort_id)
-        .fetch_optional(&state.pool)
+        .fetch_optional(&mut *transaction)
         .await
         .map_err(db_error)?;
     if exists.is_none() {
@@ -317,17 +322,18 @@ async fn create_label(
         .bind(input.sort_id)
         .bind(input.name)
         .bind(input.description)
-        .execute(&state.pool)
+        .execute(&mut *transaction)
         .await
         .map_err(db_error)?
         .last_insert_rowid();
-    Ok(Json(
+    let label =
         sqlx::query_as("SELECT id,sort_id,label_name,label_description FROM label WHERE id=?")
             .bind(id)
-            .fetch_one(&state.pool)
+            .fetch_one(&mut *transaction)
             .await
-            .map_err(db_error)?,
-    ))
+            .map_err(db_error)?;
+    transaction.commit().await.map_err(db_error)?;
+    Ok(Json(label))
 }
 async fn update_label(
     State(state): State<AppState>,

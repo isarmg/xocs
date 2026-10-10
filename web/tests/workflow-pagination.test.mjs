@@ -273,3 +273,14 @@ test('site settings retain the existing pending lock and allow correction after 
   requests.at(-1).reject(new Error('ordinary save failure'));await settle(host);assert.ok(controls(host).every(item=>!item.disabled));assert.equal(fields(host,'TextField')[0].props.value,'Site A');
   fields(host,'TextField')[0].props.onChange({target:{value:'Site B'}});host.render();save(host);requests.at(-1).resolve({web_name:'Site B'});await settle(host);assert.equal(fields(host,'TextField')[0].props.value,'Site B');
 });
+
+test('article page changes hide old destructive actions and a failed page can retry',async context=>{
+  const {host,requests}=setup(context,ArticleManager);requests.at(-1).resolve(page([{...summary,article_title:'OLD_ARTICLE'}],16,1,15));await settle(host);
+  button(host,'Next page').props.onClick();host.render();
+  assert.doesNotMatch(text(host),/OLD_ARTICLE/);assert.equal(button(host,'Delete'),undefined);
+  requests.at(-1).reject(new Error('offline'));await settle(host);
+  assert.equal(button(host,'Delete'),undefined);
+  walk(host.tree,node=>typeof node.type==='function'&&node.type.name==='ErrorState')[0].props.onRetry();host.render();
+  assert.match(requests.at(-1).url,/page=2/);requests.at(-1).resolve(page([{...summary,id:16,article_title:'PAGE_TWO'}],16,2,15));await settle(host);
+  assert.match(text(host),/PAGE_TWO/);assert.doesNotMatch(text(host),/OLD_ARTICLE|Unable to load articles/);
+});

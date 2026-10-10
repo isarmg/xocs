@@ -83,11 +83,12 @@ const AdminApp = createXcssAdminApplication({
 
 function ArticleManager() {
   const {client, notify} = useAdminApplication();
-  const [result, setResult] = useState<Page<ArticleSummary> | null>(null);
+  const [loaded, setLoaded] = useState<{page:number;refresh:number;data:Page<ArticleSummary>} | null>(null);
   const [failure, setFailure] = useState('');
   const [busy, setBusy] = useState(false);
   const [refresh, setRefresh] = useState(0);
   const [page, setPage] = useState(1);
+  const result=loaded?.page===page&&loaded.refresh===refresh?loaded.data:null;
   useEffect(() => {
     const controller = new AbortController();
     setBusy(true);
@@ -96,8 +97,8 @@ function ArticleManager() {
       .then(data => {
         if (controller.signal.aborted) return;
         const lastPage = Math.max(1, Math.ceil(data.total / data.size));
-        if (page > lastPage) { setResult(null); setPage(lastPage); return; }
-        setResult(data);
+        if (page > lastPage) { setLoaded(null); setPage(lastPage); return; }
+        setLoaded({page,refresh,data});
       })
       .catch(() => { if (!controller.signal.aborted) setFailure(t("文章加载失败", "Unable to load articles")); })
       .finally(() => { if (!controller.signal.aborted) setBusy(false); });
@@ -107,7 +108,7 @@ function ArticleManager() {
     if (!window.confirm(t("确定删除这篇文章？", "Delete this article?"))) return;
     try {
       await client.request(`/api/v1/content/articles/${id}`, isDelete, {method: 'DELETE'});
-      notify(t("文章已删除", "Article deleted")); setResult(null); setRefresh(value => value+1);
+      notify(t("文章已删除", "Article deleted")); setLoaded(null); setRefresh(value => value+1);
     } catch { setFailure(t("删除失败，请刷新后重试", "Delete failed. Refresh and try again.")); }
   }
   return <section className="xcss-content-stack">
@@ -115,7 +116,7 @@ function ArticleManager() {
     <PageHeader><div><h1>{t("文章管理", "Articles")}</h1><p>{t("管理公开文章与草稿。", "Manage published articles and drafts.")}</p></div></PageHeader>
     {failure && <ErrorState onRetry={() => setRefresh(value => value+1)}>{failure}</ErrorState>}
     {busy && !result ? <LoadingState /> : result?.items.length ? <Table aria-label={t("文章列表", "Article list")}><thead><tr><th>{t("标题", "Title")}</th><th>{t("状态", "Status")}</th><th>{t("浏览", "Views")}</th><th>{t("创建时间", "Created at")}</th><th>{t("操作", "Actions")}</th></tr></thead><tbody>{result.items.map(item => <tr key={item.id}><td><strong>{item.article_title}</strong><small className="muted">#{item.id}</small></td><td><span className={item.view_status ? 'badge success' : 'badge'}>{item.view_status ? t("公开", "Public") : t("加密", "Password protected")}</span></td><td>{item.view_count}</td><td>{item.create_time || '—'}</td><td><div className="xcss-actions"><Button onClick={() => {window.location.hash=`edit/${item.id}`;}}>{t("编辑", "Edit")}</Button><Button className="xcss-danger" onClick={() => void remove(item.id)}>{t("删除", "Delete")}</Button></div></td></tr>)}</tbody></Table> : result&&<EmptyState>{t("还没有文章。点击“新增文章”开始创作。", "No articles yet. Select “Add article” to begin writing.")}</EmptyState>}
-    {result&&(result.total>15||page>1)&&<nav className="pager" aria-label={t("分页", "Pagination")}><Button disabled={busy||page<=1} onClick={() => setPage(value => value-1)}>{t("上一页", "Previous page")}</Button><span>{t("第 {0} 页 · 共 {1} 篇", "Page {0} · {1} articles", [page, result.total])}</span><Button disabled={busy||page*15>=result.total} onClick={() => setPage(value => value+1)}>{t("下一页", "Next page")}</Button></nav>}
+    {result&&(result.total>15||page>1)&&<nav className="pager" aria-label={t("分页", "Pagination")}><Button disabled={busy||page<=1} onClick={() => setPage(page-1)}>{t("上一页", "Previous page")}</Button><span>{t("第 {0} 页 · 共 {1} 篇", "Page {0} · {1} articles", [page, result.total])}</span><Button disabled={busy||page*15>=result.total} onClick={() => setPage(page+1)}>{t("下一页", "Next page")}</Button></nav>}
   </section>;
 }
 
