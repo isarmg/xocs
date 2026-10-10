@@ -200,7 +200,7 @@ function ArticleNewsEditor({id}:{id:number}){
     event.preventDefault();if(savePending.current)return;
     savePending.current=true;setSaving(true);
     try{
-      const saved=await client.request(`/api/v1/content/articles/${id}/news`,isNewsEntry,{method:'POST',body:JSON.stringify({content,create_time:date||null})});
+      const saved=await client.request(`/api/v1/content/articles/${id}/news`,isNewsEntry,{method:'POST',body:JSON.stringify({content,create_time:date ? new Date(date).toISOString() : null})});
       setEntries(current=>[saved,...current].sort((a,b)=>(b.create_time||'').localeCompare(a.create_time||'')));
       setContent('');setDate('');setFailure('');notify(t("文章进展已发布", "Article update published"));
     }catch(reason){setFailure(publicErrorMessage(reason, t("发布失败", "Unable to publish")));}

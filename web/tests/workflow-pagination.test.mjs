@@ -222,7 +222,7 @@ test('article updates admit one pending publish, lock its draft, and preserve it
   fields(host,'TextField')[0].props.onChange({target:{value:'2026-10-10T10:30'}});host.render();
   const before=requests.length;save(host);save(host);host.render();save(host);
   assert.equal(requests.length,before+1);assert.ok(controls(host).every(item=>item.disabled));
-  assert.deepEqual(JSON.parse(requests.at(-1).options.body),{content:'First update',create_time:'2026-10-10T10:30'});
+  assert.deepEqual(JSON.parse(requests.at(-1).options.body),{content:'First update',create_time:new Date('2026-10-10T10:30').toISOString()});
   requests.at(-1).reject(new Error('ordinary save failure'));await settle(host);
   assert.ok(controls(host).every(item=>!item.disabled));assert.equal(walk(host.tree,node=>node.type==='textarea')[0].props.value,'First update');
   assert.equal(fields(host,'TextField')[0].props.value,'2026-10-10T10:30');
@@ -284,3 +284,23 @@ test('article page changes hide old destructive actions and a failed page can re
   assert.match(requests.at(-1).url,/page=2/);requests.at(-1).resolve(page([{...summary,id:16,article_title:'PAGE_TWO'}],16,2,15));await settle(host);
   assert.match(text(host),/PAGE_TWO/);assert.doesNotMatch(text(host),/OLD_ARTICLE|Unable to load articles/);
 });
+
+for (const [zone, local, expected] of [
+  ['Asia/Shanghai', '2026-10-10T20:00', '2026-10-10T12:00:00.000Z'],
+  ['America/New_York', '2026-07-10T20:00', '2026-07-11T00:00:00.000Z'],
+  ['America/New_York', '2026-01-10T20:00', '2026-01-11T01:00:00.000Z'],
+  ['UTC', '', null],
+]) {
+  test(`article update local date becomes an absolute API timestamp (${zone}, ${local || 'default'})`, async context => {
+    const previousTimezone = process.env.TZ;
+    process.env.TZ = zone;
+    context.after(() => { if (previousTimezone === undefined) delete process.env.TZ; else process.env.TZ = previousTimezone; });
+    const { host, requests } = setup(context, ArticleNewsEditor, { id: 1 });
+    requests[0].resolve([]); await settle(host);
+    walk(host.tree, node => node.type === 'textarea')[0].props.onChange({ target: { value: 'Timed update' } });
+    fields(host, 'TextField')[0].props.onChange({ target: { value: local } }); host.render();
+    save(host);
+    assert.equal(JSON.parse(requests.at(-1).options.body).create_time, expected);
+    requests.at(-1).resolve({ id: 1, content: 'Timed update', create_time: expected }); await settle(host);
+  });
+}
