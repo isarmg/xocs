@@ -344,3 +344,16 @@ test('upload filename metadata keeps the existing 200-byte limit without splitti
   ]) assert.equal(decodeURIComponent(uploadFilename(name)),expected);
   for(const fixture of uploadNameFixtures)assert.equal(uploadFilename(fixture.name),fixture.header);
 });
+
+test('pending cover upload locks its URL while leaving body edits and cancellation available',async context=>{
+  const {host,requests}=await editor(context);upload(host);host.render();
+  const field=walk(host.tree,node=>typeof node.type==='function'&&node.type.name==='FormField'&&node.props.label==='Cover image URL')[0];
+  const input=walk(expand(field),node=>node.type==='input')[0];
+  if(!input.props.disabled){input.props.onChange({target:{value:'/media/manual.png'}});host.render();}
+  requests.at(-1).resolve({path:'/media/uploaded.png'});await settle(host);
+  const updated=walk(host.tree,node=>typeof node.type==='function'&&node.type.name==='FormField'&&node.props.label==='Cover image URL')[0];
+  if(!input.props.disabled)assert.equal(walk(expand(updated),node=>node.type==='input')[0].props.value,'/media/manual.png','old upload cannot overwrite a newer manual cover');
+  assert.equal(input.props.disabled,true);
+  assert.equal(walk(expand(updated),node=>node.type==='input')[0].props.disabled,false);
+  assert.equal(button(host,'Cancel').props.disabled,false);
+});
