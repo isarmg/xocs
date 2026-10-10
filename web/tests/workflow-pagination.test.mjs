@@ -103,6 +103,28 @@ test('travel category changes discard old append responses and selecting the act
   requests.at(-1).resolve(page([photo(30)],1,1,12));await settle(host);obsolete.resolve(page(photos(13,24),25,2,12));await settle(host);
   assert.match(text(host),/photo-30/);assert.doesNotMatch(text(host),/photo-1\b|photo-13\b/);
 });
+test('travel all photos makes uncategorized uploads reachable and resets the previous category page',async context=>{
+  const {host,requests}=await travel(context);
+  assert.equal(button(host,'A 25').props.className,'active');
+  button(host,'Next page').props.onClick();host.render();const oldCategoryPage=requests.at(-1);
+  button(host,'All photos').props.onClick();host.render();
+  assert.equal(oldCategoryPage.options.signal.aborted,true);
+  assert.match(requests.at(-1).url,/page=1/);assert.doesNotMatch(requests.at(-1).url,/classify=/);
+  assert.equal(button(host,'All photos').props.className,'active');assert.equal(button(host,'A 25').props.className,'');
+  requests.at(-1).resolve(page([photo(1),{...photo(30),title:'Uncategorized upload',classify:null}],2,1,12));await settle(host);
+  oldCategoryPage.resolve(page(photos(13,24),25,2,12));await settle(host);
+  assert.match(text(host),/Uncategorized upload/);assert.match(text(host),/photo-1\b/);assert.doesNotMatch(text(host),/photo-13\b/);
+  const count=requests.length;button(host,'All photos').props.onClick();host.render();assert.equal(requests.length,count);assert.match(text(host),/Uncategorized upload/);
+  button(host,'B 1').props.onClick();host.render();const oldCategory=requests.at(-1);
+  assert.match(oldCategory.url,/page=1/);assert.match(oldCategory.url,/classify=B/);
+  button(host,'All photos').props.onClick();host.render();const oldAll=requests.at(-1);
+  assert.equal(oldCategory.options.signal.aborted,true);assert.doesNotMatch(oldAll.url,/classify=/);
+  button(host,'A 25').props.onClick();host.render();assert.equal(oldAll.options.signal.aborted,true);
+  requests.at(-1).resolve(page([photo(2)],1,1,12));await settle(host);
+  oldAll.resolve(page([{...photo(30),title:'Uncategorized upload',classify:null}],1,1,12));oldCategory.resolve(page([photo(40)],1,1,12));await settle(host);
+  assert.equal(button(host,'All photos').props.className,'');assert.equal(button(host,'A 25').props.className,'active');
+  assert.match(text(host),/photo-2\b/);assert.doesNotMatch(text(host),/Uncategorized upload|photo-40\b/);
+});
 async function love(context) {
   const fixture=setup(context,LovePage);fixture.requests.find(item=>item.url.endsWith('/family')).resolve([]);
   fixture.requests.find(item=>item.url.includes('/classes')).resolve([{classify:'A',count:25}]);fixture.requests.at(-1).resolve(page(photos(1,12),25,1,12));await settle(fixture.host);return fixture;

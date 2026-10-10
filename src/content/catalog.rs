@@ -128,6 +128,20 @@ pub(super) async fn delete_category(
     if used > 0 {
         return Err(AppError(StatusCode::CONFLICT, "分类中还有文章"));
     }
+    let removes_last_section: i64 = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM home_sections WHERE sort_id=? AND enabled=1) AND NOT EXISTS(SELECT 1 FROM home_sections WHERE enabled=1 AND (sort_id IS NULL OR sort_id<>?))",
+    )
+    .bind(id)
+    .bind(id)
+    .fetch_one(&mut *transaction)
+    .await
+    .map_err(db_error)?;
+    if removes_last_section != 0 {
+        return Err(AppError(
+            StatusCode::CONFLICT,
+            "请先启用其他首页栏目，再删除此分类",
+        ));
+    }
     let result = sqlx::query("DELETE FROM sort WHERE id=?")
         .bind(id)
         .execute(&mut *transaction)
