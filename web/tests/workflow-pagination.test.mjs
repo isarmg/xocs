@@ -19,6 +19,7 @@ const boundaries = {
   './LovePage': 'export const LovePage=()=>null;',
 };
 const { CommentReplies } = await originalModule(new URL('../src/PublicComments.tsx', import.meta.url), boundaries, ['CommentReplies']);
+const { ArticleNews } = await originalModule(new URL('../src/ArticleNews.tsx', import.meta.url), boundaries);
 const { PublicExtras } = await originalModule(new URL('../src/PublicExtras.tsx', import.meta.url), boundaries);
 const { LovePage } = await originalModule(new URL('../src/LovePage.tsx', import.meta.url), boundaries);
 const { LabelsPage, SitePage, ResourcesPage } = await originalModule(new URL('../src/AdminExtras.tsx', import.meta.url), { ...boundaries, '@xcss/web/admin-shell':'export const useAdminApplication=()=>globalThis.__WORKFLOW_APP;', './AdminLayout':'export const adminGroups=[];' });
@@ -291,9 +292,10 @@ for (const [zone, local, expected] of [
   ['Asia/Shanghai', '2026-10-10T20:00', '2026-10-10T12:00:00.000Z'],
   ['America/New_York', '2026-07-10T20:00', '2026-07-11T00:00:00.000Z'],
   ['America/New_York', '2026-01-10T20:00', '2026-01-11T01:00:00.000Z'],
+  ['UTC', '2026-10-10T20:00', '2026-10-10T20:00:00.000Z'],
   ['UTC', '', null],
 ]) {
-  test(`article update local date becomes an absolute API timestamp (${zone}, ${local || 'default'})`, async context => {
+  test(`article update local date round-trips through UTC storage and both displays (${zone}, ${local || 'default'})`, async context => {
     const previousTimezone = process.env.TZ;
     process.env.TZ = zone;
     context.after(() => { if (previousTimezone === undefined) delete process.env.TZ; else process.env.TZ = previousTimezone; });
@@ -303,7 +305,16 @@ for (const [zone, local, expected] of [
     fields(host, 'TextField')[0].props.onChange({ target: { value: local } }); host.render();
     save(host);
     assert.equal(JSON.parse(requests.at(-1).options.body).create_time, expected);
-    requests.at(-1).resolve({ id: 1, content: 'Timed update', create_time: expected }); await settle(host);
+    const saved = { id: 1, content: 'Timed update', create_time: expected?.slice(0, 19).replace('T', ' ') ?? '2026-10-10 12:34:56' };
+    const display = local ? `${local.replace('T', ' ')}:00` : saved.create_time;
+    requests.at(-1).resolve(saved); await settle(host);
+    assert.ok(text(host).includes(display), `saved admin row: ${text(host)}`);
+    const reloaded = new HookHost(ArticleNewsEditor, { id: 1 }); context.after(() => reloaded.unmount());
+    reloaded.render(); requests.at(-1).resolve([saved]); await settle(reloaded);
+    assert.ok(text(reloaded).includes(display), `reloaded admin row: ${text(reloaded)}`);
+    const publicView = new HookHost(ArticleNews, { articleId: 1 }); context.after(() => publicView.unmount());
+    publicView.render(); requests.at(-1).resolve([saved]); await settle(publicView);
+    assert.equal(textContent(walk(publicView.tree, node => node.type === 'time')[0]), display);
   });
 }
 

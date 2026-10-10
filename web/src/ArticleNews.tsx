@@ -1,3 +1,4 @@
+import { formatArticleNewsTime } from './article-news-time.ts';
 import { isNews, type NewsEntry } from './public-contracts';
 import { t } from '@xcss/web/admin-ui/i18n';
 import { useEffect, useState } from 'react';
@@ -15,6 +16,6 @@ export function ArticleNews({ articleId }: { articleId: number }) {
   }, [articleId]);
   if (!items.length && !error) return null;
   return <section className="article-news"><h2>{t('最新进展', 'Recent updates')}</h2>{error && <p role="alert">{error}</p>}
-    {items.length > 0 && <ol>{items.map(item => <li key={item.id}><time>{item.create_time || t('最近', 'Recently')}</time><p>{item.content}</p></li>)}</ol>}
+    {items.length > 0 && <ol>{items.map(item => <li key={item.id}><time>{formatArticleNewsTime(item.create_time) || t('最近', 'Recently')}</time><p>{item.content}</p></li>)}</ol>}
   </section>;
 }
