@@ -3,6 +3,7 @@ import { chromium, firefox, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { preview } from 'vite';
 import { mockApi, site } from './browser-fixtures.mjs';
+import { paintedSurfaceColor } from './painted-surface.mjs';
 
 const groups = [
   { labels: ['总览', 'Overview'], pages: [['dashboard', '总览', 'Overview']] },
@@ -28,16 +29,18 @@ async function accessible(page) {
 
 async function surfaces(page, selector) {
   await page.locator(selector).first().waitFor({ state: 'visible' });
-  const result = await page.locator(selector).evaluateAll(elements => {
+  const expected = await page.evaluate(() => {
     const probe = document.createElement('span');
     probe.style.backgroundColor = 'var(--xcss-bg-panel)';
     document.body.append(probe);
     const expected = getComputedStyle(probe).backgroundColor;
     probe.remove();
-    return { expected, backgrounds: elements.map(element => getComputedStyle(element).backgroundColor) };
+    return expected;
   });
-  assert.ok(result.backgrounds.length > 0, `No surfaces found: ${selector}`);
-  assert.ok(result.backgrounds.every(value => value === result.expected), JSON.stringify(result));
+  const elements = page.locator(selector), count = await elements.count();
+  assert.ok(count > 0, `No surfaces found: ${selector}`);
+  await expect.poll(() => Promise.all(Array.from({ length: count }, (_, index) =>
+    paintedSurfaceColor(elements.nth(index))))).toEqual(Array(count).fill(expected));
 }
 
 const server = await preview({ preview: { host: '127.0.0.1', port: 0, strictPort: true } });

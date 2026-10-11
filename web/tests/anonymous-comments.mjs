@@ -114,7 +114,11 @@ try {
           await expect(comments.getByRole('alert')).toHaveCount(0);
           await expect(comments.locator('.public-comment').first()).toContainText('Keep this draft on failure');
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-          const header = await page.locator('.public-header').evaluate(element => ({ background: getComputedStyle(element).backgroundColor, blur: getComputedStyle(element).backdropFilter }));
+          const header = await page.locator('.public-header').evaluate(element => {
+            const surface = element.querySelector(':scope > [data-xcss-server-corner-decoration]') || element;
+            const style = getComputedStyle(surface);
+            return { background: style.backgroundColor, blur: style.backdropFilter };
+          });
           const alpha = Number(header.background.split(',').at(-1).replace(')', ''));
           assert.ok(alpha > .4 && alpha < .8, JSON.stringify(header)); assert.match(header.blur, /blur\(16px\)/);
         }

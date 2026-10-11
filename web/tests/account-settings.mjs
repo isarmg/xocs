@@ -3,6 +3,7 @@ import {chromium, firefox, expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import {preview} from 'vite';
 import {mockApi, session} from './browser-fixtures.mjs';
+import {paintedSurfaceColor} from './painted-surface.mjs';
 
 const server = await preview({build: {outDir: process.env.XOCS_WEB_DIST || 'dist'}, preview: {host: '127.0.0.1', port: 0, strictPort: true}});
 const base = `http://127.0.0.1:${server.httpServer.address().port}`;
@@ -39,6 +40,7 @@ try {
           await expect(page.locator('html')).toHaveAttribute('data-xcss-fonts', 'ready');
           await page.evaluate(() => document.fonts.ready);
           const loginStyle = await login.evaluate(appearance);
+          loginStyle.background = await paintedSurfaceColor(login);
           state.authenticated = true;
           await page.reload();
           const trigger = page.getByRole('button', {name: english ? 'Account settings' : '账号设置', exact: true});
@@ -53,7 +55,7 @@ try {
           await expect(page).toHaveURL(/#account$/);
           const panel = dialog.locator('.xcss-content-panel');
           const panelStyle = await panel.evaluate(element => ({background:getComputedStyle(element).backgroundColor,font:getComputedStyle(element).fontFamily}));
-          assert.equal(panelStyle.background, loginStyle.background);
+          await expect.poll(() => paintedSurfaceColor(panel)).toBe(loginStyle.background);
           assert.equal(panelStyle.font, loginStyle.font);
           const fields = dialog.locator('.xcss-form-field');
           const labels = english ? ['Username', 'Current password', 'New password', 'Confirm new password'] : ['用户名', '当前密码', '新密码', '确认新密码'];
