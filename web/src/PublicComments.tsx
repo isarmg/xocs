@@ -62,14 +62,17 @@ export function CommentThread({ articleId, kind = 'article', title }: CommentPro
   const [comments, setComments] = useState<Page<PublicComment> | null>(null);
   const [draft, setDraft] = useState(saved.submission?.content ?? ''), [replyTo, setReplyTo] = useState<PublicComment | null>(null);
   const [failure, setFailure] = useState(''), [feedback, setFeedback] = useState('');
+  const [loadFailure, setLoadFailure] = useState(''), [loading, setLoading] = useState(true), [loadAttempt, setLoadAttempt] = useState(0);
   const [refresh, setRefresh] = useState(0), [page, setPage] = useState(1), [busy, setBusy] = useState(false);
   useEffect(() => {
     const controller = new AbortController(); const filter = kind === 'article' ? `&article_id=${articleId}` : '';
+    setLoading(true); setLoadFailure('');
     void request(`${path}?page=${page}&size=10${filter}`, isPublicCommentPage, { signal: controller.signal })
       .then(value => { if (!controller.signal.aborted) setComments(value); })
-      .catch(reason => { if (!controller.signal.aborted) setFailure(publicErrorMessage(reason, t('评论加载失败', 'Unable to load comments'))); });
+      .catch(reason => { if (!controller.signal.aborted) setLoadFailure(publicErrorMessage(reason, t('评论加载失败', 'Unable to load comments'))); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [articleId, kind, path, page, refresh]);
+  }, [articleId, kind, path, page, refresh, loadAttempt]);
   async function post(event: FormEvent) {
     event.preventDefault();
     if (submitting.current || storageFailure || (!pendingRef.current && !normalizeCommentContent(draft))) return;
@@ -106,12 +109,15 @@ export function CommentThread({ articleId, kind = 'article', title }: CommentPro
     pendingRef.current = null; setPending(null); setDraft(''); setReplyTo(null); setFailure(''); setStorageFailure(false);
   }
   const chooseReply = (item: PublicComment) => { if (!busy && !pending && !storageFailure) setReplyTo(item); };
+  const visibleComments = comments?.page === page ? comments : null;
   return <section className="article-comments"><h3>{title || t('评论', 'Comments')} | {t('{0} 条评论', '{0} comments', [comments?.total ?? 0])}</h3>
     {failure && <p role="alert">{failure}</p>}
+    {loadFailure && <p role="alert">{loadFailure} <button type="button" disabled={loading} onClick={() => setLoadAttempt(value => value + 1)}>{t('重试', 'Try again')}</button></p>}
+    {loading && <p role="status">{t('评论加载中…', 'Loading comments…')}</p>}
     {storageFailure && <p role="alert">{t('无法读取或保存待确认的提交。请先检查评论，再清除待确认状态；当前不会发送新评论。', 'The pending submission could not be read or saved. Check the comments before clearing it. No new comment will be sent.')}</p>}
     {pending && !failure && <p role="status">{t('有一条评论等待确认，请继续确认原提交。', 'A comment is awaiting confirmation. Continue confirming the original submission.')}</p>}
-    {comments?.items.map(item => <div className="comment-floor" key={item.id}><CommentEntry item={item} onReply={chooseReply} /><CommentReplies root={item} refresh={refresh} kind={kind} onReply={chooseReply} /></div>)}
-    {comments?.items.length === 0 && <p className="muted">{t('还没有评论。', 'No comments yet.')}</p>}
+    {visibleComments?.items.map(item => <div className="comment-floor" key={item.id}><CommentEntry item={item} onReply={chooseReply} /><CommentReplies root={item} refresh={refresh} kind={kind} onReply={chooseReply} /></div>)}
+    {visibleComments?.items.length === 0 && <p className="muted">{t('还没有评论。', 'No comments yet.')}</p>}
     {comments && comments.total > 10 && <nav className="pager" aria-label={t('评论分页', 'Comment pages')}><button type="button" disabled={busy || page <= 1} onClick={() => setPage(value => value - 1)}>{t('上一页', 'Previous page')}</button><span>{t('第 {0} 页', 'Page {0}', [page])}</span><button type="button" disabled={busy || page * 10 >= comments.total} onClick={() => setPage(value => value + 1)}>{t('下一页', 'Next page')}</button></nav>}
     <form className="comment-form" onSubmit={event => void post(event)}>
       <p className="comment-identity">{t('无需登录，以匿名访客身份发表评论。', 'Post a comment as an anonymous guest. No account is needed.')}</p>
