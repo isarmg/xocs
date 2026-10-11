@@ -14,6 +14,7 @@ import '@xcss/web/design-tokens/reset.css';
 import '@xcss/web/design-tokens/accessibility.css';
 import '@xcss/web/web-fonts/fonts.css';
 import {startAfterFonts} from '@xcss/web/web-fonts';
+import {startServerCorners} from '@xcss/web/admin-ui/server-corners';
 import './style.css';
 import './public-original.css';
 import './public-layout.css';
@@ -316,6 +317,7 @@ function Site() {
 function NotFoundPage(){return <PublicChrome title={t('页面不存在','Page not found')}><section className="public-empty-state"><h2>{t('页面不存在','Page not found')}</h2><a href="/">{t('返回首页','Back to home')}</a></section></PublicChrome>;}
 
 function renderApplication() {
+  startServerCorners(document);
   createRoot(document.getElementById('root')!).render(<StrictMode><div style={{display:'contents'}} onClickCapture={preserveLinkLanguage}>{window.location.pathname.startsWith('/admin')?<div className="xocs-admin-app"><AdminApp /></div>:['/weiYan','/jotting','/menory','/message','/favorite','/friend','/music','/travel','/love','/sort','/search','/about','/letter'].includes(window.location.pathname)?<PublicExtras/>:window.location.pathname==='/'||/^\/article\/[^/]+$/.test(window.location.pathname)?<Site />:<NotFoundPage/>}</div></StrictMode>);
 }
 

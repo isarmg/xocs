@@ -557,3 +557,62 @@
 @media(max-width:1050px){.original-public .article-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.original-public .home-layout{grid-template-columns:1fr}.original-public .journey-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.original-public .journey-item:nth-child(5n+1){grid-column:auto}}
 @media(max-width:900px){.original-public .public-header nav.open{height:auto;background:#fff;color:#333}.original-public .public-header nav>a{font-size:1rem}.original-public .home-aside{order:1;grid-template-columns:repeat(2,minmax(0,1fr))}.original-public .home-content{order:2}.original-public .journey-page{padding:35px 22px}}
 @media(max-width:650px){.original-public .home-hero{height:420px;min-height:0}.original-public .public-main{padding-left:16px;padding-right:16px}.original-public .home-aside{grid-template-columns:1fr}.original-public .article-grid{grid-template-columns:1fr}.original-public .article-card,.original-public .article-card:nth-child(even){height:300px;min-height:0}.original-public .article-card-body,.original-public .article-card:nth-child(even) .article-card-body{height:130px}.original-public .journey-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.original-public .journey-item{padding-top:16px}.original-public .travel-page{padding-top:10px}.original-public .travel-content{padding:25px 8px}.original-public .page-jotting .wall-layout{padding:16px}.original-public .public-header .brand{width:70px}}
+
+/* Explicit Mac mini surfaces; the authored round radii remain the fallback before startup. */
+.original-public .home-aside>section,.original-public .aside-search { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
+.original-public .aside-recommended img,.original-public .aside-recommend-cover { --xcss-server-corner-extent: var(--xcss-server-corner-photo, 31.0568993271%); --xcss-server-corner-mode: clip; }
+.original-public .aside-categories a { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .article-card { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .reading-card:not(.reading-article) { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .article-markdown blockquote { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
+.original-public .link-card,.original-public .wall-card { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .wall-photo-button { --xcss-server-corner-extent: 36px; }
+.original-public .section-squares { --xcss-server-corner-extent: var(--xcss-server-corner-photo, 31.0568993271%); --xcss-server-corner-mode: clip; }
+.original-public .article-card-link { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .reading-toc nav,.original-public .reading-toc details { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
+.original-public .article-end-info>a { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
+.original-public .article-copyright-backdrop section { --xcss-server-corner-extent: var(--xcss-server-corner-dialog, 54px); }
+.original-public .original-tag-panel { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
+.original-public .original-tag-panel button { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
+.original-public .original-list-card { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .original-list-tag { --xcss-server-corner-extent: 8px; }
+.original-public .search-form input { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
+.original-public .favorite-banner { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .favorite-feature-links button { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .favorite-link-card { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .travel-grid button { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .message-hero form { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
+.original-public .message-comment-wrap .article-comments { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .article-news { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .article-markdown pre { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); padding-block-start: 60px; }
+.original-public .article-copy-code { top: 16px; right: 16px; --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
+.original-public .about-dialog { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
+.original-public .love-tabs button { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
+.original-public .love-wishes { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .push-dialog { --xcss-server-corner-extent: var(--xcss-server-corner-dialog, 54px); }
+.original-public .push-close { top: 20px; right: 20px; }
+.original-public .push-dialog img { --xcss-server-corner-extent: 36px; --xcss-server-corner-mode: clip; }
+.original-public .article-card-tags span,.original-public .original-list-tags span { --xcss-server-corner-extent: 8px; }
+.original-public .friend-page { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
+.original-public .favorite-group-empty { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .wall-list>.wall-card,.original-public .love-notes>.wall-card { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .travel-grid .travel-photo-card { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .travel-photo-image { --xcss-server-corner-extent: 36px; --xcss-server-corner-mode: clip; }
+.original-public .travel-photo-empty { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .message-form-wrap form { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
+.original-public .original-empty-articles { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .hero-poem { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .aside-featured img { --xcss-server-corner-extent: 36px; --xcss-server-corner-mode: clip; }
+.original-public .aside-labels a { --xcss-server-corner-extent: 8px; }
+.original-public .announcement { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .article-card,.original-public .article-card:nth-child(even) { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public.page-jotting .wall-layout { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .travel-banner { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .travel-content>.original-tag-panel button { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
+.original-public.page-message .message-form-wrap form { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
+
+.original-public .public-more > div,.original-public .about-talk,.original-public .about-reply,
+.original-public .aside-search input,.original-public .aside-search button,
+.original-public .aside-avatar,.original-public .public-comment img,
+.original-public .message-avatar,.original-public .back-top,
+.original-public .journey-image { --xcss-server-corner-extent: 0px; }

@@ -371,3 +371,46 @@
   .original-public .sliding-title::-webkit-scrollbar { display: none; }
   .original-public .reference-petals { display: none; }
 }
+
+/* Explicit Mac mini surfaces; the authored round radii remain the fallback before startup. */
+.original-public .public-menu-toggle { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
+.original-public .article-card,
+.original-public .article-card:nth-child(even) { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .original-tag-panel { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
+.original-public .original-list-card { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public :is(.search-form button, .pager button, .travel-more, .comment-form > button[type=submit]) { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
+.original-public .travel-banner { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .travel-grid .travel-photo-card { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .travel-photo-image { --xcss-server-corner-extent: var(--xcss-server-corner-photo, 31.0568993271%); --xcss-server-corner-mode: clip; }
+.original-public .travel-photo-card > .travel-photo-image { --xcss-server-corner-nested: all; }
+.original-public .journey-picture { --xcss-server-corner-extent: var(--xcss-server-corner-photo, 31.0568993271%); --xcss-server-corner-mode: clip; }
+.original-public .wall-list > .wall-card,
+.original-public .wall-list > .wall-card:nth-of-type(even),
+.original-public.page-jotting .wall-list > .wall-card,
+.original-public.page-jotting .wall-list > .wall-card:nth-of-type(even) { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .comment-form textarea { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
+.original-public .public-empty-state { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .public-empty-state button { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
+.original-public .public-feedback { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .public-feedback button { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
+.original-public .love-pair-card { --xcss-server-corner-extent: 63px; }
+.original-public .love-letter { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .love-story-card p { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
+.original-public .love-tabs button { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
+.original-public .original-tag-panel.love-photo-filters button { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
+.original-public .love-moment-card { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.original-public .love-wishes { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+@media (max-width: 600px) {
+  .original-public .love-pair-card { --xcss-server-corner-extent: 31.5px; }
+}
+.original-public .love-panel .travel-photo-image { --xcss-server-corner-extent: var(--xcss-server-corner-photo, 31.0568993271%); --xcss-server-corner-mode: clip; }
+
+.original-public .love-avatar,.original-public .love-avatar img,
+.original-public .love-tab-icon,.original-public .love-heart,
+.original-public .journey-turn,.original-public .reference-petals > span { --xcss-server-corner-extent: 0px; }
+
+/* Keep text clear of the active Mac mini corners without changing vertical spacing. */
+.original-public :is(.article-card, .original-list-card):is([data-xcss-server-corner-state="paint"], [data-xcss-server-corner-state="clip"]) > :is(.article-card-body, .original-list-body),
+.original-public :is(.wall-card, .love-moment-card, .favorite-group-empty, .announcement):is([data-xcss-server-corner-state="paint"], [data-xcss-server-corner-state="clip"]),
+.original-public .wall-list > .wall-card:is([data-xcss-server-corner-state="paint"], [data-xcss-server-corner-state="clip"]),
+.original-public.page-jotting .wall-list > .wall-card:is([data-xcss-server-corner-state="paint"], [data-xcss-server-corner-state="clip"]) { padding-inline: 26px; }

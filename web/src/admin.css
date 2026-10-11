@@ -64,3 +64,11 @@
   .xocs-admin-workspace .form-grid { grid-template-columns: minmax(0, 1fr); }
   .xocs-admin-workspace .inline-form > .xcss-form-field { flex-basis: 100%; }
 }
+
+/* Explicit Mac mini surfaces; the authored round radii remain the fallback before startup. */
+.xocs-admin-app .xocs-site-link { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
+.xocs-admin-workspace .editor-form { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
+.xocs-admin-workspace .editor-form .editor-form { --xcss-server-corner-extent: 0px; }
+.xocs-admin-workspace .inline-form { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
+
+.xocs-admin-workspace .badge,.xocs-admin-workspace .pager .xcss-button { --xcss-server-corner-extent: 0px; }

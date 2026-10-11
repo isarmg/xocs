@@ -50,3 +50,32 @@ html:lang(en) .original-public .public-header nav {gap:.55rem;font-size:.8rem;}
 .wall-photo-button{display:block;max-width:100%;padding:0;border:0;background:none;cursor:zoom-in}.wall-photo-button img{display:block;max-width:min(100%,520px);max-height:420px;object-fit:contain;border-radius:10px}.image-lightbox{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:3rem;background:#0b1329ed;cursor:zoom-out}.image-lightbox img{max-width:100%;max-height:100%;object-fit:contain;cursor:auto}.image-lightbox-close{position:absolute;top:1rem;right:1.2rem;border:0;background:#ffffff22;color:#fff;font-size:2rem;line-height:1;padding:.2rem .7rem;border-radius:8px;cursor:pointer}.moderation-photo{border:0;background:none;padding:0;cursor:zoom-in}.moderation-photo img{width:72px;height:56px;object-fit:cover;border-radius:6px}
 @media(max-width:900px){.reading-layout{grid-template-columns:1fr}.reading-toc{order:-1}.reading-toc nav{display:none}.reading-toc details{display:block;background:#fff;border:1px solid #e1e7f0;border-radius:12px;padding:.8rem 1rem}.reading-toc summary{cursor:pointer;font-weight:700}.image-lightbox{padding:1rem}}
 @media(prefers-reduced-motion:reduce){.reading-progress span{transition:none}}
+
+/* Explicit Mac mini surfaces; the authored round radii remain the fallback before startup. */
+.editor-form { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
+.article-card,.reading-card:not(.reading-article) { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.article-markdown pre { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
+.article-markdown code { --xcss-server-corner-extent: 8px; }
+.password-form input { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
+.password-form button { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
+.comment-form textarea { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
+.comment-form>button[type=submit] { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
+.wall-card,.link-card { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.search-form input { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
+.search-form button,.pager button { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
+.article-video { --xcss-server-corner-extent: 36px; --xcss-server-corner-mode: clip; }
+.music-cover { --xcss-server-corner-extent: 36px; --xcss-server-corner-mode: clip; }
+.editor-markdown-preview { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
+.editor-markdown-preview pre { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
+.featured-article { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
+.link-card mark { --xcss-server-corner-extent: 2.25px; }
+.reading-toc nav { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
+.reading-toc a { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
+.wall-photo-button img { --xcss-server-corner-extent: 36px; --xcss-server-corner-mode: clip; }
+.image-lightbox-close { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
+.moderation-photo img { --xcss-server-corner-extent: var(--xcss-server-corner-photo, 31.0568993271%); --xcss-server-corner-mode: clip; }
+@media (max-width:900px) {
+  .reading-toc details { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
+}
+
+.reading-card.reading-article,.public-tools > button { --xcss-server-corner-extent: 0px; }
