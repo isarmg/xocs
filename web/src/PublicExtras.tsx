@@ -17,22 +17,22 @@ function Shell({title,subtitle,children}:{title:string;subtitle?:string;children
 }
 
 function JourneyPage(){
-  const [result,setResult]=useState<Page<ArticleSummary>|null>(null);
   const [page,setPage]=useState(1);
-  const [error,setError]=useState('');
-  useEffect(()=>{const controller=new AbortController();void request(`/api/v1/articles?page=${page}&size=20`, isArticlePage,{signal:controller.signal}).then(setResult).catch(()=>{if(!controller.signal.aborted)setError(t("游记加载失败", "Unable to load travels"));});return()=>controller.abort();},[page]);
-  return <PublicChrome title="xocs" cover="/live/xocs-current-menory.jpg"><div className="journey-page"><header><strong>{t("时间线", "Timeline")}</strong><small>{t("灵魂在路上", "The soul is walking")}</small></header>{error&&<p role="alert">{error}</p>}<div className="journey-grid">{result?.items.map((item,index)=><a href={`/article/${item.id}`} className="journey-item" key={item.id}><span className="journey-image">{safeHttpUrl(item.article_cover)?<img src={safeHttpUrl(item.article_cover)||''} alt="" loading="lazy"/>:<span>xocs</span>}</span><strong>{item.article_title}</strong><small>{item.create_time?.slice(0,16)||t("最近", "Recently")} <span>{result.total-index-(page-1)*20}</span></small></a>)}</div>{result?.items.length===0&&<p className="journey-empty">{t("时光里的故事，正在路上。", "More stories are on their way.")}</p>}{result&&result.total>20&&<div className="pager"><button disabled={page<=1} onClick={()=>setPage(value=>value-1)}>{t("上一页", "Previous page")}</button><span>{t("第 {0} 页", "Page {0}", [page])}</span><button disabled={page*20>=result.total} onClick={()=>setPage(value=>value+1)}>{t("下一页", "Next page")}</button></div>}</div></PublicChrome>;
+  const data=useBrowseData(`/api/v1/articles?page=${page}&size=20`,isArticlePage,t("游记加载失败", "Unable to load travels"));
+  const result=data.value,error=data.error;
+  return <PublicChrome title="xocs" cover="/live/xocs-current-menory.jpg"><div className="journey-page"><header><strong>{t("时间线", "Timeline")}</strong><small>{t("灵魂在路上", "The soul is walking")}</small></header>{error&&<p role="alert">{error} <button type="button" onClick={data.retry}>{t("重试", "Try again")}</button></p>}{data.busy&&<p role="status">{t("正在加载文章…", "Loading articles…")}</p>}<div className="journey-grid">{result?.items.map((item,index)=><a href={`/article/${item.id}`} className="journey-item" key={item.id}><span className="journey-image">{safeHttpUrl(item.article_cover)?<img src={safeHttpUrl(item.article_cover)||''} alt="" loading="lazy"/>:<span>xocs</span>}</span><strong>{item.article_title}</strong><small>{item.create_time?.slice(0,16)||t("最近", "Recently")} <span>{result.total-index-(page-1)*20}</span></small></a>)}</div>{result?.items.length===0&&<p className="journey-empty">{t("时光里的故事，正在路上。", "More stories are on their way.")}</p>}{result&&result.total>20&&<div className="pager"><button disabled={page<=1} onClick={()=>setPage(page-1)}>{t("上一页", "Previous page")}</button><span>{t("第 {0} 页", "Page {0}", [page])}</span><button disabled={page*20>=result.total} onClick={()=>setPage(page+1)}>{t("下一页", "Next page")}</button></div>}</div></PublicChrome>;
 }
 
 function Wall(){
   const jotting=window.location.pathname==='/jotting';
-  const [result,setResult]=useState<Page<Note>|null>(null),[page,setPage]=useState(1);
-  const [error,setError]=useState(''),[lightbox,setLightbox]=useState<string|null>(null);
-  useEffect(()=>{const controller=new AbortController();setError('');void request(`/api/v1/notes/page?page=${page}`, isNotePage,{signal:controller.signal}).then(value=>{if(!controller.signal.aborted)setResult(value);}).catch(reason=>{if(!controller.signal.aborted)setError(publicErrorMessage(reason,t('内容加载失败','Unable to load content')));});return()=>controller.abort();},[page]);
+  const [page,setPage]=useState(1);
+  const [lightbox,setLightbox]=useState<string|null>(null);
+  const data=useBrowseData(`/api/v1/notes/page?page=${page}`,isNotePage,t('内容加载失败','Unable to load content'),true);
+  const result=data.value,error=data.error;
   return <PublicChrome title={jotting?'xocs':t('微言','Posts')} cover={jotting?'/live/xocs-current-jotting.png':undefined}><div className="wall-layout wall-reading-layout"><div className="wall-list">
-    {error&&<p role="alert">{error}</p>}{result?.items.map(item=><article className="wall-card" key={item.id}><small>{item.username||t('站长','Site owner')} · {item.create_time||t('最近','Recently')}</small><p>{item.content}</p>{safeImageUrl(item.image_path)&&<button type="button" className="wall-photo-button" onClick={()=>setLightbox(safeImageUrl(item.image_path))} aria-label={t('放大图片','Enlarge image')}><img src={safeImageUrl(item.image_path)!} alt={t('动态图片','Post image')} loading="lazy"/></button>}</article>)}
+    {error&&<p role="alert">{error} <button type="button" onClick={data.retry}>{t("重试", "Try again")}</button></p>}{data.busy&&<p role="status">{t("正在加载…", "Loading…")}</p>}{result?.items.map(item=><article className="wall-card" key={item.id}><small>{item.username||t('站长','Site owner')} · {item.create_time||t('最近','Recently')}</small><p>{item.content}</p>{safeImageUrl(item.image_path)&&<button type="button" className="wall-photo-button" onClick={()=>setLightbox(safeImageUrl(item.image_path))} aria-label={t('放大图片','Enlarge image')}><img src={safeImageUrl(item.image_path)!} alt={t('动态图片','Post image')} loading="lazy"/></button>}</article>)}
     {result?.items.length===0&&<div className="public-empty-state"><h3>{t('还没有记录。','No entries yet.')}</h3><p>{t('新的日常记录正在路上。','New everyday stories are on their way.')}</p></div>}
-    {result&&result.total>10&&<nav className="pager" aria-label={t('记录分页','Entry pages')}><button type="button" disabled={page<=1} onClick={()=>setPage(value=>value-1)}>{t('上一页','Previous page')}</button><span>{t('第 {0} 页','Page {0}',[page])}</span><button type="button" disabled={page*10>=result.total} onClick={()=>setPage(value=>value+1)}>{t('下一页','Next page')}</button></nav>}
+    {result&&result.total>10&&<nav className="pager" aria-label={t('记录分页','Entry pages')}><button type="button" disabled={page<=1} onClick={()=>setPage(page-1)}>{t('上一页','Previous page')}</button><span>{t('第 {0} 页','Page {0}',[page])}</span><button type="button" disabled={page*10>=result.total} onClick={()=>setPage(page+1)}>{t('下一页','Next page')}</button></nav>}
   </div></div><ImageLightbox src={lightbox} onClose={()=>setLightbox(null)}/></PublicChrome>;
 }
 
@@ -110,7 +110,7 @@ function ArticleListCard({item}:{item:ArticleSummary}){
 }
 
 // Keep each result tied to its request, including same-query retries.
-function useBrowseData<T>(url:string|null, validate:ResponseValidator<T>, message:string){
+function useBrowseData<T>(url:string|null, validate:ResponseValidator<T>, message:string,detailedErrors=false){
   const [attempt,setAttempt]=useState(0);
   const [loaded,setLoaded]=useState<{url:string;attempt:number;value:T|null;error:string}|null>(null);
   useEffect(()=>{
@@ -118,9 +118,9 @@ function useBrowseData<T>(url:string|null, validate:ResponseValidator<T>, messag
     const controller=new AbortController();
     void request(url,validate,{signal:controller.signal})
       .then(value=>{if(!controller.signal.aborted)setLoaded({url,attempt,value,error:''});})
-      .catch(()=>{if(!controller.signal.aborted)setLoaded({url,attempt,value:null,error:message});});
+      .catch(reason=>{if(!controller.signal.aborted)setLoaded({url,attempt,value:null,error:detailedErrors?publicErrorMessage(reason,message):message});});
     return()=>controller.abort();
-  },[url,validate,message,attempt]);
+  },[url,validate,message,attempt,detailedErrors]);
   const current=loaded?.url===url&&loaded.attempt===attempt?loaded:null;
   return {value:current?.value??null,error:current?.error||'',busy:!!url&&!current,retry:()=>setAttempt(value=>value+1)};
 }
