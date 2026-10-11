@@ -249,7 +249,7 @@ export function FamilyPage(){
   }
   return <section className="xcss-content-stack">
     <PageHeader><div><h1>{t("恋爱笔记", "Love journal")}</h1><p>{t("这里仅由管理员创建并维护一份家的资料。", "The administrator creates and maintains one home here.")}</p></div></PageHeader>
-    {failure&&<ErrorState onRetry={()=>setVersion(value=>value+1)}>{failure}</ErrorState>}
+    {failure&&<ErrorState onRetry={loaded?undefined:()=>setVersion(value=>value+1)}>{failure}</ErrorState>}
     {!loaded&&!failure&&<LoadingState>{t("正在加载家的资料…", "Loading home details…")}</LoadingState>}
     {loaded&&<fieldset className="xocs-fieldset" disabled={saving}><form className="editor-form" onSubmit={event=>void save(event)}>
       <h2>{editing?t("编辑家的资料", "Edit home details"):t("创建我的家", "Create my home")}</h2>

@@ -17,3 +17,16 @@ test('the home timer waits for its start date and handles missing or invalid dat
   for (const since of [NaN, Infinity, 1e50, now + 1]) assert.equal(timeTogether(since, now), null);
   assert.equal(timeTogether(now, NaN), null);
 });
+
+test('zero elapsed time stays zero during the repeated daylight-saving hour', () => {
+  const original = process.env.TZ;
+  try {
+    process.env.TZ = 'America/New_York';
+    const since = Date.parse('2026-11-01T01:30:00-05:00');
+    assert.deepEqual(timeTogether(since, since), { years: 0, months: 0, days: 0, hours: 0, minutes: 0, seconds: 0 });
+    assert.deepEqual(timeTogether(since, since + 30_000), { years: 0, months: 0, days: 0, hours: 0, minutes: 0, seconds: 30 });
+  } finally {
+    if (original === undefined) delete process.env.TZ;
+    else process.env.TZ = original;
+  }
+});

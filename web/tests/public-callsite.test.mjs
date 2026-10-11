@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { readFile } from 'node:fs/promises';
 import { HookHost, expand, textContent, walk } from './fixtures/hook-host.mjs';
 import { originalModule } from './fixtures/original-module.mjs';
 import { summary } from './browser-fixtures.mjs';
@@ -84,4 +85,14 @@ test('message publishing keeps the draft and does not insert a malformed success
   assert.equal(walk(host.tree, node => node.type === 'input')[0].props.value, 'Keep this draft');
   assert.match(text(host), /operation result could not be confirmed/);
   assert.equal(walk(host.tree, node => node.props?.className === 'message-barrage-item').length, 0);
+});
+
+
+test('jotting cover references the shipped JPEG asset', async context => {
+  const host=setup(context,null,{},'/jotting',async()=>json(page([])));
+  const cover=host.tree.props.cover;
+  assert.equal(cover,'/live/xocs-current-jotting.jpg');
+  const image=await readFile(new URL('../public'+cover,import.meta.url));
+  assert.deepEqual([...image.subarray(0,3)],[0xff,0xd8,0xff],'referenced asset is a JPEG, not an HTML fallback');
+  await settle(host);
 });

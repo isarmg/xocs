@@ -4,6 +4,7 @@ export function timeTogether(since: number, now: number) {
   const start = new Date(since), end = new Date(now);
   if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) return null;
   const anniversary = (months: number) => {
+    if (months === 0) return new Date(start);
     const date = new Date(start);
     date.setDate(1);
     date.setMonth(start.getMonth() + months);

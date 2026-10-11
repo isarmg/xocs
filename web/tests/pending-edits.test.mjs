@@ -149,3 +149,44 @@ test('FamilyPage keeps creation unavailable when current home loading fails',asy
   assert.equal(nodes(host,'form').length,0);
   assert.equal(requests.filter(r=>r.options.method==='POST').length,0);
 });
+
+for (const existing of [false, true]) {
+  test(`FamilyPage ${existing ? 'edit' : 'create'}: a failed save has no reload action that can erase its draft`, async t => {
+    const {host,requests}=setup(t,'FamilyPage');
+    requests[0].resolve(existing?[home]:[]);await settle(host);
+    nodes(host,'input').find(n=>n.props.required).props.onChange({target:{value:'Unsaved owner'}});host.render();
+    nodes(host,'form')[0].props.onSubmit({preventDefault(){}});host.render();
+    const pending=requests.at(-1);pending.reject(new Error('offline'));await settle(host);
+    assert.equal(nodes(host,'input').find(n=>n.props.required).props.value,'Unsaved owner');
+    assert.equal(nodes(host,'button').filter(n=>textContent(n)==='Try again').length,0,'mutation failures must not offer a destructive reload');
+    nodes(host,'form')[0].props.onSubmit({preventDefault(){}});
+    assert.equal(requests.at(-1).options.body,pending.options.body);
+    assert.equal(requests.at(-1).options.method,existing?'PUT':'POST');
+    requests.at(-1).resolve({...home,man_name:'Unsaved owner'});await settle(host);
+    assert.equal(nodes(host,'input').find(n=>n.props.required).props.value,'Unsaved owner');
+  });
+}
+
+test('FamilyPage initial load retries, while failed deletion retains the editable home and successful deletion reloads', async t => {
+  const {host,requests}=setup(t,'FamilyPage');
+  requests[0].reject(new Error('offline'));await settle(host);
+  nodes(host,'button').find(n=>textContent(n)==='Try again').props.onClick();host.render();
+  assert.equal(requests.at(-1).url,'/api/v1/content/family');
+  requests.at(-1).resolve([home]);await settle(host);
+  const oldWindow=globalThis.window;globalThis.window={confirm:()=>true};
+  t.after(()=>{if(oldWindow===undefined)delete globalThis.window;else globalThis.window=oldWindow;});
+  nodes(host,'input').find(n=>n.props.required).props.onChange({target:{value:'Unsaved owner'}});host.render();
+  nodes(host,'button').find(n=>textContent(n)==='Delete home details').props.onClick();host.render();
+  assert.equal(requests.at(-1).options.method,'DELETE');
+  requests.at(-1).reject(new Error('offline'));await settle(host);
+  assert.equal(nodes(host,'input').find(n=>n.props.required).props.value,'Unsaved owner');
+  assert.equal(nodes(host,'button').filter(n=>textContent(n)==='Try again').length,0);
+  nodes(host,'button').find(n=>textContent(n)==='Delete home details').props.onClick();host.render();
+  requests.at(-1).resolve({deleted:true});await settle(host);
+  assert.equal(requests.at(-1).url,'/api/v1/content/family');
+  assert.equal(requests.at(-1).options.method,undefined);
+  assert.equal(nodes(host,'form').length,0);
+  requests.at(-1).resolve([]);await settle(host);
+  assert.equal(nodes(host,'h2').map(textContent).join(''),'Create my home');
+  assert.equal(nodes(host,'input').find(n=>n.props.required).props.value,'');
+});
