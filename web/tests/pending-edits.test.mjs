@@ -9,6 +9,7 @@ const pages = await originalModule(new URL('../src/AdminExtras.tsx', import.meta
   './AdminLayout': 'export const adminGroups=[];',
 });
 const saved={id:1,path:'/media/one.png',title:'Saved',classify:null,cover:null,url:null,introduction:null,link_type:'favorites',status:1};
+const home={id:1,bg_cover:null,man_cover:null,woman_cover:null,man_name:'Owner',woman_name:'Partner',timing:'2026-10-01',countdown_title:null,countdown_time:null,family_info:'Our home',status:1};
 const nodes=(host,type)=>walk(expand(host.tree),node=>node.type===type);
 const settle=async host=>{for(let i=0;i<6;i++)await Promise.resolve();host.render();};
 function setup(t,name){
@@ -21,6 +22,7 @@ function setup(t,name){
 for(const name of ['ResourcesPage','LinksPage','NotesPage','FamilyPage']){
   test(`${name}: a pending submission locks editable controls and ignores same-tick duplicate submits; failures allow retry`,async t=>{
     const {host,requests}=setup(t,name);
+    if(name==='FamilyPage'){requests[0].resolve([]);await settle(host);}
     if(name==='ResourcesPage'){
       nodes(host,'input').find(n=>n.props.type==='file').props.onChange({target:{files:[{name:'one.png',size:1,type:'image/png'}]}});host.render();
     }
@@ -40,7 +42,7 @@ for(const name of ['ResourcesPage','LinksPage','NotesPage','FamilyPage']){
     assert.equal(requests.filter(r=>r.options.method==='POST').length,2,'retry sends once');
     const mutations=requests.filter(r=>r.options.method==='POST');
     assert.equal(mutations[0].options.body,mutations[1].options.body,'failure preserves the original draft or selected file');
-    requests.filter(r=>r.options.method==='POST').at(-1).resolve(saved);
+    requests.filter(r=>r.options.method==='POST').at(-1).resolve(name==='FamilyPage'?home:saved);
     await settle(host);
     assert.ok(nodes(host,'fieldset').every(n=>!n.props.disabled),'success unlocks editor');
   });
@@ -60,6 +62,7 @@ function userControls(host){
 for(const name of ['ResourcesPage','LinksPage','NotesPage','FamilyPage']){
   test(`${name}: a slow success cannot erase a newer reachable draft or file selection`,async t=>{
     const {host,requests}=setup(t,name);
+    if(name==='FamilyPage'){requests[0].resolve([]);await settle(host);}
     const controls=userControls(host);
     const editable=controls.find(n=>name==='ResourcesPage'?n.props.type==='file':name==='NotesPage'?n.type==='textarea':n.type==='input'&&n.props.required);
     const firstFile={name:'first.png',size:1,type:'image/png'};
@@ -69,7 +72,7 @@ for(const name of ['ResourcesPage','LinksPage','NotesPage','FamilyPage']){
     const current=userControls(host).find(n=>name==='ResourcesPage'?n.props.type==='file':name==='NotesPage'?n.type==='textarea':n.type==='input'&&n.props.required);
     // Only dispatch changes that a user can make through enabled controls.
     if(!current.disabled)current.props.onChange({target:{value:'New draft',files:[{name:'second.png',size:1,type:'image/png'}]}});
-    host.render();pending.resolve(saved);await settle(host);
+    host.render();pending.resolve(name==='FamilyPage'?home:saved);await settle(host);
     if(!current.disabled){
       if(name==='ResourcesPage')assert.equal(nodes(host,'button').find(n=>textContent(n)==='Upload').props.disabled,false,'new selection remains uploadable');
       else assert.equal(userControls(host).find(n=>n.type===current.type&&n.props.required).props.value,'New draft','new draft survives old success');
@@ -78,11 +81,11 @@ for(const name of ['ResourcesPage','LinksPage','NotesPage','FamilyPage']){
   });
 }
 
-for(const name of ['LinksPage','FamilyPage']){
+for(const name of ['LinksPage']){
   test(`${name}: pending save prevents switching rows or cancelling into a new edit`,async t=>{
     const {host,requests}=setup(t,name);
-    const rows=name==='LinksPage'?[{...saved,id:1,title:'First'},{...saved,id:2,title:'Second'}]:[{id:1,man_name:'First',woman_name:'Partner',status:1},{id:2,man_name:'Second',woman_name:'Partner',status:1}];
-    requests[0].resolve(name==='LinksPage'?{items:rows,page:1,size:20,total:2}:rows);await settle(host);
+    const rows=[{...saved,id:1,title:'First'},{...saved,id:2,title:'Second'}];
+    requests[0].resolve({items:rows,page:1,size:20,total:2});await settle(host);
     userControls(host).find(n=>n.type==='button'&&textContent(n)==='Edit').props.onClick();host.render();
     nodes(host,'form')[0].props.onSubmit({preventDefault(){}});host.render();
     const pending=requests.find(r=>r.options.method==='PUT');
@@ -113,4 +116,36 @@ test('file upload retains its selection on failure and clears the native picker 
   assert.equal(retry.options.body,file);retry.resolve({id:1,path:'/media/photo.png'});await settle(host);
   assert.equal(picker.value,'');
   assert.equal(userControls(host).find(n=>n.type==='button'&&textContent(n)==='Upload').disabled,true);
+});
+
+
+test('FamilyPage loads one home directly, preserves failed edits and stays in edit mode after saving',async t=>{
+  const {host,requests}=setup(t,'FamilyPage');
+  assert.equal(nodes(host,'form').length,0,'creation stays unavailable until the current home is known');
+  requests[0].resolve([home]);await settle(host);
+  assert.equal(nodes(host,'input').find(n=>n.props.required).props.value,'Owner');
+  assert.equal(nodes(host,'table').length,0,'there is no multi-home list');
+  assert.equal(userControls(host).filter(n=>n.type==='button'&&['Edit','Cancel editing'].includes(textContent(n))).length,0);
+  nodes(host,'input').find(n=>n.props.required).props.onChange({target:{value:'Updated owner'}});host.render();
+  const submit=nodes(host,'form')[0].props.onSubmit;submit({preventDefault(){}});submit({preventDefault(){}});host.render();
+  const pending=requests.find(r=>r.options.method==='PUT');
+  assert.equal(requests.filter(r=>r.options.method==='PUT').length,1);
+  assert.equal(pending.url,'/api/v1/content/family/1');
+  assert.ok(userControls(host).find(n=>n.type==='button'&&textContent(n)==='Delete home details').disabled);
+  pending.reject(new Error('offline'));await settle(host);
+  assert.equal(nodes(host,'input').find(n=>n.props.required).props.value,'Updated owner');
+  nodes(host,'form')[0].props.onSubmit({preventDefault(){}});
+  const retry=requests.filter(r=>r.options.method==='PUT').at(-1);
+  assert.equal(retry.options.body,pending.options.body);
+  retry.resolve({...home,man_name:'Updated owner'});await settle(host);
+  assert.equal(nodes(host,'h2').map(textContent).join(''),'Edit home details');
+  nodes(host,'form')[0].props.onSubmit({preventDefault(){}});
+  assert.equal(requests.filter(r=>r.options.method==='POST').length,0,'saving an existing home never creates a second one');
+});
+
+test('FamilyPage keeps creation unavailable when current home loading fails',async t=>{
+  const {host,requests}=setup(t,'FamilyPage');
+  requests[0].reject(new Error('offline'));await settle(host);
+  assert.equal(nodes(host,'form').length,0);
+  assert.equal(requests.filter(r=>r.options.method==='POST').length,0);
 });

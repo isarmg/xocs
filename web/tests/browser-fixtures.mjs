@@ -1,5 +1,5 @@
 export const session = { authenticated: true, user_id: 'A'.repeat(43), username: 'admin', role: 'admin', csrf_token: 'A'.repeat(43) };
-export const site = { web_name: 'XOCS', web_title: null, notices: null, footer: null, background_image: null, avatar: null, random_avatar: null, random_name: null, random_cover: null, waifu_json: null };
+export const site = { web_name: 'XOCS', web_title: null, notices: null, footer: null, background_image: null, avatar: null, random_cover: null };
 const category = { id: 1, sort_name: '中文分类', sort_description: null, priority: 0, article_count: 1 };
 export const summary = { id: 1, article_title: '中文文章标题', article_cover: null, sort_id: 1, label_id: 1, sort_name: category.sort_name, label_name: null, view_count: 1, like_count: 0, comment_count: 0, recommend_status: 0, view_status: 1, create_time: '2026-10-08', excerpt: '中文摘要', search_snippet: null };
 const { excerpt: _excerpt, search_snippet: _snippet, ...articleFields } = summary;

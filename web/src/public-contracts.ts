@@ -46,7 +46,7 @@ export type EditorLabel = { id: number; sort_id: number; label_name: string; lab
 export const isEditorLabels = arrayOf((value: unknown): value is EditorLabel => isRecord(value) && isId(value.id) && isId(value.sort_id)
   && isString(value.label_name) && isNullableString(value.label_description));
 export const isSiteInfo = (value: unknown): value is SiteInfo => isRecord(value)
-  && strings(value, ['web_name', 'web_title', 'notices', 'footer', 'background_image', 'avatar', 'random_avatar', 'random_name', 'random_cover', 'waifu_json']);
+  && strings(value, ['web_name', 'web_title', 'notices', 'footer', 'background_image', 'avatar', 'random_cover']);
 export const isSiteStats = (value: unknown): value is { article_count: number; view_count: number } => isRecord(value)
   && isCount(value.article_count) && isCount(value.view_count);
 

@@ -19,7 +19,8 @@ import './public-original.css';
 import './public-layout.css';
 import './admin.css';
 import { AdminWorkspace } from './AdminLayout';
-import {articleExcerpt, request, type Article, type ArticleInput, type ArticleSummary, type Category, type Page, type PublicLabel, type SiteInfo} from './api';
+import {request, type Article, type ArticleInput, type ArticleSummary, type Category, type Page, type PublicLabel, type SiteInfo} from './api';
+import {SlidingTitle} from './SlidingTitle';
 import {clearValidation, languageHref, localizeValidation, preserveLinkLanguage} from './language';
 import {CommentsPage, Dashboard, FamilyPage, LabelsPage, LinksPage, NotesPage, ResourcesPage, SitePage, TreeHolePage, UsersPage} from './AdminExtras';
 import {PublicExtras} from './PublicExtras';
@@ -247,10 +248,9 @@ function CategoryManager() {
 }
 
 function HomeArticleCard({item}:{item:ArticleSummary}){
-  const excerpt=articleExcerpt(item.excerpt,75);
   return <a className="article-card" href={`/article/${item.id}`}>
     <div className="article-card-cover">{safeMediaUrl(item.article_cover)?<img src={safeMediaUrl(item.article_cover)||''} alt="" loading="lazy"/>:<span>{t("遇事不决，可问春风", "Let the spring breeze guide you")}</span>}</div>
-    <div className="article-card-body"><small>{t("📅 发布于 ", "📅 Published ")}{item.create_time||t("最近", "Recently")}</small><h3>{item.article_title}</h3><p className="article-card-stats">🔥 {item.view_count}{t(" 热度 💬 ", " views 💬 ")}{item.comment_count}{t(" 评论 🧡 ", " comments 🧡 ")}{item.like_count}{t(" 点赞", " likes")}</p>{excerpt&&<p className="article-card-excerpt">{excerpt}</p>}<span className="article-card-tags">{item.sort_name&&<span>📁 {item.sort_name}</span>}{item.label_name&&<span>🏷 {item.label_name}</span>}{item.view_status===0&&<span>{t("🔒 密码文章", "🔒 Password protected")}</span>}</span></div>
+    <div className="article-card-body"><small>{t("📅 发布于 ", "📅 Published ")}{item.create_time||t("最近", "Recently")}</small><h3><SlidingTitle text={item.article_title}/></h3><p className="article-card-stats">🔥 {item.view_count}{t(" 热度 💬 ", " views 💬 ")}{item.comment_count}{t(" 评论 🧡 ", " comments 🧡 ")}{item.like_count}{t(" 点赞", " likes")}</p><span className="article-card-tags">{item.sort_name&&<span>📁 {item.sort_name}</span>}{item.label_name&&<span>🏷 {item.label_name}</span>}{item.view_status===0&&<span>{t("🔒 密码文章", "🔒 Password protected")}</span>}</span></div>
   </a>;
 }
 

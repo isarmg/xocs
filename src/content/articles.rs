@@ -180,12 +180,10 @@ pub(super) async fn public_article(
 #[derive(Serialize, sqlx::FromRow)]
 pub(super) struct ArticleNews {
     id: i64,
-    user_id: Option<i64>,
-    username: Option<String>,
     content: String,
     create_time: Option<String>,
 }
-const ARTICLE_NEWS_SQL: &str = "SELECT w.id,w.user_id,u.username,w.content,w.create_time FROM wei_yan w LEFT JOIN user u ON u.id=w.user_id";
+const ARTICLE_NEWS_SQL: &str = "SELECT w.id,w.content,w.create_time FROM wei_yan w";
 pub(super) async fn article_news(
     State(state): State<AppState>,
     Path(id): Path<i64>,

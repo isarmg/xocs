@@ -15,10 +15,6 @@ pub(super) struct Note {
     is_public: i64,
     create_time: Option<String>,
 }
-pub(super) async fn notes(State(state): State<AppState>) -> ApiResult<Vec<Note>> {
-    Ok(Json(sqlx::query_as::<_,Note>("SELECT w.id,w.user_id,u.username,w.content,w.image_path,w.like_count,w.is_public,w.create_time FROM wei_yan w LEFT JOIN user u ON u.id=w.user_id WHERE w.is_public=1 AND w.type='friend' ORDER BY w.id DESC LIMIT 100")
-        .fetch_all(&state.pool).await.map_err(db_error)?))
-}
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct NotePageQuery {

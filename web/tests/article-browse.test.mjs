@@ -7,6 +7,8 @@ const reexport = path => `export * from ${JSON.stringify(new URL(path, import.me
 const { Categories, SearchPage, JourneyPage, Wall, MessagePage } = await originalModule(new URL('../src/PublicExtras.tsx', import.meta.url), {
   './api': reexport('../src/api.ts'), './public-contracts': reexport('../src/public-contracts.ts'),
   './comment-submission': reexport('../src/comment-submission.ts'),
+  './SlidingTitle': 'export const SlidingTitle=({text})=>text;',
+  './ReferencePetals': 'export const ReferencePetals=()=>null;',
   './PublicChrome': 'export const PublicChrome=({children})=>children;',
   './PublicComments': 'export const PublicComments=()=>null;',
   './MediaPreview': 'export const ImageLightbox=()=>null; export const safeImageUrl=value=>value;',

@@ -7,7 +7,7 @@ import { mockApi } from './browser-fixtures.mjs';
 async function checkHeaderScrolling(page, width, english) {
   const articleUrl = page.url();
   const header = page.locator('.public-header');
-  const home = page.locator('.public-home-menu'), homeLink = home.locator('.public-home-link'), popup = home.locator(':scope > div');
+  const homeLink = header.locator('nav > a[href="/"]');
   await expect(page.locator('.comment-form textarea')).toBeVisible();
   await expect(header).toBeVisible();
   await page.evaluate(() => scrollTo(0, 180));
@@ -30,45 +30,13 @@ async function checkHeaderScrolling(page, width, english) {
     await expect(header).toBeHidden();
     await page.evaluate(() => scrollTo(0, 0));
     await expect(header).toBeVisible();
-  } else {
-    await page.clock.install({ time: new Date('2026-10-08T00:00:00Z') });
-    await page.clock.pauseAt(new Date('2026-10-08T00:01:00Z'));
-    await homeLink.hover({ force: true });
-    await page.clock.runFor(100);
-    await expect(popup).toBeHidden();
-    await page.mouse.move(5, 150);
-    await page.clock.runFor(300);
-    await expect(popup).toBeHidden();
-    await homeLink.hover({ force: true });
-    await page.clock.runFor(300);
-    await expect(popup).toBeVisible();
-    await page.clock.resume();
-    const boxes = await home.evaluate(element => {
-      const trigger = element.querySelector('.public-home-link').getBoundingClientRect(), dropdown = element.querySelector(':scope > div').getBoundingClientRect();
-      return { trigger: trigger.x + trigger.width / 2, dropdown: dropdown.x + dropdown.width / 2 };
-    });
-    assert.ok(Math.abs(boxes.trigger - boxes.dropdown) < 1, JSON.stringify(boxes));
-    await popup.getByRole('link', { name: english ? '🔍 Start page' : '🔍 起始页', exact: true }).hover();
-    await expect(popup).toBeVisible();
-    await page.mouse.move(5, 150);
-    await expect(popup).toBeHidden();
-    await homeLink.hover();
-    await expect(popup).toBeVisible();
-    await page.evaluate(() => scrollTo(0, 180));
-    await expect(header).toBeHidden();
-    await expect(popup).toBeHidden();
-    await page.evaluate(() => scrollTo(0, 0));
-    await expect(header).toBeVisible();
   }
   if (width === 390) {
     await page.getByRole('button', { name: english ? 'Open navigation' : '打开导航', exact: true }).click();
-    await home.getByRole('button', { name: english ? 'Open Home menu' : '打开首页菜单', exact: true }).click();
-    await expect(popup).toBeVisible();
-    const bounds = await popup.boundingBox();
-    assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= width, JSON.stringify(bounds));
-    await home.getByRole('button', { name: english ? 'Close Home menu' : '关闭首页菜单', exact: true }).click();
-    await expect(popup).toBeHidden();
   }
+  await homeLink.hover();
+  assert.equal(await homeLink.getAttribute('aria-expanded'), null);
+  await expect(header.locator('nav > a[href="/sort"]')).toBeVisible();
   await homeLink.click();
   await expect(page).toHaveURL(url => url.pathname === '/' && url.searchParams.get('lang') === (english ? 'en' : 'zh-CN'));
   await expect(page.getByRole('heading', { name: english ? 'Believe in the power of stories' : '相信记录的力量', exact: true })).toBeVisible();
@@ -76,12 +44,8 @@ async function checkHeaderScrolling(page, width, english) {
   await expect(page.locator('.comment-form textarea')).toBeVisible();
   if (width === 390) await page.getByRole('button', { name: english ? 'Open navigation' : '打开导航', exact: true }).click();
   await homeLink.focus();
-  await page.keyboard.press('ArrowDown');
-  await expect(popup).toBeVisible();
-  await expect(popup.getByRole('link').first()).toBeFocused();
-  await page.keyboard.press('Escape');
-  await expect(popup).toBeHidden();
-  await expect(homeLink).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(header.locator('nav > a[href="/love"]')).toBeFocused();
   if (width === 390) await page.getByRole('button', { name: english ? 'Close navigation' : '关闭导航', exact: true }).click();
   await page.locator('.public-header .brand').focus();
   await page.keyboard.press('Tab');

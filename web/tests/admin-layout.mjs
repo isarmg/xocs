@@ -130,10 +130,10 @@ try {
       await page.goto(`${base}/admin?lang=en#site`);
       await page.getByLabel('Site name', { exact: true }).fill('Layout test');
       await page.getByLabel('Notices', { exact: true }).fill('["First notice"]');
-      await page.getByLabel('Random names', { exact: true }).fill('Alice\nBob');
+      await page.getByLabel('Random covers', { exact: true }).fill('https://example.com/cover.jpg');
       await page.getByRole('button', { name: 'Save settings', exact: true }).click();
       await expect(page.getByText('Site settings saved', { exact: true })).toBeVisible();
-      assert.deepEqual(saved, { ...site, web_name: 'Layout test', notices: '["First notice"]', random_name: 'Alice\nBob' });
+      assert.deepEqual(saved, { ...site, web_name: 'Layout test', notices: '["First notice"]', random_cover: 'https://example.com/cover.jpg' });
       await context.close();
       console.log(`${engine.name()}: statistics retry and settings save contract passed`);
     } finally { await browser.close(); }

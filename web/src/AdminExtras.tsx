@@ -127,15 +127,9 @@ export function SitePage(){
           </div>
         </section>
         <section className="xcss-content-panel">
-          <h2>{t('随机内容','Random content')}</h2>
-          <p className="xocs-field-help">{t('使用 JSON 字符串数组或每行一个值；图片请填写图片地址。','Use a JSON string array or one value per line. For images, enter image URLs.')}</p>
-          <FormField label={t('随机头像','Random avatars')}><textarea className="xcss-input" value={site.random_avatar||''} onChange={event=>change('random_avatar',event.target.value)}/></FormField>
-          <FormField label={t('随机昵称','Random names')}><textarea className="xcss-input" value={site.random_name||''} onChange={event=>change('random_name',event.target.value)}/></FormField>
+          <h2>{t('随机封面','Random covers')}</h2>
+          <p className="xocs-field-help">{t('使用 JSON 图片地址数组或每行一个图片地址。','Use a JSON array of image URLs or one image URL per line.')}</p>
           <FormField label={t('随机封面','Random covers')}><textarea className="xcss-input" value={site.random_cover||''} onChange={event=>change('random_cover',event.target.value)}/></FormField>
-        </section>
-        <section className="xcss-content-panel">
-          <h2>{t('高级设置','Advanced settings')}</h2>
-          <FormField label={t('看板娘配置 JSON','Mascot configuration JSON')}><textarea className="xcss-input" value={site.waifu_json||''} onChange={event=>change('waifu_json',event.target.value)}/></FormField>
         </section>
       </fieldset>
       <div className="xcss-actions"><Button type="submit" disabled={saving}>{saving?t('保存中…','Saving…'):t('保存设置','Save settings')}</Button></div>
@@ -222,13 +216,51 @@ export function NotesPage(){
 }
 
 const emptyFamily={bg_cover:'',man_cover:'',woman_cover:'',man_name:'',woman_name:'',timing:'',countdown_title:'',countdown_time:'',family_info:'',status:true};
+const isFamily=(value:unknown):value is Family=>isRecord(value)&&Number.isSafeInteger(value.id)&&Number(value.id)>0&&['bg_cover','man_cover','woman_cover','man_name','woman_name','timing','countdown_title','countdown_time','family_info'].every(key=>value[key]===null||typeof value[key]==='string')&&(value.status===null||value.status===0||value.status===1);
+function familyForm(item:Family){return {bg_cover:item.bg_cover||'',man_cover:item.man_cover||'',woman_cover:item.woman_cover||'',man_name:item.man_name||'',woman_name:item.woman_name||'',timing:item.timing||'',countdown_title:item.countdown_title||'',countdown_time:item.countdown_time||'',family_info:item.family_info||'',status:item.status===1};}
 export function FamilyPage(){
-  const [saving,setSaving]=useState(false);const savePending=useRef(false);
-  const {client,notify}=useAdminApplication();const [families,setFamilies]=useState<Family[]>([]);const [form,setForm]=useState(emptyFamily);const [editing,setEditing]=useState<number|null>(null);const [failure,setFailure]=useState('');const [version,setVersion]=useState(0);
-  useEffect(()=>{const controller=new AbortController();void client.request('/api/v1/content/family',(value):value is Family[]=>Array.isArray(value)&&value.every(item=>isRecord(item)&&typeof item.id==='number'),{signal:controller.signal}).then(value=>{if(!controller.signal.aborted){setFamilies(value);setFailure('');}}).catch(()=>{if(!controller.signal.aborted)setFailure(t("恋爱笔记加载失败", "Unable to load love journal"));});return()=>controller.abort();},[client,version]);
+  const {client,notify}=useAdminApplication();
+  const [form,setForm]=useState(emptyFamily),[editing,setEditing]=useState<number|null>(null);
+  const [loaded,setLoaded]=useState(false),[saving,setSaving]=useState(false),[failure,setFailure]=useState(''),[version,setVersion]=useState(0);
+  const savePending=useRef(false);
+  useEffect(()=>{
+    const controller=new AbortController();setLoaded(false);setFailure('');
+    void client.request('/api/v1/content/family',(value):value is Family[]=>Array.isArray(value)&&value.length<=1&&value.every(isFamily),{signal:controller.signal})
+      .then(value=>{if(!controller.signal.aborted){const home=value[0];setEditing(home?.id??null);setForm(home?familyForm(home):emptyFamily);setLoaded(true);}})
+      .catch(reason=>{if(!controller.signal.aborted)setFailure(publicErrorMessage(reason,t("恋爱笔记加载失败", "Unable to load love journal")));});
+    return()=>controller.abort();
+  },[client,version]);
   function change<K extends keyof typeof emptyFamily>(key:K,value:(typeof emptyFamily)[K]){setForm(current=>({...current,[key]:value}));}
-  function edit(item:Family){setEditing(item.id);setForm({bg_cover:item.bg_cover||'',man_cover:item.man_cover||'',woman_cover:item.woman_cover||'',man_name:item.man_name||'',woman_name:item.woman_name||'',timing:item.timing||'',countdown_title:item.countdown_title||'',countdown_time:item.countdown_time||'',family_info:item.family_info||'',status:item.status===1});}
-  async function save(event:FormEvent){event.preventDefault();if(savePending.current)return;savePending.current=true;setSaving(true);setFailure('');try{const payload={...form,bg_cover:form.bg_cover||null,man_cover:form.man_cover||null,woman_cover:form.woman_cover||null,countdown_title:form.countdown_title||null,countdown_time:form.countdown_time||null,family_info:form.family_info||null};await client.request(editing?`/api/v1/content/family/${editing}`:'/api/v1/content/family',(value):value is Family=>isRecord(value)&&typeof value.id==='number',{method:editing?'PUT':'POST',body:JSON.stringify(payload)});setForm(emptyFamily);setEditing(null);setVersion(v=>v+1);setFailure('');notify(t("恋爱笔记已保存", "Love journal saved"));}catch(reason){setFailure(publicErrorMessage(reason, t("保存失败", "Unable to save")));}finally{savePending.current=false;setSaving(false);}}
-  async function remove(id:number){if(!window.confirm(t("确定删除这条恋爱笔记？", "Delete this love journal entry?")))return;try{await client.request(`/api/v1/content/family/${id}`,isDeleted,{method:'DELETE'});setVersion(v=>v+1);notify(t("恋爱笔记已删除", "Love journal entry deleted"));}catch{setFailure(t("删除失败", "Unable to delete"));}}
-  return <section className="xcss-content-stack"><PageHeader><div><h1>{t("恋爱笔记", "Love journal")}</h1></div></PageHeader>{failure&&<ErrorState onRetry={()=>setVersion(value=>value+1)}>{failure}</ErrorState>}<fieldset className="xocs-fieldset" disabled={saving}><form className="editor-form" onSubmit={event=>void save(event)}><h2>{editing?t("编辑笔记", "Edit entry"):t("新增笔记", "Add entry")}</h2><div className="form-grid"><FormField label={t("男生昵称", "His name")}><TextField required maxLength={32} value={form.man_name} onChange={event=>change('man_name',event.target.value)}/></FormField><FormField label={t("女生昵称", "Her name")}><TextField required maxLength={32} value={form.woman_name} onChange={event=>change('woman_name',event.target.value)}/></FormField></div><div className="form-grid"><FormField label={t("起始时间", "Start date")}><TextField maxLength={32} value={form.timing} onChange={event=>change('timing',event.target.value)}/></FormField><FormField label={t("倒计时标题", "Countdown title")}><TextField maxLength={32} value={form.countdown_title} onChange={event=>change('countdown_title',event.target.value)}/></FormField></div><FormField label={t("倒计时时间", "Countdown date")}><TextField maxLength={32} value={form.countdown_time} onChange={event=>change('countdown_time',event.target.value)}/></FormField><FormField label={t("背景图片", "Background image")}><TextField value={form.bg_cover} onChange={event=>change('bg_cover',event.target.value)}/></FormField><div className="form-grid"><FormField label={t("男生头像", "His avatar")}><TextField value={form.man_cover} onChange={event=>change('man_cover',event.target.value)}/></FormField><FormField label={t("女生头像", "Her avatar")}><TextField value={form.woman_cover} onChange={event=>change('woman_cover',event.target.value)}/></FormField></div><FormField label={t("简介", "Introduction")}><textarea className="xcss-input" maxLength={1024} value={form.family_info} onChange={event=>change('family_info',event.target.value)}/></FormField><label><input type="checkbox" checked={form.status} onChange={event=>change('status',event.target.checked)}/>{t(" 公开显示", " Show publicly")}</label><div className="xcss-actions"><Button type="submit" disabled={saving}>{saving?t("保存中…", "Saving…"):t("保存", "Save")}</Button>{editing&&<Button onClick={()=>{setEditing(null);setForm(emptyFamily);}}>{t("取消编辑", "Cancel editing")}</Button>}</div></form>{families.length?<Table aria-label={t("恋爱笔记列表", "Love journal entries")}><thead><tr><th>{t("标题", "Title")}</th><th>{t("时间", "Time")}</th><th>{t("状态", "Status")}</th><th>{t("操作", "Actions")}</th></tr></thead><tbody>{families.map(item=><tr key={item.id}><td>{item.man_name}{t(" 与 ", " and ")}{item.woman_name}</td><td>{item.timing||'—'}</td><td>{item.status?t("公开", "Public"):t("待审核 / 隐藏", "Pending review / hidden")}</td><td><div className="xcss-actions"><Button onClick={()=>edit(item)}>{t("编辑", "Edit")}</Button><Button className="xcss-danger" onClick={()=>void remove(item.id)}>{t("删除", "Delete")}</Button></div></td></tr>)}</tbody></Table>:<EmptyState>{t("暂无恋爱笔记", "No love journal entries yet")}</EmptyState>}</fieldset></section>;
+  async function save(event:FormEvent){
+    event.preventDefault();if(!loaded||savePending.current)return;savePending.current=true;setSaving(true);setFailure('');
+    try{
+      const payload={...form,bg_cover:form.bg_cover||null,man_cover:form.man_cover||null,woman_cover:form.woman_cover||null,countdown_title:form.countdown_title||null,countdown_time:form.countdown_time||null,family_info:form.family_info||null};
+      const home=await client.request(editing?`/api/v1/content/family/${editing}`:'/api/v1/content/family',isFamily,{method:editing?'PUT':'POST',body:JSON.stringify(payload)});
+      setEditing(home.id);setForm(familyForm(home));notify(t("家的资料已保存", "Home details saved"));
+    }catch(reason){setFailure(publicErrorMessage(reason,t("保存失败", "Unable to save")));}
+    finally{savePending.current=false;setSaving(false);}
+  }
+  async function remove(){
+    if(!editing||savePending.current||!window.confirm(t("确定删除家的资料？", "Delete your home details?")))return;
+    savePending.current=true;setSaving(true);setFailure('');
+    try{await client.request(`/api/v1/content/family/${editing}`,isDeleted,{method:'DELETE'});setVersion(value=>value+1);notify(t("家的资料已删除", "Home details deleted"));}
+    catch(reason){setFailure(publicErrorMessage(reason,t("删除失败", "Unable to delete")));}
+    finally{savePending.current=false;setSaving(false);}
+  }
+  return <section className="xcss-content-stack">
+    <PageHeader><div><h1>{t("恋爱笔记", "Love journal")}</h1><p>{t("这里仅由管理员创建并维护一份家的资料。", "The administrator creates and maintains one home here.")}</p></div></PageHeader>
+    {failure&&<ErrorState onRetry={()=>setVersion(value=>value+1)}>{failure}</ErrorState>}
+    {!loaded&&!failure&&<LoadingState>{t("正在加载家的资料…", "Loading home details…")}</LoadingState>}
+    {loaded&&<fieldset className="xocs-fieldset" disabled={saving}><form className="editor-form" onSubmit={event=>void save(event)}>
+      <h2>{editing?t("编辑家的资料", "Edit home details"):t("创建我的家", "Create my home")}</h2>
+      <div className="form-grid"><FormField label={t("男生昵称", "His name")}><TextField required maxLength={32} value={form.man_name} onChange={event=>change('man_name',event.target.value)}/></FormField><FormField label={t("女生昵称", "Her name")}><TextField required maxLength={32} value={form.woman_name} onChange={event=>change('woman_name',event.target.value)}/></FormField></div>
+      <div className="form-grid"><FormField label={t("起始时间", "Start date")}><TextField maxLength={32} value={form.timing} onChange={event=>change('timing',event.target.value)}/></FormField><FormField label={t("倒计时标题", "Countdown title")}><TextField maxLength={32} value={form.countdown_title} onChange={event=>change('countdown_title',event.target.value)}/></FormField></div>
+      <FormField label={t("倒计时时间", "Countdown date")}><TextField maxLength={32} value={form.countdown_time} onChange={event=>change('countdown_time',event.target.value)}/></FormField>
+      <FormField label={t("背景图片", "Background image")}><TextField value={form.bg_cover} onChange={event=>change('bg_cover',event.target.value)}/></FormField>
+      <div className="form-grid"><FormField label={t("男生头像", "His avatar")}><TextField value={form.man_cover} onChange={event=>change('man_cover',event.target.value)}/></FormField><FormField label={t("女生头像", "Her avatar")}><TextField value={form.woman_cover} onChange={event=>change('woman_cover',event.target.value)}/></FormField></div>
+      <FormField label={t("简介", "Introduction")}><textarea className="xcss-input" maxLength={1024} value={form.family_info} onChange={event=>change('family_info',event.target.value)}/></FormField>
+      <label><input type="checkbox" checked={form.status} onChange={event=>change('status',event.target.checked)}/>{t(" 公开显示", " Show publicly")}</label>
+      <div className="xcss-actions"><Button type="submit">{saving?t("保存中…", "Saving…"):t("保存", "Save")}</Button>{editing&&<Button className="xcss-danger" onClick={()=>void remove()}>{t("删除家的资料", "Delete home details")}</Button>}</div>
+    </form></fieldset>}
+  </section>;
 }

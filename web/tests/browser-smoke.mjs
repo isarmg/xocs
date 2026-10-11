@@ -19,7 +19,7 @@ try {
         : url.pathname === '/api/v1/home-sections' ? [{id:1,title:'最新',kind:'latest',sort_id:null,priority:0,enabled:true}]
         : url.pathname === '/api/v1/categories' ? [{id:1,sort_name:'测试分类',sort_description:null,priority:0,article_count:0}]
         : url.pathname === '/api/v1/articles' ? { items: [], total: 0, page: 1, size: 12 }
-        : ['/api/v1/family', '/api/v1/notes', '/api/v1/tree-hole', '/api/v1/links'].includes(url.pathname) ? []
+        : ['/api/v1/family', '/api/v1/tree-hole', '/api/v1/links'].includes(url.pathname) ? []
         : { error: 'unauthorized' };
       await route.fulfill({ status: 'error' in payload ? 401 : 200, contentType: 'application/json', body: JSON.stringify(payload) });
       return;
@@ -27,22 +27,28 @@ try {
     const asset = url.pathname.startsWith('/assets/') || /\.(png|svg)$/.test(url.pathname);
     const target = asset ? path.join(dist, url.pathname) : path.join(dist, 'index.html');
     const contentType = target.endsWith('.js') ? 'application/javascript' : target.endsWith('.css') ? 'text/css' : target.endsWith('.woff2') ? 'font/woff2' : target.endsWith('.png') ? 'image/png' : target.endsWith('.svg') ? 'image/svg+xml' : 'text/html';
-    await route.fulfill({ status: 200, contentType, body: await readFile(target) });
+    try {
+      await route.fulfill({ status: 200, contentType, body: await readFile(target) });
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+      await route.fulfill({ status: 404, body: '' });
+    }
   });
   const homeHeading = process.env.XOCS_SMOKE_URL ? '相信记录的力量' : '测试站点';
-  for (const [route, heading] of [['/', homeHeading], ['/search', '搜索文章'], ['/sort', '文章分类'], ['/weiYan', '微言'], ['/jotting', 'xocs'], ['/menory', 'xocs'], ['/favorite', '百宝箱'], ['/friend', '友人帐'], ['/music', '音乐盒'], ['/travel', '时光相册'], ['/love', '这是我们一起走过的'], ['/message', '弹幕']]) {
+  for (const [route, heading] of [['/', homeHeading], ['/search', '搜索文章'], ['/sort', '文章分类'], ['/weiYan', '微言'], ['/jotting', 'xocs'], ['/menory', 'xocs'], ['/favorite', '百宝箱'], ['/friend', '百宝箱'], ['/music', '百宝箱'], ['/travel', '时光相册'], ['/love', '这是我们一起走过的'], ['/message', '弹幕']]) {
     await page.goto(`${base}${route}`);
     await page.getByRole('heading', { name: heading }).first().waitFor();
     console.log(`${route}: rendered`);
   }
   if (!process.env.XOCS_SMOKE_URL) {
     await page.goto(`${base}/`);
-    await page.locator('.public-sort-menu').filter({hasText:'记录'}).locator('summary').click();
-    await page.getByRole('link', {name: '测试分类 0'}).click();
+    await page.locator('.aside-categories a[href="/sort?sort_id=1"]').click();
     await page.getByRole('heading', {name: '测试分类'}).first().waitFor();
   }
   await page.goto(`${base}/love`);
-  await page.locator('.love-tabs').getByRole('button', {name: /表白墙/}).click();
+  await expect(page.locator('.love-tabs button')).toHaveCount(3);
+  await expect(page.locator('.love-story-picker, .family-grid, .family-apply-dialog')).toHaveCount(0);
+  await page.locator('.love-tabs').getByRole('button', {name: /点点滴滴/}).click();
   await page.goto(`${base}/letter`);
   await page.getByRole('button', { name: '打开信封' }).click();
   await page.getByRole('heading', { name: 'To Ming' }).waitFor();

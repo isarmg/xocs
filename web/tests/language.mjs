@@ -7,7 +7,7 @@ import { authored, mockApi, schemaPrefixes, summary } from './browser-fixtures.m
 const routes = [
   ['/', 'Believe in the power of stories'], ['/search', 'Search articles'], ['/sort', 'Article categories'],
   ['/weiYan', 'Posts'], ['/jotting', 'xocs'], ['/menory', 'xocs'], ['/favorite', 'Toolbox'],
-  ['/friend', 'Friends'], ['/music', 'Music player'], ['/travel', 'Photo album'], ['/love', 'Our journey together'],
+  ['/friend', 'Toolbox'], ['/music', 'Toolbox'], ['/travel', 'Photo album'], ['/love', 'Our journey together'],
   ['/message', 'Message wall'], ['/about', 'About'], ['/letter', 'To Ming'],
   ['/article/1', summary.article_title],
   ...[['dashboard','Overview'],['articles','Articles'],['categories','Categories'],['labels','Tags'],['comments','Comments'],
@@ -82,11 +82,9 @@ try {
       const restrictedPage = await restricted.newPage(), restrictedState = { authenticated: false };
       await mockApi(restrictedPage, restrictedState);
       await restrictedPage.goto(base + '/?lang=zh-CN');
-      await restrictedPage.locator('.public-home-link').hover();
-      await expect(restrictedPage.locator('.public-home-menu > div')).toBeVisible();
-      await restrictedPage.locator('a[href="/search"]').first().click();
-      await expect(restrictedPage).toHaveURL(/lang=zh-CN/);
-      await expect(restrictedPage.getByRole('heading', { name: '搜索文章', exact: true })).toBeVisible();
+      await restrictedPage.locator('.public-header nav > a[href="/sort"]').click();
+      await expect(restrictedPage).toHaveURL(/\/sort\?lang=zh-CN/);
+      await expect(restrictedPage.getByRole('heading', { name: '文章分类', exact: true })).toBeVisible();
       await restrictedPage.goto(base + '/admin?lang=zh-CN');
       await restrictedPage.getByLabel('用户名', { exact: true }).fill('admin');
       await restrictedPage.getByLabel('密码', { exact: true }).fill('valid-password');

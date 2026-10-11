@@ -14,9 +14,11 @@ pub(super) struct Family {
     countdown_title: Option<String>,
     countdown_time: Option<String>,
     family_info: Option<String>,
-    like_count: i64,
 }
 pub(super) async fn family(State(state): State<AppState>) -> ApiResult<Vec<Family>> {
-    Ok(Json(sqlx::query_as::<_,Family>("SELECT id,bg_cover,man_cover,woman_cover,man_name,woman_name,timing,countdown_title,countdown_time,family_info,like_count FROM family WHERE status=1 ORDER BY id DESC LIMIT 20")
-        .fetch_all(&state.pool).await.map_err(db_error)?))
+    let author = crate::site_author_id(&state.pool).await?;
+    // Choose the owner's current home before checking visibility, so hiding it
+    // cannot reveal an older story from a previous version of the site.
+    Ok(Json(sqlx::query_as::<_,Family>("SELECT id,bg_cover,man_cover,woman_cover,man_name,woman_name,timing,countdown_title,countdown_time,family_info FROM family WHERE user_id=? AND id=(SELECT MAX(id) FROM family WHERE user_id=?) AND status=1")
+        .bind(author).bind(author).fetch_all(&state.pool).await.map_err(db_error)?))
 }

@@ -212,14 +212,11 @@ struct Site {
     footer: Option<String>,
     background_image: Option<String>,
     avatar: Option<String>,
-    random_avatar: Option<String>,
-    random_name: Option<String>,
     random_cover: Option<String>,
-    waifu_json: Option<String>,
 }
 async fn site(State(state): State<AppState>) -> ApiResult<Site> {
-    Ok(Json(sqlx::query_as::<_,Site>("SELECT web_name,web_title,notices,footer,background_image,avatar,random_avatar,random_name,random_cover,waifu_json FROM web_info ORDER BY id LIMIT 1")
-        .fetch_optional(&state.pool).await.map_err(db_error)?.unwrap_or(Site{web_name:None,web_title:None,notices:None,footer:None,background_image:None,avatar:None,random_avatar:None,random_name:None,random_cover:None,waifu_json:None})))
+    Ok(Json(sqlx::query_as::<_,Site>("SELECT web_name,web_title,notices,footer,background_image,avatar,random_cover FROM web_info ORDER BY id LIMIT 1")
+        .fetch_optional(&state.pool).await.map_err(db_error)?.unwrap_or(Site{web_name:None,web_title:None,notices:None,footer:None,background_image:None,avatar:None,random_cover:None})))
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -230,10 +227,7 @@ struct SiteInput {
     footer: Option<String>,
     background_image: Option<String>,
     avatar: Option<String>,
-    random_avatar: Option<String>,
-    random_name: Option<String>,
     random_cover: Option<String>,
-    waifu_json: Option<String>,
 }
 async fn update_site(
     State(state): State<AppState>,
@@ -246,15 +240,9 @@ async fn update_site(
             .as_deref()
             .is_some_and(|v| v.chars().count() > 200)
         || input.footer.as_deref().is_some_and(|v| v.len() > 4096)
-        || [
-            &input.notices,
-            &input.random_avatar,
-            &input.random_name,
-            &input.random_cover,
-            &input.waifu_json,
-        ]
-        .iter()
-        .any(|item| item.as_deref().is_some_and(|v| v.len() > 16384))
+        || [&input.notices, &input.random_cover]
+            .iter()
+            .any(|item| item.as_deref().is_some_and(|v| v.len() > 16384))
     {
         return Err(invalid("站点信息无效"));
     }
@@ -263,12 +251,12 @@ async fn update_site(
         .await
         .map_err(db_error)?;
     if let Some(id) = id {
-        sqlx::query("UPDATE web_info SET web_name=?,web_title=?,notices=?,footer=?,background_image=?,avatar=?,random_avatar=?,random_name=?,random_cover=?,waifu_json=? WHERE id=?")
-            .bind(input.web_name).bind(input.web_title).bind(input.notices).bind(input.footer).bind(input.background_image).bind(input.avatar).bind(input.random_avatar).bind(input.random_name).bind(input.random_cover).bind(input.waifu_json).bind(id)
+        sqlx::query("UPDATE web_info SET web_name=?,web_title=?,notices=?,footer=?,background_image=?,avatar=?,random_cover=? WHERE id=?")
+            .bind(input.web_name).bind(input.web_title).bind(input.notices).bind(input.footer).bind(input.background_image).bind(input.avatar).bind(input.random_cover).bind(id)
             .execute(&state.pool).await.map_err(db_error)?;
     } else {
-        sqlx::query("INSERT INTO web_info(web_name,web_title,notices,footer,background_image,avatar,random_avatar,random_name,random_cover,waifu_json,status) VALUES(?,?,?,?,?,?,?,?,?,?,1)")
-            .bind(input.web_name).bind(input.web_title).bind(input.notices).bind(input.footer).bind(input.background_image).bind(input.avatar).bind(input.random_avatar).bind(input.random_name).bind(input.random_cover).bind(input.waifu_json)
+        sqlx::query("INSERT INTO web_info(web_name,web_title,notices,footer,background_image,avatar,random_cover,status) VALUES(?,?,?,?,?,?,?,1)")
+            .bind(input.web_name).bind(input.web_title).bind(input.notices).bind(input.footer).bind(input.background_image).bind(input.avatar).bind(input.random_cover)
             .execute(&state.pool).await.map_err(db_error)?;
     }
     site(State(state)).await
@@ -773,11 +761,15 @@ struct Family {
     status: Option<i64>,
 }
 const FAMILY_SQL: &str = "SELECT id,bg_cover,man_cover,woman_cover,man_name,woman_name,timing,countdown_title,countdown_time,family_info,status FROM family";
+const CURRENT_FAMILY: &str = "user_id=? AND id=(SELECT MAX(id) FROM family WHERE user_id=?)";
 async fn content_family(State(state): State<AppState>) -> ApiResult<Vec<Family>> {
+    let author = crate::site_author_id(&state.pool).await?;
     Ok(Json(
         sqlx::query_as::<_, Family>(sqlx::AssertSqlSafe(format!(
-            "{FAMILY_SQL} ORDER BY id DESC LIMIT 100"
+            "{FAMILY_SQL} WHERE {CURRENT_FAMILY}"
         )))
+        .bind(author)
+        .bind(author)
         .fetch_all(&state.pool)
         .await
         .map_err(db_error)?,
@@ -830,13 +822,18 @@ fn validate_family(input: &FamilyInput) -> Result<(), AppError> {
     Ok(())
 }
 async fn load_family(state: &AppState, id: i64) -> ApiResult<Family> {
+    let author = crate::site_author_id(&state.pool).await?;
     Ok(Json(
-        sqlx::query_as::<_, Family>(sqlx::AssertSqlSafe(format!("{FAMILY_SQL} WHERE id=?")))
-            .bind(id)
-            .fetch_optional(&state.pool)
-            .await
-            .map_err(db_error)?
-            .ok_or_else(absent)?,
+        sqlx::query_as::<_, Family>(sqlx::AssertSqlSafe(format!(
+            "{FAMILY_SQL} WHERE id=? AND {CURRENT_FAMILY}"
+        )))
+        .bind(id)
+        .bind(author)
+        .bind(author)
+        .fetch_optional(&state.pool)
+        .await
+        .map_err(db_error)?
+        .ok_or_else(absent)?,
     ))
 }
 async fn create_family(
@@ -845,11 +842,25 @@ async fn create_family(
 ) -> ApiResult<Family> {
     validate_family(&input)?;
     let author = crate::site_author_id(&state.pool).await?;
+    let mut transaction = state
+        .pool
+        .begin_with("BEGIN IMMEDIATE")
+        .await
+        .map_err(db_error)?;
+    let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM family WHERE user_id=?)")
+        .bind(author)
+        .fetch_one(&mut *transaction)
+        .await
+        .map_err(db_error)?;
+    if exists {
+        return Err(AppError(StatusCode::CONFLICT, "家已创建，请编辑现有资料"));
+    }
     let id=sqlx::query("INSERT INTO family(user_id,bg_cover,man_cover,woman_cover,man_name,woman_name,timing,countdown_title,countdown_time,family_info,status) VALUES(?,?,?,?,?,?,?,?,?,?,?)")
         .bind(author)
         .bind(input.bg_cover).bind(input.man_cover).bind(input.woman_cover).bind(input.man_name).bind(input.woman_name).bind(input.timing)
         .bind(input.countdown_title).bind(input.countdown_time).bind(input.family_info).bind(i64::from(input.status))
-        .execute(&state.pool).await.map_err(db_error)?.last_insert_rowid();
+        .execute(&mut *transaction).await.map_err(db_error)?.last_insert_rowid();
+    transaction.commit().await.map_err(db_error)?;
     load_family(&state, id).await
 }
 async fn update_family(
@@ -858,9 +869,10 @@ async fn update_family(
     crate::ContractJson(input): crate::ContractJson<FamilyInput>,
 ) -> ApiResult<Family> {
     validate_family(&input)?;
-    let changed=sqlx::query("UPDATE family SET bg_cover=?,man_cover=?,woman_cover=?,man_name=?,woman_name=?,timing=?,countdown_title=?,countdown_time=?,family_info=?,status=?,update_time=CURRENT_TIMESTAMP WHERE id=?")
+    let author = crate::site_author_id(&state.pool).await?;
+    let changed=sqlx::query(sqlx::AssertSqlSafe(format!("UPDATE family SET bg_cover=?,man_cover=?,woman_cover=?,man_name=?,woman_name=?,timing=?,countdown_title=?,countdown_time=?,family_info=?,status=?,update_time=CURRENT_TIMESTAMP WHERE id=? AND {CURRENT_FAMILY}")))
         .bind(input.bg_cover).bind(input.man_cover).bind(input.woman_cover).bind(input.man_name).bind(input.woman_name).bind(input.timing)
-        .bind(input.countdown_title).bind(input.countdown_time).bind(input.family_info).bind(i64::from(input.status)).bind(id)
+        .bind(input.countdown_title).bind(input.countdown_time).bind(input.family_info).bind(i64::from(input.status)).bind(id).bind(author).bind(author)
         .execute(&state.pool).await.map_err(db_error)?;
     if changed.rows_affected() == 0 {
         return Err(absent());
@@ -871,13 +883,30 @@ async fn delete_family(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> ApiResult<serde_json::Value> {
-    let changed = sqlx::query("DELETE FROM family WHERE id=?")
-        .bind(id)
-        .execute(&state.pool)
+    let author = crate::site_author_id(&state.pool).await?;
+    let mut transaction = state
+        .pool
+        .begin_with("BEGIN IMMEDIATE")
         .await
         .map_err(db_error)?;
+    let changed = sqlx::query(sqlx::AssertSqlSafe(format!(
+        "DELETE FROM family WHERE id=? AND {CURRENT_FAMILY}"
+    )))
+    .bind(id)
+    .bind(author)
+    .bind(author)
+    .execute(&mut *transaction)
+    .await
+    .map_err(db_error)?;
     if changed.rows_affected() == 0 {
         return Err(absent());
     }
+    // Retain legacy stories without making one of them the replacement home.
+    sqlx::query("UPDATE family SET user_id=NULL WHERE user_id=?")
+        .bind(author)
+        .execute(&mut *transaction)
+        .await
+        .map_err(db_error)?;
+    transaction.commit().await.map_err(db_error)?;
     Ok(Json(serde_json::json!({"deleted":true})))
 }

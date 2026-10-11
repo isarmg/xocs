@@ -1,9 +1,8 @@
-import { isCategories, isSiteInfo } from './public-contracts';
+import { isSiteInfo } from './public-contracts';
 import { t } from '@xcss/web/admin-ui/i18n';
 import {useEffect, useMemo, useState, type ReactNode} from 'react';
-import {request, type Category, type SiteInfo} from './api';
+import {request, type SiteInfo} from './api';
 import {LanguageControl, clearValidation, localizeValidation} from './language';
-import {HomeMenu} from './HomeMenu';
 
 const links = [
   ['🏡', t("首页", "Home"), '/'],
@@ -42,7 +41,6 @@ export function PublicChrome({site, title, home = false, cover, articleMeta, pla
   const [headerHidden, setHeaderHidden] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [dark, setDark] = useState(() => { try { return window.localStorage.getItem('xocs-theme') === 'dark'; } catch { return false; } });
-  const [categories,setCategories]=useState<Category[]>([]);
   useEffect(() => {
     if (site !== undefined) return;
     const controller = new AbortController();
@@ -67,16 +65,14 @@ export function PublicChrome({site, title, home = false, cover, articleMeta, pla
       if (distance < 8) return;
       distance = 0;
       setHeaderHidden(direction > 0);
-      if (direction > 0) document.querySelectorAll<HTMLDetailsElement>('.original-public .public-header details[open]').forEach(item => { item.open = false; });
     };
     const schedule = () => { if (!frame) frame = window.requestAnimationFrame(update); };
     update();
     window.addEventListener('scroll', schedule, {passive: true});
     return () => { window.removeEventListener('scroll', schedule); window.cancelAnimationFrame(frame); };
   }, [menuOpen]);
-  useEffect(()=>{void request('/api/v1/categories', isCategories).then(setCategories).catch(()=>{});},[]);
   useEffect(() => {
-    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') { setMenuOpen(false); document.querySelectorAll<HTMLDetailsElement>('.original-public .public-header details[open]').forEach(item => { item.open = false; }); } };
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') { setMenuOpen(false); } };
     window.addEventListener('keydown', close);
     return () => window.removeEventListener('keydown', close);
   }, []);
@@ -93,8 +89,8 @@ export function PublicChrome({site, title, home = false, cover, articleMeta, pla
   const fallbackCover=useMemo(()=>randomCover(info?.random_cover),[info?.random_cover]);
   return <div onInvalidCapture={localizeValidation} onInputCapture={clearValidation} onChangeCapture={clearValidation} className={`public-site original-public page-${window.location.pathname.slice(1).replace(/[^a-zA-Z0-9_-]/g,'') || 'home'}${dark ? ' theme-dark' : ''}`}>
     <header className={`public-header${scrolled || menuOpen || plainHeader ? ' entered' : ''}${plainHeader ? ' plain-header' : ''}${headerHidden && !menuOpen ? ' header-hidden' : ''}`}>
-      <a className="brand" href="/" aria-label={t("{0} 首页", "{0} home", [info?.web_name || 'xocs'])}><img src="/live/xocs-logo.png" alt={info?.web_name || 'xocs'}/></a>
-      <nav className={menuOpen ? 'open' : ''} aria-label={t("主导航", "Main navigation")}><span className="public-mobile-title">{t("欢迎光临", "Welcome")}</span>{links.map(([icon, label, href]) => href==='/sort'?<details key={href} className="public-sort-menu"><summary><span aria-hidden="true">{icon}</span> {label}</summary><div><a href="/sort">{t("全部文章", "All articles")}</a>{categories.map(category=><a href={`/sort?sort_id=${category.id}`} key={category.id}>{category.sort_name}<small>{category.article_count}</small></a>)}</div></details>:href==='/favorite'?<details key={href} className="public-sort-menu"><summary><span aria-hidden="true">{icon}</span> {label}</summary><div><a href="/music">{t("🎵 音乐", "🎵 Music")}</a><a href="/favorite?tab=favorites">{t("📁 收藏夹", "📁 Favorites")}</a><a href="/friend">{t("🔗 友链", "🔗 Friend links")}</a></div></details>:href==='/'?<HomeMenu key={href} headerHidden={headerHidden} menuOpen={menuOpen}/>:<a key={href} href={href} aria-current={window.location.pathname === href ? 'page' : undefined}><span aria-hidden="true">{icon}</span> {label}</a>)}</nav>
+      <a className="brand" href="/" aria-label={t("xocs 首页", "xocs home")}>xocs</a>
+      <nav className={menuOpen ? 'open' : ''} aria-label={t("主导航", "Main navigation")}><span className="public-mobile-title">{t("欢迎光临", "Welcome")}</span>{links.map(([icon, label, href]) => <a key={href} href={href} aria-current={window.location.pathname === href ? 'page' : undefined}><span aria-hidden="true">{icon}</span> {label}</a>)}</nav>
       {displayControls}
       <button className="public-menu-toggle" type="button" aria-label={menuOpen ? t("关闭导航", "Close navigation") : t("打开导航", "Open navigation")} aria-expanded={menuOpen} onClick={() => setMenuOpen(value => !value)}>{menuOpen ? '✕' : '☰'}</button>
     </header>

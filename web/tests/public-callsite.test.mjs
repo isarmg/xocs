@@ -8,6 +8,8 @@ const reexport = path => `export * from ${JSON.stringify(new URL(path, import.me
 const boundaries = {
   './api': reexport('../src/api.ts'),
   './public-contracts': reexport('../src/public-contracts.ts'),
+  './SlidingTitle': 'export const SlidingTitle=({text})=>text;',
+  './ReferencePetals': 'export const ReferencePetals=()=>null;',
   './PublicChrome': 'export const PublicChrome=({children})=>children;',
   './PublicComments': 'export const PublicComments=()=>null;',
   './MediaPreview': 'export const ImageLightbox=()=>null; export const safeImageUrl=value=>value;',

@@ -30,6 +30,17 @@ curl -fsS -c "$smoke_dir/cookies" -o "$smoke_dir/login.json" \
   --data '{"username":"admin","password":"TemporaryPassphrase123"}' \
   http://127.0.0.1:18881/api/v1/auth/login
 csrf=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["csrf_token"])' < "$smoke_dir/login.json")
+test "$(curl -s -o "$smoke_dir/site.json" -w '%{http_code}' -X PUT -b "$smoke_dir/cookies" \
+  -H 'Origin: http://127.0.0.1:18881' -H 'Sec-Fetch-Site: same-origin' -H "X-CSRF-Token: $csrf" -H 'Content-Type: application/json' \
+  --data '{"web_name":"Smoke site","web_title":null,"notices":null,"footer":null,"background_image":null,"avatar":null,"random_cover":null}' \
+  http://127.0.0.1:18881/api/v1/content/site)" = 200
+python3 - "$smoke_dir/site.json" <<'PY'
+import json, sys
+with open(sys.argv[1]) as stream:
+    site = json.load(stream)
+assert set(site) == {'web_name', 'web_title', 'notices', 'footer', 'background_image', 'avatar', 'random_cover'}
+assert site['web_name'] == 'Smoke site'
+PY
 test "$(curl -s -o /dev/null -w '%{http_code}' -b "$smoke_dir/cookies" \
   -H 'Origin: http://127.0.0.1:18881' -H 'Sec-Fetch-Site: same-origin' -H "X-CSRF-Token: $csrf" -H 'Content-Type: application/json' \
   --data '{"name":"Smoke"}' http://127.0.0.1:18881/api/v1/content/categories)" = 200
@@ -80,7 +91,7 @@ printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwM
 test "$(curl -s -o /dev/null -w '%{http_code}' -b "$smoke_dir/cookies" \
   -H 'Origin: http://127.0.0.1:18881' -H 'Sec-Fetch-Site: same-origin' -H "X-CSRF-Token: $csrf" -H 'Content-Type: image/png' \
   --data-binary @"$smoke_dir/image.png" http://127.0.0.1:18881/api/v1/content/upload)" = 200
-for retired in members/register members/login members/session family/submissions im/friends; do
+for retired in members/register members/login members/session family/submissions im/friends resources friends notes; do
   test "$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:18881/api/v1/$retired")" = 404
 done
 for page in im user socket; do

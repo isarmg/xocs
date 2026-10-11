@@ -9,6 +9,8 @@ import {PublicChrome} from './PublicChrome';
 import {PublicComments} from './PublicComments';
 import {PhotoGrid} from './PhotoGallery';
 import {LovePage} from './LovePage';
+import {SlidingTitle} from './SlidingTitle';
+import {ReferencePetals} from './ReferencePetals';
 
 function safeHttpUrl(value:string|null){if(!value)return null;try{const parsed=new URL(value,window.location.origin);return ['http:','https:'].includes(parsed.protocol)?parsed.href:null;}catch{return null;}}
 
@@ -20,7 +22,18 @@ function JourneyPage(){
   const [page,setPage]=useState(1);
   const data=useBrowseData(`/api/v1/articles?page=${page}&size=20`,isArticlePage,t("游记加载失败", "Unable to load travels"));
   const result=data.value,error=data.error;
-  return <PublicChrome title="xocs" cover="/live/xocs-current-menory.jpg"><div className="journey-page"><header><strong>{t("时间线", "Timeline")}</strong><small>{t("灵魂在路上", "The soul is walking")}</small></header>{error&&<p role="alert">{error} <button type="button" onClick={data.retry}>{t("重试", "Try again")}</button></p>}{data.busy&&<p role="status">{t("正在加载文章…", "Loading articles…")}</p>}<div className="journey-grid">{result?.items.map((item,index)=><a href={`/article/${item.id}`} className="journey-item" key={item.id}><span className="journey-image">{safeHttpUrl(item.article_cover)?<img src={safeHttpUrl(item.article_cover)||''} alt="" loading="lazy"/>:<span>xocs</span>}</span><strong>{item.article_title}</strong><small>{item.create_time?.slice(0,16)||t("最近", "Recently")} <span>{result.total-index-(page-1)*20}</span></small></a>)}</div>{result?.items.length===0&&<p className="journey-empty">{t("时光里的故事，正在路上。", "More stories are on their way.")}</p>}{result&&result.total>20&&<div className="pager"><button disabled={page<=1} onClick={()=>setPage(page-1)}>{t("上一页", "Previous page")}</button><span>{t("第 {0} 页", "Page {0}", [page])}</span><button disabled={page*20>=result.total} onClick={()=>setPage(page+1)}>{t("下一页", "Next page")}</button></div>}</div></PublicChrome>;
+  return <PublicChrome title="xocs" cover="/live/xocs-current-menory.jpg"><ReferencePetals/><div className="journey-page">
+    <header><strong>{t("时间线", "Timeline")}</strong><small>{t("灵魂在路上", "The soul is walking")}</small></header>
+    {error&&<p role="alert">{error} <button type="button" onClick={data.retry}>{t("重试", "Try again")}</button></p>}{data.busy&&<p role="status">{t("正在加载文章…", "Loading articles…")}</p>}
+    <div className="journey-grid">{result?.items.map((item,index)=>{
+      const row=Math.floor(index/5),reverse=row%2===1,turn=index%5===4,more=index<result.items.length-1;
+      return <a href={`/article/${item.id}`} className={`journey-item${reverse?' journey-reverse':''}`} key={item.id} style={{gridColumn:reverse?5-index%5:index%5+1,gridRow:row+1}}>
+        <span className="journey-image"><span className="journey-picture">{safeHttpUrl(item.article_cover)?<img src={safeHttpUrl(item.article_cover)||''} alt="" loading="lazy"/>:<span>xocs</span>}</span>{more&&<span className={`journey-connector${turn?' journey-turn':''}`} aria-hidden="true"/>}</span>
+        <strong><SlidingTitle text={item.article_title}/></strong><small><time dateTime={item.create_time||undefined}>{item.create_time?.slice(0,16)||t("最近", "Recently")}</time><span>{result.total-index-(page-1)*20}</span></small>
+      </a>;
+    })}</div>
+    {result?.items.length===0&&<p className="journey-empty">{t("时光里的故事，正在路上。", "More stories are on their way.")}</p>}{result&&result.total>20&&<div className="pager"><button disabled={page<=1} onClick={()=>setPage(page-1)}>{t("上一页", "Previous page")}</button><span>{t("第 {0} 页", "Page {0}", [page])}</span><button disabled={page*20>=result.total} onClick={()=>setPage(page+1)}>{t("下一页", "Next page")}</button></div>}
+  </div></PublicChrome>;
 }
 
 function Wall(){
@@ -70,15 +83,43 @@ function TravelPage(){
 }
 
 
-function Favorites({friendOnly=false}:{friendOnly?:boolean}){
-  const [tab,setTab]=useState<'friends'|'music'|'favorites'>(friendOnly?'friends':new URLSearchParams(window.location.search).get('tab')==='favorites'?'favorites':'friends');
+type ToolboxTab = 'friends' | 'music' | 'favorites';
+
+function toolboxTab(): ToolboxTab {
+  if (window.location.pathname === '/friend') return 'friends';
+  if (window.location.pathname === '/music') return 'music';
+  const tab = new URLSearchParams(window.location.search).get('tab');
+  return tab === 'friends' || tab === 'music' ? tab : 'favorites';
+}
+
+function Toolbox(){
+  const [tab,setTab]=useState<ToolboxTab>(toolboxTab);
   const [items,setItems]=useState<Link[]>([]);const [friends,setFriends]=useState<Link[]>([]);const [error,setError]=useState('');
   const [site,setSite]=useState<SiteInfo|null>(null);
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.pathname === '/friend' || url.pathname === '/music') {
+      url.searchParams.set('tab', toolboxTab());
+      url.pathname = '/favorite';
+      window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+    }
+    const restore = () => setTab(toolboxTab());
+    window.addEventListener('popstate', restore);
+    return () => window.removeEventListener('popstate', restore);
+  }, []);
+  function selectTab(next: ToolboxTab) {
+    if (next === tab) return;
+    const url = new URL(window.location.href);
+    url.pathname = '/favorite';
+    url.searchParams.set('tab', next);
+    window.history.pushState(null, '', url.pathname + url.search + url.hash);
+    setTab(next);
+  }
   useEffect(()=>{void request('/api/v1/links?kind=favorites', isLinks).then(setItems).catch(()=>setError(t("收藏内容加载失败", "Unable to load favorites")));void request('/api/v1/links?kind=friendUrl', isLinks).then(setFriends).catch(()=>setError(t("友链加载失败", "Unable to load friend links")));void request('/api/v1/site', isSiteInfo).then(setSite).catch(()=>{});},[]);
   const groups=items.reduce<Record<string,Link[]>>((result,item)=>{const name=item.classify||t("我的收藏", "My favorites");(result[name]??=[]).push(item);return result;},{});
   const friendGroups=friends.reduce<Record<string,Link[]>>((result,item)=>{const name=item.classify||t("🥇友情链接", "🥇 Friend links");(result[name]??=[]).push(item);return result;},{});
-  return <PublicChrome plainHeader title={friendOnly?t("友人帐", "Friends"):t("百宝箱", "Toolbox")}><div className="favorite-page">
-    <section className="favorite-banner"><video autoPlay muted loop playsInline preload="metadata" poster="/legacy/backgroundPicture.jpg" src="/legacy/backgroundVideo.mp4"/><div className="favorite-banner-overlay"><small>{t("记录", "Articles")}</small><h1>{friendOnly?t("友人帐", "Friends"):t("百宝箱", "Toolbox")}</h1><div className="favorite-feature-links"><button className={tab==='friends'?'active':''} onClick={()=>setTab('friends')}><strong>{t("友人帐", "Friends")}</strong><span>{t("看看朋友们的网站", "Explore our friends’ websites")}</span></button><button className={tab==='music'?'active':''} onClick={()=>setTab('music')}><strong>{t("曲乐", "Music")}</strong><span>{t("一曲肝肠断，天涯何处觅知音", "Music brings kindred spirits together")}</span></button><button className={tab==='favorites'?'active':''} onClick={()=>setTab('favorites')}><strong>{t("收藏夹", "Favorites")}</strong><span>{t("将本网站添加到您的收藏夹吧", "Add this site to your favorites")}</span></button></div></div></section>
+  return <PublicChrome plainHeader title={t("百宝箱", "Toolbox")}><div className="favorite-page">
+    <section className="favorite-banner"><video autoPlay muted loop playsInline preload="metadata" poster="/legacy/backgroundPicture.jpg" src="/legacy/backgroundVideo.mp4"/><div className="favorite-banner-overlay"><small>{t("记录", "Articles")}</small><h1>{t("百宝箱", "Toolbox")}</h1><div className="favorite-feature-links"><button className={tab==='favorites'?'active':''} aria-pressed={tab==='favorites'} onClick={()=>selectTab('favorites')}><strong>{t("收藏夹", "Favorites")}</strong><span>{t("将本网站添加到您的收藏夹吧", "Add this site to your favorites")}</span></button><button className={tab==='music'?'active':''} aria-pressed={tab==='music'} onClick={()=>selectTab('music')}><strong>{t("音乐", "Music")}</strong><span>{t("一曲肝肠断，天涯何处觅知音", "Music brings kindred spirits together")}</span></button><button className={tab==='friends'?'active':''} aria-pressed={tab==='friends'} onClick={()=>selectTab('friends')}><strong>{t("友人帐", "Friends")}</strong><span>{t("看看朋友们的网站", "Explore our friends’ websites")}</span></button></div></div></section>
     <div className="favorite-groups">{error&&<p role="alert">{error}</p>}
       {tab==='friends'&&<div className="friend-page">
         <section className="friend-site-info"><h2>{t("🌸 本站信息", "🌸 Site information")}</h2><div><p><b>{t("网站名称", "Site name")}</b><span>{site?.web_name||'xocs'}</span></p><p><b>{t("网址", "URL")}</b><a href={window.location.origin}>{window.location.origin}</a></p>{site?.avatar&&<p><b>{t("头像", "Avatar")}</b><a href={site.avatar} target="_blank" rel="noopener noreferrer">{t("查看头像", "View avatar")}</a></p>}<p><b>{t("描述", "Description")}</b><span>{site?.web_title||t("有诗意地记录生活", "Record life through poetry")}</span></p></div></section>
@@ -92,9 +133,6 @@ function Favorites({friendOnly=false}:{friendOnly?:boolean}){
 
 function FavoriteGroup({name,items}:{name:string;items:Link[]}){return <section className="favorite-link-group"><h2>{name}</h2><div className="favorite-link-grid">{items.map(item=>{const href=safeHttpUrl(item.url);const cover=safeHttpUrl(item.cover);return <a key={item.id} className="favorite-link-card" href={href||undefined} target={href?'_blank':undefined} rel="noopener noreferrer">{cover?<img src={cover} alt="" loading="lazy"/>:<span className="favorite-link-placeholder"/>}<span><strong>{item.title||t("未命名", "Untitled")}</strong><small>{item.introduction||''}</small></span></a>;})}</div>{items.length===0&&<p className="favorite-group-empty">{t("这里还没有友链。", "No friend links yet.")}</p>}</section>;}
 
-function MusicPage(){
-  return <Shell title={t("音乐盒", "Music player")}><MusicBody/></Shell>;
-}
 function MusicBody(){
   const [items,setItems]=useState<Link[]>([]);const [selected,setSelected]=useState(0);
   useEffect(()=>{void request('/api/v1/links?kind=funny', isLinks).then(setItems).catch(()=>{});},[]);
@@ -166,4 +204,4 @@ function About(){
 
 function LetterPage(){const [open,setOpen]=useState(false);return <PublicChrome plainHeader title={t("信笺", "Letter")}><div className="letter-page"><div className="letter-sakura" aria-hidden="true">✿　❀　✿　❀　✿</div><div className={`letter-envelope${open?' opened':''}`}><div className="letter-envelope-front"><span>To&nbsp; Ming</span><button type="button" onClick={()=>setOpen(true)}>{t("打开信封", "Open letter")}</button></div><div className="letter-paper"><h1>To Ming</h1><p>{t("夜にはいつも寒いよね、でも、手を繋いでいると、暖かくなるよ！", "Cold nights feel warmer when we hold hands.")}</p><p>{t("どんなに寒い夜も、君と二人でいれば、ちっとも寒くない！", "No night feels cold when we are together.")}</p><strong>Hao</strong><button type="button" onClick={()=>setOpen(false)}>{t("合上信封", "Close letter")}</button></div></div></div></PublicChrome>;}
 
-export function PublicExtras(){const path=window.location.pathname;switch(path){case '/weiYan':case '/jotting':return <Wall/>;case '/menory':return <JourneyPage/>;case '/message':return <MessagePage/>;case '/favorite':return <Favorites/>;case '/friend':return <Favorites friendOnly/>;case '/music':return <MusicPage/>;case '/travel':return <TravelPage/>;case '/love':return <LovePage/>;case '/sort':return <Categories/>;case '/search':return <SearchPage/>;case '/about':return <About/>;case '/letter':return <LetterPage/>;default:return null;}}
+export function PublicExtras(){const path=window.location.pathname;switch(path){case '/weiYan':case '/jotting':return <Wall/>;case '/menory':return <JourneyPage/>;case '/message':return <MessagePage/>;case '/favorite':case '/friend':case '/music':return <Toolbox/>;case '/travel':return <TravelPage/>;case '/love':return <LovePage/>;case '/sort':return <Categories/>;case '/search':return <SearchPage/>;case '/about':return <About/>;case '/letter':return <LetterPage/>;default:return null;}}

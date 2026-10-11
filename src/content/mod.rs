@@ -63,9 +63,6 @@ pub fn public_routes() -> Router<AppState> {
             "/api/v1/love-comments/{id}/replies",
             get(comments::love_comment_replies),
         )
-        .route("/api/v1/resources", get(site::resources))
-        .route("/api/v1/friends", get(site::friends))
-        .route("/api/v1/notes", get(notes::notes))
         .route("/api/v1/notes/page", get(notes::note_page))
         .route("/api/v1/tree-hole", get(guestbook::tree_hole))
         .route(

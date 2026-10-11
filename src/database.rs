@@ -179,15 +179,12 @@ pub(crate) async fn validate_database(pool: &SqlitePool) -> anyhow::Result<()> {
             .await?;
     for table in [
         "user",
-        "member_sessions",
         "article",
         "comment",
         "comment_submission",
         "sort",
         "label",
         "resource",
-        "im_chat_user_message",
-        "im_chat_user_group_message",
         "_common_administrators",
         "_common_admin_sessions",
     ] {

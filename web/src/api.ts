@@ -44,7 +44,7 @@ export function publicErrorMessage(error: unknown, fallback = t("请求失败，
 export type Article = Omit<ArticleSummary, 'excerpt' | 'search_snippet'> & {user_id: number; article_content: string; video_url: string | null; username: string | null; sort_name: string | null; label_name: string | null; comment_status: number; password_required: number; tips: string | null; update_time: string | null};
 export type Category = {id: number; sort_name: string; sort_description: string | null; priority: number | null; article_count: number};
 export type PublicLabel = {id: number; sort_id: number; label_name: string; label_description: string | null; article_count: number};
-export type SiteInfo = {web_name: string | null; web_title: string | null; notices: string | null; footer: string | null; background_image: string | null; avatar: string | null; random_avatar: string | null; random_name: string | null; random_cover: string | null; waifu_json: string | null};
+export type SiteInfo = {web_name: string | null; web_title: string | null; notices: string | null; footer: string | null; background_image: string | null; avatar: string | null; random_cover: string | null};
 export type Page<T> = {items: T[]; total: number; page: number; size: number};
 export function articleExcerpt(value: string | null | undefined, limit = 115): string {
   if (!value) return '';

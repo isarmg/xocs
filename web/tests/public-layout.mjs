@@ -6,7 +6,6 @@ import { mockApi, summary } from './browser-fixtures.mjs';
 
 const families = [
   { id: 1, man_name: 'Lin', woman_name: 'Yu', timing: '2026-10-01', bg_cover: null, man_cover: null, woman_cover: null, family_info: 'We keep the little moments.\nOne photo and one story at a time.', countdown_title: 'A special day', countdown_time: '2026-10-08' },
-  { id: 2, man_name: 'Alex', woman_name: 'Sam', timing: '2026-09-01', bg_cover: null, man_cover: '/legacy/avatar.jpg', woman_cover: null, family_info: 'A different story, with the same wish to remember our days.', countdown_title: 'Our next trip', countdown_time: '2026-10-09' },
 ];
 const photos = Array.from({ length: 14 }, (_, index) => ({ id: index + 1, title: `Memory ${index + 1}`, classify: index === 13 ? 'City' : 'Beach', cover: '/live/xocs-current-hero.jpg', create_time: '2026-10-08', introduction: null, url: null, link_type: 'lovePhoto' }));
 const notes = Array.from({ length: 11 }, (_, index) => ({ id: index + 1, username: 'Lin', content: `Moment ${index + 1}: an ordinary day worth keeping.`, image_path: index === 0 ? '/legacy/avatar.jpg' : null, create_time: '2026-10-08', user_id: 1, is_public: 1, like_count: 0 }));
@@ -26,14 +25,18 @@ async function fixtures(page, state) {
     const query = new URL(route.request().url()).searchParams;
     return route.fulfill({ json: paged(state.empty ? [] : notes, Number(query.get('page') || 1), 10) });
   });
-  await page.route('**/api/v1/articles?*', route => route.fulfill({ json: paged(Array.from({ length: 6 }, (_, index) => ({ ...summary, id: index + 1, article_title: `A day worth keeping ${index + 1}`, article_cover: '/live/xocs-current-hero.jpg' })), 1, 12) }));
+  await page.route('**/api/v1/articles?*', route => {
+    const size = Number(new URL(route.request().url()).searchParams.get('size') || 12);
+    const items = Array.from({ length: size === 20 ? 15 : 6 }, (_, index) => ({ ...summary, id: index + 1, article_title: index === 0 ? 'A very long title, with all of its words visible as it slides across the card instead of wrapping onto a second line' : `A day worth keeping ${index + 1}`, article_cover: '/live/xocs-current-hero.jpg' }));
+    return route.fulfill({ json: paged(items, 1, size) });
+  });
 }
 async function widthCheck(page, wideSelector) {
   await page.evaluate(() => document.fonts.ready);
   const result = await page.evaluate(selector => ({ viewport: innerWidth, scroll: document.documentElement.scrollWidth,
     content: selector ? document.querySelector(selector)?.getBoundingClientRect().width : null }), wideSelector);
   assert.ok(result.scroll <= result.viewport, `${page.url()}: ${JSON.stringify(result)}`);
-  if (result.viewport >= 1440 && wideSelector) assert.ok(result.content >= Math.min(result.viewport, 1920) * .87, `${wideSelector} is too narrow: ${JSON.stringify(result)}`);
+  if (result.viewport >= 1440 && wideSelector) assert.ok(result.content >= Math.min(result.viewport, wideSelector === '.love-hero-inner' ? 1200 : wideSelector === '.love-content' ? 1600 : 1920) * .87, `${wideSelector} is too narrow: ${JSON.stringify(result)}`);
 }
 async function accessible(page) {
   const { violations } = await new AxeBuilder({ page }).include('.love-page').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
@@ -60,17 +63,34 @@ try {
           ['/menory', '.journey-page', '.journey-item:nth-child(6)'],
           ['/jotting', '.wall-layout', '.wall-card:nth-child(10)'],
           ['/travel', '.travel-page', '.travel-content .travel-photo-card:nth-child(12)'],
-          ['/favorite', '.favorite-page', '.friend-site-info span:text-is("XOCS")'],
+          ['/favorite', '.favorite-page', '.favorite-empty'],
           ['/article/1', '.reading-layout', '.article-markdown h2'],
           ['/love', '.love-content', '.love-content .travel-photo-card:nth-child(12)'],
         ]) {
           await page.goto(`${base}${path}?lang=en`);
           await page.locator(readySelector).waitFor({ state: 'visible', timeout: 30000 });
           await widthCheck(page, selector);
+          if (path === '/') {
+            await expect(page.locator('.article-card-excerpt')).toHaveCount(0);
+            await expect(page.locator('.article-card h3 .sliding-title').first()).toHaveClass(/is-overflowing/);
+            const height = await page.locator('.article-card h3').first().evaluate(node => ({ height: node.getBoundingClientRect().height, line: parseFloat(getComputedStyle(node).lineHeight) }));
+            assert.ok(Math.abs(height.height - height.line) < 2, 'Home title stays on one line');
+          }
+          if (path === '/menory') {
+            await expect(page.locator('.journey-item')).toHaveCount(15);
+            const geometry = await page.locator('.journey-grid').evaluate(grid => ({ columns: getComputedStyle(grid).gridTemplateColumns.split(' ').length, pictures: [...grid.querySelectorAll('.journey-image')].map(node => ({ ratio: node.clientWidth / node.clientHeight, fit: getComputedStyle(node.querySelector('img')).objectFit })), rows: [...grid.querySelectorAll('.journey-item')].map(node => node.getBoundingClientRect().top) }));
+            assert.equal(geometry.columns, width >= 1001 ? 5 : 2);
+            assert.ok(geometry.pictures.every(item => Math.abs(item.ratio - 1.5) < .02 && item.fit === 'cover'), 'Journey pictures fill 3:2 frames with uniform scaling');
+            if (width >= 1001) assert.equal(geometry.rows.filter(top => Math.abs(top - geometry.rows[0]) < 2).length, 5);
+          }
           assert.equal(await page.getByRole('alert').count(), 0, path);
         }
         await widthCheck(page, '.love-hero-inner');
-        await expect(page.locator('.love-clock strong').first()).toHaveText('7');
+        await expect(page.locator('.love-clock [data-unit=days] strong')).toHaveText('7');
+        await expect(page.locator('.love-clock [data-unit=years] strong')).toHaveText('0');
+        await expect(page.locator('.love-wave')).toBeVisible();
+        await expect(page.locator('.love-tab-icon')).toHaveCount(3);
+        await expect(page.getByRole('link', { name: 'A letter for you', exact: true })).toHaveAttribute('href', '/letter');
         await expect(page.locator('.love-countdown')).toContainText('Today is the day');
         await expect(page.locator('.love-story-card')).toContainText(families[0].family_info);
         await expect(page.locator('.travel-photo-card')).toHaveCount(12);
@@ -98,13 +118,12 @@ try {
         await page.getByRole('navigation', { name: 'Entry pages', exact: true }).getByRole('button', { name: 'Next page', exact: true }).click();
         await expect(page.locator('.love-moment-card')).toHaveCount(1);
         await expect(page.locator('.love-moments-grid')).toContainText('Moment 11');
-        await tabs.getByRole('button', { name: /^Love wall/ }).click();
-        await page.getByRole('button', { name: 'View the story of Alex and Sam', exact: true }).click();
-        await expect(page.locator('.love-pair')).toContainText('Alex');
-        await expect(page.locator('.love-story-card')).toContainText(families[1].family_info);
-        await expect(page.locator('.love-countdown')).toContainText('1 day to go');
-        await page.getByLabel('Choose a story', { exact: true }).selectOption('1');
+        await expect(tabs.getByRole('button')).toHaveCount(3);
+        await expect(page.locator('.love-story-picker, .family-grid')).toHaveCount(0);
+        await expect(page.getByRole('button', { name: /Love wall|Apply|Move in/ })).toHaveCount(0);
         await expect(page.locator('.love-pair')).toContainText('Lin');
+        await tabs.getByRole('button', { name: /^Photos/ }).click();
+        await expect(tabs.getByRole('button', { name: /^Photos/ })).toHaveAttribute('aria-pressed', 'true');
         await tabs.getByRole('button', { name: /^Wishes/ }).click();
         await expect(page.locator('.love-wishes').getByRole('heading', { name: /^Wishes/ })).toBeVisible();
         await expect(page.locator('.love-wishes').getByRole('button', { name: 'Post anonymous comment', exact: true })).toBeVisible();
@@ -130,12 +149,12 @@ try {
         await page.reload();
         await expect(page.getByRole('heading', { name: 'No photos in this collection yet', exact: true })).toBeVisible();
         await expect(page.locator('.love-timer')).toContainText('Start with your first memory');
-        await tabs.getByRole('button', { name: /^Love wall/ }).click();
-        await expect(page.getByRole('heading', { name: 'No stories on the love wall yet', exact: true })).toBeVisible();
+        await expect(tabs.getByRole('button')).toHaveCount(3);
+        await expect(page.locator('.love-story-card')).toContainText('Make a home for everyday moments');
         await widthCheck(page, '.love-content');
         assert.deepEqual(errors, []);
         await context.close();
-        console.log(`${engine.name()} ${width}px: wide layouts, photos, entries, stories, themes and empty states passed`);
+        console.log(`${engine.name()} ${width}px: wide layouts, photos, entries, private home, themes and empty states passed`);
       }
       const context = await browser.newContext({ locale: 'en', viewport: { width: 1280, height: 900 } }), page = await context.newPage(), state = { empty: false, failPhotos: true };
       await fixtures(page, state);
@@ -148,6 +167,26 @@ try {
       await expect(page.getByRole('alert')).toHaveCount(0);
       await context.close();
       console.log(`${engine.name()}: photo retry passed`);
+      const animated = await browser.newContext({ locale: 'en', viewport: { width: 1440, height: 900 }, reducedMotion: 'no-preference' });
+      const animatedPage = await animated.newPage();await fixtures(animatedPage, { empty: false, failPhotos: false });
+      for (const path of ['/', '/menory']) {
+        await animatedPage.goto(`${base}${path}?lang=en`);
+        const title = animatedPage.locator(path === '/' ? '.article-card .sliding-title.is-overflowing' : '.journey-item .sliding-title.is-overflowing').first();
+        await expect(title).toBeVisible();
+        const movement = await title.evaluate(async node => {
+          const label = node.querySelector('.sliding-title-text'), animation = label.getAnimations()[0];
+          if (!animation) throw new Error('Long title has no sliding animation');
+          animation.pause();animation.currentTime = 0;
+          await new Promise(resolve => requestAnimationFrame(resolve));
+          const beginning = label.getBoundingClientRect().left;
+          animation.currentTime = animation.effect.getTiming().duration;
+          await new Promise(resolve => requestAnimationFrame(resolve));
+          return { distance: beginning - label.getBoundingClientRect().left, expected: parseFloat(node.style.getPropertyValue('--title-travel')) };
+        });
+        assert.ok(movement.distance > 0 && Math.abs(movement.distance - movement.expected) < 2, `${path}: ${JSON.stringify(movement)}`);
+      }
+      await animated.close();console.log(`${engine.name()}: overflowing titles slide across their full text`);
+
     } finally { await browser.close(); }
   }
 } finally { await new Promise(resolve => server.httpServer.close(resolve)); }
