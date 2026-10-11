@@ -23,10 +23,10 @@ tower-http = { version = "0.6", features = ["fs", "trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tempfile = "3"
-xcss = { git = "https://github.com/isarmg/xcss.git", rev = "736cfb22a4842226df19295e1876839df6bb7a7d", version = "=1.0.3", features = ["tracing"] }
+xcss = { git = "https://github.com/isarmg/xcss.git", rev = "0fb8d744c75e829dff48eadc5e50137f5ad589fd", version = "=1.0.4", features = ["tracing"] }
 
 [build-dependencies]
-xcss = { git = "https://github.com/isarmg/xcss.git", rev = "736cfb22a4842226df19295e1876839df6bb7a7d", version = "=1.0.3" }
+xcss = { git = "https://github.com/isarmg/xcss.git", rev = "0fb8d744c75e829dff48eadc5e50137f5ad589fd", version = "=1.0.4" }
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }

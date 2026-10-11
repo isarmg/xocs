@@ -2,7 +2,7 @@
 .xocs-admin-app { display: contents; }
 .xocs-admin-app .xocs-site-link {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 44px; height: 44px; color: var(--xcss-text-primary); border-radius: var(--xcss-radius-sm);
+  width: 44px; height: 44px; color: var(--xcss-text-primary);
 }
 .xocs-admin-app .xocs-site-link svg { width: 1em; height: 1em; }
 .xocs-admin-workspace .xcss-page-header { padding: 0; align-items: center; }
@@ -13,7 +13,7 @@
 .xocs-admin-workspace :is(.xcss-input, textarea, input[type=file]) { min-width: 0; max-width: 100%; }
 .xocs-admin-workspace .editor-form {
   display: grid; gap: 16px; max-width: none; min-width: 0; padding: 16px;
-  border: 0; border-radius: var(--xcss-radius-md); box-shadow: none;
+  border: 0; box-shadow: none;
   background: var(--xcss-bg-panel); color: var(--xcss-text-primary);
 }
 .xocs-admin-workspace .editor-form > :is(h2, p) { margin: 0; }
@@ -21,7 +21,7 @@
 .xocs-admin-workspace .editor-form .editor-form { padding: 0; }
 .xocs-admin-workspace .inline-form {
   display: flex; flex-wrap: wrap; align-items: end; gap: 16px;
-  min-width: 0; padding: 16px; border-radius: var(--xcss-radius-md); background: var(--xcss-bg-panel);
+  min-width: 0; padding: 16px; background: var(--xcss-bg-panel);
 }
 .xocs-admin-workspace .inline-form > .xcss-form-field { flex: 1 1 15rem; }
 .xocs-admin-workspace .inline-form > .xcss-button { align-self: end; }
@@ -65,7 +65,7 @@
   .xocs-admin-workspace .inline-form > .xcss-form-field { flex-basis: 100%; }
 }
 
-/* Explicit Mac mini surfaces; the authored round radii remain the fallback before startup. */
+/* Explicit Mac mini surfaces on supported modern browsers. */
 .xocs-admin-app .xocs-site-link { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
 .xocs-admin-workspace .editor-form { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
 .xocs-admin-workspace .editor-form .editor-form { --xcss-server-corner-extent: 0px; }
