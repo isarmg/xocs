@@ -4,14 +4,14 @@ import { HookHost, expand, textContent, walk } from './fixtures/hook-host.mjs';
 import { originalModule } from './fixtures/original-module.mjs';
 import { summary } from './browser-fixtures.mjs';
 const reexport = path => `export * from ${JSON.stringify(new URL(path, import.meta.url).href)};`;
-const { Categories, SearchPage, JourneyPage, Wall } = await originalModule(new URL('../src/PublicExtras.tsx', import.meta.url), {
+const { Categories, SearchPage, JourneyPage, Wall, MessagePage } = await originalModule(new URL('../src/PublicExtras.tsx', import.meta.url), {
   './api': reexport('../src/api.ts'), './public-contracts': reexport('../src/public-contracts.ts'),
   './comment-submission': reexport('../src/comment-submission.ts'),
   './PublicChrome': 'export const PublicChrome=({children})=>children;',
   './PublicComments': 'export const PublicComments=()=>null;',
   './MediaPreview': 'export const ImageLightbox=()=>null; export const safeImageUrl=value=>value;',
   './PhotoGallery': 'export const PhotoGrid=()=>null;', './LovePage': 'export const LovePage=()=>null;',
-}, ['Categories', 'SearchPage', 'JourneyPage', 'Wall']);
+}, ['Categories', 'SearchPage', 'JourneyPage', 'Wall', 'MessagePage']);
 const text = host => textContent(expand(host.tree));
 const button = (host, label) => walk(expand(host.tree), node=>node.type==='button' && textContent(node).trim()===label)[0];
 const settle = async host => { await new Promise(resolve=>setImmediate(resolve)); host.render(); };
@@ -92,4 +92,47 @@ for(const path of ['/weiYan','/jotting'])test(`${path} hides stale journal entri
   requests[2].resolve(notePage('NEW_NOTE',2));await settle(host);
   assert.match(text(host),/NEW_NOTE/);assert.match(text(host),/Page 2/);
   assert.doesNotMatch(text(host),/OLD_NOTE|Unable to load content/);
+});
+
+const wallPost = (id,message) => ({id,user_id:null,username:null,avatar:null,message,image_path:null,create_time:'2026-10-11 03:30:00'});
+const messageInput = host => walk(expand(host.tree),node=>node.type==='input')[0];
+function editMessage(host,value){messageInput(host).props.onChange({target:{value}});host.render();}
+function sendMessage(host){walk(expand(host.tree),node=>node.type==='form')[0].props.onSubmit({preventDefault(){}});host.render();}
+test('message success preserves a newer draft including whitespace-only edits',async context=>{
+  const {host,requests}=setup(context,MessagePage);requests[0].resolve([]);await settle(host);
+  editMessage(host,'FIRST MESSAGE');sendMessage(host);
+  assert.equal(JSON.parse(requests[1].options.body).message,'FIRST MESSAGE');
+  assert.notEqual(messageInput(host).props.disabled,true);
+  editMessage(host,'SECOND DRAFT');requests[1].resolve(wallPost(2,'FIRST MESSAGE'));await settle(host);
+  assert.equal(messageInput(host).props.value,'SECOND DRAFT');
+  sendMessage(host);editMessage(host,' SECOND DRAFT ');
+  requests[2].resolve(wallPost(3,'SECOND DRAFT'));await settle(host);
+  assert.equal(messageInput(host).props.value,' SECOND DRAFT ');
+});
+test('initial message load preserves a post already acknowledged by its publish response',async context=>{
+  const {host,requests}=setup(context,MessagePage);
+  editMessage(host,'NEW MESSAGE');sendMessage(host);
+  requests[1].resolve(wallPost(2,'NEW MESSAGE'));await settle(host);
+  requests[0].resolve([wallPost(1,'OLDER MESSAGE')]);await settle(host);
+  assert.match(text(host),/NEW MESSAGE/);assert.match(text(host),/OLDER MESSAGE/);
+});
+test('initial message load and publish response render the saved ID only once',async context=>{
+  const {host,requests}=setup(context,MessagePage);
+  editMessage(host,'NEW MESSAGE');sendMessage(host);
+  requests[0].resolve([wallPost(2,'NEW MESSAGE'),wallPost(1,'OLDER MESSAGE')]);await settle(host);
+  requests[1].resolve(wallPost(2,'NEW MESSAGE'));await settle(host);
+  const cards=walk(expand(host.tree),node=>node.props?.className==='message-barrage-item');
+  assert.equal(cards.filter(node=>textContent(node).includes('NEW MESSAGE')).length,1);
+  assert.equal(cards.length,2);
+});
+test('ordinary message success clears its unchanged draft and failure preserves it',async context=>{
+  const {host,requests}=setup(context,MessagePage);requests[0].resolve([]);await settle(host);
+  editMessage(host,' SUCCESS ');sendMessage(host);
+  assert.equal(JSON.parse(requests[1].options.body).message,'SUCCESS');
+  requests[1].resolve(wallPost(1,'SUCCESS'));await settle(host);
+  assert.equal(messageInput(host).props.value,'');assert.match(text(host),/SUCCESS/);
+  editMessage(host,' KEEP ON FAILURE ');sendMessage(host);
+  requests[2].reject(new Error('offline'));await settle(host);
+  assert.equal(messageInput(host).props.value,' KEEP ON FAILURE ');
+  assert.match(text(host),/Unable to send/);assert.equal(button(host,'Send').props.disabled,false);
 });

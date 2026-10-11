@@ -41,12 +41,12 @@ function MessagePage(){
   const [draft,setDraft]=useState('');
   const [error,setError]=useState('');
   const [busy,setBusy]=useState(false);
-  useEffect(()=>{const controller=new AbortController();void request('/api/v1/tree-hole', isWallPosts,{signal:controller.signal}).then(setItems).catch(()=>{if(!controller.signal.aborted)setError(t("留言加载失败", "Unable to load messages"));});return()=>controller.abort();},[]);
+  useEffect(()=>{const controller=new AbortController();void request('/api/v1/tree-hole', isWallPosts,{signal:controller.signal}).then(loaded=>setItems(current=>[...current,...loaded.filter(item=>!current.some(existing=>existing.id===item.id))])).catch(()=>{if(!controller.signal.aborted)setError(t("留言加载失败", "Unable to load messages"));});return()=>controller.abort();},[]);
   async function publish(event:FormEvent){
     event.preventDefault();
     if(!draft.trim()||busy)return;
     setBusy(true);setError('');
-    try{const saved=await request('/api/v1/tree-hole/guest', isWallPost,{method:'POST',body:JSON.stringify({message:draft.trim()})});setItems(current=>[saved,...current]);setDraft('');}
+    try{const saved=await request('/api/v1/tree-hole/guest', isWallPost,{method:'POST',body:JSON.stringify({message:draft.trim()})});setItems(current=>[saved,...current.filter(item=>item.id!==saved.id)]);setDraft(current=>current===draft?'':current);}
     catch(reason){setError(publicErrorMessage(reason, t("发送失败", "Unable to send")));}
     finally{setBusy(false);}
   }
