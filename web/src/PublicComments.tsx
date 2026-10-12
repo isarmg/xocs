@@ -1,3 +1,4 @@
+import { formatUtcTime } from './utc-time.ts';
 import { t } from '@xcss/web/admin-ui/i18n';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ApiError, publicErrorMessage, request, type Page } from './api';
@@ -12,7 +13,7 @@ const commenter = (item: PublicComment) => item.username || t('匿名访客', 'A
 function CommentEntry({ item, onReply }: { item: PublicComment; onReply: (item: PublicComment) => void }) {
   const avatar = safeImageUrl(item.avatar);
   return <article className="public-comment"><div className="public-comment-head">
-    {avatar && <img src={avatar} alt="" />}<div><strong>{commenter(item)}</strong><small>{item.create_time || t('最近', 'Recently')}</small></div>
+    {avatar && <img src={avatar} alt="" />}<div><strong>{commenter(item)}</strong><small>{formatUtcTime(item.create_time) || t('最近', 'Recently')}</small></div>
   </div><p>{item.parent_username && <span className="comment-mention">@{item.parent_username} </span>}{item.comment_content}</p>
     <div className="comment-actions"><button type="button" onClick={() => onReply(item)}>{t('回复', 'Reply')}</button></div>
   </article>;

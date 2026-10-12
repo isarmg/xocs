@@ -14,7 +14,7 @@ const byName = (tree, name) => walk(tree, node => typeof node.type === 'function
 const button = (tree, label) => walk(expand(tree), node => node.type === 'button' && textContent(node) === label)[0];
 const text = host => textContent(expand(host.tree));
 const link = (id, title, link_type = 'favorites', status = 1) => ({
-  id, title, link_type, classify: null, cover: null, url: null, introduction: null, status,
+  id, title, link_type, classify: null, cover: null, url: null, introduction: null, status, create_time: null,
 });
 const page = (items, total, number = 1) => ({ items, total, page: number, size: 20 });
 const settle = async host => {

@@ -13,7 +13,7 @@ export function PhotoGrid({ items, onPreview }: { items: PhotoItem[]; onPreview:
         <span className="travel-photo-image">{cover ? <img src={cover} alt="" loading="lazy" decoding="async" />
           : <span>{t('记录美好瞬间', 'Capture beautiful moments')}</span>}</span>
         <span className="travel-photo-body"><strong>{title}</strong>
-          <small>{t('日期：', 'Date: ')}{item.create_time?.slice(0, 10) || t('最近', 'Recently')}</small></span>
+          <small>{t('日期（UTC）：', 'Date (UTC): ')}{item.create_time?.slice(0, 10) || t('最近', 'Recently')}</small></span>
       </button>;
     })}
     {items.length === 0 && <div className="travel-photo-empty public-empty-state">

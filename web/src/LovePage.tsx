@@ -1,3 +1,4 @@
+import { formatUtcTime, parseUtcDate } from './utc-time.ts';
 import { isFamilies, isLinkClasses, isLinkPage, isNotePage, type Family, type LinkClass, type Note } from './public-contracts';
 import { t } from '@xcss/web/admin-ui/i18n';
 import { useEffect, useRef, useState } from 'react';
@@ -11,12 +12,8 @@ import { timeTogether } from './love-time.ts';
 
 type Tab = 'notes' | 'photos' | 'wishes';
 
-function dateValue(value: string | null | undefined) {
-  if (!value) return NaN;
-  return Date.parse(/^\d{4}-\d{2}-\d{2}$/.test(value) ? value + 'T00:00:00' : value.replace(' ', 'T'));
-}
 function dateLabel(value: number) {
-  return new Intl.DateTimeFormat(document.documentElement.lang || 'zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }).format(value);
+  return new Intl.DateTimeFormat(document.documentElement.lang || 'zh-CN', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }).format(value) + ' UTC';
 }
 function Avatar({ name, src }: { name: string; src: string | null | undefined }) {
   return <span className="love-avatar">{safeImageUrl(src) ? <img src={safeImageUrl(src)!} alt="" />
@@ -98,7 +95,7 @@ export function LovePage() {
   }, [tab, classify, photoPage, photoVersion, photoAttempt]);
 
   const hisName = love?.man_name || t('他', 'Him'), herName = love?.woman_name || t('她', 'Her');
-  const since = dateValue(love?.timing);
+  const since = parseUtcDate(love?.timing);
   const elapsed = timeTogether(since, now);
   const clock = elapsed ? [
     { key: 'years', value: elapsed.years, label: t('年', elapsed.years === 1 ? 'year' : 'years') },
@@ -108,9 +105,9 @@ export function LovePage() {
     { key: 'minutes', value: elapsed.minutes, label: t('分', elapsed.minutes === 1 ? 'minute' : 'minutes') },
     { key: 'seconds', value: elapsed.seconds, label: t('秒', elapsed.seconds === 1 ? 'second' : 'seconds') },
   ] : [];
-  const countdown = dateValue(love?.countdown_time);
+  const countdown = parseUtcDate(love?.countdown_time);
   const target = new Date(countdown), current = new Date(now);
-  const left = Number.isFinite(countdown) ? Math.round((Date.UTC(target.getFullYear(), target.getMonth(), target.getDate()) - Date.UTC(current.getFullYear(), current.getMonth(), current.getDate())) / 86400000) : null;
+  const left = Number.isFinite(countdown) ? Math.round((Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), target.getUTCDate()) - Date.UTC(current.getUTCFullYear(), current.getUTCMonth(), current.getUTCDate())) / 86400000) : null;
   const tabs: { id: Tab; label: string; icon: string; description: string }[] = [
     { id: 'notes', label: t('点点滴滴', 'Moments'), icon: '/legacy/love-moments.jpg', description: t('☀️ 今朝有酒今朝醉', '☀️ Little moments of joy') },
     { id: 'photos', label: t('时光相册', 'Photos'), icon: '/legacy/love-photos.jpg', description: t('📸 记录美好瞬间', '📸 Keep beautiful memories') },
@@ -158,7 +155,7 @@ export function LovePage() {
             {tab === 'notes' && <>
               <div className="love-section-heading"><div><h2>{t('点点滴滴', 'Moments')}</h2><p>{t('记录那些平常又特别的小事。', 'A place for the little things that make our days.')}</p></div><a href="/jotting">{t('浏览更多记录', 'Browse more entries')} <span aria-hidden="true">↗</span></a></div>
               {noteFailure && <Feedback message={noteFailure} retry={() => setNoteVersion(value => value + 1)} />}
-              {noteBusy ? <p className="public-loading" role="status">{t('正在加载记录…', 'Loading entries…')}</p> : notes && <div className="love-moments-grid">{notes.items.map(item => <article className="love-moment-card" key={item.id}><small>{item.username || t('站长', 'Site owner')} · {item.create_time || t('最近', 'Recently')}</small><p>{item.content}</p>{safeImageUrl(item.image_path) && <button type="button" className="wall-photo-button" onClick={() => setLightbox(safeImageUrl(item.image_path))} aria-label={t('放大图片', 'Enlarge image')}><img src={safeImageUrl(item.image_path)!} alt={t('微言图片', 'Post image')} loading="lazy" /></button>}</article>)}{notes.items.length === 0 && <div className="public-empty-state"><span aria-hidden="true">✎</span><h3>{t('还没有记录。', 'No entries yet.')}</h3><p>{t('写下此刻的想法，留住每一个值得纪念的日常。', 'Write a thought and keep a little piece of today.')}</p></div>}</div>}
+              {noteBusy ? <p className="public-loading" role="status">{t('正在加载记录…', 'Loading entries…')}</p> : notes && <div className="love-moments-grid">{notes.items.map(item => <article className="love-moment-card" key={item.id}><small>{item.username || t('站长', 'Site owner')} · {formatUtcTime(item.create_time) || t('最近', 'Recently')}</small><p>{item.content}</p>{safeImageUrl(item.image_path) && <button type="button" className="wall-photo-button" onClick={() => setLightbox(safeImageUrl(item.image_path))} aria-label={t('放大图片', 'Enlarge image')}><img src={safeImageUrl(item.image_path)!} alt={t('微言图片', 'Post image')} loading="lazy" /></button>}</article>)}{notes.items.length === 0 && <div className="public-empty-state"><span aria-hidden="true">✎</span><h3>{t('还没有记录。', 'No entries yet.')}</h3><p>{t('写下此刻的想法，留住每一个值得纪念的日常。', 'Write a thought and keep a little piece of today.')}</p></div>}</div>}
               {notes && notes.total > notes.size && <nav className="pager" aria-label={t('记录分页', 'Entry pages')}><button type="button" disabled={noteBusy || notePage <= 1} onClick={() => setNotePage(value => value - 1)}>{t('上一页', 'Previous page')}</button><span>{t('第 {0} 页', 'Page {0}', [notePage])}</span><button type="button" disabled={noteBusy || notePage * notes.size >= notes.total} onClick={() => setNotePage(value => value + 1)}>{t('下一页', 'Next page')}</button></nav>}
             </>}
             {tab === 'wishes' && <div className="love-wishes"><PublicComments kind="love" title={t('祝福板', 'Wishes')} /></div>}

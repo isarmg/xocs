@@ -18,7 +18,7 @@ async function fixtures(page, state) {
   await page.route('**/api/v1/links/page?*', route => {
     if (state.failPhotos) return route.fulfill({ status: 503, json: { code: 'service_unavailable', retryable: true, request_id: 'public-layout-503' } });
     const query = new URL(route.request().url()).searchParams;
-    const items = state.empty ? [] : photos.filter(item => !query.get('classify') || item.classify === query.get('classify'));
+    const items = state.empty || query.get('kind') !== 'lovePhoto' ? [] : photos.filter(item => !query.get('classify') || item.classify === query.get('classify'));
     return route.fulfill({ json: paged(items, Number(query.get('page') || 1), Number(query.get('size') || 12)) });
   });
   await page.route('**/api/v1/notes/page?*', route => {
@@ -50,11 +50,11 @@ try {
     const browser = await engine.launch();
     try {
       for (const width of [390, 1280, 1920, 2560]) {
-        const context = await browser.newContext({ locale: 'en', timezoneId: 'Asia/Shanghai', viewport: { width, height: 1080 }, reducedMotion: 'reduce' });
+        const context = await browser.newContext({ locale: 'en', viewport: { width, height: 1080 }, reducedMotion: 'reduce' });
         const page = await context.newPage(), state = { empty: false, failPhotos: false }, errors = [];
         page.on('pageerror', error => errors.push(error.message));
         await fixtures(page, state);
-        await page.clock.install({ time: new Date('2026-10-08T12:34:56+08:00') });
+        await page.clock.install({ time: new Date('2026-10-08T04:34:56Z') });
         // Wait for fixture content to render; autoplay media and lazy resources
         // are independent of whether each route is ready for layout assertions.
         for (const [path, selector, readySelector] of [

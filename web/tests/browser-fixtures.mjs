@@ -24,6 +24,7 @@ export async function mockApi(page, state) {
       : path === '/api/v1/articles/1' || path === '/api/v1/content/articles/1' ? article
       : path.endsWith('/articles') || path.endsWith('/articles/search') ? pageOf([summary])
       : path.includes('/news') ? []
+      : path === '/api/v1/links/page' ? {items:[],total:0,page:Number(new URL(route.request().url()).searchParams.get('page'))||1,size:Number(new URL(route.request().url()).searchParams.get('size'))||20}
       : ['/api/v1/content/users','/api/v1/content/comments','/api/v1/content/resources','/api/v1/content/tree-hole'].includes(path) || path.endsWith('/page') || /^\/api\/v1\/(?:comments|message-comments|love-comments)/.test(path) ? pageOf([])
       : path.endsWith('/notes') ? pageOf([])
       : path === '/api/v1/content/links' ? { items: [], total: 0, page: Number(new URL(route.request().url()).searchParams.get('page')) || 1, size: 20 }

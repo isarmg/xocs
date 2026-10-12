@@ -52,7 +52,6 @@ export function articleExcerpt(value: string | null | undefined, limit = 115): s
     .replace(/<[^>]+>/g, ' ').replace(/[#>*_`~|]/g, ' ').replace(/\s+/g, ' ').trim();
   return plain.length > limit ? `${plain.slice(0, limit).trimEnd()}…` : plain;
 }
-export type AdminSession = {authenticated: true; user_id: string; username: string; role: 'admin'; csrf_token: string};
 export type ArticleInput = {article_title: string; article_content: string; article_cover: string | null; video_url: string | null; sort_id: number; label_id: number; view_status: boolean; recommend_status: boolean; comment_status: boolean; password: string | null; tips: string | null};
 
 export type ResponseValidator<T> = (value: unknown) => value is T;

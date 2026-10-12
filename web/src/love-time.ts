@@ -6,16 +6,16 @@ export function timeTogether(since: number, now: number) {
   const anniversary = (months: number) => {
     if (months === 0) return new Date(start);
     const date = new Date(start);
-    date.setDate(1);
-    date.setMonth(start.getMonth() + months);
-    date.setDate(Math.min(start.getDate(), new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()));
+    date.setUTCDate(1);
+    date.setUTCMonth(start.getUTCMonth() + months);
+    date.setUTCDate(Math.min(start.getUTCDate(), new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0)).getUTCDate()));
     return date;
   };
-  let months = (end.getFullYear() - start.getFullYear()) * 12 + end.getMonth() - start.getMonth();
+  let months = (end.getUTCFullYear() - start.getUTCFullYear()) * 12 + end.getUTCMonth() - start.getUTCMonth();
   if (anniversary(months).getTime() > now) months--;
   let cursor = anniversary(months), days = 0;
   for (;;) {
-    const next = new Date(cursor); next.setDate(next.getDate() + 1);
+    const next = new Date(cursor); next.setUTCDate(next.getUTCDate() + 1);
     if (next.getTime() > now) break;
     cursor = next; days++;
   }

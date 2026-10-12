@@ -8,7 +8,7 @@ const pages = await originalModule(new URL('../src/AdminExtras.tsx', import.meta
   './MediaPreview': 'export const ImageLightbox=()=>null; export const safeImageUrl=value=>value;',
   './AdminLayout': 'export const adminGroups=[];',
 });
-const saved={id:1,path:'/media/one.png',title:'Saved',classify:null,cover:null,url:null,introduction:null,link_type:'favorites',status:1};
+const saved={id:1,mime_type:'image/png',size:1,user_id:null,username:null,content:'Saved',image_path:null,is_public:1,create_time:null,path:'/media/7692c3ad3540bb803c020b3aee66cd8887123234ea0c6e7143c0add73ff431ed.png',title:'Saved',classify:null,cover:null,url:null,introduction:null,link_type:'favorites',status:1};
 const home={id:1,bg_cover:null,man_cover:null,woman_cover:null,man_name:'Owner',woman_name:'Partner',timing:'2026-10-01',countdown_title:null,countdown_time:null,family_info:'Our home',status:1};
 const nodes=(host,type)=>walk(expand(host.tree),node=>node.type===type);
 const settle=async host=>{for(let i=0;i<6;i++)await Promise.resolve();host.render();};
@@ -113,7 +113,7 @@ test('file upload retains its selection on failure and clears the native picker 
   assert.equal(picker.value,'C:\\fakepath\\photo.png');
   nodes(host,'form')[0].props.onSubmit({preventDefault(){}});
   const retry=requests.filter(r=>r.options.method==='POST').at(-1);
-  assert.equal(retry.options.body,file);retry.resolve({id:1,path:'/media/photo.png'});await settle(host);
+  assert.equal(retry.options.body,file);retry.resolve({id:1,mime_type:'image/png',size:42,path:'/media/55c64d0fcd6f9d5f7c828093857e3fdfda68478bb4e9bd24d481ef391c7804e8.png'});await settle(host);
   assert.equal(picker.value,'');
   assert.equal(userControls(host).find(n=>n.type==='button'&&textContent(n)==='Upload').disabled,true);
 });

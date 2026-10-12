@@ -6,7 +6,10 @@ import {HookHost,walk,textContent} from './fixtures/hook-host.mjs';
 // Execute the unchanged editor declarations from current source, with only external boundaries stubbed.
 const main=await readFile(new URL('../src/main.tsx',import.meta.url),'utf8');
 const home=await readFile(new URL('../src/HomeSections.tsx',import.meta.url),'utf8');
-const prelude=`import {useState,useRef,useEffect,useMemo,jsx,jsxs,Fragment} from '${new URL('./fixtures/hook-host.mjs',import.meta.url).href}';
+const prelude=`import {articlePasswordError} from '${new URL('../src/article-password.ts',import.meta.url).href}';
+import {isUploadedImage} from '${new URL('../src/admin-contracts.ts',import.meta.url).href}';
+import {formatUtcTime,utcDateTimeInput} from '${new URL('../src/utc-time.ts',import.meta.url).href}';
+import {useState,useRef,useEffect,useMemo,jsx,jsxs,Fragment} from '${new URL('./fixtures/hook-host.mjs',import.meta.url).href}';
 const h=(type,props,...children)=>jsx(type,{...props,children});
 const useAdminApplication=()=>globalThis.__EDIT_APP;
 const request=(...args)=>globalThis.__EDIT_APP.client.request(...args);

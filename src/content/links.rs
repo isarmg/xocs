@@ -23,17 +23,6 @@ pub(super) struct LinkQuery {
 fn valid_link_kind(kind: &str) -> bool {
     matches!(kind, "favorites" | "friendUrl" | "lovePhoto" | "funny")
 }
-pub(super) async fn links(
-    State(state): State<AppState>,
-    Query(query): Query<LinkQuery>,
-) -> ApiResult<Vec<Link>> {
-    let kind = query.kind.unwrap_or_else(|| "favorites".into());
-    if !valid_link_kind(&kind) {
-        return Err(invalid("资源类型无效"));
-    }
-    Ok(Json(sqlx::query_as::<_,Link>("SELECT id,title,classify,cover,url,introduction,type AS link_type,create_time FROM resource_path WHERE type=? AND status=1 ORDER BY id DESC LIMIT 200")
-        .bind(kind).fetch_all(&state.pool).await.map_err(db_error)?))
-}
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct LinkPageQuery {

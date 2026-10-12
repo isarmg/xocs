@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { timeTogether } from '../src/love-time.ts';
 
-const date = (...parts) => new Date(...parts).getTime();
+const date = (...parts) => Date.UTC(...parts);
 test('the home timer counts calendar years and months at leap days and month ends', () => {
   for (const [since, now, years, months, days] of [
     [date(2026, 0, 31), date(2026, 1, 28), 0, 1, 0],
@@ -18,15 +18,8 @@ test('the home timer waits for its start date and handles missing or invalid dat
   assert.equal(timeTogether(now, NaN), null);
 });
 
-test('zero elapsed time stays zero during the repeated daylight-saving hour', () => {
-  const original = process.env.TZ;
-  try {
-    process.env.TZ = 'America/New_York';
-    const since = Date.parse('2026-11-01T01:30:00-05:00');
-    assert.deepEqual(timeTogether(since, since), { years: 0, months: 0, days: 0, hours: 0, minutes: 0, seconds: 0 });
-    assert.deepEqual(timeTogether(since, since + 30_000), { years: 0, months: 0, days: 0, hours: 0, minutes: 0, seconds: 30 });
-  } finally {
-    if (original === undefined) delete process.env.TZ;
-    else process.env.TZ = original;
-  }
+test('zero elapsed time and a UTC midnight remain exact', () => {
+  const since = Date.parse('2026-10-12T23:59:45Z');
+  assert.deepEqual(timeTogether(since, since), { years: 0, months: 0, days: 0, hours: 0, minutes: 0, seconds: 0 });
+  assert.deepEqual(timeTogether(since, since + 30_000), { years: 0, months: 0, days: 0, hours: 0, minutes: 0, seconds: 30 });
 });

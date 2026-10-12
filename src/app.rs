@@ -192,8 +192,6 @@ const PAGE_ROUTES: &[&str] = &[
     "/jotting",
     "/menory",
     "/favorite",
-    "/friend",
-    "/music",
     "/travel",
     "/love",
     "/message",

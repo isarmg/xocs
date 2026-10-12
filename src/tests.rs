@@ -421,6 +421,7 @@ async fn removed_account_application_and_chat_routes_are_not_available() {
         ("POST", "/api/v1/members/logout"),
         ("GET", "/api/v1/members/session"),
         ("GET", "/api/v1/resources"),
+        ("GET", "/api/v1/links"),
         ("GET", "/api/v1/friends"),
         ("GET", "/api/v1/notes"),
         ("GET", "/api/v1/members/profile"),
@@ -434,6 +435,8 @@ async fn removed_account_application_and_chat_routes_are_not_available() {
         ("GET", "/socket"),
         ("GET", "/im"),
         ("GET", "/user"),
+        ("GET", "/friend"),
+        ("GET", "/music"),
     ] {
         let response = app
             .clone()

@@ -69,7 +69,6 @@ pub fn public_routes() -> Router<AppState> {
             "/api/v1/tree-hole/guest",
             post(guestbook::create_guest_tree_hole),
         )
-        .route("/api/v1/links", get(links::links))
         .route("/api/v1/links/page", get(links::link_page))
         .route("/api/v1/links/classes", get(links::link_classes))
         .route("/api/v1/family", get(family::family))

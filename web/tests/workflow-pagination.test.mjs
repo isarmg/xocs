@@ -22,7 +22,7 @@ const boundaries = {
 };
 const { CommentReplies } = await originalModule(new URL('../src/PublicComments.tsx', import.meta.url), boundaries, ['CommentReplies']);
 const { ArticleNews } = await originalModule(new URL('../src/ArticleNews.tsx', import.meta.url), boundaries);
-const { PublicExtras } = await originalModule(new URL('../src/PublicExtras.tsx', import.meta.url), boundaries);
+const { PublicExtras, MusicBody } = await originalModule(new URL('../src/PublicExtras.tsx', import.meta.url), boundaries, ['MusicBody']);
 const { LovePage } = await originalModule(new URL('../src/LovePage.tsx', import.meta.url), boundaries);
 const { LabelsPage, SitePage, ResourcesPage } = await originalModule(new URL('../src/AdminExtras.tsx', import.meta.url), { ...boundaries, '@xcss/web/admin-shell':'export const useAdminApplication=()=>globalThis.__WORKFLOW_APP;', './AdminLayout':'export const adminGroups=[];' });
 const { HomeSectionsPage } = await originalModule(new URL('../src/HomeSections.tsx', import.meta.url), { ...boundaries, '@xcss/web/admin-shell':'export const useAdminApplication=()=>globalThis.__WORKFLOW_APP;' });
@@ -55,7 +55,8 @@ const settle = async host => { await new Promise(resolve=>setImmediate(resolve))
 function setup(context, component, props = {}, path = '/admin') {
   const previous = { fetch:globalThis.fetch, window:globalThis.window, app:globalThis.__WORKFLOW_APP };
   const requests = [], notifications = [];
-  globalThis.window = { location:{pathname:path, search:'', origin:'https://example.test', hash:''}, history:{replaceState(){}}, confirm:()=>true, setInterval:()=>1, clearInterval(){} };
+  const location=new URL(path,'https://example.test');const listeners=new Map();
+  globalThis.window = { location, history:{replaceState(_state,_title,url){if(url)globalThis.window.location=new URL(url,location.origin);},pushState(_state,_title,url){globalThis.window.location=new URL(url,location.origin);}},addEventListener(type,callback){listeners.set(type,callback)},removeEventListener(type){listeners.delete(type)},dispatchEvent(event){listeners.get(event.type)?.()},confirm:()=>true, setInterval:()=>1, clearInterval(){} };
   globalThis.fetch = (url, options={}) => new Promise((resolve,reject)=>requests.push({url:String(url), options, reject, resolve(value,status=200){resolve(new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json'}}));}}));
   globalThis.__WORKFLOW_APP = {client:{request}, notify:value=>notifications.push(value)};
   const element = component ? {type:component, props} : PublicExtras();
@@ -169,18 +170,18 @@ const upload=(host,index=0)=>{
 const save=host=>walk(host.tree,node=>node.type==='form')[0].props.onSubmit({preventDefault(){}});
 test('article save waits for the selected upload and includes its confirmed image path',async context=>{
   const {host,requests}=await editor(context);upload(host);const before=requests.length;save(host);host.render();assert.equal(requests.length,before);assert.equal(button(host,'Uploading image').props.disabled,true);
-  requests.at(-1).resolve({path:'/media/owned.png'});await settle(host);assert.equal(button(host,'Save article').props.disabled,false);save(host);assert.equal(JSON.parse(requests.at(-1).options.body).article_cover,'/media/owned.png');requests.at(-1).resolve(article);await settle(host);assert.equal(window.location.hash,'articles');
+  requests.at(-1).resolve({id:1,mime_type:'image/png',size:5,path:'/media/f5e6d024c05c9cc2746a3e127408b91a8b7a7f2a30da0c259bc54265502ddef4.png'});await settle(host);assert.equal(button(host,'Save article').props.disabled,false);save(host);assert.equal(JSON.parse(requests.at(-1).options.body).article_cover,'/media/f5e6d024c05c9cc2746a3e127408b91a8b7a7f2a30da0c259bc54265502ddef4.png');requests.at(-1).resolve(article);await settle(host);assert.equal(window.location.hash,'#articles');
 });
 test('failed image uploads preserve the draft and allow a deliberate retry',async context=>{
   const {host,requests}=await editor(context);upload(host);requests.at(-1).reject(new Error('ordinary connection failure'));await settle(host);assert.match(text(host),/Image upload failed/);assert.equal(button(host,'Save article').props.disabled,false);
-  assert.equal(walk(host.tree,node=>node.type==='textarea')[0].props.value,'Original text');upload(host);requests.at(-1).resolve({path:'/media/retry.png'});await settle(host);save(host);assert.equal(JSON.parse(requests.at(-1).options.body).article_cover,'/media/retry.png');
+  assert.equal(walk(host.tree,node=>node.type==='textarea')[0].props.value,'Original text');upload(host);requests.at(-1).resolve({id:1,mime_type:'image/png',size:5,path:'/media/06b29bb318814108e94270528fe7994c096308b3692923723bf1ae6f98d50b4f.png'});await settle(host);save(host);assert.equal(JSON.parse(requests.at(-1).options.body).article_cover,'/media/06b29bb318814108e94270528fe7994c096308b3692923723bf1ae6f98d50b4f.png');
 });
 test('canceling or leaving the editor ignores late upload success',async context=>{
-  const {host,requests,notifications}=await editor(context);upload(host);const obsolete=requests.at(-1);button(host,'Cancel').props.onClick();host.render();assert.equal(obsolete.options.signal.aborted,true);host.unmount();obsolete.resolve({path:'/media/late.png'});await new Promise(resolve=>setImmediate(resolve));assert.deepEqual(notifications,[]);
+  const {host,requests,notifications}=await editor(context);upload(host);const obsolete=requests.at(-1);button(host,'Cancel').props.onClick();host.render();assert.equal(obsolete.options.signal.aborted,true);host.unmount();obsolete.resolve({id:1,mime_type:'image/png',size:5,path:'/media/089001a35679a33ef3db0ca350db9b9a2f0136e0e327577b04b3b98127470961.png'});await new Promise(resolve=>setImmediate(resolve));assert.deepEqual(notifications,[]);
 });
 test('content upload preserves edits made while waiting; stale save success cannot navigate a new editor',async context=>{
-  const {host,requests}=await editor(context);upload(host,1);host.render();walk(host.tree,node=>node.type==='textarea')[0].props.onChange({target:{value:'Continued writing'}});host.render();requests.at(-1).resolve({path:'/media/content.png'});await settle(host);save(host);const saving=requests.at(-1);assert.match(JSON.parse(saving.options.body).article_content,/Continued writing[\s\S]*\/media\/content.png/);
-  host.unmount();window.location.hash='new';saving.resolve(article);await new Promise(resolve=>setImmediate(resolve));assert.equal(window.location.hash,'new');
+  const {host,requests}=await editor(context);upload(host,1);host.render();walk(host.tree,node=>node.type==='textarea')[0].props.onChange({target:{value:'Continued writing'}});host.render();requests.at(-1).resolve({id:1,mime_type:'image/png',size:5,path:'/media/ed7002b439e9ac845f22357d822bac1444730fbdb6016d3ec9432297b9ec9f73.png'});await settle(host);save(host);const saving=requests.at(-1);assert.match(JSON.parse(saving.options.body).article_content,/Continued writing[\s\S]*\/media\/ed7002b439e9ac845f22357d822bac1444730fbdb6016d3ec9432297b9ec9f73.png/);
+  host.unmount();window.location.hash='new';saving.resolve(article);await new Promise(resolve=>setImmediate(resolve));assert.equal(window.location.hash,'#new');
 });
 
 
@@ -215,15 +216,15 @@ test('existing article editing waits for load and retries failures before enabli
   assert.equal(walk(host.tree,node=>node.type==='form').length,0);assert.equal(walk(host.tree,node=>node.type==='input'&&node.props.type==='file').length,0);assert.ok(button(host,'Cancel'));
   initial.reject(new Error('temporary load failure'));await settle(host);assert.match(text(host),/Unable to load article/);assert.equal(walk(host.tree,node=>node.type==='form').length,0);
   button(host,'Try again').props.onClick();host.render();assert.match(requests.at(-1).url,/\/articles\/1$/);assert.equal(walk(host.tree,node=>node.type==='input'&&node.props.type==='file').length,0);
-  requests.at(-1).resolve({...article,article_cover:'/media/old.png'});await settle(host);assert.equal(walk(host.tree,node=>node.type==='input'&&node.props.type==='file').length,2);
-  upload(host);requests.at(-1).resolve({path:'/media/new.png'});await settle(host);save(host);assert.equal(JSON.parse(requests.at(-1).options.body).article_cover,'/media/new.png');assert.equal(requests.at(-1).options.method,'PUT');
+  requests.at(-1).resolve({...article,article_cover:'/media/cba06b5736faf67e54b07b561eae94395e774c517a7d910a54369e1263ccfbd4.png'});await settle(host);assert.equal(walk(host.tree,node=>node.type==='input'&&node.props.type==='file').length,2);
+  upload(host);requests.at(-1).resolve({id:1,mime_type:'image/png',size:5,path:'/media/11507a0e2f5e69d5dfa40a62a1bd7b6ee57e6bcd85c67c9b8431b36fff21c437.png'});await settle(host);save(host);assert.equal(JSON.parse(requests.at(-1).options.body).article_cover,'/media/11507a0e2f5e69d5dfa40a62a1bd7b6ee57e6bcd85c67c9b8431b36fff21c437.png');assert.equal(requests.at(-1).options.method,'PUT');
 });
 test('article identity changes discard stale initial loads and pending uploads',async context=>{
   const {host,requests}=setup(context,ArticleEditor,{id:1});const obsolete=requests.find(item=>item.url.endsWith('/articles/1'));
   host.props={id:2};host.render();assert.equal(obsolete.options.signal.aborted,true);const current=requests.at(-1);obsolete.resolve({...article,article_title:'Obsolete title'});await settle(host);assert.equal(walk(host.tree,node=>node.type==='form').length,0);
   current.resolve({...article,id:2,article_title:'Current title'});await settle(host);assert.equal(walk(host.tree,node=>typeof node.type==='function'&&node.type.name==='TextField')[0].props.value,'Current title');
-  upload(host);const oldUpload=requests.at(-1);host.props={id:3};host.render();assert.equal(oldUpload.options.signal.aborted,true);const next=requests.at(-1);oldUpload.resolve({path:'/media/obsolete.png'});await settle(host);assert.equal(walk(host.tree,node=>node.type==='form').length,0);
-  next.resolve({...article,id:3,article_cover:'/media/third.png'});await settle(host);save(host);assert.match(requests.at(-1).url,/\/articles\/3$/);assert.equal(JSON.parse(requests.at(-1).options.body).article_cover,'/media/third.png');
+  upload(host);const oldUpload=requests.at(-1);host.props={id:3};host.render();assert.equal(oldUpload.options.signal.aborted,true);const next=requests.at(-1);oldUpload.resolve({id:1,mime_type:'image/png',size:5,path:'/media/b80cd861051aa5903ae63197c8a1e586800bfb3c45b8e3ab44e5892aa93f5975.png'});await settle(host);assert.equal(walk(host.tree,node=>node.type==='form').length,0);
+  next.resolve({...article,id:3,article_cover:'/media/b1e99324505bd32da0e1f85dcf5e19a09db0481e8a15f62c41eb320304a8e927.png'});await settle(host);save(host);assert.match(requests.at(-1).url,/\/articles\/3$/);assert.equal(JSON.parse(requests.at(-1).options.body).article_cover,'/media/b1e99324505bd32da0e1f85dcf5e19a09db0481e8a15f62c41eb320304a8e927.png');
 });
 
 
@@ -249,7 +250,7 @@ test('article updates admit one pending publish, lock its draft, and preserve it
   fields(host,'TextField')[0].props.onChange({target:{value:'2026-10-10T10:30'}});host.render();
   const before=requests.length;save(host);save(host);host.render();save(host);
   assert.equal(requests.length,before+1);assert.ok(controls(host).every(item=>item.disabled));
-  assert.deepEqual(JSON.parse(requests.at(-1).options.body),{content:'First update',create_time:new Date('2026-10-10T10:30').toISOString()});
+  assert.deepEqual(JSON.parse(requests.at(-1).options.body),{content:'First update',create_time:'2026-10-10T10:30:00.000Z'});
   requests.at(-1).reject(new Error('ordinary save failure'));await settle(host);
   assert.ok(controls(host).every(item=>!item.disabled));assert.equal(walk(host.tree,node=>node.type==='textarea')[0].props.value,'First update');
   assert.equal(fields(host,'TextField')[0].props.value,'2026-10-10T10:30');
@@ -282,7 +283,7 @@ test('article saving locks editable content and failure restores the submitted d
   requests.at(-1).reject(new Error('ordinary save failure'));await settle(host);
   assert.ok(controls(host).every(item=>!item.disabled));assert.equal(walk(host.tree,node=>node.type==='textarea')[0].props.value,'Original text');
   walk(host.tree,node=>node.type==='textarea')[0].props.onChange({target:{value:'Corrected final text'}});host.render();save(host);
-  assert.equal(JSON.parse(requests.at(-1).options.body).article_content,'Corrected final text');requests.at(-1).resolve(article);await settle(host);assert.equal(window.location.hash,'articles');
+  assert.equal(JSON.parse(requests.at(-1).options.body).article_content,'Corrected final text');requests.at(-1).resolve(article);await settle(host);assert.equal(window.location.hash,'#articles');
 });
 
 test('home-section saves lock add, edit, reorder, and delete until success or failure',async context=>{
@@ -296,9 +297,9 @@ test('home-section saves lock add, edit, reorder, and delete until success or fa
 });
 
 test('site settings retain the existing pending lock and allow correction after failed save',async context=>{
-  const {host,requests}=setup(context,SitePage);requests[0].resolve({web_name:'Site A'});await settle(host);save(host);host.render();assert.ok(controls(host).every(item=>item.disabled));
+  const {host,requests}=setup(context,SitePage);requests[0].resolve({web_name:'Site A',web_title:null,notices:null,footer:null,background_image:null,avatar:null,random_cover:null});await settle(host);save(host);host.render();assert.ok(controls(host).every(item=>item.disabled));
   requests.at(-1).reject(new Error('ordinary save failure'));await settle(host);assert.ok(controls(host).every(item=>!item.disabled));assert.equal(fields(host,'TextField')[0].props.value,'Site A');
-  fields(host,'TextField')[0].props.onChange({target:{value:'Site B'}});host.render();save(host);requests.at(-1).resolve({web_name:'Site B'});await settle(host);assert.equal(fields(host,'TextField')[0].props.value,'Site B');
+  fields(host,'TextField')[0].props.onChange({target:{value:'Site B'}});host.render();save(host);requests.at(-1).resolve({web_name:'Site B',web_title:null,notices:null,footer:null,background_image:null,avatar:null,random_cover:null});await settle(host);assert.equal(fields(host,'TextField')[0].props.value,'Site B');
 });
 
 test('article page changes hide old destructive actions and a failed page can retry',async context=>{
@@ -312,25 +313,20 @@ test('article page changes hide old destructive actions and a failed page can re
   assert.match(text(host),/PAGE_TWO/);assert.doesNotMatch(text(host),/OLD_ARTICLE|Unable to load articles/);
 });
 
-for (const [zone, local, expected] of [
-  ['Asia/Shanghai', '2026-10-10T20:00', '2026-10-10T12:00:00.000Z'],
-  ['America/New_York', '2026-07-10T20:00', '2026-07-11T00:00:00.000Z'],
-  ['America/New_York', '2026-01-10T20:00', '2026-01-11T01:00:00.000Z'],
-  ['UTC', '2026-10-10T20:00', '2026-10-10T20:00:00.000Z'],
-  ['UTC', '', null],
+for (const [input, expected] of [
+  ['2026-10-10T20:00', '2026-10-10T20:00:00.000Z'],
+  ['2028-02-29T00:00', '2028-02-29T00:00:00.000Z'],
+  ['', null],
 ]) {
-  test(`article update local date round-trips through UTC storage and both displays (${zone}, ${local || 'default'})`, async context => {
-    const previousTimezone = process.env.TZ;
-    process.env.TZ = zone;
-    context.after(() => { if (previousTimezone === undefined) delete process.env.TZ; else process.env.TZ = previousTimezone; });
+  test(`article update UTC input round-trips through storage and both displays (${input || 'default'})`, async context => {
     const { host, requests } = setup(context, ArticleNewsEditor, { id: 1 });
     requests[0].resolve([]); await settle(host);
     walk(host.tree, node => node.type === 'textarea')[0].props.onChange({ target: { value: 'Timed update' } });
-    fields(host, 'TextField')[0].props.onChange({ target: { value: local } }); host.render();
+    fields(host, 'TextField')[0].props.onChange({ target: { value: input } }); host.render();
     save(host);
     assert.equal(JSON.parse(requests.at(-1).options.body).create_time, expected);
     const saved = { id: 1, content: 'Timed update', create_time: expected?.slice(0, 19).replace('T', ' ') ?? '2026-10-10 12:34:56' };
-    const display = local ? `${local.replace('T', ' ')}:00` : saved.create_time;
+    const display = (input ? `${input.replace('T', ' ')}:00` : saved.create_time) + ' UTC';
     requests.at(-1).resolve(saved); await settle(host);
     assert.ok(text(host).includes(display), `saved admin row: ${text(host)}`);
     const reloaded = new HookHost(ArticleNewsEditor, { id: 1 }); context.after(() => reloaded.unmount());
@@ -353,8 +349,8 @@ for (const name of uploadNames) {
     const pending=requests.at(-1);
     assert.equal(new Headers(pending.options.headers).get('X-File-Name'),encodeURIComponent(name));
     assert.equal(pending.options.body,file);
-    pending.resolve({id:1,path:'/media/fixture.png'});await settle(host);
-    requests.at(-1).resolve(page([{id:1,original_name:name,path:'/media/fixture.png',resource_type:'image',size:5,status:1,create_time:null}],1,1,20));await settle(host);
+    pending.resolve({id:1,mime_type:'image/png',size:5,path:'/media/f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d.png'});await settle(host);
+    requests.at(-1).resolve(page([{id:1,original_name:name,path:'/media/f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d.png',resource_type:'image',size:5,status:1,create_time:null}],1,1,20));await settle(host);
     assert.ok(text(host).includes(name));
   });
   for (const target of [0,1]) test(`article ${target===0?'cover':'content'} upload preserves UTF-8 filename: ${name}`, async context => {
@@ -363,10 +359,10 @@ for (const name of uploadNames) {
     walk(host.tree,node=>node.type==='input'&&node.props.type==='file')[target].props.onChange({target:{files:[file],value:name}});
     assert.equal(new Headers(requests.at(-1).options.headers).get('X-File-Name'),encodeURIComponent(name));
     assert.equal(requests.at(-1).options.body,file);
-    requests.at(-1).resolve({path:'/media/fixture.png'});await settle(host);
+    requests.at(-1).resolve({id:1,mime_type:'image/png',size:5,path:'/media/f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d.png'});await settle(host);
     save(host);const saved=JSON.parse(requests.at(-1).options.body);
-    if(target===0)assert.equal(saved.article_cover,'/media/fixture.png');
-    else assert.ok(saved.article_content.includes(`![${name}](/media/fixture.png)`));
+    if(target===0)assert.equal(saved.article_cover,'/media/f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d.png');
+    else assert.ok(saved.article_content.includes(`![${name}](/media/f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d.png)`));
   });
 }
 
@@ -384,11 +380,54 @@ test('pending cover upload locks its URL while leaving body edits and cancellati
   const {host,requests}=await editor(context);upload(host);host.render();
   const field=walk(host.tree,node=>typeof node.type==='function'&&node.type.name==='FormField'&&node.props.label==='Cover image URL')[0];
   const input=walk(expand(field),node=>node.type==='input')[0];
-  if(!input.props.disabled){input.props.onChange({target:{value:'/media/manual.png'}});host.render();}
-  requests.at(-1).resolve({path:'/media/uploaded.png'});await settle(host);
+  if(!input.props.disabled){input.props.onChange({target:{value:'/media/36bde66f289a35683683b041c6d8f418a5f36607b547da25d00ad55891e80b88.png'}});host.render();}
+  requests.at(-1).resolve({id:1,mime_type:'image/png',size:5,path:'/media/3cef1b245d4b2f37dadddcbadb76017d440ba283601228724c0cb2c07d35bed4.png'});await settle(host);
   const updated=walk(host.tree,node=>typeof node.type==='function'&&node.type.name==='FormField'&&node.props.label==='Cover image URL')[0];
-  if(!input.props.disabled)assert.equal(walk(expand(updated),node=>node.type==='input')[0].props.value,'/media/manual.png','old upload cannot overwrite a newer manual cover');
+  if(!input.props.disabled)assert.equal(walk(expand(updated),node=>node.type==='input')[0].props.value,'/media/36bde66f289a35683683b041c6d8f418a5f36607b547da25d00ad55891e80b88.png','old upload cannot overwrite a newer manual cover');
   assert.equal(input.props.disabled,true);
   assert.equal(walk(expand(updated),node=>node.type==='input')[0].props.disabled,false);
   assert.equal(button(host,'Cancel').props.disabled,false);
+});
+
+for(const [tab,kind] of [['favorites','favorites'],['friends','friendUrl'],['music','funny']])test(`toolbox ${tab} exposes every record beyond 200 through actual paged requests`,async context=>{
+ const {host,requests}=setup(context,null,{},`/favorite?tab=${tab}`);
+ const link=id=>({...photo(id),title:`${tab}-${id}`,link_type:kind,url:'https://example.test/track.mp3'});
+ for(let current=1;current<=9;current++){
+  const pending=requests.findLast(item=>item.url.includes('/links/page?'));assert.ok(pending);assert.match(pending.url,new RegExp(`kind=${kind}&page=${current}&size=24`));
+  const start=201-(current-1)*24;const ids=Array.from({length:Math.min(24,start)},(_,i)=>start-i);
+  pending.resolve(page(ids.map(link),201,current,24));await settle(host);
+  const body=tab==='music'?walk(host.tree,node=>typeof node.type==='function'&&node.type.name==='MusicBody')[0].props.items.map(item=>item.title).join(' '):text(host);
+  for(const id of ids)assert.match(body,new RegExp(`${tab}-${id}\\b`));
+  const next=walk(host.tree,node=>node.type==='button'&&textContent(node)==='Next page')[0];assert.equal(next.props.disabled,current===9);
+  if(current<9){next.props.onClick();host.render();}
+ }
+ assert.equal(requests.some(item=>item.url.includes('/links?kind=')),false);
+});
+test('toolbox failed page keeps previous-page recovery and tab changes ignore obsolete results',async context=>{
+ const {host,requests}=setup(context,null,{},'/favorite');const first=requests.find(item=>item.url.includes('/links/page?'));
+ first.resolve(page([{...photo(201),link_type:'favorites',title:'Favorite current'}],201,1,24));await settle(host);
+ button(host,'Next page').props.onClick();host.render();const old=requests.at(-1);old.reject(Error('offline'));await settle(host);
+ assert.ok(button(host,'Try again'));assert.equal(button(host,'Previous page').props.disabled,false);assert.doesNotMatch(text(host),/Favorite current/);
+ button(host,'Try again').props.onClick();host.render();const obsolete=requests.at(-1);
+ button(host,'Friends').props.onClick();host.render();const friends=requests.at(-1);assert.match(friends.url,/kind=friendUrl&page=1/);
+ obsolete.resolve(page([{...photo(9),title:'Obsolete favorite'}],201,2,24));friends.resolve(page([{...photo(1),title:'Current friend',link_type:'friendUrl'}],1,1,24));await settle(host);
+ assert.match(text(host),/Current friend/);assert.doesNotMatch(text(host),/Obsolete favorite/);assert.equal(window.location.search,'?tab=friends');
+ window.location=new URL('/favorite?tab=music',window.location.origin);window.dispatchEvent({type:'popstate'});host.render();assert.match(requests.at(-1).url,/kind=funny&page=1/);
+});
+for(const password of ['密码密码','a'.repeat(11),'a'.repeat(1025),'bad\npassword-long'])test(`article protected creation validates UTF-8 password (${new TextEncoder().encode(password).length} bytes) before real request`,async context=>{
+ const {host,requests}=await editor(context);walk(host.tree,node=>node.type==='input'&&node.props.type==='checkbox')[0].props.onChange({target:{checked:false}});host.render();
+ const input=walk(expand(host.tree),node=>node.type==='input'&&node.props.type==='password')[0];assert.equal(input.props.minLength,undefined);input.props.onChange({target:{value:password}});host.render();const before=requests.length;save(host);
+ if(password==='密码密码'){assert.equal(requests.length,before+1);assert.equal(JSON.parse(requests.at(-1).options.body).password,password);}
+ else{assert.equal(requests.length,before);assert.match(text(host),/UTF-8 bytes/);}
+});
+for(const protectedArticle of [false,true])test(`empty password ${protectedArticle?'preserves existing protection':'cannot protect a formerly public article'}`,async context=>{
+ const {host,requests}=setup(context,ArticleEditor,{id:1});requests.find(r=>r.url.endsWith('/articles/1')).resolve({...article,view_status:protectedArticle?0:1,password_required:protectedArticle?1:0});requests.filter(r=>!r.url.endsWith('/articles/1')).forEach(r=>r.resolve([]));await settle(host);
+ if(!protectedArticle){walk(host.tree,node=>node.type==='input'&&node.props.type==='checkbox')[0].props.onChange({target:{checked:false}});host.render();}
+ const before=requests.length;save(host);assert.equal(requests.length,before+(protectedArticle?1:0));if(!protectedArticle)assert.match(text(host),/Set an article access password/);
+});
+
+test('music page displays playable records supplied by pagination and permits selecting the oldest track',context=>{
+ const previous=globalThis.window;globalThis.window={location:{origin:'https://example.test'}};context.after(()=>{globalThis.window=previous;});
+ const items=[{...photo(2),url:'https://example.test/new.mp3',title:'New track'},{...photo(1),url:'https://example.test/old.mp3',title:'Old track'}];
+ const host=new HookHost(MusicBody,{items});host.render();walk(host.tree,node=>node.type==='button'&&textContent(node).startsWith('Old track'))[0].props.onClick();host.render();assert.equal(walk(host.tree,node=>node.type==='audio')[0].props.src,'https://example.test/old.mp3');host.unmount();
 });

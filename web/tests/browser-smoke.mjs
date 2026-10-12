@@ -19,7 +19,10 @@ try {
         : url.pathname === '/api/v1/home-sections' ? [{id:1,title:'最新',kind:'latest',sort_id:null,priority:0,enabled:true}]
         : url.pathname === '/api/v1/categories' ? [{id:1,sort_name:'测试分类',sort_description:null,priority:0,article_count:0}]
         : url.pathname === '/api/v1/articles' ? { items: [], total: 0, page: 1, size: 12 }
-        : ['/api/v1/family', '/api/v1/tree-hole', '/api/v1/links'].includes(url.pathname) ? []
+        : url.pathname === '/api/v1/links/page' ? {items:[],total:0,page:Number(url.searchParams.get('page'))||1,size:Number(url.searchParams.get('size'))||20}
+        : url.pathname === '/api/v1/links/classes' ? []
+        : url.pathname === '/api/v1/notes/page' ? {items:[],total:0,page:Number(url.searchParams.get('page'))||1,size:10}
+        : ['/api/v1/family', '/api/v1/tree-hole'].includes(url.pathname) ? []
         : { error: 'unauthorized' };
       await route.fulfill({ status: 'error' in payload ? 401 : 200, contentType: 'application/json', body: JSON.stringify(payload) });
       return;
@@ -35,7 +38,7 @@ try {
     }
   });
   const homeHeading = process.env.XOCS_SMOKE_URL ? '相信记录的力量' : '测试站点';
-  for (const [route, heading] of [['/', homeHeading], ['/search', '搜索文章'], ['/sort', '文章分类'], ['/weiYan', '微言'], ['/jotting', 'xocs'], ['/menory', 'xocs'], ['/favorite', '百宝箱'], ['/friend', '百宝箱'], ['/music', '百宝箱'], ['/travel', '时光相册'], ['/love', '这是我们一起走过的'], ['/message', '弹幕']]) {
+  for (const [route, heading] of [['/', homeHeading], ['/search', '搜索文章'], ['/sort', '文章分类'], ['/weiYan', '微言'], ['/jotting', 'xocs'], ['/menory', 'xocs'], ['/favorite', '百宝箱'], ['/favorite?tab=friends', '百宝箱'], ['/favorite?tab=music', '百宝箱'], ['/travel', '时光相册'], ['/love', '这是我们一起走过的'], ['/message', '弹幕']]) {
     await page.goto(`${base}${route}`);
     await page.getByRole('heading', { name: heading }).first().waitFor();
     console.log(`${route}: rendered`);

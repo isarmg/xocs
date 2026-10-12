@@ -73,7 +73,6 @@ export const isWallPosts = arrayOf(isWallPost);
 export type Link = { id: number; title: string | null; classify: string | null; cover: string | null; url: string | null; introduction: string | null; link_type: string | null; create_time: string | null };
 export const isLink = (value: unknown): value is Link => isRecord(value) && isId(value.id)
   && strings(value, ['title', 'classify', 'cover', 'url', 'introduction', 'link_type', 'create_time']);
-export const isLinks = arrayOf(isLink);
 export const isLinkPage = pageOf(isLink);
 export type LinkClass = { classify: string; count: number };
 export const isLinkClasses = arrayOf((value: unknown): value is LinkClass => isRecord(value) && isString(value.classify) && isCount(value.count));

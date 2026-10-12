@@ -1,3 +1,4 @@
+import { formatUtcTime } from './utc-time.ts';
 import { isSiteInfo } from './public-contracts';
 import { t } from '@xcss/web/admin-ui/i18n';
 import {useEffect, useMemo, useState, type ReactNode} from 'react';
@@ -9,10 +10,12 @@ const links = [
   ['💖', t("家", "Home and love"), '/love'],
   ['🌈', t("游记", "Travels"), '/menory'],
   ['🏖️', t("随笔", "Journal"), '/jotting'],
+  ['✎', t("微言", "Posts"), '/weiYan'],
   ['📒', t("记录", "Articles"), '/sort'],
   ['📸', t("相册", "Photos"), '/travel'],
   ['🧰', t("百宝箱", "Toolbox"), '/favorite'],
   ['📪', t("留言", "Messages"), '/message'],
+  ['ℹ', t("关于", "About"), '/about'],
 ] as const;
 
 function safeCover(value: string | null | undefined) {
@@ -95,7 +98,7 @@ export function PublicChrome({site, title, home = false, cover, articleMeta, pla
       <button className="public-menu-toggle" type="button" aria-label={menuOpen ? t("关闭导航", "Close navigation") : t("打开导航", "Open navigation")} aria-expanded={menuOpen} onClick={() => setMenuOpen(value => !value)}>{menuOpen ? '✕' : '☰'}</button>
     </header>
     {!plainHeader && <section className={`hero${home ? ' home-hero' : articleMeta ? ' article-hero' : ' compact-hero'}`} style={{backgroundImage: `linear-gradient(#0b2c3e3d,#0b2c3e52),url("${safeCover(cover || info?.background_image || fallbackCover)}")`}}>
-      <div className={articleMeta ? 'hero-article-info' : 'hero-center'}><h1>{home ? info?.web_title || t("相信记录的力量", "Believe in the power of stories") : title || 'xocs'}</h1>{home && <p className="hero-poem">{t("相信记录的力量！", "Believe in the power of stories!")}<span className="cursor">|</span></p>}{subtitle && <p className="hero-subtitle">{subtitle}</p>}{articleMeta && <p className="hero-article-meta">👤 {articleMeta.author||t("站长", "Site owner")}　·　📅 {articleMeta.date || t("最近", "Recently")}　·　🔥 {articleMeta.views}{t(" 热度 · 💬 ", " views · 💬 ")}{articleMeta.comments}{t(" 评论 · ❤️ ", " comments · ❤️ ")}{articleMeta.likes}{t(" 点赞", " likes")}</p>}</div>
+      <div className={articleMeta ? 'hero-article-info' : 'hero-center'}><h1>{home ? info?.web_title || t("相信记录的力量", "Believe in the power of stories") : title || 'xocs'}</h1>{home && <p className="hero-poem">{t("相信记录的力量！", "Believe in the power of stories!")}<span className="cursor">|</span></p>}{subtitle && <p className="hero-subtitle">{subtitle}</p>}{articleMeta && <p className="hero-article-meta">👤 {articleMeta.author||t("站长", "Site owner")}　·　📅 {formatUtcTime(articleMeta.date) || t("最近", "Recently")}　·　🔥 {articleMeta.views}{t(" 热度 · 💬 ", " views · 💬 ")}{articleMeta.comments}{t(" 评论 · ❤️ ", " comments · ❤️ ")}{articleMeta.likes}{t(" 点赞", " likes")}</p>}</div>
       {home && <><a className="hero-down" href="#public-content" aria-label={t("浏览文章", "Browse articles")}>⌄</a><div className="hero-wave hero-wave-back" aria-hidden="true"/><div className="hero-wave hero-wave-front" aria-hidden="true"/></>}
     </section>}
     <main id="public-content" className={`public-main${home ? '' : ' extra-main'}`}>{children}</main>
