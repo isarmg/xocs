@@ -1,5 +1,5 @@
 import { chromium, expect } from '@playwright/test';
-import { site } from './browser-fixtures.mjs';
+import { pageOf, site } from './browser-fixtures.mjs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,7 +18,7 @@ try {
         ? { ...site, web_title: '测试站点' }
         : url.pathname === '/api/v1/home-sections' ? [{id:1,title:'最新',kind:'latest',sort_id:null,priority:0,enabled:true}]
         : url.pathname === '/api/v1/categories' ? [{id:1,sort_name:'测试分类',sort_description:null,priority:0,article_count:0}]
-        : url.pathname === '/api/v1/articles' ? { items: [], total: 0, page: 1, size: 12 }
+        : url.pathname === '/api/v1/articles' ? pageOf([], url)
         : ['/api/v1/family', '/api/v1/tree-hole', '/api/v1/links'].includes(url.pathname) ? []
         : { error: 'unauthorized' };
       await route.fulfill({ status: 'error' in payload ? 401 : 200, contentType: 'application/json', body: JSON.stringify(payload) });
