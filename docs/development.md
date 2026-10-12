@@ -17,9 +17,9 @@ web/node_modules/.bin/xcss-build-server \
   --rust-only --source-revision "$XOCS_SOURCE_REVISION"
 ```
 
-Rust 公共依赖固定官方 xcss 仓库的版本 `=1.0.7` 与完整 revision `b3a68b94e1b7bae53685bae07449e3f78e3c20a8`；一个 @xcss/web 包固定同版 `v1.0.7` 官方发行 URL 和真实归档的 lockfile integrity，不读取相邻工作区。Xocs 软件版本为 `1.0.3`，数据库格式身份为 `xocs-db-v4`，软件版本与数据格式版本分别管理。
+Rust 公共依赖固定官方 xcss 仓库的版本 `=1.0.11` 与完整 revision `53c24a2bc026b3c09e073f18cd26b01d15d6d354`；一个 @xcss/web 包固定同版 `v1.0.11` 官方发行 URL 和真实归档的 lockfile integrity，不读取相邻工作区。Xocs 软件版本为 `1.0.4`，数据库格式身份为 `xocs-db-v4`，软件版本与数据格式版本分别管理。
 
-根目录是唯一 Cargo workspace 与 lock。共同 builder 验证 Linux AMD64 GNU target、真实源码 revision 和实际二进制资源清单，报告真实输出路径；默认正式输出为 `target/x86_64-unknown-linux-gnu/release/xocs`。独立缓存通过 `CARGO_TARGET_DIR` 选择，打包脚本以 `XOCS_RELEASE_CARGO_TARGET_DIR` 指向同一绝对缓存根。正式包要求干净源码、annotated `v1.0.3` 精确指向 HEAD 和匹配该 HEAD 的二进制身份，不允许 unbound 程序打包。
+根目录是唯一 Cargo workspace 与 lock。共同 builder 验证 Linux AMD64 GNU target、真实源码 revision 和实际二进制资源清单，报告真实输出路径；默认正式输出为 `target/x86_64-unknown-linux-gnu/release/xocs`。独立缓存通过 `CARGO_TARGET_DIR` 选择，打包脚本以 `XOCS_RELEASE_CARGO_TARGET_DIR` 指向同一绝对缓存根。正式包要求干净源码、annotated `v1.0.4` 精确指向 HEAD 和匹配该 HEAD 的二进制身份，不允许 unbound 程序打包。
 
 ## 验证
 
@@ -43,3 +43,5 @@ bash scripts/smoke.sh
 浏览器检查需要安装 Chromium 和 Firefox（`cd web && npx playwright install chromium firefox`）。语言与布局检查使用临时 Web 预览和模拟 API；后台检查覆盖导航、浏览器历史、手机布局、深色模式对比度、加载重试和设置保存。前台检查覆盖手机至 2560 像素宽屏、家页面的相册筛选与分页、计时、深色模式、空状态和匿名评论。`scripts/smoke.sh` 在本机回环地址启动临时服务，创建临时数据库和媒体目录，执行 API 与浏览器检查，结束时清理。
 
 首次启动按[安装指南](getting-started.md)准备隔离的测试数据。配置、页面操作和评论重试分别见[配置](configuration.md)、[使用](usage.md)和[实现参考](current-guide.md)。
+
+CLI 集成测试实际运行程序，覆盖初始化前配置校验、离线状态检查、重复初始化拒绝、密码重置和日志；安装器测试在隔离根目录用真实二进制初始化及检查，只模拟 systemd 与账户管理，验证 setup、外部媒体目录、重复 setup 拒绝、升级保持原服务运行状态且不修改配置与数据。系统级服务验收仍需部署主机执行。

@@ -43,7 +43,7 @@ mkdir -p "${dist_dir}"
 staging_dir="$(mktemp -d "${dist_dir}/.xocs-package.XXXXXXXX")"
 trap 'rm -rf -- "${staging_dir}"' EXIT
 staged_package="${staging_dir}/${package_name}"
-mkdir -p "${staged_package}/bin" "${staged_package}/share"
+mkdir -p "${staged_package}/bin" "${staged_package}/share" "${staged_package}/systemd" "${staged_package}/config"
 install -m 0755 "${binary}" "${staged_package}/bin/xocs"
 "${staged_package}/bin/xocs" release-identity > "${staged_package}/share/release-identity.json"
 "${staged_package}/bin/xocs" state-contract > "${staged_package}/share/state-contract.json"
@@ -62,7 +62,10 @@ if header[:6] != b'\x7fELF\x02\x01' or header[18:20] != b'\x3e\x00':
     raise SystemExit('The packaged binary is not Linux x86_64 ELF.')
 pathlib.Path(sys.argv[1]).with_name('binary.sha256').write_text(digest + '  bin/xocs\n', encoding='ascii')
 PY
+install -m 0755 "${project_dir}/deploy/linux-x86_64/install.sh" "${staged_package}/install.sh"
 install -m 0644 "${project_dir}/deploy/linux-x86_64/README.md" "${staged_package}/README.md"
+install -m 0644 "${project_dir}/deploy/linux-x86_64/xocs.service" "${staged_package}/systemd/xocs.service"
+install -m 0644 "${project_dir}/deploy/linux-x86_64/config.json.example" "${staged_package}/config/config.json.example"
 install -m 0644 "${project_dir}/LICENSE" "${staged_package}/LICENSE"
 printf '%s\n' "${release_version}" > "${staged_package}/VERSION"
 

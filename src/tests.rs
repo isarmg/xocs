@@ -22,13 +22,13 @@ async fn setup() -> (tempfile::TempDir, Router, SqlitePool) {
 }
 
 async fn setup_with_proxies(
-    trusted_proxies: Vec<std::net::IpAddr>,
+    trusted_proxies: Vec<String>,
 ) -> (tempfile::TempDir, Router, SqlitePool) {
     setup_with_pool_limit(trusted_proxies, 8).await
 }
 
 async fn setup_with_pool_limit(
-    trusted_proxies: Vec<std::net::IpAddr>,
+    trusted_proxies: Vec<String>,
     limit: u32,
 ) -> (tempfile::TempDir, Router, SqlitePool) {
     let dir = tempfile::tempdir().unwrap();
@@ -540,14 +540,14 @@ async fn comments_and_replies_are_anonymous_and_stay_in_their_source() {
 
 #[tokio::test]
 async fn guest_tree_hole_visitors_have_independent_quotas_behind_a_configured_proxy() {
-    let (_dir, app, pool) = setup_with_proxies(vec!["127.0.0.1".parse().unwrap()]).await;
+    let (_dir, app, pool) = setup_with_proxies(vec!["127.0.0.1".into()]).await;
     let request = |visitor: &str| {
         with_peer(
             Request::builder()
                 .method("POST")
                 .uri("/api/v1/tree-hole/guest")
                 .header("content-type", "application/json")
-                .header("x-real-ip", visitor)
+                .header("x-forwarded-for", visitor)
                 .body(Body::from(r#"{"message":"A visitor's message"}"#))
                 .unwrap(),
         )
@@ -591,21 +591,19 @@ async fn guest_tree_hole_visitors_have_independent_quotas_behind_a_configured_pr
 
 #[tokio::test]
 async fn guest_tree_hole_proxy_headers_are_strict_and_untrusted_headers_do_not_bypass_limits() {
-    let (_dir, app, pool) = setup_with_proxies(vec!["127.0.0.1".parse().unwrap()]).await;
+    let (_dir, app, pool) = setup_with_proxies(vec!["127.0.0.1".into()]).await;
     for headers in [
-        vec![],
         vec!["unknown"],
-        vec!["192.0.2.1, 192.0.2.2"],
-        vec!["0.0.0.0"],
-        vec!["224.0.0.1"],
-        vec!["192.0.2.1", "192.0.2.2"],
+        vec!["192.0.2.1, invalid"],
+        vec![""],
+        vec!["192.0.2.1", "invalid"],
     ] {
         let mut builder = Request::builder()
             .method("POST")
             .uri("/api/v1/tree-hole/guest")
             .header("content-type", "application/json");
         for value in headers {
-            builder = builder.header("x-real-ip", value);
+            builder = builder.header("x-forwarded-for", value);
         }
         let response = app
             .clone()
@@ -637,7 +635,7 @@ async fn guest_tree_hole_proxy_headers_are_strict_and_untrusted_headers_do_not_b
             .method("POST")
             .uri("/api/v1/tree-hole/guest")
             .header("content-type", "application/json")
-            .header("x-real-ip", format!("198.51.100.{attempt}"))
+            .header("x-forwarded-for", format!("198.51.100.{attempt}"))
             .body(Body::from(r#"{"message":"Untrusted identity"}"#))
             .unwrap();
         request.extensions_mut().insert(ConnectInfo(
@@ -818,9 +816,7 @@ async fn comment_from(
         .uri("/api/v1/message-comments")
         .header("content-type", "application/json");
     if let Some(ip) = forwarded {
-        request = request
-            .header("x-real-ip", ip)
-            .header("x-forwarded-for", ip);
+        request = request.header("x-forwarded-for", ip);
     }
     let mut request = request
         .body(Body::from(
@@ -842,7 +838,7 @@ fn comment_request_id(id: u64) -> String {
 
 #[tokio::test]
 async fn comment_proxy_policy_is_explicit_and_visitors_have_independent_quotas() {
-    let (_dir, app, _pool) = setup_with_proxies(vec!["127.0.0.1".parse().unwrap()]).await;
+    let (_dir, app, _pool) = setup_with_proxies(vec!["127.0.0.1".into()]).await;
     for id in 1..=11 {
         let visitor = format!("192.0.2.{id}");
         assert_eq!(
@@ -876,7 +872,7 @@ async fn comment_proxy_policy_is_explicit_and_visitors_have_independent_quotas()
             }
         );
     }
-    for invalid in [None, Some("unknown"), Some("192.0.2.1, 192.0.2.2")] {
+    for invalid in [Some(""), Some("unknown"), Some("192.0.2.1, invalid")] {
         assert_eq!(
             comment_from(
                 &app,
@@ -910,16 +906,31 @@ async fn comment_proxy_policy_is_explicit_and_visitors_have_independent_quotas()
             }
         );
     }
-    let mut headers = axum::http::HeaderMap::new();
-    headers.append("x-real-ip", "192.0.2.1".parse().unwrap());
-    headers.append("x-real-ip", "192.0.2.2".parse().unwrap());
-    assert!(
-        crate::rate_limit::visitor_ip(
-            "127.0.0.1:1234".parse().unwrap(),
-            &headers,
-            &["127.0.0.1".parse().unwrap()]
+    // Missing forwarded headers use the actual peer; multiple trusted hops are
+    // resolved by the shared boundary middleware, never the content handlers.
+    assert_eq!(
+        comment_from(
+            &app,
+            "127.0.0.1:1234",
+            None,
+            &comment_request_id(200),
+            "No forwarded header"
         )
-        .is_err()
+        .await
+        .status(),
+        StatusCode::OK
+    );
+    assert_eq!(
+        comment_from(
+            &app,
+            "127.0.0.1:1234",
+            Some("198.51.100.10, 127.0.0.1"),
+            &comment_request_id(201),
+            "Trusted chain"
+        )
+        .await
+        .status(),
+        StatusCode::OK
     );
 }
 
@@ -1160,3 +1171,51 @@ mod public_browse;
 mod management;
 
 mod media_management;
+
+#[tokio::test]
+async fn article_password_limits_share_the_resolved_proxy_address() {
+    let (_dir, app, pool) = setup_with_proxies(vec!["127.0.0.0/8".into()]).await;
+    let hash = xcss::admin_auth::hash_password("ProtectedPassphrase123").unwrap();
+    sqlx::query("INSERT INTO article(id,user_id,sort_id,label_id,article_title,article_content,view_status,password) VALUES(1,1,0,0,'Protected','Secret',0,?)")
+        .bind(hash).execute(&pool).await.unwrap();
+    let request = |visitor: &str, password: &str| {
+        with_peer(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/articles/1/unlock")
+                .header("content-type", "application/json")
+                .header("x-forwarded-for", format!("{visitor}, 127.0.0.2"))
+                .header("x-real-ip", "203.0.113.250")
+                .body(Body::from(
+                    serde_json::json!({"password":password}).to_string(),
+                ))
+                .unwrap(),
+        )
+    };
+    for attempt in 1..=11 {
+        let response = app
+            .clone()
+            .oneshot(request("192.0.2.1", "wrong password"))
+            .await
+            .unwrap();
+        assert_eq!(
+            response.status(),
+            if attempt <= 10 {
+                StatusCode::FORBIDDEN
+            } else {
+                StatusCode::TOO_MANY_REQUESTS
+            }
+        );
+    }
+    let response = app
+        .clone()
+        .oneshot(request("192.0.2.2", "wrong password"))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    let response = app
+        .oneshot(request("192.0.2.2", "ProtectedPassphrase123"))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+}

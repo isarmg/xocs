@@ -51,25 +51,3 @@ pub(crate) fn attempt_key(kind: &str, ip: &str, subject: &str) -> Vec<u8> {
     hash.update(subject.as_bytes());
     hash.finalize().to_vec()
 }
-
-/// Only an explicitly configured immediate peer may identify a visitor.
-/// The proxy must overwrite X-Real-IP; forwarded chains are never interpreted.
-pub(crate) fn visitor_ip(
-    peer: std::net::SocketAddr,
-    headers: &axum::http::HeaderMap,
-    trusted_proxies: &[std::net::IpAddr],
-) -> Result<std::net::IpAddr, AppError> {
-    if !trusted_proxies.contains(&peer.ip()) {
-        return Ok(peer.ip());
-    }
-    let mut values = headers.get_all("x-real-ip").iter();
-    let ip = values
-        .next()
-        .and_then(|value| value.to_str().ok())
-        .and_then(|value| value.parse::<std::net::IpAddr>().ok());
-    if values.next().is_some() {
-        return Err(crate::invalid("可信代理必须提供单个有效 X-Real-IP"));
-    }
-    ip.filter(|ip| !ip.is_unspecified() && !ip.is_multicast())
-        .ok_or_else(|| crate::invalid("可信代理必须提供单个有效 X-Real-IP"))
-}

@@ -16,7 +16,7 @@
 
 - [开发与验证](development.md)：源码构建、自动化检查与发行输入。
 - [当前实现参考](current-guide.md)：数据库身份、公开响应与评论重试语义。
-- [账号设置](account-settings.md)、[公共支撑](common-support.md)、[1.0.0 发行记录](releases/1.0.0.md)。
+- [账号设置](account-settings.md)、[公共支撑](common-support.md)。
 - [项目首页](../README.md)、[MIT 许可证](../LICENSE)。第三方前端许可证位于 `web/licenses/`。
 
-当前源码使用 `xocs-db-v4`。公开 v1.0.0 归档早于当前匿名评论、来源识别和持久回执实现；使用这些功能时应构建对应源码，并以该程序的身份与状态校验结果为准。
+当前源码使用 `xocs-db-v4`。程序会校验实际数据结构；不匹配时只读失败，不自动迁移。

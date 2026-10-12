@@ -819,14 +819,13 @@ struct Family {
     status: Option<i64>,
 }
 const FAMILY_SQL: &str = "SELECT id,bg_cover,man_cover,woman_cover,man_name,woman_name,timing,countdown_title,countdown_time,family_info,status FROM family";
-const CURRENT_FAMILY: &str = "user_id=? AND id=(SELECT MAX(id) FROM family WHERE user_id=?)";
+const FAMILY_OWNER: &str = "user_id=?";
 async fn content_family(State(state): State<AppState>) -> ApiResult<Vec<Family>> {
     let author = crate::site_author_id(&state.pool).await?;
     Ok(Json(
         sqlx::query_as::<_, Family>(sqlx::AssertSqlSafe(format!(
-            "{FAMILY_SQL} WHERE {CURRENT_FAMILY}"
+            "{FAMILY_SQL} WHERE {FAMILY_OWNER}"
         )))
-        .bind(author)
         .bind(author)
         .fetch_all(&state.pool)
         .await
@@ -883,10 +882,9 @@ async fn load_family(state: &AppState, id: i64) -> ApiResult<Family> {
     let author = crate::site_author_id(&state.pool).await?;
     Ok(Json(
         sqlx::query_as::<_, Family>(sqlx::AssertSqlSafe(format!(
-            "{FAMILY_SQL} WHERE id=? AND {CURRENT_FAMILY}"
+            "{FAMILY_SQL} WHERE id=? AND {FAMILY_OWNER}"
         )))
         .bind(id)
-        .bind(author)
         .bind(author)
         .fetch_optional(&state.pool)
         .await
@@ -928,9 +926,9 @@ async fn update_family(
 ) -> ApiResult<Family> {
     validate_family(&input)?;
     let author = crate::site_author_id(&state.pool).await?;
-    let changed=sqlx::query(sqlx::AssertSqlSafe(format!("UPDATE family SET bg_cover=?,man_cover=?,woman_cover=?,man_name=?,woman_name=?,timing=?,countdown_title=?,countdown_time=?,family_info=?,status=?,update_time=CURRENT_TIMESTAMP WHERE id=? AND {CURRENT_FAMILY}")))
+    let changed=sqlx::query(sqlx::AssertSqlSafe(format!("UPDATE family SET bg_cover=?,man_cover=?,woman_cover=?,man_name=?,woman_name=?,timing=?,countdown_title=?,countdown_time=?,family_info=?,status=?,update_time=CURRENT_TIMESTAMP WHERE id=? AND {FAMILY_OWNER}")))
         .bind(input.bg_cover).bind(input.man_cover).bind(input.woman_cover).bind(input.man_name).bind(input.woman_name).bind(input.timing)
-        .bind(input.countdown_title).bind(input.countdown_time).bind(input.family_info).bind(i64::from(input.status)).bind(id).bind(author).bind(author)
+        .bind(input.countdown_title).bind(input.countdown_time).bind(input.family_info).bind(i64::from(input.status)).bind(id).bind(author)
         .execute(&state.pool).await.map_err(db_error)?;
     if changed.rows_affected() == 0 {
         return Err(absent());
@@ -948,10 +946,9 @@ async fn delete_family(
         .await
         .map_err(db_error)?;
     let changed = sqlx::query(sqlx::AssertSqlSafe(format!(
-        "DELETE FROM family WHERE id=? AND {CURRENT_FAMILY}"
+        "DELETE FROM family WHERE id=? AND {FAMILY_OWNER}"
     )))
     .bind(id)
-    .bind(author)
     .bind(author)
     .execute(&mut *transaction)
     .await
@@ -959,12 +956,6 @@ async fn delete_family(
     if changed.rows_affected() == 0 {
         return Err(absent());
     }
-    // Retain legacy stories without making one of them the replacement home.
-    sqlx::query("UPDATE family SET user_id=NULL WHERE user_id=?")
-        .bind(author)
-        .execute(&mut *transaction)
-        .await
-        .map_err(db_error)?;
     transaction.commit().await.map_err(db_error)?;
     Ok(Json(serde_json::json!({"deleted":true})))
 }

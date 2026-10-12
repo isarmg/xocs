@@ -12,8 +12,8 @@ cleanup() {
 }
 trap cleanup EXIT
 chmod 700 "$smoke_dir"
-printf '%s\n' 'TemporaryPassphrase123' | "$binary" init --database "$smoke_dir/site.sqlite" >/dev/null
-"$binary" run --database "$smoke_dir/site.sqlite" --media "$smoke_dir/media" --development-http --bind 127.0.0.1:18881 >"$smoke_dir/server.log" 2>&1 &
+printf '%s\n' 'TemporaryPassphrase123' | "$binary" --data-dir "$smoke_dir" init >/dev/null
+"$binary" --data-dir "$smoke_dir" run --development --bind 127.0.0.1:18881 >"$smoke_dir/server.log" 2>&1 &
 server_pid=$!
 for _ in {1..20}; do
   if curl -fsS http://127.0.0.1:18881/api/v1/health >/dev/null 2>&1; then break; fi
@@ -121,5 +121,5 @@ test "$(curl -s -o /dev/null -w '%{http_code}' -X DELETE -b "$smoke_dir/cookies"
 test "$(curl -s -o /dev/null -w '%{http_code}' -X DELETE -b "$smoke_dir/cookies" \
   -H 'Origin: http://127.0.0.1:18881' -H 'Sec-Fetch-Site: same-origin' -H "X-CSRF-Token: $csrf" \
   http://127.0.0.1:18881/api/v1/content/tree-hole/1)" = 200
-"$binary" doctor --database "$smoke_dir/site.sqlite" | grep -qx ok
+"$binary" --data-dir "$smoke_dir" check | grep -qx 'initialized state is valid'
 echo 'server smoke: ok' 

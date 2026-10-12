@@ -500,7 +500,7 @@ async fn concurrent_article_replays_share_one_receipt_on_a_single_connection() {
 }
 
 #[tokio::test]
-async fn failed_taxonomy_leaves_key_available_and_legacy_posts_remain_independent() {
+async fn failed_taxonomy_leaves_key_available_and_unkeyed_posts_remain_independent() {
     let (_dir, app, pool) = setup().await;
     seed(&pool).await;
     let session = login(&app).await;

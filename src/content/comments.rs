@@ -1,13 +1,9 @@
 use super::PageResult;
 use crate::{ApiResult, AppError, AppState, absent, db_error, invalid, rate_limit};
-use axum::{
-    Json,
-    extract::{ConnectInfo, State},
-    http::{HeaderMap, StatusCode},
-};
+use axum::{Extension, Json, extract::State, http::StatusCode};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::net::{IpAddr, SocketAddr};
+use std::net::IpAddr;
 use xcss::server_cli::{ContractPath as Path, ContractQuery as Query};
 
 #[derive(Deserialize)]
@@ -29,8 +25,7 @@ pub(super) struct MessageCommentInput {
 
 pub(super) async fn create_comment(
     State(state): State<AppState>,
-    ConnectInfo(peer): ConnectInfo<SocketAddr>,
-    headers: HeaderMap,
+    Extension(xcss::client_ip::ClientIp(visitor)): Extension<xcss::client_ip::ClientIp>,
     crate::ContractJson(input): crate::ContractJson<CommentInput>,
 ) -> ApiResult<Comment> {
     let enabled: Option<i64> = sqlx::query_scalar("SELECT comment_status FROM article WHERE id=? AND deleted=0 AND view_status=1 AND password IS NULL")
@@ -38,7 +33,6 @@ pub(super) async fn create_comment(
     if enabled != Some(1) {
         return Err(AppError(StatusCode::FORBIDDEN, "文章不允许评论"));
     }
-    let visitor = rate_limit::visitor_ip(peer, &headers, &state.trusted_proxies)?;
     create_anonymous_comment(
         &state,
         visitor,
@@ -55,22 +49,18 @@ pub(super) async fn create_comment(
 
 pub(super) async fn create_message_comment(
     State(state): State<AppState>,
-    ConnectInfo(peer): ConnectInfo<SocketAddr>,
-    headers: HeaderMap,
+    Extension(xcss::client_ip::ClientIp(visitor)): Extension<xcss::client_ip::ClientIp>,
     crate::ContractJson(input): crate::ContractJson<MessageCommentInput>,
 ) -> ApiResult<Comment> {
-    let visitor = rate_limit::visitor_ip(peer, &headers, &state.trusted_proxies)?;
     create_anonymous_comment(&state, visitor, 0, "message", input).await
 }
 
 pub(super) async fn create_love_comment(
     State(state): State<AppState>,
-    ConnectInfo(peer): ConnectInfo<SocketAddr>,
-    headers: HeaderMap,
+    Extension(xcss::client_ip::ClientIp(visitor)): Extension<xcss::client_ip::ClientIp>,
     crate::ContractJson(input): crate::ContractJson<MessageCommentInput>,
 ) -> ApiResult<Comment> {
     let source = crate::site_author_id(&state.pool).await?;
-    let visitor = rate_limit::visitor_ip(peer, &headers, &state.trusted_proxies)?;
     create_anonymous_comment(&state, visitor, source, "love", input).await
 }
 

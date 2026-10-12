@@ -29,7 +29,7 @@ pub(crate) struct AppState {
     pub(crate) origin: AdministratorOriginMode,
     pub(crate) media: PathBuf,
     pub(crate) media_operations: Arc<tokio::sync::Mutex<()>>,
-    pub(crate) trusted_proxies: Vec<std::net::IpAddr>,
+    pub(crate) trusted_proxies: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -92,6 +92,7 @@ pub(crate) fn now_micros() -> anyhow::Result<u64> {
 }
 
 pub(crate) fn router(state: AppState, web: Option<PathBuf>) -> anyhow::Result<Router> {
+    let trusted = xcss::client_ip::TrustedProxies::parse(&state.trusted_proxies)?;
     let admin_routes = content::admin_routes()
         .merge(admin::routes())
         .merge(media::admin_routes())
@@ -165,6 +166,7 @@ pub(crate) fn router(state: AppState, web: Option<PathBuf>) -> anyhow::Result<Ro
                 .on_failure(()),
         )
         .layer(from_fn_with_state(state.scope.clone(), admit_request))
+        .layer(from_fn_with_state(trusted, xcss::client_ip::middleware))
         .layer(from_fn_with_state(
             PRODUCT_ID.to_string(),
             xcss::server_cli::service_identity_middleware,

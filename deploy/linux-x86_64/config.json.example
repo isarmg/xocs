@@ -1,0 +1,6 @@
+{
+  "bind": "127.0.0.1:8081",
+  "data_dir": "/var/lib/isarmg/xocs",
+  "development": false,
+  "log_level": "info"
+}

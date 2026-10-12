@@ -199,6 +199,15 @@ pub(crate) async fn validate_database(pool: &SqlitePool) -> anyhow::Result<()> {
     if !violations.is_empty() {
         bail!("database contains foreign-key violations");
     }
+    let duplicate_family: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM family WHERE user_id IS NOT NULL GROUP BY user_id HAVING COUNT(*) > 1)",
+    )
+    .fetch_one(pool)
+    .await?;
+    anyhow::ensure!(
+        !duplicate_family,
+        "an author must have at most one family record"
+    );
     let authors: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM user WHERE user_type=0 AND deleted=0 AND user_status=1",
     )

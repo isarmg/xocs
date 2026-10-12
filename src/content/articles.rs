@@ -2,13 +2,12 @@ use super::PageResult;
 use crate::rate_limit;
 use crate::{ApiResult, AppError, AppState, absent, db_error, invalid};
 use axum::{
-    Json,
-    extract::{ConnectInfo, State},
+    Extension, Json,
+    extract::State,
     http::{HeaderMap, StatusCode},
 };
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
-use std::net::SocketAddr;
 use xcss::server_cli::{ContractPath as Path, ContractQuery as Query};
 
 #[derive(Serialize, sqlx::FromRow)]
@@ -430,7 +429,7 @@ pub(super) struct UnlockRequest {
 }
 pub(super) async fn unlock_article(
     State(state): State<AppState>,
-    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    Extension(xcss::client_ip::ClientIp(visitor)): Extension<xcss::client_ip::ClientIp>,
     Path(id): Path<i64>,
     crate::ContractJson(input): crate::ContractJson<UnlockRequest>,
 ) -> ApiResult<Article> {
@@ -445,7 +444,7 @@ pub(super) async fn unlock_article(
     .await
     .map_err(db_error)?
     .ok_or_else(absent)?;
-    let key = rate_limit::attempt_key("article", &peer.ip().to_string(), &id.to_string());
+    let key = rate_limit::attempt_key("article", &visitor.to_string(), &id.to_string());
     rate_limit::record_attempt(&state.pool, &key, 10)
         .await
         .map_err(|error| {

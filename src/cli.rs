@@ -23,12 +23,15 @@ use xcss::admin_sqlite::SqliteAdministratorStore;
 #[derive(Parser)]
 #[command(about = "XOCS Rust service", version, long_version = concat!(env!("CARGO_PKG_VERSION"), " target=", env!("XOCS_BUILD_TARGET"), " source=", env!("XOCS_SOURCE_REVISION")))]
 struct Cli {
-    /// Read current JSON settings; explicit CLI > mapped environment > file > defaults.
+    /// Read private JSON configuration (default: /etc/isarmg/xocs/config.json).
     #[arg(long, global = true, env = "XOCS_CONFIG")]
     config: Option<PathBuf>,
-    /// Private state root containing site.sqlite and media/ by default.
+    /// Private state root containing site.sqlite, logs/ and media/ by default.
     #[arg(long, global = true)]
     data_dir: Option<PathBuf>,
+    /// Structured log threshold: trace, debug, info, warn, error or off.
+    #[arg(long, global = true)]
+    log_level: Option<String>,
     #[arg(long, global = true)]
     json: bool,
     #[command(subcommand)]
@@ -39,8 +42,6 @@ struct Cli {
 enum Command {
     /// Create a new empty database. Read the administrator password from stdin.
     Init {
-        #[arg(long)]
-        database: Option<PathBuf>,
         #[arg(long, default_value = "admin")]
         username: String,
     },
@@ -49,7 +50,7 @@ enum Command {
         #[command(flatten)]
         settings: config::Overrides,
     },
-    /// Read-only checks of configuration, current data and required locations.
+    /// Validate configuration without requiring initialized state.
     Config {
         #[command(subcommand)]
         command: ConfigCommand,
@@ -59,9 +60,15 @@ enum Command {
         #[command(flatten)]
         settings: config::Overrides,
     },
-    Doctor {
-        #[arg(long)]
-        database: PathBuf,
+    /// Read-only, offline checks of initialized state and required directories.
+    Check {
+        #[command(flatten)]
+        settings: config::Overrides,
+    },
+    /// Offline administrator maintenance. Stop the service before changing credentials.
+    Admin {
+        #[command(subcommand)]
+        command: AdminCommand,
     },
     /// Print the exact Web inventory compiled into this executable.
     WebAssets,
@@ -69,6 +76,15 @@ enum Command {
     ReleaseIdentity,
     /// Print the current data and backup contract compiled into this executable.
     StateContract,
+}
+
+#[derive(Subcommand)]
+enum AdminCommand {
+    /// Read a new password from stdin and revoke all sessions for this administrator.
+    ResetPassword {
+        #[arg(long, default_value = "admin")]
+        username: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -132,16 +148,7 @@ pub(crate) async fn run() -> std::process::ExitCode {
             }
         }
     }
-    use tracing_subscriber::prelude::*;
-    let log_layer = xcss::log::XcssStructuredLayer::new("xocs").expect("static service identity");
-    tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info,tower_http=info".into()),
-        )
-        .with(log_layer.clone())
-        .init();
-    match execute(cli, &log_layer).await {
+    match execute(cli).await {
         Ok(()) => std::process::ExitCode::SUCCESS,
         Err(error) => {
             let envelope = if let Some(error) = error.downcast_ref::<xcss::config::ConfigError>() {
@@ -205,19 +212,39 @@ pub(crate) async fn run() -> std::process::ExitCode {
     }
 }
 
-async fn execute(cli: Cli, log_layer: &xcss::log::XcssStructuredLayer) -> anyhow::Result<()> {
+async fn execute(cli: Cli) -> anyhow::Result<()> {
     let output_json = cli.json;
+    let mut overrides = match &cli.command {
+        Command::Run { settings }
+        | Command::Status { settings }
+        | Command::Check { settings }
+        | Command::Config {
+            command: ConfigCommand::Validate { settings },
+        } => settings.clone(),
+        _ => config::Overrides::default(),
+    };
+    overrides.log_level = cli.log_level;
+    let loaded = match &cli.command {
+        Command::WebAssets | Command::ReleaseIdentity | Command::StateContract => None,
+        _ => Some(config::load(
+            cli.config.as_deref(),
+            cli.data_dir.as_deref(),
+            &overrides,
+        )?),
+    };
+    let log_layer = xcss::log::XcssStructuredLayer::new("xocs")?;
+    use tracing_subscriber::prelude::*;
+    let level = loaded
+        .as_ref()
+        .map_or("info", |loaded| loaded.value.log_level.as_str());
+    tracing_subscriber::registry()
+        .with(level.parse::<tracing_subscriber::filter::LevelFilter>()?)
+        .with(log_layer.clone())
+        .try_init()?;
+
     match cli.command {
-        Command::Init { database, username } => {
-            let settings = config::load(
-                cli.config.as_deref(),
-                cli.data_dir.as_deref(),
-                &config::Overrides {
-                    database,
-                    ..Default::default()
-                },
-            )?
-            .value;
+        Command::Init { username } => {
+            let settings = &loaded.as_ref().expect("configuration loaded").value;
             let database = settings.database_path()?;
             if database.exists() {
                 bail!(
@@ -226,11 +253,7 @@ async fn execute(cli: Cli, log_layer: &xcss::log::XcssStructuredLayer) -> anyhow
                 );
             }
             let username = xcss::admin_auth::normalize_administrator_username(&username)?;
-            let mut password = String::new();
-            io::stdin().take(4097).read_to_string(&mut password)?;
-
-            let password = password.trim_end_matches(['\r', '\n']);
-            xcss::admin_auth::validate_password(password)?;
+            let password = read_password()?;
             xcss::server_cli::create_empty_private_directory(&settings.state_directory()?)
                 .map_err(CliFailure)?;
             let state_directory =
@@ -241,7 +264,8 @@ async fn execute(cli: Cli, log_layer: &xcss::log::XcssStructuredLayer) -> anyhow
             xcss::state_file::PrivateStateDirectory::create(settings.media_path()?)?;
             xcss::server_cli::create_runtime_log_directory(&settings.state_directory()?)
                 .map_err(CliFailure)?;
-            initialize_new_database(&database, &username, password).await?;
+            attach_log_file(settings, &log_layer)?;
+            initialize_new_database(&database, &username, &password).await?;
             tracing::info!(event = "common.initialization.completed");
             if output_json {
                 println!(
@@ -252,24 +276,21 @@ async fn execute(cli: Cli, log_layer: &xcss::log::XcssStructuredLayer) -> anyhow
                 println!("created {}", database.display());
             }
         }
-        Command::Run {
-            settings: overrides,
-        } => {
-            let settings =
-                config::load(cli.config.as_deref(), cli.data_dir.as_deref(), &overrides)?.value;
+        Command::Run { .. } => {
+            let settings = &loaded.as_ref().expect("configuration loaded").value;
             let database = settings.database_path()?;
             let media = settings.media_path()?;
-            let instance_lock = Arc::new(config::runtime_lock(&settings)?);
+            let instance_lock = Arc::new(config::runtime_lock(settings)?);
             let bind = settings.bind;
             let web = settings.web.clone();
-            let development_http = settings.development_http;
+            let development = settings.development;
             static_assets::verify()?;
             if let Some(web) = &web
-                && (!development_http || !web.is_absolute() || !web.join("index.html").is_file())
+                && (!development || !web.is_absolute() || !web.join("index.html").is_file())
             {
                 bail!("--web requires development HTTP and an absolute built Web directory");
             }
-            if development_http && !bind.ip().is_loopback() {
+            if development && !bind.ip().is_loopback() {
                 bail!("development HTTP may only bind loopback");
             }
             if !media.is_absolute() {
@@ -287,7 +308,7 @@ async fn execute(cli: Cli, log_layer: &xcss::log::XcssStructuredLayer) -> anyhow
             let pool = open_database(&database, false).await?;
             let result = async {
                 validate_database(&pool).await?;
-                let origin = if development_http {
+                let origin = if development {
                     AdministratorOriginMode::LoopbackDevelopmentHttp
                 } else {
                     AdministratorOriginMode::ProductionHttps
@@ -298,12 +319,7 @@ async fn execute(cli: Cli, log_layer: &xcss::log::XcssStructuredLayer) -> anyhow
                 admin.store().validate_all_administrators().await?;
                 xcss::server_cli::validate_runtime_log_directory(&settings.state_directory()?)
                     .map_err(CliFailure)?;
-                let logs = settings.state_directory()?.join("logs");
-                log_layer.set_rotating_file(xcss::log::RotatingLogFile::open(
-                    logs,
-                    "server",
-                    xcss::log::LogRetention::default(),
-                )?)?;
+                attach_log_file(settings, &log_layer)?;
                 tracing::info!(event = "common.config.loaded");
                 let scope = xcss::server_runtime::WorkScope::new();
                 let participant = Arc::new(lifecycle::Lifecycle {
@@ -369,46 +385,59 @@ async fn execute(cli: Cli, log_layer: &xcss::log::XcssStructuredLayer) -> anyhow
             pool.close().await;
             result?;
         }
-        Command::Doctor { database } => {
-            validate_existing_database(&database).await?;
+        Command::Admin {
+            command: AdminCommand::ResetPassword { username },
+        } => {
+            let settings = &loaded.as_ref().expect("configuration loaded").value;
+            let username = xcss::admin_auth::normalize_administrator_username(&username)?;
+            let password = read_password()?;
+            let state = xcss::state_file::PrivateStateDirectory::open(settings.state_directory()?)?;
+            state.verify_no_pending_maintenance()?;
+            let _maintenance = state.try_maintenance_lock()?;
+            state.verify_no_pending_maintenance()?;
+            check_state(settings).await?;
+            attach_log_file(settings, &log_layer)?;
+            let pool = open_database(&settings.database_path()?, false).await?;
+            let service = AdministratorService::new(SqliteAdministratorStore::new(pool.clone()));
+            let result = service
+                .change_administrator_password(&username, &password, crate::now_micros()?)
+                .await;
+            pool.close().await;
+            result?;
             if output_json {
                 println!(
                     "{}",
-                    serde_json::json!({"status":"valid","schema_identity":schema::current_identity()?})
+                    serde_json::json!({"status":"password_reset","username":username,"sessions_revoked":true})
                 );
             } else {
-                println!("ok");
+                println!("administrator password reset; existing sessions revoked");
             }
         }
-        Command::Config {
-            command: ConfigCommand::Validate {
-                settings: overrides,
-            },
-        } => {
-            let loaded = config::load(cli.config.as_deref(), cli.data_dir.as_deref(), &overrides)?;
-            let database = loaded.value.database_path()?;
-            let media = loaded.value.media_path()?;
-            xcss::state_file::PrivateStateDirectory::open(loaded.value.state_directory()?)?;
-            xcss::state_file::PrivateStateDirectory::open(media)?;
-            validate_existing_database(&database).await?;
-            xcss::server_cli::validate_runtime_log_directory(&loaded.value.state_directory()?)
-                .map_err(CliFailure)?;
-            let mut state_paths = vec![loaded.value.state_directory()?, loaded.value.media_path()?];
-            if let Some(config) = &cli.config {
-                state_paths.push(config.clone());
-            }
-            let report = serde_json::json!({"status":"valid","schema_identity":schema::current_identity()?,"state_paths":state_paths,"sources":loaded.sources});
+        Command::Check { .. } => {
+            let settings = &loaded.as_ref().expect("configuration loaded").value;
+            check_state(settings).await?;
             if output_json {
-                println!("{report}");
+                println!(
+                    "{}",
+                    serde_json::json!({"status":"valid","schema_identity":schema::current_identity()?,"state_paths":[settings.data_dir, settings.media_path()?]})
+                );
             } else {
-                println!("configuration and current database are valid");
+                println!("initialized state is valid");
             }
         }
-        Command::Status {
-            settings: overrides,
-        } => {
-            let settings =
-                config::load(cli.config.as_deref(), cli.data_dir.as_deref(), &overrides)?.value;
+        Command::Config { .. } => {
+            let loaded = loaded.as_ref().expect("configuration loaded");
+            if output_json {
+                println!(
+                    "{}",
+                    serde_json::json!({"status":"valid","sources":loaded.sources})
+                );
+            } else {
+                println!("configuration is valid");
+            }
+        }
+        Command::Status { .. } => {
+            let settings = &loaded.as_ref().expect("configuration loaded").value;
             let report = xcss::server_cli::query_status(settings.bind, PRODUCT_ID)
                 .await
                 .map_err(CliFailure)?;
@@ -429,5 +458,45 @@ async fn execute(cli: Cli, log_layer: &xcss::log::XcssStructuredLayer) -> anyhow
             println!("{}", String::from_utf8(release::state_contract_bytes()?)?);
         }
     }
+    Ok(())
+}
+
+fn read_password() -> anyhow::Result<String> {
+    let mut password = String::new();
+    io::stdin().take(4097).read_to_string(&mut password)?;
+    anyhow::ensure!(password.len() <= 4096, "password input is too long");
+    if password.ends_with('\n') {
+        password.pop();
+        if password.ends_with('\r') {
+            password.pop();
+        }
+    }
+    anyhow::ensure!(
+        !password.contains(['\r', '\n']),
+        "password input must contain exactly one line"
+    );
+    xcss::admin_auth::validate_password(&password)?;
+    Ok(password)
+}
+
+fn attach_log_file(
+    settings: &config::Settings,
+    log_layer: &xcss::log::XcssStructuredLayer,
+) -> anyhow::Result<()> {
+    xcss::server_cli::validate_runtime_log_directory(&settings.data_dir).map_err(CliFailure)?;
+    log_layer.set_rotating_file(xcss::log::RotatingLogFile::open(
+        settings.data_dir.join("logs"),
+        "server",
+        xcss::log::LogRetention::default(),
+    )?)?;
+    Ok(())
+}
+
+async fn check_state(settings: &config::Settings) -> anyhow::Result<()> {
+    let state = xcss::state_file::PrivateStateDirectory::open(settings.state_directory()?)?;
+    state.verify_no_pending_maintenance()?;
+    xcss::state_file::PrivateStateDirectory::open(settings.media_path()?)?;
+    xcss::server_cli::validate_runtime_log_directory(&settings.data_dir).map_err(CliFailure)?;
+    validate_existing_database(&settings.database_path()?).await?;
     Ok(())
 }

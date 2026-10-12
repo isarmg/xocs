@@ -79,13 +79,13 @@ async fn public_home(app: &Router) -> serde_json::Value {
 }
 
 #[tokio::test]
-async fn family_is_admin_owned_and_legacy_stories_do_not_reappear() {
+async fn family_is_admin_owned_and_other_authors_stay_isolated() {
     let (_directory, app, pool) = setup().await;
     sqlx::query("INSERT INTO user(id,username,user_type,user_status) VALUES(2,'other-author',2,1)")
         .execute(&pool)
         .await
         .unwrap();
-    sqlx::query("INSERT INTO family(id,user_id,man_name,woman_name,status) VALUES(1,1,'Earlier','Partner',1),(2,1,'Current','Partner',1),(3,2,'Other','Partner',1)")
+    sqlx::query("INSERT INTO family(id,user_id,man_name,woman_name,status) VALUES(2,1,'Current','Partner',1),(3,2,'Other','Partner',1)")
         .execute(&pool).await.unwrap();
     let home = public_home(&app).await;
     assert_eq!(home.as_array().unwrap().len(), 1);
@@ -185,10 +185,7 @@ async fn family_is_admin_owned_and_legacy_stories_do_not_reappear() {
             .fetch_all(&pool)
             .await
             .unwrap();
-    assert_eq!(
-        retained,
-        vec![(1, None, "Earlier".into()), (3, Some(2), "Other".into())]
-    );
+    assert_eq!(retained, vec![(3, Some(2), "Other".into())]);
     let mut forged = details(true);
     forged["user_id"] = 2.into();
     let response = admin_request(&app, &session, "POST", "/api/v1/content/family", forged).await;
@@ -237,4 +234,16 @@ async fn concurrent_family_creation_only_creates_one_home() {
     let home = public_home(&app).await;
     assert_eq!(home.as_array().unwrap().len(), 1);
     assert_eq!(home[0]["man_name"], "Owner");
+}
+
+#[tokio::test]
+async fn duplicate_family_owners_are_rejected_without_rewriting_state() {
+    let (directory, _app, pool) = setup().await;
+    sqlx::query("INSERT INTO family(user_id,man_name,woman_name,status) VALUES(1,'First','Partner',1),(1,'Second','Partner',1)")
+        .execute(&pool).await.unwrap();
+    close_fixture_pool(&pool).await;
+    let database = directory.path().join("site.sqlite");
+    let before = std::fs::read(&database).unwrap();
+    assert!(validate_existing_database(&database).await.is_err());
+    assert_eq!(std::fs::read(&database).unwrap(), before);
 }

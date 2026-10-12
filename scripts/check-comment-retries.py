@@ -31,7 +31,7 @@ def post(base, content, identity=None, visitor=None):
     body = {'request_id': identity or str(uuid.uuid4()), 'content': content}
     headers = {'Content-Type': 'application/json'}
     if visitor:
-        headers.update({'X-Real-IP': visitor, 'X-Forwarded-For': visitor})
+        headers.update({'X-Forwarded-For': visitor})
     request = urllib.request.Request(base + '/api/v1/message-comments', json.dumps(body).encode(), headers)
     try:
         with urllib.request.urlopen(request, timeout=10) as response:
@@ -64,7 +64,7 @@ def main():
 
         def start(trusted):
             nonlocal server
-            command = [binary, '--data-dir', directory, 'run', '--bind', f'127.0.0.1:{address}', '--development-http']
+            command = [binary, '--data-dir', directory, 'run', '--bind', f'127.0.0.1:{address}', '--development']
             if trusted:
                 command += ['--trusted-proxies', '127.0.0.1']
             server = subprocess.Popen(command, stdout=log, stderr=log)
@@ -87,7 +87,7 @@ def main():
             stop(); start(True)
             statuses = [post(base, f'Proxy visitor {i}', visitor=f'192.0.2.{i}')[0] for i in range(1, 12)]
             assert statuses == [200] * 11, statuses
-            assert post(base, 'Missing trusted header')[0] == 400
+            assert post(base, 'Missing trusted header')[0] == 429  # Falls back to the exhausted socket-peer quota.
             print('PASS: eleven visitors behind the configured proxy each receive independent quota')
 
             class DropFirstResponse(http.server.BaseHTTPRequestHandler):
@@ -98,7 +98,7 @@ def main():
 
                 def do_POST(self):
                     payload = self.rfile.read(int(self.headers['Content-Length']))
-                    request = urllib.request.Request(base + self.path, payload, {'Content-Type': 'application/json', 'X-Real-IP': '192.0.2.200'})
+                    request = urllib.request.Request(base + self.path, payload, {'Content-Type': 'application/json', 'X-Forwarded-For': '192.0.2.200'})
                     with urllib.request.urlopen(request, timeout=10) as response:
                         data, status = response.read(), response.status
                     type(self).count += 1
@@ -143,7 +143,7 @@ def main():
                 proxy.shutdown(); proxy.server_close(); worker.join()
         finally:
             stop(); log.close()
-        subprocess.run([binary, '--data-dir', directory, 'config', 'validate'], check=True)
+        subprocess.run([binary, '--data-dir', directory, 'check'], check=True)
 
 
 if __name__ == '__main__':
