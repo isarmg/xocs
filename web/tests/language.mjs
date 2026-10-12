@@ -57,7 +57,10 @@ try {
           await expect(page.locator('.xcss-admin-shell .xcss-loading')).toHaveCount(0);
         } else if (adminPage === 'labels') {
           await expect(page.getByRole('combobox', { name: 'Category', exact: true })).toBeEnabled();
-          await expect(page.getByRole('combobox', { name: 'Category', exact: true })).toContainText('中文分类');
+          const category = page.getByRole('combobox', { name: 'Category', exact: true });
+          await category.click();
+          await expect(page.getByRole('option', { name: '中文分类', exact: true })).toBeVisible();
+          await category.press('Escape');
           await expect(page.locator('.xcss-admin-shell .xcss-loading')).toHaveCount(0);
         }
         assert.equal(await page.getByRole('alert').count(), 0, `${path}: ${await page.getByRole('alert').allTextContents()}`);

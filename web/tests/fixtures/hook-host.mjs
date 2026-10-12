@@ -3,6 +3,14 @@
 let current;
 let nextHostId = 0;
 const owners = new WeakMap();
+const nativeSelectBoundaries = new WeakSet();
+// Browser-owned composite interactions are tested against actual shared DOM
+// in the browser suite. Business units inspect their original form props.
+export function registerNativeSelectBoundary(component) {
+  if (typeof component === 'function') nativeSelectBoundaries.add(component);
+}
+const changedDependencies = (previous, next) => next === undefined || previous === undefined
+  || next.length !== previous.length || next.some((dep, index) => !Object.is(dep, previous[index]));
 export function useState(initial) {
   const host = current, index = host.index++;
   if (!(index in host.slots)) {
@@ -22,37 +30,42 @@ export function useRef(value) {
 }
 export function useMemo(factory, deps) {
   const memo = useRef(null);
-  if (!memo.current || !deps || deps.some((dep, index) => !Object.is(dep, memo.current.deps[index])))
+  if (!memo.current || changedDependencies(memo.current.deps, deps))
     memo.current = { deps, value: factory() };
   return memo.current.value;
 }
+export function useCallback(callback, deps) { return useMemo(() => callback, deps); }
 export const StrictMode = ({ children }) => children;
 export function useId() { return useRef(`unit-${current.id}-${current.index}`).current; }
-export function useEffect(effect, deps) {
+function scheduleEffect(effect, deps, layout) {
   const host = current, index = host.index++;
   const previous = host.slots[index];
-  if (!previous || deps === undefined || deps.some((dep, i) => !Object.is(dep, previous.deps[i]))) {
-    host.effects.push(() => {
+  if (!previous || changedDependencies(previous.deps, deps)) {
+    (layout ? host.layoutEffects : host.effects).push(() => {
       previous?.cleanup?.();
-      host.slots[index] = { deps, cleanup: effect() };
+      host.slots[index] = { deps, layout, cleanup: effect() };
     });
   }
 }
+export function useEffect(effect, deps) { scheduleEffect(effect, deps, false); }
+export function useLayoutEffect(effect, deps) { scheduleEffect(effect, deps, true); }
 export function jsx(type, props, key) { return { type, props: props ?? {}, key }; }
 export const jsxs = jsx;
 export const Fragment = 'fragment';
 export class HookHost {
-  slots = []; effects = []; dirty = true; index = 0; children = new Map();
+  slots = []; effects = []; layoutEffects = []; dirty = true; index = 0; children = new Map();
   id = nextHostId++;
   constructor(component, props = {}) { this.component = component; this.props = props; }
   render(beforeEffects) {
     for (let i = 0; i < 30; i++) {
       const previous = current;
-      current = this; this.index = 0; this.effects = []; this.dirty = false;
+      current = this; this.index = 0; this.effects = []; this.layoutEffects = []; this.dirty = false;
       try { this.tree = this.component(this.props); }
       finally { current = previous; }
       if (this.tree && typeof this.tree === 'object') owners.set(this.tree, this);
       beforeEffects?.(this.tree);
+      const layoutEffects = this.layoutEffects; this.layoutEffects = [];
+      for (const effect of layoutEffects) effect();
       const effects = this.effects; this.effects = [];
       for (const effect of effects) effect();
       if (!this.dirty) return this.tree;
@@ -62,7 +75,9 @@ export class HookHost {
   unmount() {
     for (const child of this.children.values()) child.unmount();
     this.children.clear();
-    for (const slot of this.slots) slot?.cleanup?.();
+    for (const layout of [true, false]) {
+      for (const slot of this.slots) if (slot?.layout === layout) slot.cleanup?.();
+    }
     this.slots = [];
   }
 }
@@ -88,6 +103,9 @@ export function expand(node) {
     if (Array.isArray(value)) return value.map((item, index) =>
       visit(item, `${path}/${item?.key == null ? `index:${index}` : `key:${JSON.stringify(item.key)}`}`));
     if (!value || typeof value !== 'object') return value;
+    if (nativeSelectBoundaries.has(value.type) && !value.props.multiple && (value.props.size ?? 0) <= 1) {
+      return visit({ ...value, type: 'select' }, path);
+    }
     if (typeof value.type === 'function') {
       visited.add(path);
       let child = owner.children.get(path);

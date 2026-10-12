@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { registerHooks } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { transformWithOxc } from 'vite';
+import { registerNativeSelectBoundary } from './hook-host.mjs';
 
 // Transform the original TSX, replacing only explicitly named module boundaries.
 // The shared UI is loaded from the installed package. No browser or DOM is used.
@@ -28,7 +29,10 @@ export async function originalModule(entry, replacements = {}, exports = []) {
     },
   });
   try {
-    return await import(entry.href);
+    const module = await import(entry.href);
+    const ui = await import('@xcss/web/admin-ui');
+    registerNativeSelectBoundary(ui.Select);
+    return module;
   } finally {
     hooks.deregister();
   }
