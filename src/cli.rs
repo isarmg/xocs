@@ -5,7 +5,7 @@ use crate::{
     database::{
         initialize_new_database, open_database, validate_database, validate_existing_database,
     },
-    lifecycle, release, schema, static_assets,
+    lifecycle, media, release, schema, static_assets,
 };
 use anyhow::{Context, bail};
 use clap::{Parser, Subcommand};
@@ -336,12 +336,14 @@ async fn execute(cli: Cli, log_layer: &xcss::log::XcssStructuredLayer) -> anyhow
                 )
                 .build()
                 .await?;
+                media::recover_deletions(&pool, &media).await?;
                 let state = AppState {
                     scope,
                     pool: pool.clone(),
                     admin,
                     origin,
                     media,
+                    media_operations: std::sync::Arc::new(tokio::sync::Mutex::new(())),
                     trusted_proxies: settings.trusted_proxies.clone(),
                 };
                 let app = router(state, web)?;

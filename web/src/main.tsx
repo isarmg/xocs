@@ -1,9 +1,9 @@
 import { articlePasswordError } from './article-password.ts';
-import { isUploadedImage } from './admin-contracts.ts';
-import { formatUtcTime, utcDateTimeInput } from './utc-time.ts';
+import { isUploadedImage, isNewsPage } from './admin-contracts.ts';
+import { formatUtcTime, parseUtcDate, utcDateTimeInput } from './utc-time.ts';
 import { formatArticleNewsTime } from './article-news-time.ts';
 import { uploadFilename } from './upload-filename.ts';
-import { isArticle, isArticleAccess, isArticlePage, isCategories, isCategory, isEditorLabels, isHomeSections, isNews, isNewsEntry, isPublicLabels, isSiteInfo, isSiteStats, isWallPosts, type NewsEntry } from './public-contracts';
+import { isArticle, isArticleAccess, isArticlePage, isCategories, isCategory, isEditorLabels, isHomeSections, isNewsEntry, isPublicLabels, isSiteInfo, isSiteStats, isWallPosts, type NewsEntry } from './public-contracts';
 import { publicErrorMessage } from './api';
 import { t } from '@xcss/web/admin-ui/i18n';
 import {StrictMode, useEffect, useMemo, useRef, useState} from 'react';
@@ -26,7 +26,8 @@ import { AdminWorkspace } from './AdminLayout';
 import {request, type Article, type ArticleInput, type ArticleSummary, type Category, type Page, type PublicLabel, type SiteInfo} from './api';
 import {SlidingTitle} from './SlidingTitle';
 import {clearValidation, languageHref, localizeValidation, preserveLinkLanguage} from './language';
-import {CommentsPage, Dashboard, FamilyPage, LabelsPage, LinksPage, NotesPage, ResourcesPage, SitePage, TreeHolePage, UsersPage} from './AdminExtras';
+import {CommentsPage, Dashboard, FamilyPage, LabelsPage, LetterPage, LinksPage, NotesPage, ResourcesPage, SitePage, TreeHolePage} from './AdminExtras';
+import {FilePicker} from './FilePicker.tsx';
 import {PublicExtras} from './PublicExtras';
 import {HomeSectionsPage,type HomeSection} from './HomeSections';
 import {PublicChrome} from './PublicChrome';
@@ -63,9 +64,9 @@ function AdminPages() {
   function renderPage() {
     if (page === 'account') return <AccountPage />;
     if (page === 'dashboard') return <Dashboard />;
-    if (page === 'users') return <UsersPage />;
     if (page === 'comments') return <CommentsPage />;
     if (page === 'notes') return <NotesPage />;
+    if (page === 'letter') return <LetterPage />;
     if (page === 'site') return <SitePage />;
     if (page === 'home') return <HomeSectionsPage />;
     if (page === 'labels') return <LabelsPage />;
@@ -209,12 +210,13 @@ function ArticleEditor({id}: {id?: number}) {
       <fieldset className="xocs-fieldset" disabled={saving}>
       <FormField label={t("标题", "Title")}><TextField required maxLength={120} value={article.article_title} onChange={event => change('article_title',event.target.value)} /></FormField>
       <div className="form-grid"><FormField label={t("分类", "Category")}><Select required value={article.sort_id} onChange={event => {change('sort_id',Number(event.target.value));change('label_id',0);}}><option value={0}>{t("选择分类", "Select a category")}</option>{categories.map(item => <option key={item.id} value={item.id}>{item.sort_name}</option>)}</Select></FormField><FormField label={t("标签", "Tags")}><Select required value={article.label_id} onChange={event => change('label_id',Number(event.target.value))}><option value={0}>{t("选择标签", "Select a tag")}</option>{labels.filter(item=>item.sort_id===article.sort_id).map(item=><option key={item.id} value={item.id}>{item.label_name}</option>)}</Select></FormField></div>
-      <div className="form-grid"><FormField label={t("封面图片地址", "Cover image URL")}><TextField disabled={uploading} value={article.article_cover || ''} onChange={event => change('article_cover',event.target.value || null)} /></FormField><FormField label={t("上传封面图片", "Upload cover image")}><input type="file" accept="image/png,image/jpeg,image/gif,image/webp" disabled={uploading||saving} onChange={event=>{const file=event.target.files?.[0];event.target.value='';void uploadPicture(file,'cover');}}/></FormField></div>
+      <div className="form-grid"><FormField label={t("封面图片地址", "Cover image URL")}><TextField disabled={uploading} value={article.article_cover || ''} onChange={event => change('article_cover',event.target.value || null)} /></FormField><FilePicker label={t("上传封面图片", "Upload cover image")} accept="image/png,image/jpeg,image/gif,image/webp" disabled={uploading||saving} onChange={event=>{const file=event.target.files?.[0];event.target.value='';void uploadPicture(file,'cover');}}/></div>
       <FormField label={t("Markdown 正文", "Markdown content")}><textarea className="xcss-input editor-textarea" required value={article.article_content} onChange={event => change('article_content',event.target.value)} /></FormField>
-      <div className="xcss-actions"><Button type="button" onClick={()=>setPreview(value=>!value)}>{preview?t("收起预览", "Hide preview"):t("预览正文", "Preview content")}</Button><FormField label={t("插入正文图片", "Insert content image")}><input type="file" accept="image/png,image/jpeg,image/gif,image/webp" disabled={uploading||saving} onChange={event=>{const file=event.target.files?.[0];event.target.value='';void uploadPicture(file,'content');}}/></FormField></div>
+      <div className="xcss-actions"><Button type="button" onClick={()=>setPreview(value=>!value)}>{preview?t("收起预览", "Hide preview"):t("预览正文", "Preview content")}</Button><FilePicker label={t("插入正文图片", "Insert content image")} accept="image/png,image/jpeg,image/gif,image/webp" disabled={uploading||saving} onChange={event=>{const file=event.target.files?.[0];event.target.value='';void uploadPicture(file,'content');}}/></div>
       {preview&&<div className="editor-markdown-preview article-markdown" dangerouslySetInnerHTML={{__html:previewHtml}}/>}
       <div className="form-grid"><FormField label={t("视频地址", "Video URL")}><TextField value={article.video_url || ''} onChange={event => change('video_url',event.target.value || null)} /></FormField>{!article.view_status&&<div><FormField label={t("文章访问密码", "Article access password")}><TextField type="password" aria-describedby={articlePasswordError(article.password,hasExistingPassword)?"xocs-article-password-error":undefined} aria-invalid={!!articlePasswordError(article.password,hasExistingPassword)||undefined} placeholder={hasExistingPassword?t("留空则保留原密码", "Leave empty to keep the current password"):t("至少 12 字节", "At least 12 bytes")} value={article.password || ''} onChange={event => change('password',event.target.value || null)} /></FormField>{articlePasswordError(article.password,hasExistingPassword)&&<p id="xocs-article-password-error" role="alert">{articlePasswordError(article.password,hasExistingPassword)}</p>}</div>}</div>
       <div className="check-row"><label><input type="checkbox" checked={article.view_status} onChange={event => {change('view_status',event.target.checked);if(event.target.checked)change('password',null);}} />{t(" 公开访问（关闭后需设置密码）", " Public access (a password is required when disabled)")}</label><label><input type="checkbox" checked={article.recommend_status} onChange={event => change('recommend_status',event.target.checked)} />{t(" 推荐", " Recommended")}</label><label><input type="checkbox" checked={article.comment_status} onChange={event => change('comment_status',event.target.checked)} />{t(" 允许评论", " Allow comments")}</label></div>
+      {!article.view_status&&<FormField label={t('密码提示','Password hint')}><TextField value={article.tips||''} onChange={event=>change('tips',event.target.value||null)}/><span className="xocs-field-help">{t('显示在文章访问密码输入页。','Displayed on the article access password screen.')}</span></FormField>}
       <div className="xcss-actions"><Button disabled={saving} onClick={() => {uploadRequest.current?.abort();uploadRequest.current=null;setUploading(false);window.location.hash='articles';}}>{t("取消", "Cancel")}</Button><Button type="submit" disabled={saving||uploading}>{uploading?t("图片上传中…", "Uploading image…"):saving?t("保存中…", "Saving…"):t("保存文章", "Save article")}</Button></div>
       </fieldset>
     </form>
@@ -225,27 +227,66 @@ function ArticleEditor({id}: {id?: number}) {
 
 function ArticleNewsEditor({id}:{id:number}){
   const {client,notify}=useAdminApplication();
-  const [entries,setEntries]=useState<NewsEntry[]>([]);const [content,setContent]=useState('');const [date,setDate]=useState('');const [failure,setFailure]=useState('');
+  const [query,setQuery]=useState({article:id,page:1,version:0});
+  const page=query.article===id?query.page:1,attempt=query.article===id?query.version:0;
+  const [result,setResult]=useState<{client:typeof client;id:number;page:number;attempt:number;data:Page<NewsEntry>|null;failure:string}|null>(null);
+  const [content,setContent]=useState(''),[date,setDate]=useState(''),[editing,setEditing]=useState<NewsEntry|null>(null),[failure,setFailure]=useState('');
   const [saving,setSaving]=useState(false);const savePending=useRef<AbortController|null>(null);
-  const [loadedId,setLoadedId]=useState<number|null>(null),[loadFailure,setLoadFailure]=useState(''),[attempt,setAttempt]=useState(0);
-  const ready=loadedId===id;
-  useEffect(()=>{const controller=new AbortController();setLoadedId(null);setEntries([]);setContent('');setDate('');setFailure('');setLoadFailure('');setSaving(false);
-    void client.request(`/api/v1/content/articles/${id}/news`,isNews,{signal:controller.signal}).then(value=>{if(!controller.signal.aborted){setEntries(value);setLoadedId(id);}}).catch(()=>{if(!controller.signal.aborted)setLoadFailure(t("文章进展加载失败", "Unable to load article updates"));});
-    return()=>{controller.abort();savePending.current?.abort();savePending.current=null;};
-  },[client,id,attempt]);
+  const current=result?.client===client&&result.id===id&&result.page===page&&result.attempt===attempt?result:null;
+  const data=current?.data??null,loadFailure=current?.failure??'',ready=!!data;
+  function fieldDate(value:string|null){const timestamp=parseUtcDate(value);return Number.isFinite(timestamp)?new Date(timestamp).toISOString().slice(0,19):'';}
+  const dirty=content!==(editing?.content??'')||date!==(editing?fieldDate(editing.create_time):'');
+  function reset(){setContent('');setDate('');setEditing(null);setFailure('');}
+  function reload(nextPage=page){setQuery(current=>({article:id,page:nextPage,version:current.article===id?current.version+1:1}));}
+  useEffect(()=>{reset();setSaving(false);return()=>{savePending.current?.abort();savePending.current=null;};},[client,id]);
+  useEffect(()=>{
+    const controller=new AbortController();
+    void client.request(`/api/v1/content/articles/${id}/news?page=${page}&size=20`,(value):value is Page<NewsEntry>=>isNewsPage(value)&&value.page===page&&value.size===20,{signal:controller.signal}).then(value=>{
+      if(controller.signal.aborted)return;
+      const lastPage=Math.max(1,Math.ceil(value.total/value.size));
+      if(page>lastPage){setQuery(current=>({article:id,page:lastPage,version:current.version+1}));return;}
+      setResult({client,id,page,attempt,data:value,failure:''});
+    }).catch(()=>{if(!controller.signal.aborted)setResult({client,id,page,attempt,data:null,failure:t('文章进展加载失败','Unable to load article updates')});});
+    return()=>controller.abort();
+  },[client,id,page,attempt]);
+  function edit(item:NewsEntry){
+    if(savePending.current||(dirty&&!window.confirm(t('放弃当前未保存的进展修改？','Discard the current unsaved update changes?'))))return;
+    setEditing(item);setContent(item.content);setDate(fieldDate(item.create_time));setFailure('');
+  }
   async function publish(event:React.FormEvent){
     event.preventDefault();if(!ready||savePending.current)return;
+    if(!content.trim()||Array.from(content.trim()).length>1024){setFailure(t('进展正文须为 1–1024 个字符','Update content must contain 1–1024 characters'));return;}
     const controller=new AbortController();savePending.current=controller;setSaving(true);setFailure('');
     try{
-      const saved=await client.request(`/api/v1/content/articles/${id}/news`,isNewsEntry,{method:'POST',signal:controller.signal,body:JSON.stringify({content,create_time:utcDateTimeInput(date)})});
+      await client.request(`/api/v1/content/articles/${id}/news${editing?`/${editing.id}`:''}`,(value):value is NewsEntry=>isNewsEntry(value)&&(!editing||value.id===editing.id)&&value.content===content.trim(),
+        {method:editing?'PUT':'POST',signal:controller.signal,body:JSON.stringify({content,create_time:utcDateTimeInput(date)})});
       if(controller.signal.aborted||savePending.current!==controller)return;
-      setEntries(current=>[saved,...current].sort((a,b)=>(b.create_time||'').localeCompare(a.create_time||'')));
-      setContent('');setDate('');setFailure('');notify(t("文章进展已发布", "Article update published"));
-    }catch(reason){if(!controller.signal.aborted)setFailure(publicErrorMessage(reason, t("发布失败", "Unable to publish")));}
+      reset();reload(1);notify(editing?t('文章进展已保存','Article update saved'):t('文章进展已发布','Article update published'));
+    }catch(reason){if(!controller.signal.aborted)setFailure(publicErrorMessage(reason,t('保存进展失败','Unable to save update')));}
     finally{if(savePending.current===controller){savePending.current=null;setSaving(false);}}
   }
-  async function remove(entryId:number){if(!window.confirm(t("确定删除这条文章进展？", "Delete this article update?")))return;try{await client.request(`/api/v1/content/articles/${id}/news/${entryId}`,isDelete,{method:'DELETE'});setEntries(current=>current.filter(item=>item.id!==entryId));notify(t("文章进展已删除", "Article update deleted"));}catch(reason){setFailure(publicErrorMessage(reason, t("删除失败", "Unable to delete")));}}
-  return <section className="editor-form"><h2>{t("最新进展", "Recent updates")}</h2>{loadFailure&&<ErrorState onRetry={()=>setAttempt(value=>value+1)}>{loadFailure}</ErrorState>}{!ready&&!loadFailure&&<LoadingState/>}{failure&&<ErrorState>{failure}</ErrorState>}<form className="editor-form" onSubmit={event=>void publish(event)}><fieldset className="xocs-fieldset" disabled={saving||!ready}><FormField label={t("进展内容", "Update content")}><textarea className="xcss-input" required maxLength={1024} value={content} onChange={event=>setContent(event.target.value)}/></FormField><FormField label={t("进展时间（UTC）", "Update time (UTC)")}><TextField type="datetime-local" value={date} onChange={event=>setDate(event.target.value)}/></FormField><Button type="submit" disabled={saving||!ready}>{saving?t("发布中…", "Publishing…"):t("发布进展", "Publish update")}</Button></fieldset></form>{entries.length?<Table aria-label={t("文章进展", "Article updates")}><thead><tr><th>{t("时间", "Time")}</th><th>{t("内容", "Content")}</th><th>{t("操作", "Actions")}</th></tr></thead><tbody>{entries.map(item=><tr key={item.id}><td>{formatArticleNewsTime(item.create_time)||'—'}</td><td className="comment-cell">{item.content}</td><td><Button className="xcss-danger" onClick={()=>void remove(item.id)}>{t("删除", "Delete")}</Button></td></tr>)}</tbody></Table>:ready?<EmptyState>{t("暂无进展", "No updates yet")}</EmptyState>:null}</section>;
+  async function remove(entryId:number){
+    if(savePending.current||!window.confirm(t('确定删除这条文章进展？','Delete this article update?')))return;
+    const controller=new AbortController();savePending.current=controller;setSaving(true);setFailure('');
+    try{
+      await client.request(`/api/v1/content/articles/${id}/news/${entryId}`,isDelete,{method:'DELETE',signal:controller.signal});
+      if(controller.signal.aborted)return;
+      if(editing?.id===entryId)reset();reload();notify(t('文章进展已删除','Article update deleted'));
+    }catch(reason){if(!controller.signal.aborted)setFailure(publicErrorMessage(reason,t('删除失败','Unable to delete')));}
+    finally{if(savePending.current===controller){savePending.current=null;setSaving(false);}}
+  }
+  return <section className="editor-form"><h2>{t('最新进展','Recent updates')}</h2>
+    {loadFailure&&<ErrorState onRetry={()=>reload()}>{loadFailure}</ErrorState>}{!current&&<LoadingState/>}{failure&&<ErrorState>{failure}</ErrorState>}
+    <form className="editor-form" onSubmit={event=>void publish(event)}><fieldset className="xocs-fieldset" disabled={saving||!ready}>
+      <h3>{editing?t('编辑进展','Edit update'):t('新增进展','Add update')}</h3>
+      <FormField label={t('进展内容','Update content')}><textarea className="xcss-input" aria-label={t('进展内容','Update content')} required maxLength={2048} value={content} onChange={event=>setContent(event.target.value)}/></FormField>
+      <FormField label={t('进展时间（UTC）','Update time (UTC)')}><TextField type="datetime-local" step={1} value={date} onChange={event=>setDate(event.target.value)}/></FormField>
+      <p className="xocs-field-help">{t('新增时留空使用当前 UTC；编辑时留空保留原时间。','Leave blank to use current UTC for a new update, or keep its existing time when editing.')}</p>
+      <div className="xcss-actions"><Button type="submit" disabled={saving||!ready}>{saving?t('保存中…','Saving…'):editing?t('保存修改','Save changes'):t('发布进展','Publish update')}</Button>{(editing||dirty)&&<Button onClick={()=>{if(!dirty||window.confirm(t('放弃当前未保存的进展修改？','Discard the current unsaved update changes?')))reset();}}>{t('取消编辑','Cancel editing')}</Button>}</div>
+    </fieldset></form>
+    {data?.items.length?<Table aria-label={t('文章进展','Article updates')}><thead><tr><th>{t('时间','Time')}</th><th>{t('内容','Content')}</th><th>{t('操作','Actions')}</th></tr></thead><tbody>{data.items.map(item=><tr key={item.id}><td>{formatArticleNewsTime(item.create_time)||'—'}</td><td className="comment-cell">{item.content}</td><td><div className="xcss-actions"><Button disabled={saving} onClick={()=>edit(item)}>{t('编辑','Edit')}</Button><Button className="xcss-danger" disabled={saving} onClick={()=>void remove(item.id)}>{t('删除','Delete')}</Button></div></td></tr>)}</tbody></Table>:data&&<EmptyState>{t('暂无进展','No updates yet')}</EmptyState>}
+    {(page>1||data&&data.total>data.size)&&<nav className="pager" aria-label={t('进展分页','Update pages')}><Button disabled={saving||page<=1} onClick={()=>reload(page-1)}>{t('上一页','Previous page')}</Button><span>{t('第 {0} 页','Page {0}',[page])}</span><Button disabled={saving||!data||page*data.size>=data.total} onClick={()=>reload(page+1)}>{t('下一页','Next page')}</Button></nav>}
+  </section>;
 }
 
 function CategoryManager() {
@@ -353,7 +394,7 @@ function NotFoundPage(){return <PublicChrome title={t('页面不存在','Page no
 
 function renderApplication() {
   startServerCorners(document);
-  createRoot(document.getElementById('root')!).render(<StrictMode><div style={{display:'contents'}} onClickCapture={preserveLinkLanguage}>{window.location.pathname.startsWith('/admin')?<div className="xocs-admin-app"><AdminApp /></div>:['/weiYan','/jotting','/menory','/message','/favorite','/travel','/love','/sort','/search','/about','/letter'].includes(window.location.pathname)?<PublicExtras/>:window.location.pathname==='/'||/^\/article\/[^/]+$/.test(window.location.pathname)?<Site />:<NotFoundPage/>}</div></StrictMode>);
+  createRoot(document.getElementById('root')!).render(<StrictMode><div style={{display:'contents'}} onClickCapture={preserveLinkLanguage}>{window.location.pathname.startsWith('/admin')?<div className="xocs-admin-app"><AdminApp /></div>:['/jotting','/menory','/message','/favorite','/travel','/love','/sort','/search','/letter'].includes(window.location.pathname)?<PublicExtras/>:window.location.pathname==='/'||/^\/article\/[^/]+$/.test(window.location.pathname)?<Site />:<NotFoundPage/>}</div></StrictMode>);
 }
 
 void startAfterFonts(renderApplication);

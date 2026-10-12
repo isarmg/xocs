@@ -11,12 +11,12 @@ export const adminGroups = [
     { id: 'articles', label: t('文章管理', 'Articles') },
     { id: 'categories', label: t('分类管理', 'Categories') },
     { id: 'labels', label: t('标签管理', 'Tags') },
-    { id: 'notes', label: t('动态管理', 'Posts') },
+    { id: 'notes', label: t('随笔管理', 'Notes') },
+    { id: 'letter', label: t('信笺管理', 'Letter') },
   ] },
   { id: 'community', label: t('社区', 'Community'), title: t('社区管理', 'Community management'), pages: [
     { id: 'comments', label: t('评论管理', 'Comments') },
     { id: 'tree-hole', label: t('留言板管理', 'Message board') },
-    { id: 'users', label: t('用户管理', 'Users') },
   ] },
   { id: 'resources', label: t('资源', 'Resources'), title: t('资源管理', 'Resource management'), pages: [
     { id: 'resources', label: t('文件管理', 'Files') },

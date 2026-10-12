@@ -10,12 +10,10 @@ const links = [
   ['💖', t("家", "Home and love"), '/love'],
   ['🌈', t("游记", "Travels"), '/menory'],
   ['🏖️', t("随笔", "Journal"), '/jotting'],
-  ['✎', t("微言", "Posts"), '/weiYan'],
   ['📒', t("记录", "Articles"), '/sort'],
   ['📸', t("相册", "Photos"), '/travel'],
   ['🧰', t("百宝箱", "Toolbox"), '/favorite'],
   ['📪', t("留言", "Messages"), '/message'],
-  ['ℹ', t("关于", "About"), '/about'],
 ] as const;
 
 function safeCover(value: string | null | undefined) {
@@ -102,7 +100,6 @@ export function PublicChrome({site, title, home = false, cover, articleMeta, pla
       {home && <><a className="hero-down" href="#public-content" aria-label={t("浏览文章", "Browse articles")}>⌄</a><div className="hero-wave hero-wave-back" aria-hidden="true"/><div className="hero-wave hero-wave-front" aria-hidden="true"/></>}
     </section>}
     <main id="public-content" className={`public-main${home ? '' : ' extra-main'}`}>{children}</main>
-    <footer className="public-footer"><span>{info?.footer || 'xocs'}</span><small>{t("本网站由 xocs 强力支持", "Powered by xocs")}</small></footer>
     {scrolled && <div className="public-tools"><button className="back-top" type="button" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})} aria-label={t('返回顶部', 'Back to top')}><span aria-hidden="true">↑</span></button></div>}
   </div>;
 }

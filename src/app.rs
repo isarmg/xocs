@@ -28,6 +28,7 @@ pub(crate) struct AppState {
     pub(crate) admin: Arc<AdministratorService<SqliteAdministratorStore>>,
     pub(crate) origin: AdministratorOriginMode,
     pub(crate) media: PathBuf,
+    pub(crate) media_operations: Arc<tokio::sync::Mutex<()>>,
     pub(crate) trusted_proxies: Vec<std::net::IpAddr>,
 }
 
@@ -178,6 +179,14 @@ async fn admit_request(
     request: Request,
     next: Next,
 ) -> Response {
+    if request
+        .uri()
+        .path()
+        .strip_prefix("/media/")
+        .is_some_and(|name| !media::is_image_filename(name))
+    {
+        return absent().into_response();
+    }
     let Some(_admission) = scope.enter_request().await else {
         return AppError(StatusCode::SERVICE_UNAVAILABLE, "服务正在停止").into_response();
     };
@@ -188,14 +197,12 @@ const PAGE_ROUTES: &[&str] = &[
     "/admin",
     "/sort",
     "/search",
-    "/weiYan",
     "/jotting",
     "/menory",
     "/favorite",
     "/travel",
     "/love",
     "/message",
-    "/about",
     "/letter",
     "/article/{id}",
 ];

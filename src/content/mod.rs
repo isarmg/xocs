@@ -10,6 +10,7 @@ mod catalog;
 mod comments;
 mod family;
 mod guestbook;
+mod letter;
 mod links;
 mod notes;
 mod site;
@@ -25,6 +26,7 @@ struct PageResult<T> {
 pub fn public_routes() -> Router<AppState> {
     Router::new()
         .route("/api/v1/site", get(site::site_info))
+        .route("/api/v1/letter", get(letter::public_letter))
         .route("/api/v1/articles", get(articles::public_articles))
         .route("/api/v1/articles/{id}", get(articles::public_article))
         .route(
@@ -77,6 +79,10 @@ pub fn public_routes() -> Router<AppState> {
 pub fn admin_routes() -> Router<AppState> {
     Router::new()
         .route(
+            "/api/v1/content/letter",
+            get(letter::admin_letter).put(letter::save_letter),
+        )
+        .route(
             "/api/v1/content/articles",
             get(articles::admin_articles).post(articles::create_article),
         )
@@ -92,7 +98,8 @@ pub fn admin_routes() -> Router<AppState> {
         )
         .route(
             "/api/v1/content/articles/{id}/news/{news_id}",
-            axum::routing::delete(articles::admin_delete_article_news),
+            axum::routing::put(articles::admin_update_article_news)
+                .delete(articles::admin_delete_article_news),
         )
         .route("/api/v1/content/categories", post(catalog::create_category))
         .route(

@@ -1,5 +1,5 @@
 import { formatUtcTime } from './utc-time.ts';
-import { isArticlePage, isCategories, isLinkClasses, isLinkPage, isNotePage, isPublicLabels, isSiteInfo, isWallPost, isWallPosts, type Link, type LinkClass, type WallPost } from './public-contracts';
+import { isArticlePage, isCategories, isLinkClasses, isLinkPage, isNotePage, isPublicLabels, isPublicLetter, isSiteInfo, isWallPost, isWallPosts, type Link, type LinkClass, type WallPost } from './public-contracts';
 import { publicErrorMessage } from './api';
 import { t } from '@xcss/web/admin-ui/i18n';
 import {useEffect,useRef,useState,type FormEvent,type ReactNode} from 'react';
@@ -52,14 +52,13 @@ function JourneyPage(){
   </div></PublicChrome>;
 }
 
-function Wall(){
-  const jotting=window.location.pathname==='/jotting';
+function Jotting(){
   const {params,navigate}=useBrowseParams();
   const page=browsePage(params),setPage=(value:number)=>navigate({page:pageParam(value)});
   const [lightbox,setLightbox]=useState<string|null>(null);
   const data=useBrowseData(`/api/v1/notes/page?page=${page}`,isNotePage,t('内容加载失败','Unable to load content'),true);
   const result=data.value,error=data.error;
-  return <PublicChrome title={jotting?'xocs':t('微言','Posts')} cover={jotting?'/live/xocs-current-jotting.jpg':undefined}><div className="wall-layout wall-reading-layout"><div className="wall-list">
+  return <PublicChrome title="xocs" cover="/live/xocs-current-jotting.jpg"><div className="wall-layout wall-reading-layout"><div className="wall-list">
     {error&&<p role="alert">{error} <button type="button" onClick={data.retry}>{t("重试", "Try again")}</button></p>}{data.busy&&<p role="status">{t("正在加载…", "Loading…")}</p>}{result?.items.map(item=><article className="wall-card" key={item.id}><small>{item.username||t('站长','Site owner')} · {formatUtcTime(item.create_time)||t('最近','Recently')}</small><p>{item.content}</p>{safeImageUrl(item.image_path)&&<button type="button" className="wall-photo-button" onClick={()=>setLightbox(safeImageUrl(item.image_path))} aria-label={t('放大图片','Enlarge image')}><img src={safeImageUrl(item.image_path)!} alt={t('动态图片','Post image')} loading="lazy"/></button>}</article>)}
     {result?.items.length===0&&<div className="public-empty-state"><h3>{t('还没有记录。','No entries yet.')}</h3><p>{t('新的日常记录正在路上。','New everyday stories are on their way.')}</p></div>}
     {result&&(result.total>10||page>1)&&<nav className="pager" aria-label={t('记录分页','Entry pages')}><button type="button" disabled={page<=1} onClick={()=>setPage(page-1)}>{t('上一页','Previous page')}</button><span>{t('第 {0} 页','Page {0}',[page])}</span><button type="button" disabled={page*10>=result.total} onClick={()=>setPage(page+1)}>{t('下一页','Next page')}</button></nav>}
@@ -208,14 +207,22 @@ function SearchPage(){
   return <Shell title={t("搜索文章", "Search articles")} subtitle={t("在文字里寻找熟悉的故事。", "Find familiar stories in these words.")}><form className="search-form" onSubmit={submit}><input aria-label={t("搜索标题或正文", "Search titles or content")} value={draft} maxLength={200} placeholder={t("搜索标题或正文", "Search titles or content")} onChange={event=>setDraft(event.target.value)}/><button type="submit">{t("搜索", "Search")}</button></form>{error&&<p role="alert">{error} <button type="button" onClick={data.retry}>{t("重试", "Try again")}</button></p>}{data.busy&&<p role="status">{t("正在搜索…", "Searching…")}</p>}{term&&result&&<p className="original-search-count">“{term}{t("” 找到 ", "” found ")}{result?.total??0}{t(" 篇文章；标题匹配优先。", " articles; title matches come first.")}</p>}<div className="original-article-list"><h2>{t("🍃 发现", "🍃 Discover")}</h2>{(!term||result?.items.length===0)&&<div className="public-empty-state search-empty-state"><span aria-hidden="true">⌕</span><h3>{term?t('没有找到匹配的文章','No matching articles'):t('输入关键词开始搜索','Enter a keyword to start searching')}</h3><p>{term?t('试试其它关键词，或浏览全部文章。','Try another keyword, or browse all articles.'):t('可以搜索文章标题，也可以寻找正文里的一句话。','Search for an article title or a phrase from its content.')}</p><a href="/sort">{t('浏览全部文章','Browse all articles')} <span aria-hidden="true">↗</span></a></div>}{result?.items.map(item=><a className="original-list-card" href={`/article/${item.id}`} key={item.id}><div className="original-list-cover">{safeHttpUrl(item.article_cover)?<img src={safeHttpUrl(item.article_cover)||''} alt="" loading="lazy"/>:<span>{t("遇事不决，可问春风", "Let the spring breeze guide you")}</span>}</div><div className="original-list-body"><small>{item.search_snippet?t("正文匹配", "Content match"):t("标题匹配", "Title match")} · {formatUtcTime(item.create_time)||'—'}</small><h3><Highlight text={item.article_title} term={term}/></h3>{item.search_snippet&&<p className="search-snippet"><Highlight text={item.search_snippet} term={term}/></p>}<span className="original-list-tag">{item.view_status?t("公开", "Public"):t("需要访问密码", "Access password required")}</span></div></a>)}{result&&<div className="pager"><button disabled={page<=1} onClick={()=>setPage(page-1)}>{t("上一页", "Previous page")}</button><span>{t("第 {0} 页", "Page {0}", [page])}</span><button disabled={page*12>=result.total} onClick={()=>setPage(page+1)}>{t("下一页", "Next page")}</button></div>}</div></Shell>;
 }
 
-function About(){
-  const [site,setSite]=useState<SiteInfo|null>(null);const [step,setStep]=useState(0);const [reply,setReply]=useState<string[]>([]);
-  useEffect(()=>{void request('/api/v1/site', isSiteInfo).then(setSite).catch(()=>{});},[]);
-  const chapters=[{talk:['Hi, there👋',t("欢迎来到这里。这里记录生活，也收藏一些喜欢的文字。", "Welcome. This is a place for stories from life and words we love.")],choices:[t("然后呢？ 😃", "Tell me more 😃"),t("少废话！ 🙄", "Get to the point 🙄")]},{talk:['😘',t("本站平时用于交流、分享和学习新知识。", "This site is for conversation, sharing, and learning."),t("如果内容涉及侵权，请联系站长处理，谢谢！", "Please contact the site owner about any copyright concerns.")],choices:[t("这个网站有什么用吗？ 😂", "What is this site for? 😂")]},{talk:[t("拥有自己的独立网站难道不酷吗🚀", "Having your own website is pretty cool 🚀"),t("那就摸鱼吧👋", "Time to relax 👋"),t("想说点什么，可以在留言板留下足迹🥝", "Leave a note on the message board 🥝")],choices:[]}];
-  function answer(choice:string){setReply(current=>[...current,choice]);if(step===0&&choice.includes(t("少废话", "Get to the point")))setStep(3);else setStep(value=>value+1);}
-  return <Shell title={t("关于", "About")}><div className="about-dialog-page"><h1>{t("两只毛驴鸣翠柳", "xocs")}</h1><section className="about-dialog"><h2>{t("与 ", "and ")}{site?.web_name||'xocs'}{t(" 对话中...", " Chatting…")}</h2>{chapters.slice(0,Math.min(step+1,chapters.length)).map((chapter,index)=><div key={index}><div className="about-bubbles">{chapter.talk.map(line=><p className="about-talk" key={line}>{line}</p>)}</div>{reply[index]&&<p className="about-reply">{reply[index]}</p>}</div>)}{step<chapters.length&&<div className="about-choices">{chapters[step].choices.map(choice=><button type="button" key={choice} onClick={()=>answer(choice)}>{choice}</button>)}</div>}{step>=chapters.length&&<p className="about-talk">👋 👋 👋</p>}{site?.notices&&<aside>{site.notices}</aside>}</section></div></Shell>;
+function LetterPage(){
+  const [open,setOpen]=useState(false);
+  const frontButton=useRef<HTMLButtonElement|null>(null),closeButton=useRef<HTMLButtonElement|null>(null),interacted=useRef(false);
+  useEffect(()=>{if(interacted.current)(open?closeButton:frontButton).current?.focus();},[open]);
+  const data=useBrowseData('/api/v1/letter',isPublicLetter,t('信笺加载失败','Unable to load the letter'),true);
+  const letter=data.value;
+  return <PublicChrome plainHeader title={t('信笺','Letter')}><div className="letter-page">
+    <h1>{t('信笺','Letter')}</h1><div className="letter-sakura" aria-hidden="true">✿　❀　✿　❀　✿</div>
+    {data.busy&&<p role="status">{t('正在加载信笺…','Loading the letter…')}</p>}
+    {data.error&&<p role="alert">{data.error} <button type="button" onClick={data.retry}>{t('重试','Try again')}</button></p>}
+    {!data.busy&&!data.error&&!letter&&<section className="public-empty-state"><h2>{t('暂未公开信笺','No letter is published yet')}</h2></section>}
+    {letter&&<div className={`letter-envelope${open?' opened':''}`}>
+      <div className="letter-envelope-front" aria-hidden={open} inert={open}><span>{t('致 {0}','To {0}',[letter.recipient])}</span><button ref={frontButton} type="button" onClick={()=>{interacted.current=true;setOpen(true);}}>{t('打开信封','Open letter')}</button></div>
+      <div className="letter-paper" aria-hidden={!open} inert={!open}><h2>{t('致 {0}','To {0}',[letter.recipient])}</h2><p className="letter-content">{letter.content}</p><strong>{letter.sender}</strong><button ref={closeButton} type="button" onClick={()=>{interacted.current=true;setOpen(false);}}>{t('合上信封','Close letter')}</button></div>
+    </div>}
+  </div></PublicChrome>;
 }
 
-function LetterPage(){const [open,setOpen]=useState(false);return <PublicChrome plainHeader title={t("信笺", "Letter")}><div className="letter-page"><div className="letter-sakura" aria-hidden="true">✿　❀　✿　❀　✿</div><div className={`letter-envelope${open?' opened':''}`}><div className="letter-envelope-front"><span>To&nbsp; Ming</span><button type="button" onClick={()=>setOpen(true)}>{t("打开信封", "Open letter")}</button></div><div className="letter-paper"><h1>To Ming</h1><p>{t("夜にはいつも寒いよね、でも、手を繋いでいると、暖かくなるよ！", "Cold nights feel warmer when we hold hands.")}</p><p>{t("どんなに寒い夜も、君と二人でいれば、ちっとも寒くない！", "No night feels cold when we are together.")}</p><strong>Hao</strong><button type="button" onClick={()=>setOpen(false)}>{t("合上信封", "Close letter")}</button></div></div></div></PublicChrome>;}
-
-export function PublicExtras(){const path=window.location.pathname;switch(path){case '/weiYan':case '/jotting':return <Wall/>;case '/menory':return <JourneyPage/>;case '/message':return <MessagePage/>;case '/favorite':return <Toolbox/>;case '/travel':return <TravelPage/>;case '/love':return <LovePage/>;case '/sort':return <Categories/>;case '/search':return <SearchPage/>;case '/about':return <About/>;case '/letter':return <LetterPage/>;default:return null;}}
+export function PublicExtras(){const path=window.location.pathname;switch(path){case '/jotting':return <Jotting/>;case '/menory':return <JourneyPage/>;case '/message':return <MessagePage/>;case '/favorite':return <Toolbox/>;case '/travel':return <TravelPage/>;case '/love':return <LovePage/>;case '/sort':return <Categories/>;case '/search':return <SearchPage/>;case '/letter':return <LetterPage/>;default:return null;}}

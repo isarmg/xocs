@@ -259,6 +259,14 @@ pub(super) struct ArticleNews {
     create_time: Option<String>,
 }
 const ARTICLE_NEWS_SQL: &str = "SELECT w.id,w.content,w.create_time FROM wei_yan w";
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct ArticleNewsQuery {
+    page: Option<i64>,
+    size: Option<i64>,
+}
+
 pub(super) async fn article_news(
     State(state): State<AppState>,
     Path(id): Path<i64>,
@@ -271,11 +279,27 @@ pub(super) async fn article_news(
 pub(super) async fn admin_article_news(
     State(state): State<AppState>,
     Path(id): Path<i64>,
-) -> ApiResult<Vec<ArticleNews>> {
+    Query(query): Query<ArticleNewsQuery>,
+) -> ApiResult<PageResult<ArticleNews>> {
     load_article(&state.pool, id, true).await?;
-    let rows=sqlx::query_as::<_,ArticleNews>(sqlx::AssertSqlSafe(format!("{ARTICLE_NEWS_SQL} WHERE w.type='news' AND w.source=? ORDER BY w.create_time DESC,w.id DESC LIMIT 100")))
-        .bind(id).fetch_all(&state.pool).await.map_err(db_error)?;
-    Ok(Json(rows))
+    let page = query.page.unwrap_or(1).clamp(1, 100_000);
+    let size = query.size.unwrap_or(20).clamp(1, 100);
+    let mut transaction = state.pool.begin().await.map_err(db_error)?;
+    let total: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM wei_yan WHERE type='news' AND source=?")
+            .bind(id)
+            .fetch_one(&mut *transaction)
+            .await
+            .map_err(db_error)?;
+    let items = sqlx::query_as::<_, ArticleNews>(sqlx::AssertSqlSafe(format!("{ARTICLE_NEWS_SQL} WHERE w.type='news' AND w.source=? ORDER BY w.create_time DESC,w.id DESC LIMIT ? OFFSET ?")))
+        .bind(id).bind(size).bind((page - 1) * size).fetch_all(&mut *transaction).await.map_err(db_error)?;
+    transaction.commit().await.map_err(db_error)?;
+    Ok(Json(PageResult {
+        items,
+        total,
+        page,
+        size,
+    }))
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -308,26 +332,68 @@ pub(super) async fn admin_delete_article_news(
     }
     Ok(Json(serde_json::json!({"deleted":true})))
 }
+
+pub(super) async fn admin_update_article_news(
+    State(state): State<AppState>,
+    Path((article_id, news_id)): Path<(i64, i64)>,
+    crate::ContractJson(input): crate::ContractJson<ArticleNewsInput>,
+) -> ApiResult<ArticleNews> {
+    load_article(&state.pool, article_id, true).await?;
+    validate_news_content(&input.content)?;
+    let time = normalize_news_time(&state, input.create_time).await?;
+    let changed = sqlx::query("UPDATE wei_yan SET content=?,create_time=COALESCE(?,create_time) WHERE id=? AND source=? AND type='news'")
+        .bind(input.content.trim()).bind(time).bind(news_id).bind(article_id)
+        .execute(&state.pool).await.map_err(db_error)?;
+    if changed.rows_affected() == 0 {
+        return Err(absent());
+    }
+    Ok(Json(
+        sqlx::query_as::<_, ArticleNews>(sqlx::AssertSqlSafe(format!(
+            "{ARTICLE_NEWS_SQL} WHERE w.id=? AND w.source=? AND w.type='news'"
+        )))
+        .bind(news_id)
+        .bind(article_id)
+        .fetch_one(&state.pool)
+        .await
+        .map_err(db_error)?,
+    ))
+}
+
+fn validate_news_content(content: &str) -> Result<(), AppError> {
+    if content.trim().is_empty() || content.trim().chars().count() > 1024 {
+        return Err(invalid("进展内容应为 1 至 1024 字"));
+    }
+    Ok(())
+}
+
+async fn normalize_news_time(
+    state: &AppState,
+    raw: Option<String>,
+) -> Result<Option<String>, AppError> {
+    if let Some(raw) = raw.filter(|value| !value.trim().is_empty()) {
+        if raw.len() > 64 {
+            return Err(invalid("日期时间无效"));
+        }
+        let parsed: Option<String> = sqlx::query_scalar("SELECT datetime(?)")
+            .bind(raw)
+            .fetch_one(&state.pool)
+            .await
+            .map_err(db_error)?;
+        Ok(Some(parsed.ok_or_else(|| invalid("日期时间无效"))?))
+    } else {
+        Ok(None)
+    }
+}
+
 async fn insert_article_news(
     state: &AppState,
     id: i64,
     author: i64,
     input: ArticleNewsInput,
 ) -> Result<ArticleNews, AppError> {
+    validate_news_content(&input.content)?;
     let content = input.content.trim();
-    if content.is_empty() || content.chars().count() > 1024 {
-        return Err(invalid("进展内容应为 1 至 1024 字"));
-    }
-    let time = if let Some(raw) = input.create_time.filter(|value| !value.trim().is_empty()) {
-        let parsed: Option<String> = sqlx::query_scalar("SELECT datetime(?)")
-            .bind(&raw)
-            .fetch_one(&state.pool)
-            .await
-            .map_err(db_error)?;
-        Some(parsed.ok_or_else(|| invalid("日期时间无效"))?)
-    } else {
-        None
-    };
+    let time = normalize_news_time(state, input.create_time).await?;
     let id_new=sqlx::query("INSERT INTO wei_yan(user_id,content,type,source,is_public,create_time) VALUES(?,?,'news',?,1,COALESCE(?,CURRENT_TIMESTAMP))")
         .bind(author).bind(content).bind(id).bind(time).execute(&state.pool).await.map_err(db_error)?.last_insert_rowid();
     sqlx::query_as::<_, ArticleNews>(sqlx::AssertSqlSafe(format!(

@@ -2,13 +2,13 @@ import assert from 'node:assert/strict';
 import { chromium, firefox, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { preview } from 'vite';
-import { mockApi, site } from './browser-fixtures.mjs';
+import { adminSite, mockApi } from './browser-fixtures.mjs';
 import { paintedSurfaceColor } from './painted-surface.mjs';
 
 const groups = [
   { labels: ['总览', 'Overview'], pages: [['dashboard', '总览', 'Overview']] },
-  { labels: ['内容', 'Content'], pages: [['articles', '文章管理', 'Articles'], ['categories', '分类管理', 'Categories'], ['labels', '标签管理', 'Tags'], ['notes', '动态管理', 'Posts']] },
-  { labels: ['社区', 'Community'], pages: [['comments', '评论管理', 'Comments'], ['tree-hole', '留言板管理', 'Message board'], ['users', '用户管理', 'Users']] },
+  { labels: ['内容', 'Content'], pages: [['articles', '文章管理', 'Articles'], ['categories', '分类管理', 'Categories'], ['labels', '标签管理', 'Tags'], ['notes', '随笔管理', 'Notes'], ['letter', '信笺管理', 'Letter']] },
+  { labels: ['社区', 'Community'], pages: [['comments', '评论管理', 'Comments'], ['tree-hole', '留言板管理', 'Message board']] },
   { labels: ['资源', 'Resources'], pages: [['resources', '文件管理', 'Files'], ['links', '内容资源', 'Content resources'], ['family', '恋爱笔记', 'Love journal']] },
   { labels: ['设置', 'Settings'], pages: [['site', '网站设置', 'Site settings'], ['home', '首页栏目', 'Home sections']] },
 ];
@@ -128,7 +128,7 @@ try {
       let saved;
       await page.route('**/api/v1/content/site', route => {
         if (route.request().method() === 'PUT') saved = route.request().postDataJSON();
-        return route.fulfill({ json: saved || site });
+        return route.fulfill({ json: saved || adminSite });
       });
       await page.goto(`${base}/admin?lang=en#site`);
       await page.getByLabel('Site name', { exact: true }).fill('Layout test');
@@ -136,7 +136,7 @@ try {
       await page.getByLabel('Random covers', { exact: true }).fill('https://example.com/cover.jpg');
       await page.getByRole('button', { name: 'Save settings', exact: true }).click();
       await expect(page.getByText('Site settings saved', { exact: true })).toBeVisible();
-      assert.deepEqual(saved, { ...site, web_name: 'Layout test', notices: '["First notice"]', random_cover: 'https://example.com/cover.jpg' });
+      assert.deepEqual(saved, { ...adminSite, web_name: 'Layout test', notices: '["First notice"]', random_cover: 'https://example.com/cover.jpg' });
       await context.close();
       console.log(`${engine.name()}: statistics retry and settings save contract passed`);
     } finally { await browser.close(); }

@@ -22,7 +22,7 @@ for _ in {1..20}; do
 done
 test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18881/api/v1/health)" = 200
 test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18881/api/v1/site)" = 200
-test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18881/api/v1/content/users)" = 401
+test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18881/api/v1/content/statistics)" = 401
 test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18881/api/v1/unknown)" = 404
 test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18881/admin)" = 200
 curl -fsS -c "$smoke_dir/cookies" -o "$smoke_dir/login.json" \
@@ -32,15 +32,17 @@ curl -fsS -c "$smoke_dir/cookies" -o "$smoke_dir/login.json" \
 csrf=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["csrf_token"])' < "$smoke_dir/login.json")
 test "$(curl -s -o "$smoke_dir/site.json" -w '%{http_code}' -X PUT -b "$smoke_dir/cookies" \
   -H 'Origin: http://127.0.0.1:18881' -H 'Sec-Fetch-Site: same-origin' -H "X-CSRF-Token: $csrf" -H 'Content-Type: application/json' \
-  --data '{"web_name":"Smoke site","web_title":null,"notices":null,"footer":null,"background_image":null,"avatar":null,"random_cover":null}' \
+  --data '{"author_name":"Smoke writer","web_name":"Smoke site","web_title":null,"notices":null,"background_image":null,"avatar":null,"random_cover":null}' \
   http://127.0.0.1:18881/api/v1/content/site)" = 200
 python3 - "$smoke_dir/site.json" <<'PY'
 import json, sys
 with open(sys.argv[1]) as stream:
     site = json.load(stream)
-assert set(site) == {'web_name', 'web_title', 'notices', 'footer', 'background_image', 'avatar', 'random_cover'}
+assert set(site) == {'author_name', 'web_name', 'web_title', 'notices', 'background_image', 'avatar', 'random_cover'}
 assert site['web_name'] == 'Smoke site'
+assert site['author_name'] == 'Smoke writer'
 PY
+test "$(curl -s -o /dev/null -w '%{http_code}' -b "$smoke_dir/cookies" http://127.0.0.1:18881/api/v1/content/users)" = 404
 test "$(curl -s -o /dev/null -w '%{http_code}' -b "$smoke_dir/cookies" \
   -H 'Origin: http://127.0.0.1:18881' -H 'Sec-Fetch-Site: same-origin' -H "X-CSRF-Token: $csrf" -H 'Content-Type: application/json' \
   --data '{"name":"Smoke"}' http://127.0.0.1:18881/api/v1/content/categories)" = 200
@@ -63,9 +65,13 @@ test "$(curl -s -o /dev/null -w '%{http_code}' -b "$smoke_dir/cookies" \
 curl -fsS http://127.0.0.1:18881/api/v1/articles/1/news | grep -q 'Smoke article news'
 test "$(curl -s -o /dev/null -w '%{http_code}' -b "$smoke_dir/cookies" \
   -H 'Origin: http://127.0.0.1:18881' -H 'Sec-Fetch-Site: same-origin' -H "X-CSRF-Token: $csrf" -H 'Content-Type: application/json' \
-  --data '{"content":"Smoke author note","is_public":true}' \
+  --data '{"content":"Smoke author note","image_path":null,"is_public":true}' \
   http://127.0.0.1:18881/api/v1/content/notes)" = 200
 curl -fsS 'http://127.0.0.1:18881/api/v1/notes/page?page=1' | grep -q 'Smoke author note'
+test "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -b "$smoke_dir/cookies" \
+  -H 'Origin: http://127.0.0.1:18881' -H 'Sec-Fetch-Site: same-origin' -H "X-CSRF-Token: $csrf" -H 'Content-Type: application/json' \
+  --data '{"recipient":"Reader","sender":"Writer","content":"Smoke letter","is_public":true}' \
+  http://127.0.0.1:18881/api/v1/content/letter)" = 200
 test "$(curl -s -o /dev/null -w '%{http_code}' -b "$smoke_dir/cookies" \
   -H 'Origin: http://127.0.0.1:18881' -H 'Sec-Fetch-Site: same-origin' -H "X-CSRF-Token: $csrf" -H 'Content-Type: application/json' \
   --data '{"article_title":"Protected","article_content":"Secret body","article_cover":null,"video_url":null,"sort_id":1,"label_id":1,"view_status":false,"recommend_status":false,"comment_status":true,"password":"ProtectedPassphrase123","tips":null}' \
@@ -94,7 +100,7 @@ test "$(curl -s -o /dev/null -w '%{http_code}' -b "$smoke_dir/cookies" \
 for retired in members/register members/login members/session family/submissions im/friends resources friends notes; do
   test "$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:18881/api/v1/$retired")" = 404
 done
-for page in im user socket; do
+for page in im user socket about weiYan; do
   test "$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:18881/$page")" = 404
 done
 test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' \
@@ -107,6 +113,7 @@ test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/jso
 test "$(curl -s -o /dev/null -w '%{http_code}' -b "$smoke_dir/cookies" \
   http://127.0.0.1:18881/api/v1/content/notes)" = 200
 XOCS_SMOKE_URL=http://127.0.0.1:18881 node "$project_root/web/tests/browser-smoke.mjs"
+XOCS_SMOKE_URL=http://127.0.0.1:18881 node "$project_root/web/tests/management-native.mjs"
 test "$(curl -s -o /dev/null -w '%{http_code}' -X DELETE http://127.0.0.1:18881/api/v1/content/notes/2)" = 401
 test "$(curl -s -o /dev/null -w '%{http_code}' -X DELETE -b "$smoke_dir/cookies" \
   -H 'Origin: http://127.0.0.1:18881' -H 'Sec-Fetch-Site: same-origin' -H "X-CSRF-Token: $csrf" \

@@ -16,6 +16,7 @@ try {
     if (url.pathname.startsWith('/api/')) {
       const payload = url.pathname === '/api/v1/site'
         ? { ...site, web_title: '测试站点' }
+        : url.pathname === '/api/v1/letter' ? { recipient:'Reader', sender:'Writer', content:'Smoke letter' }
         : url.pathname === '/api/v1/home-sections' ? [{id:1,title:'最新',kind:'latest',sort_id:null,priority:0,enabled:true}]
         : url.pathname === '/api/v1/categories' ? [{id:1,sort_name:'测试分类',sort_description:null,priority:0,article_count:0}]
         : url.pathname === '/api/v1/articles' ? pageOf([], url)
@@ -38,7 +39,7 @@ try {
     }
   });
   const homeHeading = process.env.XOCS_SMOKE_URL ? '相信记录的力量' : '测试站点';
-  for (const [route, heading] of [['/', homeHeading], ['/search', '搜索文章'], ['/sort', '文章分类'], ['/weiYan', '微言'], ['/jotting', 'xocs'], ['/menory', 'xocs'], ['/favorite', '百宝箱'], ['/favorite?tab=friends', '百宝箱'], ['/favorite?tab=music', '百宝箱'], ['/travel', '时光相册'], ['/love', '这是我们一起走过的'], ['/message', '弹幕']]) {
+  for (const [route, heading] of [['/', homeHeading], ['/search', '搜索文章'], ['/sort', '文章分类'], ['/jotting', 'xocs'], ['/menory', 'xocs'], ['/favorite', '百宝箱'], ['/favorite?tab=friends', '百宝箱'], ['/favorite?tab=music', '百宝箱'], ['/travel', '时光相册'], ['/love', '这是我们一起走过的'], ['/message', '弹幕']]) {
     await page.goto(`${base}${route}`);
     await page.getByRole('heading', { name: heading }).first().waitFor();
     console.log(`${route}: rendered`);
@@ -54,15 +55,12 @@ try {
   await page.locator('.love-tabs').getByRole('button', {name: /点点滴滴/}).click();
   await page.goto(`${base}/letter`);
   await page.getByRole('button', { name: '打开信封' }).click();
-  await page.getByRole('heading', { name: 'To Ming' }).waitFor();
-  await page.goto(`${base}/about`);
-  await page.getByRole('button', { name: '然后呢？ 😃' }).click();
-  await page.getByText('本站平时用于交流、分享和学习新知识。').waitFor();
+  await page.getByRole('heading', { name: '致 Reader' }).waitFor();
   if (process.env.XOCS_SMOKE_URL) {
     await page.goto(`${base}/love`);
     await page.getByRole('button', { name: /祝福板/ }).click();
     await page.getByText('Smoke love wish').waitFor();
-    await page.goto(`${base}/weiYan`);
+    await page.goto(`${base}/jotting`);
     await page.getByText('Smoke author note').waitFor();
     await page.goto(`${base}/`);
     await page.getByRole('heading', { name: '专栏速览' }).waitFor();
@@ -115,7 +113,7 @@ try {
     await page.locator('input[name="password"]').fill('TemporaryPassphrase123');
     await page.locator('form button[type="submit"]').click();
     await page.getByRole('heading', { name: '文章管理' }).waitFor();
-    for (const [group, label] of [['总览','总览'], ['设置','首页栏目'], ['内容','分类管理'], ['内容','标签管理'], ['社区','评论管理'], ['内容','动态管理'], ['社区','留言板管理'], ['社区','用户管理'], ['资源','文件管理'], ['资源','内容资源'], ['资源','恋爱笔记'], ['设置','网站设置']]) {
+    for (const [group, label] of [['总览','总览'], ['设置','首页栏目'], ['内容','分类管理'], ['内容','标签管理'], ['社区','评论管理'], ['内容','随笔管理'], ['社区','留言板管理'], ['资源','文件管理'], ['资源','内容资源'], ['资源','恋爱笔记'], ['设置','网站设置']]) {
       await page.locator('.xcss-header-navigation').getByRole('button', { name: group, exact: true }).click();
       if (group !== '总览') await page.locator('.xcss-secondary-navigation').getByRole('button', { name: label, exact: true }).click();
       await page.getByRole('heading', { name: label }).waitFor();

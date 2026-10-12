@@ -68,8 +68,6 @@
 .original-public .article-card-body p{margin:0;line-height:1.7}
 .original-public .article-card-link{margin-top:auto;background:#eee;padding:5px 10px;color:#777;font-size:.82rem}
 .original-public .article-card:hover .article-card-link{background:var(--xocs-orange);color:#fff}
-.original-public .public-footer{display:grid;gap:4px;text-align:center;padding:16px 20px 18px;color:#fff;background:linear-gradient(-90deg,#ee7752,#e73c7e,#23a6d5,#23d5ab);background-size:300% 300%;animation:xocs-gradient 10s ease infinite}
-.original-public .public-footer small{font-size:.75rem;color:#edf7f8}
 .original-public .back-top{position:fixed;z-index:75;right:22px;bottom:25px;width:45px;height:45px;border:0;border-radius:50%;background:#fff;color:var(--xocs-green);font-size:1.5rem;box-shadow:0 2px 12px #0004;cursor:pointer}
 .original-public .reading-layout{max-width:1120px;gap:24px}.original-public .reading-card{border:0;box-shadow:0 1px 20px -6px #0005}.original-public .reading-article{padding:36px 45px}.original-public .reading-article>h2{font-size:1.7rem}.original-public .article-markdown{color:#1f1f1f;line-height:2}.original-public .article-markdown blockquote{border-left:4px solid #03a9f4;background:#ecf7fe;padding:12px 18px;margin:22px 0}.original-public .reading-progress span{background:var(--xocs-green)}.original-public .reading-toc nav,.original-public .reading-toc details{border:0;box-shadow:0 1px 20px -6px #0004}.original-public .reading-toc a:hover,.original-public .reading-toc a.active{background:#e6faf8;color:#138f87}
 .original-public .category-list button.active{background:var(--xocs-green);border-color:var(--xocs-green)}.original-public .category-list button:hover,.original-public .category-list a:hover{color:var(--xocs-green);border-color:var(--xocs-green)}
@@ -82,7 +80,7 @@
 @media(max-width:1120px){.original-public .public-header nav{font-size:.88rem}.original-public .public-header nav a{padding:0 .4rem}.original-public .home-layout{gap:25px}}
 @media(max-width:900px){.original-public .public-menu-toggle{display:block}.original-public .public-header nav{display:none;position:absolute;top:60px;left:0;right:0;max-height:calc(100vh - 60px);overflow:auto;background:#fff;color:#333;box-shadow:0 7px 12px #0002;padding:8px 20px 20px;white-space:normal}.original-public .public-header nav.open{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.original-public .public-header nav a{height:44px;font-size:.95rem}.original-public .home-layout{grid-template-columns:minmax(0,1fr)}.original-public .home-aside{order:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;padding-top:24px}.original-public .aside-categories{grid-column:1/-1;grid-template-columns:repeat(2,minmax(0,1fr))}.original-public .home-content{order:2}.original-public .announcement{margin-top:24px}}
 @media(max-width:650px){.original-public .public-header{height:58px;padding:0 17px}.original-public .brand{font-size:1.3rem}.original-public .home-hero{min-height:70vh}.original-public .compact-hero{min-height:34vh}.original-public .hero h1{font-size:2rem}.original-public .hero-poem{font-size:.9rem;letter-spacing:.05em}.original-public .hero-wave{height:65px}.original-public .hero-down{bottom:54px}.original-public .public-main{padding:0 16px 55px}.original-public .public-main.extra-main{padding-top:40px}.original-public .article-card,.original-public .article-card:nth-child(even){display:block;height:auto;min-height:410px}.original-public .article-card-cover{width:100%;height:200px}.original-public .article-card-body,.original-public .article-card:nth-child(even) .article-card-body{height:210px;align-items:flex-start;text-align:left;padding:19px 22px}.original-public .article-card-body h3{margin:17px 0 10px}.original-public .home-aside{grid-template-columns:1fr}.original-public .aside-categories{grid-column:auto;grid-template-columns:1fr}.original-public .reading-article{padding:25px 20px}.original-public .announcement{padding:14px}.original-public .back-top{right:12px;bottom:12px}}
-@media(prefers-reduced-motion:reduce){.original-public .hero-down,.original-public .public-footer,.original-public .aside-profile,.original-public .cursor{animation:none}}
+@media(prefers-reduced-motion:reduce){.original-public .hero-down,.original-public .aside-profile,.original-public .cursor{animation:none}}
 
 /* Original proportions and artwork details. Maple comes from the local maple-font
    checkout through the project's @xcss/web/web-fonts build (same source commit). */
@@ -156,7 +154,6 @@
 .original-public .comment-replies{margin-left:50px;padding-left:18px;border-left:2px solid #edf4f4}
 .original-public .comment-replies .public-comment{padding:12px 0}
 .original-public .comment-more{border:0;background:none;color:var(--xocs-green);cursor:pointer}
-.original-public .public-footer{font-size:.9rem}
 @keyframes xocs-wave-back{to{background-position:1000px bottom}}
 @keyframes xocs-wave-front{to{background-position:-1000px bottom}}
 @media(max-width:1400px){.original-public .article-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -294,23 +291,15 @@
 .original-public .letter-paper h1{margin:0;font-size:1.65rem}.original-public .letter-paper p{line-height:2;margin:0}.original-public .letter-paper strong{justify-self:end}
 .original-public .letter-envelope.opened .letter-envelope-front{transform:rotateX(-100deg);opacity:0;pointer-events:none}
 .original-public .letter-envelope.opened .letter-paper{opacity:1;transform:translateY(0)}
+.original-public .letter-page>h1 { margin: 0 0 24px; }
+.original-public .letter-paper h2 { margin: 0; font-size: 1.65rem; }
+.original-public .letter-content { white-space: pre-wrap; overflow-wrap: anywhere; }
+.original-public .letter-envelope-front span { overflow-wrap: anywhere; }
 .original-public .article-markdown pre{position:relative;overflow:auto;padding:45px 18px 17px;background:#272b33;color:#ebecf0;line-height:1.65}
 .original-public .article-copy-code{position:absolute;top:9px;right:10px;padding:4px 10px;border:1px solid #ffffff40;background:#ffffff12;color:#fff;cursor:pointer;font-size:.76rem}
 .original-public .article-copy-code:hover{background:#ffffff30}
 .original-public .article-markdown img[role=button]{max-width:100%;height:auto;cursor:zoom-in}
 .original-public .article-copy-status{display:block;margin:8px 0;color:#397b70}
-.original-public .about-dialog-page{max-width:820px;margin:20px auto 80px;text-align:center}
-.original-public .about-dialog-page>h1{font-size:clamp(1.8rem,4vw,2.5rem);font-weight:500;letter-spacing:5px;margin:18px 0 30px}
-.original-public .about-dialog{min-height:450px;padding:22px;background:#f8f9fa;text-align:left;box-shadow:0 1px 20px -6px #0004}
-.original-public .about-dialog>h2{font-size:.9rem;font-weight:400;text-align:center;color:#777;margin:0 0 28px}
-.original-public .about-bubbles{display:grid;justify-items:start;gap:10px;margin-bottom:10px}
-.original-public .about-talk,.original-public .about-reply{max-width:min(85%,560px);margin:0;padding:11px 18px;line-height:1.7;box-shadow:0 1px 8px #0001}
-.original-public .about-talk{background:#fff}
-.original-public .about-reply{margin:10px 0 20px auto;background:#cceee7}
-.original-public .about-choices{display:flex;flex-wrap:wrap;gap:10px;margin:20px 0}
-.original-public .about-choices button{border:1px solid #acd7cd;border-radius:20px;padding:9px 16px;color:#377e71;background:#fff;cursor:pointer}
-.original-public .about-choices button:hover{background:#dff6f0}
-.original-public .about-dialog aside{margin-top:35px;color:#888;font-size:.84rem}
 .original-public .love-page{margin:-65px -20px 0;background:#f8f8f9;min-height:80vh}
 .original-public .love-hero{min-height:430px;display:grid;place-items:center;padding:90px 20px 40px;background:linear-gradient(#192f4077,#192f4088),url('/legacy/backgroundPicture.jpg') center/cover;color:#fff}
 .original-public .love-pair{display:flex;align-items:center;justify-content:center;gap:clamp(18px,7vw,85px);font-size:1.45rem;text-align:center}
@@ -508,7 +497,6 @@
 .original-public .public-tools{right:22px;bottom:28px}
 .original-public .public-tools .back-top{width:37px;height:37px;border:0;background:transparent;color:#111;box-shadow:none;font-size:1.55rem}
 .original-public .public-tools .back-top{font-size:0}.original-public .public-tools .back-top::before{content:"⌂";font-size:2.1rem}
-.original-public .public-footer{min-height:165px;box-sizing:border-box;align-content:center;border-radius:0;background:linear-gradient(#16343db2,#16343db2),url('/live/xocs-current-hero.jpg') center/cover;animation:none}
 .original-public.page-jotting .compact-hero{height:270px;min-height:0}
 .original-public.page-menory .compact-hero{height:225px;min-height:0}
 .original-public.page-jotting .public-main.extra-main{padding-top:0}
@@ -585,7 +573,6 @@
 .original-public .article-news { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
 .original-public .article-markdown pre { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); padding-block-start: 60px; }
 .original-public .article-copy-code { top: 16px; right: 16px; --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
-.original-public .about-dialog { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
 .original-public .love-tabs button { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
 .original-public .love-wishes { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
 .original-public .push-dialog { --xcss-server-corner-extent: var(--xcss-server-corner-dialog, 54px); }
@@ -609,10 +596,6 @@
 .original-public .travel-banner { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
 .original-public .travel-content>.original-tag-panel button { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
 .original-public.page-message .message-form-wrap form { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
-
-.original-public .about-talk,.original-public .about-reply {
-  --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px);
-}
 
 .original-public .aside-search input,.original-public .aside-search button,
 .original-public .aside-avatar,.original-public .public-comment img,

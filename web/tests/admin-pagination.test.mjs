@@ -16,10 +16,9 @@ const text = host => textContent(expand(host.tree));
 const page = (items, total, number = 1) => ({ items, total, page: number, size: 20 });
 const settle = async host => { await new Promise(resolve => setImmediate(resolve)); host.render(); };
 const cases = [
-  { name: 'UsersPage', path: 'users', field: 'username', action: 'Disable', empty: 'No users yet', localEmpty: 'No users on this page', item: { id: 42, username: 'OLD_ROW', email: null, phone_number: null, user_status: 1, user_type: 2, create_time: null } },
   { name: 'CommentsPage', path: 'comments', field: 'comment_content', action: 'Delete', empty: 'No comments yet', localEmpty: 'No comments on this page', item: { id: 42, source: 0, comment_type: 'message', user_id: null, username: null, comment_content: 'OLD_ROW', create_time: null } },
   { name: 'TreeHolePage', path: 'tree-hole', field: 'message', action: 'Delete', empty: 'No messages yet', localEmpty: 'No messages on this page', item: { id: 42, user_id: null, username: null, avatar: null, message: 'OLD_ROW', image_path: null, create_time: null } },
-  { name: 'NotesPage', path: 'notes', field: 'content', action: 'Delete', empty: 'No posts yet', localEmpty: 'No posts on this page', item: { id: 42, user_id: 1, username: 'owner', content: 'OLD_ROW', image_path: null, is_public: 1, create_time: null } },
+  { name: 'NotesPage', path: 'notes', field: 'content', action: 'Delete', empty: 'No notes yet', localEmpty: 'No notes on this page', item: { id: 42, user_id: 1, username: 'owner', content: 'OLD_ROW', image_path: null, is_public: 1, create_time: null } },
   { name: 'ResourcesPage', path: 'resources', field: 'original_name', action: null, empty: 'No files yet', localEmpty: 'No files on this page', item: { id: 42, original_name: 'OLD_ROW', path: '/media/old.png', resource_type: 'image', size: 12, status: 1, create_time: null } },
 ];
 const row = (fixture, label, id = 43) => ({ ...fixture.item, id, [fixture.field]: label });
@@ -204,7 +203,7 @@ for (const fixture of cases.filter(fixture => ['NotesPage', 'ResourcesPage'].inc
     const { host, requests } = setup(context, fixture);
     requests[0].resolve(page([fixture.item], 41)); await settle(host);
     const file = new File(['image'], 'draft.png', { type: 'image/png' });
-    const input = walk(host.tree, node => fixture.name === 'NotesPage' ? node.type === 'textarea' : node.type === 'input' && node.props.type === 'file')[0];
+    const input = walk(expand(host.tree), node => fixture.name === 'NotesPage' ? node.type === 'textarea' : node.type === 'input' && node.props.type === 'file')[0];
     input.props.onChange({ target: { value: 'UNSAVED_DRAFT', files: [file] } }); host.render();
     next(host); requests.at(-1).reject(new Error('page unavailable')); await settle(host);
     retry(host);
@@ -223,7 +222,7 @@ for (const fixture of cases.filter(fixture => ['NotesPage', 'ResourcesPage'].inc
     const { host, requests } = setup(context, fixture);
     requests[0].resolve(page([fixture.item], 41)); await settle(host);
     const file = new File(['image'], 'draft.png', { type: 'image/png' });
-    const input = walk(host.tree, node => fixture.name === 'NotesPage' ? node.type === 'textarea' : node.type === 'input' && node.props.type === 'file')[0];
+    const input = walk(expand(host.tree), node => fixture.name === 'NotesPage' ? node.type === 'textarea' : node.type === 'input' && node.props.type === 'file')[0];
     input.props.onChange({ target: { value: 'UNSAVED_DRAFT', files: [file] } }); host.render();
     walk(host.tree, node => node.type === 'form')[0].props.onSubmit({ preventDefault() {} });
     const submission = requests.at(-1);
@@ -241,7 +240,7 @@ for (const fixture of cases.filter(fixture => ['NotesPage', 'ResourcesPage'].inc
   test(`${fixture.name}: read retry neither resubmits nor hides a simultaneous form failure`, async context => {
     const { host, requests } = setup(context, fixture);
     requests[0].resolve(page([fixture.item], 41)); await settle(host);
-    const input = walk(host.tree, node => fixture.name === 'NotesPage' ? node.type === 'textarea' : node.type === 'input' && node.props.type === 'file')[0];
+    const input = walk(expand(host.tree), node => fixture.name === 'NotesPage' ? node.type === 'textarea' : node.type === 'input' && node.props.type === 'file')[0];
     input.props.onChange({ target: { value: 'UNSAVED_DRAFT', files: [new File(['image'], 'draft.png', { type: 'image/png' })] } }); host.render();
     walk(host.tree, node => node.type === 'form')[0].props.onSubmit({ preventDefault() {} });
     const submission = requests.at(-1);
@@ -254,7 +253,14 @@ for (const fixture of cases.filter(fixture => ['NotesPage', 'ResourcesPage'].inc
     loadError.props.onRetry(); host.render();
     assert.equal(byName(host.tree, 'LoadingState').length, 1);
     assert.equal(byName(host.tree, 'ErrorState').length, 1, 'the form error stays visible during read retry');
-    assert.equal(byName(host.tree, 'ErrorState')[0].props.onRetry, undefined);
+    const formRetry = byName(host.tree, 'ErrorState')[0].props.onRetry;
+    if (fixture.name === 'ResourcesPage') {
+      assert.equal(typeof formRetry, 'function');
+      formRetry(); host.render();
+      assert.equal(requests.at(-1).options.method, undefined, 'Refreshing after a file failure only reads the selected list page');
+      assert.match(requests.at(-1).url, /page=2&size=20$/);
+      assert.equal(byName(host.tree, 'ErrorState').length, 1, 'Refreshing cannot hide the upload failure');
+    } else assert.equal(formRetry, undefined);
     assert.equal(requests.filter(request => request.options.method === 'POST').length, 1);
     requests.at(-1).resolve(page([row(fixture, 'CURRENT_ROW')], 41, 2)); await settle(host);
     assert.equal(byName(host.tree, 'ErrorState').length, 1);
@@ -263,22 +269,6 @@ for (const fixture of cases.filter(fixture => ['NotesPage', 'ResourcesPage'].inc
     assert.equal(requests.at(-1).options.body, submission.options.body);
   });
 }
-
-test('UsersPage: a successful status change hides the stale action until the refreshed status arrives', async context => {
-  const fixture = cases[0], { host, requests } = setup(context, fixture);
-  requests[0].resolve(page([fixture.item], 1)); await settle(host);
-  button(host.tree, 'Disable').props.onClick();
-  assert.equal(requests.at(-1).options.method, 'PUT');
-  requests.at(-1).resolve({ active: false }); await settle(host);
-  assertLoading(host.tree);
-  requests.at(-1).reject(new Error('refresh unavailable')); await settle(host);
-  assertFailed(host.tree);
-  retry(host);
-  assert.equal(requests.filter(request => request.options.method === 'PUT').length, 1);
-  requests.at(-1).resolve(page([{ ...fixture.item, user_status: 0 }], 1)); await settle(host);
-  assert.ok(button(host.tree, 'Enable'));
-  assert.equal(button(host.tree, 'Disable'), undefined);
-});
 
 test('NotesPage: publishing during page-two loading selects page one and ignores the obsolete page response', async context => {
   const fixture = cases.find(fixture => fixture.name === 'NotesPage');

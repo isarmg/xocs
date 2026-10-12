@@ -12,6 +12,17 @@ export async function originalModule(entry, replacements = {}, exports = []) {
   const { code } = await transformWithOxc(source + exposed, fileURLToPath(entry), {
     jsx: { runtime: 'automatic' },
   });
+  // Explicit local TSX imports remain real components, including their hooks.
+  // Node cannot strip JSX, so transform these dependencies with the same tool.
+  const compiled = new Map([[entry.href, code]]);
+  for (const match of source.matchAll(/\bfrom\s*['"](\.[^'"]+\.tsx)['"]/g)) {
+    const dependency = new URL(match[1], entry);
+    const dependencySource = await readFile(dependency, 'utf8');
+    const transformed = await transformWithOxc(dependencySource, fileURLToPath(dependency), {
+      jsx: { runtime: 'automatic' },
+    });
+    compiled.set(dependency.href, transformed.code);
+  }
   const hookHost = new URL('./hook-host.mjs', import.meta.url).href;
   const hooks = registerHooks({
     resolve(specifier, context, next) {
@@ -24,7 +35,7 @@ export async function originalModule(entry, replacements = {}, exports = []) {
       return next(specifier, context);
     },
     load(url, context, next) {
-      if (url === entry.href) return { format: 'module', source: code, shortCircuit: true };
+      if (compiled.has(url)) return { format: 'module', source: compiled.get(url), shortCircuit: true };
       return next(url, context);
     },
   });

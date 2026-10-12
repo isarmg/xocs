@@ -32,6 +32,9 @@
 .xocs-admin-workspace textarea { min-height: 110px; resize: vertical; }
 .xocs-admin-workspace .editor-textarea { min-height: 320px; }
 .xocs-admin-workspace input[type=file] { width: 100%; box-sizing: border-box; font: inherit; }
+.xocs-admin-workspace .xocs-file-picker { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-width: 0; }
+.xocs-admin-workspace .xocs-file-picker .xcss-button { border: 1px solid var(--xcss-block-border); background: var(--xcss-bg-panel); color: var(--xcss-text-primary); text-decoration: none; }
+.xocs-admin-workspace .xocs-file-picker-name { min-width: 0; overflow-wrap: anywhere; color: var(--xcss-block-muted); }
 .xocs-admin-workspace .xcss-table { font-size: .9375rem; }
 .xocs-admin-workspace .xcss-table th { white-space: nowrap; }
 .xocs-admin-workspace .xcss-table td { overflow-wrap: anywhere; }

@@ -6,11 +6,6 @@ use crate::{ApiResult, AppError, AppState, absent, db_error, invalid};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .route("/api/v1/content/users", get(users))
-        .route(
-            "/api/v1/content/users/{id}/status",
-            axum::routing::put(change_user_status),
-        )
         .route("/api/v1/content/comments", get(comments))
         .route(
             "/api/v1/content/comments/{id}",
@@ -43,7 +38,7 @@ pub fn routes() -> Router<AppState> {
         )
         .route(
             "/api/v1/content/notes/{id}",
-            axum::routing::delete(delete_note),
+            axum::routing::put(update_admin_note).delete(delete_note),
         )
         .route(
             "/api/v1/content/tree-hole/{id}",
@@ -79,73 +74,11 @@ fn page(query: PageQuery) -> (i64, i64) {
     )
 }
 
-#[derive(Serialize, sqlx::FromRow)]
-struct User {
-    id: i64,
-    username: Option<String>,
-    email: Option<String>,
-    phone_number: Option<String>,
-    user_status: i64,
-    user_type: i64,
-    create_time: Option<String>,
-}
-async fn users(
-    State(state): State<AppState>,
-    Query(query): Query<PageQuery>,
-) -> ApiResult<Page<User>> {
-    let (page, size) = page(query);
-    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM user WHERE deleted=0")
-        .fetch_one(&state.pool)
-        .await
-        .map_err(db_error)?;
-    let items=sqlx::query_as::<_,User>("SELECT id,username,email,phone_number,user_status,user_type,create_time FROM user WHERE deleted=0 ORDER BY id DESC LIMIT ? OFFSET ?")
-        .bind(size).bind((page-1)*size).fetch_all(&state.pool).await.map_err(db_error)?;
-    Ok(Json(Page {
-        items,
-        total,
-        page,
-        size,
-    }))
-}
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct StatusInput {
     active: bool,
 }
-async fn change_user_status(
-    State(state): State<AppState>,
-    Path(id): Path<i64>,
-    crate::ContractJson(input): crate::ContractJson<StatusInput>,
-) -> ApiResult<serde_json::Value> {
-    if !input.active {
-        let kind: Option<i64> =
-            sqlx::query_scalar("SELECT user_type FROM user WHERE id=? AND deleted=0")
-                .bind(id)
-                .fetch_optional(&state.pool)
-                .await
-                .map_err(db_error)?;
-        if kind == Some(0) {
-            let others:i64=sqlx::query_scalar("SELECT COUNT(*) FROM user WHERE user_type=0 AND user_status=1 AND deleted=0 AND id<>?")
-                .bind(id).fetch_one(&state.pool).await.map_err(db_error)?;
-            if others == 0 {
-                return Err(AppError(StatusCode::CONFLICT, "不能停用唯一的站点作者"));
-            }
-        }
-    }
-    let changed = sqlx::query(
-        "UPDATE user SET user_status=?,update_time=CURRENT_TIMESTAMP WHERE id=? AND deleted=0",
-    )
-    .bind(i64::from(input.active))
-    .bind(id)
-    .execute(&state.pool)
-    .await
-    .map_err(db_error)?;
-    if changed.rows_affected() == 0 {
-        return Err(absent());
-    }
-    Ok(Json(serde_json::json!({"active":input.active})))
-}
-
 #[derive(Serialize, sqlx::FromRow)]
 struct Comment {
     id: i64,
@@ -206,25 +139,32 @@ async fn delete_comment(
 
 #[derive(Serialize, sqlx::FromRow)]
 struct Site {
+    author_name: String,
     web_name: Option<String>,
     web_title: Option<String>,
     notices: Option<String>,
-    footer: Option<String>,
     background_image: Option<String>,
     avatar: Option<String>,
     random_cover: Option<String>,
 }
 async fn site(State(state): State<AppState>) -> ApiResult<Site> {
-    Ok(Json(sqlx::query_as::<_,Site>("SELECT web_name,web_title,notices,footer,background_image,avatar,random_cover FROM web_info ORDER BY id LIMIT 1")
-        .fetch_optional(&state.pool).await.map_err(db_error)?.unwrap_or(Site{web_name:None,web_title:None,notices:None,footer:None,background_image:None,avatar:None,random_cover:None})))
+    let author = crate::site_author_id(&state.pool).await?;
+    let author_name: Option<String> = sqlx::query_scalar("SELECT username FROM user WHERE id=?")
+        .bind(author)
+        .fetch_one(&state.pool)
+        .await
+        .map_err(db_error)?;
+    Ok(Json(sqlx::query_as::<_,Site>("SELECT ? AS author_name,web_name,web_title,notices,background_image,avatar,random_cover FROM web_info ORDER BY id LIMIT 1")
+        .bind(author_name.as_deref().unwrap_or_default())
+        .fetch_optional(&state.pool).await.map_err(db_error)?.unwrap_or(Site{author_name:author_name.unwrap_or_default(),web_name:None,web_title:None,notices:None,background_image:None,avatar:None,random_cover:None})))
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct SiteInput {
+    author_name: String,
     web_name: String,
     web_title: Option<String>,
     notices: Option<String>,
-    footer: Option<String>,
     background_image: Option<String>,
     avatar: Option<String>,
     random_cover: Option<String>,
@@ -233,32 +173,63 @@ async fn update_site(
     State(state): State<AppState>,
     crate::ContractJson(input): crate::ContractJson<SiteInput>,
 ) -> ApiResult<Site> {
-    if input.web_name.trim().is_empty()
+    let author_name = input.author_name.trim();
+    if author_name.is_empty()
+        || author_name.chars().count() > 100
+        || input.web_name.trim().is_empty()
         || input.web_name.chars().count() > 100
         || input
             .web_title
             .as_deref()
             .is_some_and(|v| v.chars().count() > 200)
-        || input.footer.as_deref().is_some_and(|v| v.len() > 4096)
         || [&input.notices, &input.random_cover]
             .iter()
             .any(|item| item.as_deref().is_some_and(|v| v.len() > 16384))
     {
         return Err(invalid("站点信息无效"));
     }
+    let mut transaction = state
+        .pool
+        .begin_with("BEGIN IMMEDIATE")
+        .await
+        .map_err(db_error)?;
+    let author: i64 = sqlx::query_scalar(
+        "SELECT id FROM user WHERE user_type=0 AND deleted=0 AND user_status=1 ORDER BY id LIMIT 1",
+    )
+    .fetch_optional(&mut *transaction)
+    .await
+    .map_err(db_error)?
+    .ok_or(AppError(StatusCode::CONFLICT, "缺少站点作者账号"))?;
+    let name_used: bool =
+        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM user WHERE username=? AND id<>?)")
+            .bind(author_name)
+            .bind(author)
+            .fetch_one(&mut *transaction)
+            .await
+            .map_err(db_error)?;
+    if name_used {
+        return Err(AppError(StatusCode::CONFLICT, "作者展示名已被使用"));
+    }
+    sqlx::query("UPDATE user SET username=?,update_time=CURRENT_TIMESTAMP WHERE id=?")
+        .bind(author_name)
+        .bind(author)
+        .execute(&mut *transaction)
+        .await
+        .map_err(db_error)?;
     let id: Option<i64> = sqlx::query_scalar("SELECT id FROM web_info ORDER BY id LIMIT 1")
-        .fetch_optional(&state.pool)
+        .fetch_optional(&mut *transaction)
         .await
         .map_err(db_error)?;
     if let Some(id) = id {
-        sqlx::query("UPDATE web_info SET web_name=?,web_title=?,notices=?,footer=?,background_image=?,avatar=?,random_cover=? WHERE id=?")
-            .bind(input.web_name).bind(input.web_title).bind(input.notices).bind(input.footer).bind(input.background_image).bind(input.avatar).bind(input.random_cover).bind(id)
-            .execute(&state.pool).await.map_err(db_error)?;
+        sqlx::query("UPDATE web_info SET web_name=?,web_title=?,notices=?,background_image=?,avatar=?,random_cover=? WHERE id=?")
+            .bind(input.web_name).bind(input.web_title).bind(input.notices).bind(input.background_image).bind(input.avatar).bind(input.random_cover).bind(id)
+            .execute(&mut *transaction).await.map_err(db_error)?;
     } else {
-        sqlx::query("INSERT INTO web_info(web_name,web_title,notices,footer,background_image,avatar,random_cover,status) VALUES(?,?,?,?,?,?,?,1)")
-            .bind(input.web_name).bind(input.web_title).bind(input.notices).bind(input.footer).bind(input.background_image).bind(input.avatar).bind(input.random_cover)
-            .execute(&state.pool).await.map_err(db_error)?;
+        sqlx::query("INSERT INTO web_info(web_name,web_title,notices,background_image,avatar,random_cover,status) VALUES(?,?,?,?,?,?,1)")
+            .bind(input.web_name).bind(input.web_title).bind(input.notices).bind(input.background_image).bind(input.avatar).bind(input.random_cover)
+            .execute(&mut *transaction).await.map_err(db_error)?;
     }
+    transaction.commit().await.map_err(db_error)?;
     site(State(state)).await
 }
 
@@ -676,28 +647,115 @@ struct Note {
 #[serde(deny_unknown_fields)]
 struct AdminNoteInput {
     content: String,
-    is_public: Option<bool>,
+    #[serde(deserialize_with = "Deserialize::deserialize")]
+    image_path: Option<String>,
+    is_public: bool,
 }
+
+const ADMIN_NOTE_SQL: &str = "SELECT w.id,w.user_id,u.username,w.content,w.image_path,w.is_public,w.create_time FROM wei_yan w LEFT JOIN user u ON u.id=w.user_id";
+
+async fn validate_admin_note(
+    transaction: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    input: &AdminNoteInput,
+) -> Result<(), AppError> {
+    let content = input.content.trim();
+    if content.is_empty() || content.chars().count() > 1024 {
+        return Err(invalid("动态内容应为 1 至 1024 字"));
+    }
+    if let Some(path) = &input.image_path {
+        let local_image = path
+            .strip_prefix("/media/")
+            .and_then(|name| name.rsplit_once('.'))
+            .is_some_and(|(hash, extension)| {
+                hash.len() == 64
+                    && hash
+                        .bytes()
+                        .all(|byte| byte.is_ascii_digit() || matches!(byte, b'a'..=b'f'))
+                    && matches!(extension, "png" | "jpg" | "gif" | "webp")
+            });
+        if !local_image {
+            return Err(invalid("动态图片必须选择已上传的本地图片"));
+        }
+        let valid: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM resource WHERE path=? AND type='image' AND store_type='local' AND status=1 AND mime_type IN ('image/png','image/jpeg','image/gif','image/webp'))")
+            .bind(path).fetch_one(&mut **transaction).await.map_err(db_error)?;
+        if !valid {
+            return Err(invalid("动态图片必须选择已上传的本地图片"));
+        }
+    }
+    Ok(())
+}
+
+async fn load_admin_note(state: &AppState, id: i64) -> ApiResult<Note> {
+    Ok(Json(
+        sqlx::query_as::<_, Note>(sqlx::AssertSqlSafe(format!(
+            "{ADMIN_NOTE_SQL} WHERE w.id=? AND w.type='friend'"
+        )))
+        .bind(id)
+        .fetch_optional(&state.pool)
+        .await
+        .map_err(db_error)?
+        .ok_or_else(absent)?,
+    ))
+}
+
 async fn create_admin_note(
     State(state): State<AppState>,
     crate::ContractJson(input): crate::ContractJson<AdminNoteInput>,
 ) -> ApiResult<Note> {
-    let content = input.content.trim();
-    if content.is_empty() || content.chars().count() > 1024 {
-        return Err(invalid("微言内容应为 1 至 1024 字"));
-    }
     let author = crate::site_author_id(&state.pool).await?;
-    let id =
-        sqlx::query("INSERT INTO wei_yan(user_id,content,type,is_public) VALUES(?,?,'friend',?)")
-            .bind(author)
-            .bind(content)
-            .bind(i64::from(input.is_public.unwrap_or(true)))
-            .execute(&state.pool)
+    let mut transaction = state
+        .pool
+        .begin_with("BEGIN IMMEDIATE")
+        .await
+        .map_err(db_error)?;
+    validate_admin_note(&mut transaction, &input).await?;
+    let id = sqlx::query(
+        "INSERT INTO wei_yan(user_id,content,image_path,type,is_public) VALUES(?,?,?,'friend',?)",
+    )
+    .bind(author)
+    .bind(input.content.trim())
+    .bind(input.image_path)
+    .bind(i64::from(input.is_public))
+    .execute(&mut *transaction)
+    .await
+    .map_err(db_error)?
+    .last_insert_rowid();
+    transaction.commit().await.map_err(db_error)?;
+    load_admin_note(&state, id).await
+}
+
+async fn update_admin_note(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+    crate::ContractJson(input): crate::ContractJson<AdminNoteInput>,
+) -> ApiResult<Note> {
+    let mut transaction = state
+        .pool
+        .begin_with("BEGIN IMMEDIATE")
+        .await
+        .map_err(db_error)?;
+    let exists: bool =
+        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM wei_yan WHERE id=? AND type='friend')")
+            .bind(id)
+            .fetch_one(&mut *transaction)
             .await
-            .map_err(db_error)?
-            .last_insert_rowid();
-    Ok(Json(sqlx::query_as::<_,Note>("SELECT w.id,w.user_id,u.username,w.content,w.image_path,w.is_public,w.create_time FROM wei_yan w LEFT JOIN user u ON u.id=w.user_id WHERE w.id=?")
-        .bind(id).fetch_one(&state.pool).await.map_err(db_error)?))
+            .map_err(db_error)?;
+    if !exists {
+        return Err(absent());
+    }
+    validate_admin_note(&mut transaction, &input).await?;
+    sqlx::query(
+        "UPDATE wei_yan SET content=?,image_path=?,is_public=? WHERE id=? AND type='friend'",
+    )
+    .bind(input.content.trim())
+    .bind(input.image_path)
+    .bind(i64::from(input.is_public))
+    .bind(id)
+    .execute(&mut *transaction)
+    .await
+    .map_err(db_error)?;
+    transaction.commit().await.map_err(db_error)?;
+    load_admin_note(&state, id).await
 }
 async fn content_notes(
     State(state): State<AppState>,

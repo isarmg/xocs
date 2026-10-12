@@ -25,6 +25,7 @@ const fixtures = [
   ['home sections', contracts.isHomeSections, [{ id: 1, title: 'Latest', kind: 'latest', sort_id: null, priority: 0, enabled: true }], value => { value[0].enabled = 1; }],
   ['comment page', contracts.isPublicCommentPage, page([comment]), value => { value.items[0].reply_count = -1; }],
   ['comment post acknowledgement', contracts.isPublicComment, comment, value => { delete value.comment_content; }],
+  ['public letter', contracts.isPublicLetter, {recipient:'Reader',sender:'Writer',content:'Letter'}, value=>{value.content=false;}],
   ['article news', contracts.isNews, [{ id: 1, content: 'Update', create_time: null }], value => { value[0].content = {}; }],
   ['note page', contracts.isNotePage, page([{ id: 1, user_id: 1, username: null, content: 'Moment', image_path: null, create_time: null, like_count: 0, is_public: 1 }]), value => { value.items[0].image_path = false; }],
   ['wall posts', contracts.isWallPosts, [{ id: 1, user_id: null, username: null, avatar: null, message: 'Hello', image_path: null, create_time: null }], value => { value[0].message = {}; }],
@@ -39,7 +40,10 @@ for (const [name, validate, valid, corrupt] of fixtures) {
     assert.deepEqual(await request('/api/v1/fixture', validate), valid);
     body = structuredClone(valid); corrupt(body);
     await assert.rejects(request('/api/v1/fixture', validate), error => error instanceof ApiContractError && error.reason === 'invalid_response' && error.status === 200);
-    for (body of [null, 'invalid', 0]) await assert.rejects(request('/api/v1/fixture', validate), ApiContractError);
+    for (body of [null, 'invalid', 0]) {
+      if (name === 'public letter' && body === null) assert.equal(await request('/api/v1/fixture', validate), null, 'An unpublished letter has a valid null read model');
+      else await assert.rejects(request('/api/v1/fixture', validate), ApiContractError);
+    }
   });
 }
 

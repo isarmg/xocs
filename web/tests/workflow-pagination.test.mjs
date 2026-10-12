@@ -34,7 +34,7 @@ const { ArticleManager, ArticleEditor, ArticleNewsEditor, CategoryManager } = aw
   'react-dom/client': 'export const createRoot=()=>({render(){}});',
   '@xcss/web/web-fonts': 'export const startAfterFonts=()=>{};',
   './AdminLayout': 'export const AdminWorkspace=({children})=>children;',
-  './AdminExtras': ['CommentsPage','Dashboard','FamilyPage','LabelsPage','LinksPage','NotesPage','ResourcesPage','SitePage','TreeHolePage','UsersPage'].map(name=>`export const ${name}=()=>null;`).join(''),
+  './AdminExtras': ['CommentsPage','Dashboard','FamilyPage','LabelsPage','LetterPage','LinksPage','NotesPage','ResourcesPage','SitePage','TreeHolePage'].map(name=>`export const ${name}=()=>null;`).join(''),
   './PublicExtras': 'export const PublicExtras=()=>null;',
   './HomeSections': 'export const HomeSectionsPage=()=>null;',
   './ArticleNews': 'export const ArticleNews=()=>null;',
@@ -164,7 +164,7 @@ async function editor(context) {
 }
 const upload=(host,index=0)=>{
   const target={files:[{name:'owned.png',size:5,type:'image/png'}],value:'C:\\fakepath\\owned.png'};
-  walk(host.tree,node=>node.type==='input'&&node.props.type==='file')[index].props.onChange({target});
+  walk(expand(host.tree),node=>node.type==='input'&&node.props.type==='file')[index].props.onChange({target});
   assert.equal(target.value,'','The same file must remain selectable after a failed upload.');
 };
 const save=host=>walk(host.tree,node=>node.type==='form')[0].props.onSubmit({preventDefault(){}});
@@ -187,7 +187,7 @@ test('content upload preserves edits made while waiting; stale save success cann
 
 test('canceled selections send nothing and canceled uploads cannot publish a late failure',async context=>{
   const {host,requests,notifications}=await editor(context);const before=requests.length;
-  walk(host.tree,node=>node.type==='input'&&node.props.type==='file')[0].props.onChange({target:{files:[],value:''}});
+  walk(expand(host.tree),node=>node.type==='input'&&node.props.type==='file')[0].props.onChange({target:{files:[],value:''}});
   assert.equal(requests.length,before);upload(host);const obsolete=requests.at(-1);button(host,'Cancel').props.onClick();host.render();obsolete.reject(new Error('late rejected upload'));await settle(host);
   assert.doesNotMatch(text(host),/Image upload failed/);assert.deepEqual(notifications,[]);
 });
@@ -213,10 +213,10 @@ test('travel photo completion cannot erase a separate category failure',async co
 
 test('existing article editing waits for load and retries failures before enabling uploads or saves',async context=>{
   const {host,requests}=setup(context,ArticleEditor,{id:1});const initial=requests.find(item=>item.url.endsWith('/articles/1'));
-  assert.equal(walk(host.tree,node=>node.type==='form').length,0);assert.equal(walk(host.tree,node=>node.type==='input'&&node.props.type==='file').length,0);assert.ok(button(host,'Cancel'));
+  assert.equal(walk(host.tree,node=>node.type==='form').length,0);assert.equal(walk(expand(host.tree),node=>node.type==='input'&&node.props.type==='file').length,0);assert.ok(button(host,'Cancel'));
   initial.reject(new Error('temporary load failure'));await settle(host);assert.match(text(host),/Unable to load article/);assert.equal(walk(host.tree,node=>node.type==='form').length,0);
-  button(host,'Try again').props.onClick();host.render();assert.match(requests.at(-1).url,/\/articles\/1$/);assert.equal(walk(host.tree,node=>node.type==='input'&&node.props.type==='file').length,0);
-  requests.at(-1).resolve({...article,article_cover:'/media/cba06b5736faf67e54b07b561eae94395e774c517a7d910a54369e1263ccfbd4.png'});await settle(host);assert.equal(walk(host.tree,node=>node.type==='input'&&node.props.type==='file').length,2);
+  button(host,'Try again').props.onClick();host.render();assert.match(requests.at(-1).url,/\/articles\/1$/);assert.equal(walk(expand(host.tree),node=>node.type==='input'&&node.props.type==='file').length,0);
+  requests.at(-1).resolve({...article,article_cover:'/media/cba06b5736faf67e54b07b561eae94395e774c517a7d910a54369e1263ccfbd4.png'});await settle(host);assert.equal(walk(expand(host.tree),node=>node.type==='input'&&node.props.type==='file').length,2);
   upload(host);requests.at(-1).resolve({id:1,mime_type:'image/png',size:5,path:'/media/11507a0e2f5e69d5dfa40a62a1bd7b6ee57e6bcd85c67c9b8431b36fff21c437.png'});await settle(host);save(host);assert.equal(JSON.parse(requests.at(-1).options.body).article_cover,'/media/11507a0e2f5e69d5dfa40a62a1bd7b6ee57e6bcd85c67c9b8431b36fff21c437.png');assert.equal(requests.at(-1).options.method,'PUT');
 });
 test('article identity changes discard stale initial loads and pending uploads',async context=>{
@@ -245,7 +245,7 @@ const categoryFixture={id:1,sort_name:'Category A',sort_description:null,priorit
 const labelFixture={id:1,sort_id:1,label_name:'Tag A',label_description:null};
 
 test('article updates admit one pending publish, lock its draft, and preserve it for retry',async context=>{
-  const {host,requests,notifications}=setup(context,ArticleNewsEditor,{id:1});requests[0].resolve([]);await settle(host);
+  const {host,requests,notifications}=setup(context,ArticleNewsEditor,{id:1});requests[0].resolve({items:[],total:0,page:1,size:20});await settle(host);
   walk(host.tree,node=>node.type==='textarea')[0].props.onChange({target:{value:'First update'}});
   fields(host,'TextField')[0].props.onChange({target:{value:'2026-10-10T10:30'}});host.render();
   const before=requests.length;save(host);save(host);host.render();save(host);
@@ -256,7 +256,7 @@ test('article updates admit one pending publish, lock its draft, and preserve it
   assert.equal(fields(host,'TextField')[0].props.value,'2026-10-10T10:30');
   save(host);requests.at(-1).resolve({id:1,content:'First update',create_time:'2026-10-10 10:30:00'});await settle(host);
   assert.equal(walk(host.tree,node=>node.type==='textarea')[0].props.value,'');assert.equal(fields(host,'TextField')[0].props.value,'');
-  assert.deepEqual(notifications,['Article update published']);assert.match(text(host),/First update/);
+  requests.at(-1).resolve({items:[{id:1,content:'First update',create_time:'2026-10-10 10:30:00'}],total:1,page:1,size:20});await settle(host);assert.deepEqual(notifications,['Article update published']);assert.match(text(host),/First update/);
 });
 
 for(const [Component,kind] of [[CategoryManager,'category'],[LabelsPage,'label']]){
@@ -297,9 +297,9 @@ test('home-section saves lock add, edit, reorder, and delete until success or fa
 });
 
 test('site settings retain the existing pending lock and allow correction after failed save',async context=>{
-  const {host,requests}=setup(context,SitePage);requests[0].resolve({web_name:'Site A',web_title:null,notices:null,footer:null,background_image:null,avatar:null,random_cover:null});await settle(host);save(host);host.render();assert.ok(controls(host).every(item=>item.disabled));
+  const {host,requests}=setup(context,SitePage);requests[0].resolve({web_name:'Site A',web_title:null,notices:null,author_name:'Site owner',background_image:null,avatar:null,random_cover:null});await settle(host);save(host);host.render();assert.ok(controls(host).every(item=>item.disabled));
   requests.at(-1).reject(new Error('ordinary save failure'));await settle(host);assert.ok(controls(host).every(item=>!item.disabled));assert.equal(fields(host,'TextField')[0].props.value,'Site A');
-  fields(host,'TextField')[0].props.onChange({target:{value:'Site B'}});host.render();save(host);requests.at(-1).resolve({web_name:'Site B',web_title:null,notices:null,footer:null,background_image:null,avatar:null,random_cover:null});await settle(host);assert.equal(fields(host,'TextField')[0].props.value,'Site B');
+  fields(host,'TextField')[0].props.onChange({target:{value:'Site B'}});host.render();save(host);requests.at(-1).resolve({web_name:'Site B',web_title:null,notices:null,author_name:'Site owner',background_image:null,avatar:null,random_cover:null});await settle(host);assert.equal(fields(host,'TextField')[0].props.value,'Site B');
 });
 
 test('article page changes hide old destructive actions and a failed page can retry',async context=>{
@@ -320,7 +320,7 @@ for (const [input, expected] of [
 ]) {
   test(`article update UTC input round-trips through storage and both displays (${input || 'default'})`, async context => {
     const { host, requests } = setup(context, ArticleNewsEditor, { id: 1 });
-    requests[0].resolve([]); await settle(host);
+    requests[0].resolve({items:[],total:0,page:1,size:20}); await settle(host);
     walk(host.tree, node => node.type === 'textarea')[0].props.onChange({ target: { value: 'Timed update' } });
     fields(host, 'TextField')[0].props.onChange({ target: { value: input } }); host.render();
     save(host);
@@ -328,9 +328,10 @@ for (const [input, expected] of [
     const saved = { id: 1, content: 'Timed update', create_time: expected?.slice(0, 19).replace('T', ' ') ?? '2026-10-10 12:34:56' };
     const display = (input ? `${input.replace('T', ' ')}:00` : saved.create_time) + ' UTC';
     requests.at(-1).resolve(saved); await settle(host);
+    requests.at(-1).resolve({items:[saved],total:1,page:1,size:20});await settle(host);
     assert.ok(text(host).includes(display), `saved admin row: ${text(host)}`);
     const reloaded = new HookHost(ArticleNewsEditor, { id: 1 }); context.after(() => reloaded.unmount());
-    reloaded.render(); requests.at(-1).resolve([saved]); await settle(reloaded);
+    reloaded.render(); requests.at(-1).resolve({items:[saved],total:1,page:1,size:20}); await settle(reloaded);
     assert.ok(text(reloaded).includes(display), `reloaded admin row: ${text(reloaded)}`);
     const publicView = new HookHost(ArticleNews, { articleId: 1 }); context.after(() => publicView.unmount());
     publicView.render(); requests.at(-1).resolve([saved]); await settle(publicView);
@@ -344,7 +345,7 @@ for (const name of uploadNames) {
     const {host,requests}=setup(context,ResourcesPage);
     requests[0].resolve(page([],0,1,20));await settle(host);
     const file=new File(['image'],name,{type:'image/png'});
-    walk(host.tree,node=>node.type==='input'&&node.props.type==='file')[0].props.onChange({target:{files:[file]}});host.render();
+    walk(expand(host.tree),node=>node.type==='input'&&node.props.type==='file')[0].props.onChange({target:{files:[file]}});host.render();
     walk(host.tree,node=>node.type==='form')[0].props.onSubmit({preventDefault(){}});
     const pending=requests.at(-1);
     assert.equal(new Headers(pending.options.headers).get('X-File-Name'),encodeURIComponent(name));
@@ -356,7 +357,7 @@ for (const name of uploadNames) {
   for (const target of [0,1]) test(`article ${target===0?'cover':'content'} upload preserves UTF-8 filename: ${name}`, async context => {
     const {host,requests}=await editor(context);
     const file=new File(['image'],name,{type:'image/png'});
-    walk(host.tree,node=>node.type==='input'&&node.props.type==='file')[target].props.onChange({target:{files:[file],value:name}});
+    walk(expand(host.tree),node=>node.type==='input'&&node.props.type==='file')[target].props.onChange({target:{files:[file],value:name}});
     assert.equal(new Headers(requests.at(-1).options.headers).get('X-File-Name'),encodeURIComponent(name));
     assert.equal(requests.at(-1).options.body,file);
     requests.at(-1).resolve({id:1,mime_type:'image/png',size:5,path:'/media/f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d.png'});await settle(host);

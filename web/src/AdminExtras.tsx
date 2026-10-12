@@ -1,4 +1,4 @@
-import { isUserPage, isCommentPage, isResourcePage, isList, isLabel, isSite, isStatistics, isStatus, isDeleted, isLink, isLinksPage, isTreePage, isNotesPage, isNote, isFamily, isUploadedImage, type User, type Label, type Statistics, type Link, type Family } from './admin-contracts.ts';
+import { isCommentPage, isResourcePage, isList, isLabel, isSite, isStatistics, isDeleted, isLink, isLinksPage, isTreePage, isNotesPage, isNote, isFamily, isUploadedImage, isAdminLetter, type AdminLetter, type AdminSite, type Note, type Resource, type Label, type Statistics, type Link, type Family } from './admin-contracts.ts';
 import { isCategories } from './public-contracts.ts';
 import { formatUtcTime } from './utc-time.ts';
 import { uploadFilename } from './upload-filename.ts';
@@ -10,8 +10,9 @@ import {Button,EmptyState,ErrorState,FormField,LoadingState,PageHeader,Select,Ta
 import type {Category,Page,SiteInfo} from './api';
 import {ImageLightbox,safeImageUrl} from './MediaPreview';
 import {adminGroups} from './AdminLayout';
+import {FilePicker} from './FilePicker.tsx';
 
-function AdminPager({data,page,onPage}:{data:Page<unknown>|null;page:number;onPage:(page:number)=>void}){if(!data||(data.total<=data.size&&page<=1))return null;return <nav className="pager" aria-label={t("分页", "Pagination")}><Button disabled={page<=1} onClick={()=>onPage(page-1)}>{t("上一页", "Previous page")}</Button><span>{t("第 {0} 页 · 共 {1} 条", "Page {0} · {1} items", [page, data.total])}</span><Button disabled={page*data.size>=data.total} onClick={()=>onPage(page+1)}>{t("下一页", "Next page")}</Button></nav>;}
+function AdminPager({data,page,onPage,disabled=false}:{data:Page<unknown>|null;page:number;onPage:(page:number)=>void;disabled?:boolean}){if(!data||(data.total<=data.size&&page<=1))return null;return <nav className="pager" aria-label={t("分页", "Pagination")}><Button disabled={disabled||page<=1} onClick={()=>onPage(page-1)}>{t("上一页", "Previous page")}</Button><span>{t("第 {0} 页 · 共 {1} 条", "Page {0} · {1} items", [page, data.total])}</span><Button disabled={disabled||page*data.size>=data.total} onClick={()=>onPage(page+1)}>{t("下一页", "Next page")}</Button></nav>;}
 
 // A new selection also identifies a refresh, so old rows disappear before effects run.
 function useAdminPage<T>(client:ReturnType<typeof useAdminApplication>['client'],path:string,validate:(value:unknown)=>value is Page<T>,loadError:string){
@@ -69,12 +70,6 @@ export function Dashboard(){
   </section>;
 }
 
-export function UsersPage(){
-  const {client,notify}=useAdminApplication();const {data,failure,loadFailure,setFailure,currentPage,setCurrentPage,reload}=useAdminPage(client,'/api/v1/content/users',isUserPage,t("用户列表加载失败", "Unable to load users"));
-  async function change(user:User){setFailure('');const active=!user.user_status;try{await client.request(`/api/v1/content/users/${user.id}/status`,(value):value is {active:boolean}=>isStatus(value)&&value.active===active,{method:'PUT',body:JSON.stringify({active})});reload();notify(t("用户状态已更新", "User status updated"));}catch{setFailure(t("用户状态修改失败", "Unable to update user status"));}}
-  return <section className="xcss-content-stack"><PageHeader><div><h1>{t("用户管理", "Users")}</h1></div></PageHeader>{failure&&<ErrorState>{failure}</ErrorState>}{loadFailure&&<ErrorState onRetry={reload}>{loadFailure}</ErrorState>}{data?.items.length?<Table aria-label={t("用户列表", "User list")}><thead><tr><th>ID</th><th>{t("用户名", "Username")}</th><th>{t("邮箱", "Email")}</th><th>{t("状态", "Status")}</th><th>{t("操作", "Actions")}</th></tr></thead><tbody>{data.items.map(user=><tr key={user.id}><td>{user.id}</td><td>{user.username||'—'}</td><td>{user.email||'—'}</td><td>{user.user_status?t("正常", "Active"):t("已停用", "Disabled")}</td><td><Button onClick={()=>void change(user)}>{user.user_status?t("停用", "Disable"):t("启用", "Enable")}</Button></td></tr>)}</tbody></Table>:data?<EmptyState>{data.total===0?t("暂无用户", "No users yet"):t("本页暂无用户", "No users on this page")}</EmptyState>:!loadFailure&&<LoadingState />}<AdminPager data={data} page={currentPage} onPage={setCurrentPage}/></section>;
-}
-
 export function CommentsPage(){
   const {client,notify}=useAdminApplication();const {data,failure,loadFailure,setFailure,currentPage,setCurrentPage,reload}=useAdminPage(client,'/api/v1/content/comments',isCommentPage,t("评论加载失败", "Unable to load comments"));
   async function remove(id:number){if(!window.confirm(t("删除这条评论？如果是顶层评论，会同时删除该楼层的全部回复。", "Delete this comment? If it is a top-level comment, all replies in its thread will also be deleted.")))return;setFailure('');try{await client.request(`/api/v1/content/comments/${id}`,isDeleted,{method:'DELETE'});notify(t("评论已删除", "Comment deleted"));reload();}catch{setFailure(t("删除评论失败", "Unable to delete comment"));}}
@@ -83,7 +78,7 @@ export function CommentsPage(){
 
 export function SitePage(){
   const {client,notify}=useAdminApplication();
-  const [site,setSite]=useState<SiteInfo|null>(null);
+  const [site,setSite]=useState<AdminSite|null>(null);
   const [failure,setFailure]=useState('');
   const [saving,setSaving]=useState(false);
   const [version,setVersion]=useState(0);
@@ -97,6 +92,7 @@ export function SitePage(){
   },[client,version]);
   async function save(event:FormEvent){
     event.preventDefault();if(!site)return;
+    if(!site.author_name.trim()||Array.from(site.author_name.trim()).length>100){setFailure(t('站长显示名须为 1–100 个字符','The site owner display name must contain 1–100 characters'));return;}
     setSaving(true);setFailure('');
     try{
       const updated=await client.request('/api/v1/content/site',isSite,{method:'PUT',body:JSON.stringify(site)});
@@ -104,7 +100,7 @@ export function SitePage(){
     }catch(reason){setFailure(publicErrorMessage(reason,t('保存失败','Unable to save')));}
     finally{setSaving(false);}
   }
-  function change(key:keyof SiteInfo,value:string){setSite(current=>current?{...current,[key]:value}:current);}
+  function change(key:keyof AdminSite,value:string){setSite(current=>current?{...current,[key]:value}:current);}
   return <section className="xcss-content-stack">
     <PageHeader><div><h1>{t('网站设置','Site settings')}</h1></div></PageHeader>
     {failure&&<ErrorState onRetry={site?undefined:()=>setVersion(value=>value+1)}>{failure}</ErrorState>}
@@ -115,13 +111,14 @@ export function SitePage(){
           <div className="form-grid">
             <FormField label={t('网站名称','Site name')}><TextField required value={site.web_name||''} onChange={event=>change('web_name',event.target.value)}/></FormField>
             <FormField label={t('网站标题','Site title')}><TextField value={site.web_title||''} onChange={event=>change('web_title',event.target.value)}/></FormField>
+            <FormField label={t('站长显示名','Site owner display name')}><TextField required maxLength={200} value={site.author_name} onChange={event=>change('author_name',event.target.value)}/></FormField>
           </div>
+          <p className="xocs-field-help">{t('用于文章和随笔署名；管理员登录名与密码在右上角头像的账号设置中修改。','Used as the author of articles and notes. Change administrator sign-in credentials through the account settings avatar.')}</p>
           <FormField label={t('公告','Notices')}>
             <textarea className="xcss-input" aria-describedby="site-notices-help" value={site.notices||''} onChange={event=>change('notices',event.target.value)}/>
           </FormField>
           <p id="site-notices-help" className="xocs-field-help">{t('使用 JSON 字符串数组或每行一条公告。','Use a JSON string array or one notice per line.')}</p>
           <details><summary>{t('推送格式','Promotion format')}</summary><p className="xocs-field-help">{t('推送条目使用这些前缀：','Use these prefixes for promotion entries:')} <code>推送标题：</code> <code>推送封面：</code> <code>推送链接：</code></p></details>
-          <FormField label={t('页脚','Footer')}><textarea className="xcss-input" value={site.footer||''} onChange={event=>change('footer',event.target.value)}/></FormField>
         </section>
         <section className="xcss-content-panel">
           <h2>{t('外观','Appearance')}</h2>
@@ -176,9 +173,22 @@ export function LabelsPage(){
 
 export function ResourcesPage(){
   const [saving,setSaving]=useState(false);const savePending=useRef(false);const fileInput=useRef<HTMLInputElement|null>(null);
+  const [deleting,setDeleting]=useState<number|null>(null);const deletePending=useRef<AbortController|null>(null);
   const {client,notify}=useAdminApplication();const {data,failure,loadFailure,setFailure,currentPage,setCurrentPage,reload}=useAdminPage(client,'/api/v1/content/resources',isResourcePage,t("文件列表加载失败", "Unable to load files"));const [file,setFile]=useState<File|null>(null);const [uploaded,setUploaded]=useState('');
-  async function upload(event:FormEvent){event.preventDefault();if(savePending.current)return;if(!file)return;if(file.size>10*1024*1024){setFailure(t("图片不能超过 10 MB", "Images must not exceed 10 MB"));return;}savePending.current=true;setSaving(true);setFailure('');try{const result=await client.request('/api/v1/content/upload',isUploadedImage,{method:'POST',headers:{'Content-Type':file.type||'application/octet-stream','X-File-Name':uploadFilename(file.name)},body:file});setUploaded(result.path);setFile(null);if(fileInput.current)fileInput.current.value='';reload();notify(t("图片已上传", "Image uploaded"));setFailure('');}catch(reason){setFailure(publicErrorMessage(reason, t("上传失败", "Upload failed")));}finally{savePending.current=false;setSaving(false);}}
-  return <section className="xcss-content-stack"><PageHeader><div><h1>{t("文件管理", "Files")}</h1><p>{t("上传图片后复制地址，用于文章封面或内容资源。", "Upload an image and copy its URL for article covers or content resources.")}</p></div></PageHeader>{failure&&<ErrorState>{failure}</ErrorState>}{loadFailure&&<ErrorState onRetry={reload}>{loadFailure}</ErrorState>}<fieldset className="xocs-fieldset" disabled={saving}><form className="inline-form" onSubmit={event=>void upload(event)}><FormField label={t("上传图片（PNG、JPEG、GIF、WebP）", "Upload image (PNG, JPEG, GIF, WebP)")}><input ref={fileInput} type="file" accept="image/png,image/jpeg,image/gif,image/webp" onChange={event=>setFile(event.target.files?.[0]||null)}/></FormField><Button type="submit" disabled={!file||saving}>{saving?t("上传中…", "Uploading…"):t("上传", "Upload")}</Button></form></fieldset>{uploaded&&<p>{t("新图片地址：", "New image URL: ")}<code>{uploaded}</code></p>}{data?.items.length?<Table aria-label={t("文件列表", "File list")}><thead><tr><th>{t("名称", "Name")}</th><th>{t("类型", "Type")}</th><th>{t("大小", "Size")}</th><th>{t("位置", "Location")}</th></tr></thead><tbody>{data.items.map(item=><tr key={item.id}><td>{item.original_name||t("文件 {0}", "File {0}", [item.id])}</td><td>{item.resource_type||'—'}</td><td>{item.size??'—'}</td><td>{item.path&&/^https?:\/\/|^\/media\//.test(item.path)?<a href={item.path} target="_blank" rel="noopener noreferrer">{t("打开", "Open")}</a>:'—'}</td></tr>)}</tbody></Table>:data?<EmptyState>{data.total===0?t("暂无文件", "No files yet"):t("本页暂无文件", "No files on this page")}</EmptyState>:!loadFailure&&<LoadingState />}<AdminPager data={data} page={currentPage} onPage={setCurrentPage}/></section>;
+  async function upload(event:FormEvent){event.preventDefault();if(savePending.current||deletePending.current)return;if(!file)return;if(file.size>10*1024*1024){setFailure(t("图片不能超过 10 MB", "Images must not exceed 10 MB"));return;}savePending.current=true;setSaving(true);setFailure('');try{const result=await client.request('/api/v1/content/upload',isUploadedImage,{method:'POST',headers:{'Content-Type':file.type||'application/octet-stream','X-File-Name':uploadFilename(file.name)},body:file});setUploaded(result.path);setFile(null);if(fileInput.current)fileInput.current.value='';reload();notify(t("图片已上传", "Image uploaded"));setFailure('');}catch(reason){setFailure(publicErrorMessage(reason, t("上传失败", "Upload failed")));}finally{savePending.current=false;setSaving(false);}}
+  useEffect(()=>()=>{deletePending.current?.abort();deletePending.current=null;},[client]);
+  async function remove(item:Resource){
+    if(!item.path||savePending.current||deletePending.current||!window.confirm(t('确定删除这个文件及其图片数据？','Delete this file and its image data?')))return;
+    const id=item.id;
+    const controller=new AbortController();deletePending.current=controller;setDeleting(id);setFailure('');
+    try{
+      await client.request(`/api/v1/content/resources/${id}`,isDeleted,{method:'DELETE',signal:controller.signal,body:JSON.stringify({path:item.path})});
+      if(controller.signal.aborted)return;
+      reload();notify(t('文件已删除','File deleted'));
+    }catch(reason){if(!controller.signal.aborted)setFailure(typeof reason==='object'&&reason!==null&&'status'in reason&&reason.status===409?t('文件仍被引用或记录已变化。请刷新列表，移除引用后再重试。','This file is referenced or its record has changed. Refresh the list and remove its references before retrying.'):publicErrorMessage(reason,t('删除文件失败','Unable to delete file')));}
+    finally{if(deletePending.current===controller){deletePending.current=null;setDeleting(null);}}
+  }
+  return <section className="xcss-content-stack"><PageHeader><div><h1>{t("文件管理", "Files")}</h1><p>{t("上传图片后复制地址，用于文章封面或内容资源。", "Upload an image and copy its URL for article covers or content resources.")}</p></div></PageHeader>{failure&&<ErrorState onRetry={reload}>{failure}</ErrorState>}{loadFailure&&<ErrorState onRetry={reload}>{loadFailure}</ErrorState>}<fieldset className="xocs-fieldset" disabled={saving||deleting!==null}><form className="inline-form" onSubmit={event=>void upload(event)}><FilePicker label={t("上传图片（PNG、JPEG、GIF、WebP）", "Upload image (PNG, JPEG, GIF, WebP)")} inputRef={fileInput} filename={file?.name} accept="image/png,image/jpeg,image/gif,image/webp" onChange={event=>setFile(event.target.files?.[0]||null)}/><Button type="submit" disabled={!file||saving}>{saving?t("上传中…", "Uploading…"):t("上传", "Upload")}</Button></form></fieldset>{uploaded&&<p>{t("新图片地址：", "New image URL: ")}<code>{uploaded}</code></p>}{data?.items.length?<Table aria-label={t("文件列表", "File list")}><thead><tr><th>{t("名称", "Name")}</th><th>{t("类型", "Type")}</th><th>{t("大小", "Size")}</th><th>{t("位置", "Location")}</th><th>{t("操作", "Actions")}</th></tr></thead><tbody>{data.items.map(item=><tr key={item.id}><td>{item.original_name||t("文件 {0}", "File {0}", [item.id])}</td><td>{item.resource_type||'—'}</td><td>{item.size??'—'}</td><td>{item.path&&/^https?:\/\/|^\/media\//.test(item.path)?<a href={item.path} target="_blank" rel="noopener noreferrer">{t("打开", "Open")}</a>:'—'}</td><td><Button className="xcss-danger" disabled={!item.path||saving||deleting!==null} title={!item.path?t('文件地址缺失，无法确认删除对象','The file address is missing, so the deletion target cannot be verified.'):undefined} onClick={()=>void remove(item)}>{deleting===item.id?t('删除中…','Deleting…'):t('删除','Delete')}</Button></td></tr>)}</tbody></Table>:data?<EmptyState>{data.total===0?t("暂无文件", "No files yet"):t("本页暂无文件", "No files on this page")}</EmptyState>:!loadFailure&&<LoadingState />}<AdminPager data={data} page={currentPage} onPage={setCurrentPage} disabled={saving||deleting!==null}/></section>;
 }
 
 const emptyLink={title:'',classify:'',cover:'',url:'',introduction:'',link_type:'favorites',status:true};
@@ -223,11 +233,121 @@ export function TreeHolePage(){
 }
 
 export function NotesPage(){
-  const [saving,setSaving]=useState(false);const savePending=useRef(false);
-  const {client,notify}=useAdminApplication();const {data,failure,loadFailure,setFailure,currentPage,setCurrentPage,reload}=useAdminPage(client,'/api/v1/content/notes',isNotesPage,t("动态加载失败", "Unable to load posts"));const [lightbox,setLightbox]=useState<string|null>(null);const [draft,setDraft]=useState('');const [isPublic,setIsPublic]=useState(true);
-  async function publish(event:FormEvent){event.preventDefault();if(savePending.current)return;savePending.current=true;setSaving(true);setFailure('');try{await client.request('/api/v1/content/notes',isNote,{method:'POST',body:JSON.stringify({content:draft,is_public:isPublic})});setDraft('');setCurrentPage(1);reload();setFailure('');notify(t("微言已发布", "Post published"));}catch(reason){setFailure(publicErrorMessage(reason, t("发布失败", "Unable to publish")));}finally{savePending.current=false;setSaving(false);}}
-  async function remove(id:number){if(!window.confirm(t("确定删除这条动态？", "Delete this post?")))return;setFailure('');try{await client.request(`/api/v1/content/notes/${id}`,isDeleted,{method:'DELETE'});reload();notify(t("动态已删除", "Post deleted"));}catch{setFailure(t("删除动态失败", "Unable to delete post"));}}
-  return <section className="xcss-content-stack"><PageHeader><div><h1>{t("动态管理", "Posts")}</h1></div></PageHeader>{failure&&<ErrorState>{failure}</ErrorState>}{loadFailure&&<ErrorState onRetry={reload}>{loadFailure}</ErrorState>}<fieldset className="xocs-fieldset" disabled={saving}><form className="editor-form" onSubmit={event=>void publish(event)}><FormField label={t("发布微言", "Publish post")}><textarea className="xcss-input" maxLength={1024} required value={draft} onChange={event=>setDraft(event.target.value)}/></FormField><label><input type="checkbox" checked={isPublic} onChange={event=>setIsPublic(event.target.checked)}/>{t(" 公开可见", " Publicly visible")}</label><Button type="submit" disabled={saving}>{saving?t("发布中…", "Publishing…"):t("发布", "Publish")}</Button></form></fieldset>{data?.items.length?<Table aria-label={t("动态列表", "Post list")}><thead><tr><th>{t("作者", "Author")}</th><th>{t("内容", "Content")}</th><th>{t("图片", "Image")}</th><th>{t("状态", "Status")}</th><th>{t("时间", "Time")}</th><th>{t("操作", "Actions")}</th></tr></thead><tbody>{data.items.map(item=><tr key={item.id}><td>{item.username||t("用户 {0}", "User {0}", [item.user_id??t("未知", "Unknown")])}</td><td>{item.content||t("图片动态", "Image post")}</td><td>{safeImageUrl(item.image_path)&&<button type="button" className="moderation-photo" onClick={()=>setLightbox(safeImageUrl(item.image_path))}><img src={safeImageUrl(item.image_path)||''} alt={t("查看动态图片", "View post image")}/></button>}</td><td>{item.is_public?t("公开", "Public"):t("私密", "Private")}</td><td>{formatUtcTime(item.create_time)||'—'}</td><td><Button className="xcss-danger" onClick={()=>void remove(item.id)}>{t("删除", "Delete")}</Button></td></tr>)}</tbody></Table>:data?<EmptyState>{data.total===0?t("暂无动态", "No posts yet"):t("本页暂无动态", "No posts on this page")}</EmptyState>:!loadFailure&&<LoadingState />}<AdminPager data={data} page={currentPage} onPage={setCurrentPage}/><ImageLightbox src={lightbox} onClose={()=>setLightbox(null)}/></section>;
+  const {client,notify}=useAdminApplication();
+  const {data,failure,loadFailure,setFailure,currentPage,setCurrentPage,reload}=useAdminPage(client,'/api/v1/content/notes',isNotesPage,t('随笔加载失败','Unable to load notes'));
+  const [draft,setDraft]=useState(''),[isPublic,setIsPublic]=useState(true),[imagePath,setImagePath]=useState<string|null>(null);
+  const [editing,setEditing]=useState<Note|null>(null),[lightbox,setLightbox]=useState<string|null>(null),[filename,setFilename]=useState('');
+  const [saving,setSaving]=useState(false),[uploading,setUploading]=useState(false);
+  const savePending=useRef<AbortController|null>(null),uploadPending=useRef<AbortController|null>(null);
+  const busy=saving||uploading;
+  const dirty=draft!==(editing?.content??'')||imagePath!==(editing?.image_path??null)||isPublic!==(editing?editing.is_public===1:true);
+  useEffect(()=>()=>{savePending.current?.abort();uploadPending.current?.abort();savePending.current=null;uploadPending.current=null;},[client]);
+  function reset(){uploadPending.current?.abort();uploadPending.current=null;setUploading(false);setEditing(null);setDraft('');setImagePath(null);setFilename('');setIsPublic(true);}
+  function edit(item:Note){
+    if(busy||(dirty&&!window.confirm(t('放弃当前未保存的随笔修改？','Discard the current unsaved note changes?'))))return;
+    setEditing(item);setDraft(item.content);setImagePath(item.image_path);setIsPublic(item.is_public===1);setFilename('');setFailure('');
+  }
+  async function uploadImage(file:File|undefined){
+    if(!file||savePending.current||uploadPending.current)return;
+    if(file.size>10*1024*1024||!['image/png','image/jpeg','image/gif','image/webp'].includes(file.type)){setFailure(t('请选择不超过 10 MB 的 PNG、JPEG、GIF 或 WebP 图片','Choose a PNG, JPEG, GIF, or WebP image up to 10 MB'));return;}
+    const controller=new AbortController();uploadPending.current=controller;setUploading(true);setFailure('');
+    try{
+      const result=await client.request('/api/v1/content/upload',isUploadedImage,{method:'POST',signal:controller.signal,headers:{'Content-Type':file.type,'X-File-Name':uploadFilename(file.name)},body:file});
+      if(controller.signal.aborted||uploadPending.current!==controller)return;
+      setImagePath(result.path);setFilename(file.name);notify(t('图片已上传','Image uploaded'));
+    }catch(reason){if(!controller.signal.aborted)setFailure(publicErrorMessage(reason,t('图片上传失败','Image upload failed')));}
+    finally{if(uploadPending.current===controller){uploadPending.current=null;setUploading(false);}}
+  }
+  async function save(event:FormEvent){
+    event.preventDefault();if(savePending.current||uploadPending.current)return;
+    if(!draft.trim()||Array.from(draft.trim()).length>1024){setFailure(t('随笔正文须为 1–1024 个字符','Note content must contain 1–1024 characters'));return;}
+    const controller=new AbortController();savePending.current=controller;setSaving(true);setFailure('');
+    const input={content:draft,image_path:imagePath,is_public:isPublic};
+    try{
+      await client.request(editing?`/api/v1/content/notes/${editing.id}`:'/api/v1/content/notes',
+        (value):value is Note=>isNote(value)&&(!editing||value.id===editing.id)&&value.content===input.content.trim()&&value.image_path===input.image_path&&value.is_public===Number(input.is_public),
+        {method:editing?'PUT':'POST',signal:controller.signal,body:JSON.stringify(input)});
+      if(controller.signal.aborted)return;
+      reset();setCurrentPage(1);reload();notify(t('随笔已保存','Note saved'));
+    }catch(reason){if(!controller.signal.aborted)setFailure(publicErrorMessage(reason,t('保存随笔失败','Unable to save note')));}
+    finally{if(savePending.current===controller){savePending.current=null;setSaving(false);}}
+  }
+  async function toggle(item:Note){
+    if(savePending.current||uploadPending.current)return;
+    const controller=new AbortController();savePending.current=controller;setSaving(true);setFailure('');const visible=item.is_public!==1;
+    try{
+      const saved=await client.request(`/api/v1/content/notes/${item.id}`,(value):value is Note=>isNote(value)&&value.id===item.id&&value.is_public===Number(visible)&&value.content===item.content.trim()&&value.image_path===item.image_path,
+        {method:'PUT',signal:controller.signal,body:JSON.stringify({content:item.content,image_path:item.image_path,is_public:visible})});
+      if(controller.signal.aborted)return;
+      if(editing?.id===item.id){setEditing(saved);setIsPublic(visible);}
+      reload();notify(visible?t('随笔已公开','Note published'):t('随笔已隐藏','Note hidden'));
+    }catch(reason){if(!controller.signal.aborted)setFailure(publicErrorMessage(reason,t('修改随笔状态失败','Unable to change note visibility')));}
+    finally{if(savePending.current===controller){savePending.current=null;setSaving(false);}}
+  }
+  async function remove(id:number){
+    if(savePending.current||uploadPending.current||!window.confirm(t('确定删除这条随笔？','Delete this note?')))return;
+    const controller=new AbortController();savePending.current=controller;setSaving(true);setFailure('');
+    try{
+      await client.request(`/api/v1/content/notes/${id}`,isDeleted,{method:'DELETE',signal:controller.signal});
+      if(controller.signal.aborted)return;
+      if(editing?.id===id)reset();reload();notify(t('随笔已删除','Note deleted'));
+    }catch(reason){if(!controller.signal.aborted)setFailure(publicErrorMessage(reason,t('删除随笔失败','Unable to delete note')));}
+    finally{if(savePending.current===controller){savePending.current=null;setSaving(false);}}
+  }
+  return <section className="xcss-content-stack">
+    <PageHeader><div><h1>{t('随笔管理','Notes')}</h1><p>{t('维护随笔及恋爱日常中的内容。','Manage notes shown in the journal and everyday moments.')}</p></div></PageHeader>
+    {failure&&<ErrorState>{failure}</ErrorState>}{loadFailure&&<ErrorState onRetry={reload}>{loadFailure}</ErrorState>}
+    <form className="editor-form" onSubmit={event=>void save(event)}><fieldset className="xocs-fieldset" disabled={saving}>
+      <h2>{editing?t('编辑随笔','Edit note'):t('新增随笔','Add note')}</h2>
+      <FormField label={t('随笔正文','Note content')}><textarea className="xcss-input" aria-label={t('随笔正文','Note content')} maxLength={2048} required value={draft} onChange={event=>setDraft(event.target.value)}/></FormField>
+      <FilePicker label={t('随笔图片','Note image')} filename={filename} disabled={busy} accept="image/png,image/jpeg,image/gif,image/webp" onChange={event=>{const file=event.target.files?.[0];event.target.value='';void uploadImage(file);}}/>
+      {imagePath&&<div><button type="button" className="moderation-photo" onClick={()=>setLightbox(safeImageUrl(imagePath))}><img src={imagePath} alt={t('查看随笔图片','View note image')}/></button><Button disabled={busy} onClick={()=>{setImagePath(null);setFilename('');}}>{t('移除图片','Remove image')}</Button></div>}
+      <label><input type="checkbox" checked={isPublic} onChange={event=>setIsPublic(event.target.checked)}/>{t(' 公开可见',' Publicly visible')}</label>
+      <div className="xcss-actions"><Button type="submit" disabled={busy}>{uploading?t('图片上传中…','Uploading image…'):saving?t('保存中…','Saving…'):editing?t('保存修改','Save changes'):t('发布','Publish')}</Button>
+        {(editing||dirty||uploading)&&<Button disabled={saving} onClick={()=>{if(!dirty||window.confirm(t('放弃当前未保存的随笔修改？','Discard the current unsaved note changes?')))reset();}}>{t('取消编辑','Cancel editing')}</Button>}</div>
+    </fieldset></form>
+    {data?.items.length?<Table aria-label={t('随笔列表','Note list')}><thead><tr><th>{t('作者','Author')}</th><th>{t('内容','Content')}</th><th>{t('图片','Image')}</th><th>{t('状态','Status')}</th><th>{t('时间','Time')}</th><th>{t('操作','Actions')}</th></tr></thead><tbody>{data.items.map(item=><tr key={item.id}>
+      <td>{item.username||t('站长','Site owner')}</td><td className="comment-cell">{item.content}</td><td>{safeImageUrl(item.image_path)&&<button type="button" className="moderation-photo" onClick={()=>setLightbox(safeImageUrl(item.image_path))}><img src={safeImageUrl(item.image_path)!} alt={t('查看随笔图片','View note image')}/></button>}</td><td>{item.is_public?t('公开','Public'):t('私密','Private')}</td><td>{formatUtcTime(item.create_time)||'—'}</td>
+      <td><div className="xcss-actions"><Button disabled={busy} onClick={()=>edit(item)}>{t('编辑','Edit')}</Button><Button disabled={busy||(editing?.id===item.id&&dirty)} onClick={()=>void toggle(item)}>{item.is_public?t('隐藏','Hide'):t('公开','Publish')}</Button><Button className="xcss-danger" disabled={busy} onClick={()=>void remove(item.id)}>{t('删除','Delete')}</Button></div></td>
+    </tr>)}</tbody></Table>:data?<EmptyState>{data.total===0?t('暂无随笔','No notes yet'):t('本页暂无随笔','No notes on this page')}</EmptyState>:!loadFailure&&<LoadingState/>}
+    <AdminPager data={data} page={currentPage} onPage={setCurrentPage} disabled={busy}/><ImageLightbox src={lightbox} onClose={()=>setLightbox(null)}/>
+  </section>;
+}
+
+const emptyLetter:AdminLetter={recipient:'',sender:'',content:'',is_public:false};
+export function LetterPage(){
+  const {client,notify}=useAdminApplication();
+  const [form,setForm]=useState<AdminLetter>(emptyLetter),[original,setOriginal]=useState<AdminLetter|null>(null);
+  const [failure,setFailure]=useState(''),[version,setVersion]=useState(0),[saving,setSaving]=useState(false);
+  const pending=useRef<AbortController|null>(null);
+  useEffect(()=>{
+    const controller=new AbortController();setOriginal(null);setFailure('');
+    void client.request('/api/v1/content/letter',isAdminLetter,{signal:controller.signal}).then(value=>{if(!controller.signal.aborted){setForm(value);setOriginal(value);}}).catch(reason=>{if(!controller.signal.aborted)setFailure(publicErrorMessage(reason,t('信笺加载失败','Unable to load letter settings')));});
+    return()=>{controller.abort();pending.current?.abort();pending.current=null;};
+  },[client,version]);
+  const dirty=original&&Object.keys(emptyLetter).some(key=>form[key as keyof AdminLetter]!==original[key as keyof AdminLetter]);
+  async function save(event:FormEvent){
+    event.preventDefault();if(!original||pending.current)return;
+    const counts=[Array.from(form.recipient.trim()).length,Array.from(form.sender.trim()).length,Array.from(form.content.trim()).length];
+    if(counts[0]<1||counts[0]>100||counts[1]<1||counts[1]>100||counts[2]<1||counts[2]>16384){setFailure(t('收信人与署名须为 1–100 个字符，正文须为 1–16384 个字符。','Recipient and sender must contain 1–100 characters; content must contain 1–16384 characters.'));return;}
+    const controller=new AbortController();pending.current=controller;setSaving(true);setFailure('');
+    try{
+      const saved=await client.request('/api/v1/content/letter',isAdminLetter,{method:'PUT',signal:controller.signal,body:JSON.stringify(form)});
+      if(controller.signal.aborted)return;
+      setForm(saved);setOriginal(saved);notify(t('信笺已保存','Letter saved'));
+    }catch(reason){if(!controller.signal.aborted)setFailure(publicErrorMessage(reason,t('保存信笺失败','Unable to save letter')));}
+    finally{if(pending.current===controller){pending.current=null;setSaving(false);}}
+  }
+  return <section className="xcss-content-stack"><PageHeader><div><h1>{t('信笺管理','Letter')}</h1><p>{t('维护公开信笺的收信人、署名和正文。','Manage the recipient, sender, and content of the public letter.')}</p></div></PageHeader>
+    {failure&&<ErrorState onRetry={original?undefined:()=>setVersion(value=>value+1)}>{failure}</ErrorState>}
+    {original?<form className="editor-form" onSubmit={event=>void save(event)}><fieldset className="xocs-fieldset" disabled={saving}>
+      <FormField label={t('收信人','Recipient')}><TextField required maxLength={200} value={form.recipient} onChange={event=>setForm(current=>({...current,recipient:event.target.value}))}/></FormField>
+      <FormField label={t('署名','Sender')}><TextField required maxLength={200} value={form.sender} onChange={event=>setForm(current=>({...current,sender:event.target.value}))}/></FormField>
+      <FormField label={t('信笺正文','Letter content')}><textarea className="xcss-input" aria-label={t('信笺正文','Letter content')} required maxLength={32768} value={form.content} onChange={event=>setForm(current=>({...current,content:event.target.value}))}/></FormField>
+      <label><input type="checkbox" checked={form.is_public} onChange={event=>setForm(current=>({...current,is_public:event.target.checked}))}/>{t(' 公开显示',' Show publicly')}</label>
+      <div className="xcss-actions"><Button type="submit" disabled={saving}>{saving?t('保存中…','Saving…'):t('保存信笺','Save letter')}</Button><Button disabled={!dirty||saving} onClick={()=>{setForm(original);setFailure('');}}>{t('撤销修改','Reset changes')}</Button><a href="/letter" target="_blank" rel="noopener noreferrer">{t('查看公开页面','View public page')}</a></div>
+    </fieldset></form>:!failure&&<LoadingState/>}
+  </section>;
 }
 
 const emptyFamily={bg_cover:'',man_cover:'',woman_cover:'',man_name:'',woman_name:'',timing:'',countdown_title:'',countdown_time:'',family_info:'',status:true};

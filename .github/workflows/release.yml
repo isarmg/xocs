@@ -72,6 +72,9 @@ jobs:
           node tests/language.mjs
           node tests/admin-layout.mjs
           node tests/account-settings.mjs
+          node tests/admin-cleanup.mjs
+          node tests/management.mjs
+          node tests/public-footer.mjs
           node tests/public-layout.mjs
           node tests/anonymous-comments.mjs
 

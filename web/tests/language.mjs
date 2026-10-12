@@ -6,17 +6,17 @@ import { authored, mockApi, schemaPrefixes, summary } from './browser-fixtures.m
 
 const routes = [
   ['/', 'Believe in the power of stories'], ['/search', 'Search articles'], ['/sort', 'Article categories'],
-  ['/weiYan', 'Posts'], ['/jotting', 'xocs'], ['/menory', 'xocs'], ['/favorite', 'Toolbox'],
+  ['/jotting', 'xocs'], ['/menory', 'xocs'], ['/favorite', 'Toolbox'],
   ['/favorite?tab=friends', 'Toolbox'], ['/favorite?tab=music', 'Toolbox'], ['/travel', 'Photo album'], ['/love', 'Our journey together'],
-  ['/message', 'Message wall'], ['/about', 'About'], ['/letter', 'To Ming'],
+  ['/message', 'Message wall'], ['/letter', 'Letter'],
   ['/article/1', summary.article_title],
   ...[['dashboard','Overview'],['articles','Articles'],['categories','Categories'],['labels','Tags'],['comments','Comments'],
-    ['notes','Posts'],['tree-hole','Message board'],['users','Users'],['resources','Files'],['links','Content resources'],
+    ['notes','Notes'],['letter','Letter'],['tree-hole','Message board'],['resources','Files'],['links','Content resources'],
     ['family','Love journal'],['site','Site settings'],['home','Home sections'],['new','Add article'],['edit/1','Edit article']].map(([hash,heading])=>['/admin#'+hash,heading]),
 ];
 const adminEmptyStates = {
-  users: 'No users yet', comments: 'No comments yet', resources: 'No files yet',
-  'tree-hole': 'No messages yet', notes: 'No posts yet', links: 'No content resources yet',
+  comments: 'No comments yet', resources: 'No files yet',
+  'tree-hole': 'No messages yet', notes: 'No notes yet', links: 'No content resources yet',
 };
 
 async function assertEnglish(page) {

@@ -50,6 +50,7 @@ async fn setup_with_pool_limit(
         admin,
         origin: AdministratorOriginMode::LoopbackDevelopmentHttp,
         media: dir.path().to_path_buf(),
+        media_operations: Arc::new(tokio::sync::Mutex::new(())),
         trusted_proxies,
     };
     let app = router(state, Some(dir.path().to_path_buf())).unwrap();
@@ -1002,6 +1003,7 @@ async fn comment_submission_retries_survive_concurrency_restart_and_deletion() {
             ))),
             origin: AdministratorOriginMode::LoopbackDevelopmentHttp,
             media: dir.path().to_path_buf(),
+            media_operations: Arc::new(tokio::sync::Mutex::new(())),
             trusted_proxies: Vec::new(),
         },
         Some(dir.path().to_path_buf()),
@@ -1154,3 +1156,7 @@ mod family;
 mod schema_v3;
 
 mod public_browse;
+
+mod management;
+
+mod media_management;

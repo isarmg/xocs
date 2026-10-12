@@ -4,7 +4,7 @@ import { HookHost, expand, textContent, walk } from './fixtures/hook-host.mjs';
 import { originalModule } from './fixtures/original-module.mjs';
 import { summary } from './browser-fixtures.mjs';
 const reexport = path => `export * from ${JSON.stringify(new URL(path, import.meta.url).href)};`;
-const { Categories, SearchPage, JourneyPage, Wall, MessagePage } = await originalModule(new URL('../src/PublicExtras.tsx', import.meta.url), {
+const { Categories, SearchPage, JourneyPage, Jotting, MessagePage } = await originalModule(new URL('../src/PublicExtras.tsx', import.meta.url), {
   './api': reexport('../src/api.ts'), './public-contracts': reexport('../src/public-contracts.ts'),
   './comment-submission': reexport('../src/comment-submission.ts'),
   './SlidingTitle': 'export const SlidingTitle=({text})=>text;',
@@ -13,7 +13,7 @@ const { Categories, SearchPage, JourneyPage, Wall, MessagePage } = await origina
   './PublicComments': 'export const PublicComments=()=>null;',
   './MediaPreview': 'export const ImageLightbox=()=>null; export const safeImageUrl=value=>value;',
   './PhotoGallery': 'export const PhotoGrid=()=>null;', './LovePage': 'export const LovePage=()=>null;',
-}, ['Categories', 'SearchPage', 'JourneyPage', 'Wall', 'MessagePage']);
+}, ['Categories', 'SearchPage', 'JourneyPage', 'Jotting', 'MessagePage']);
 const text = host => textContent(expand(host.tree));
 const button = (host, label) => walk(expand(host.tree), node=>node.type==='button' && textContent(node).trim()===label)[0];
 const settle = async host => { await new Promise(resolve=>setImmediate(resolve)); host.render(); };
@@ -90,8 +90,8 @@ test('timeline repeated same-render Next callbacks advance only one page',async 
 });
 
 const notePage = (content,number=1) => ({items:[{id:1,user_id:1,username:'Owner',content,image_path:null,like_count:0,is_public:1,create_time:'2026-10-11 00:00:00'}],total:21,page:number,size:10});
-for(const path of ['/weiYan','/jotting'])test(`${path} hides stale journal entries and retries the requested page`,async context=>{
-  const {host,requests}=setup(context,Wall);window.location.pathname=path;host.render();
+for(const path of ['/jotting'])test(`${path} hides stale journal entries and retries the requested page`,async context=>{
+  const {host,requests}=setup(context,Jotting);window.location.pathname=path;host.render();
   requests[0].resolve(notePage('OLD_NOTE'));await settle(host);
   const next=button(host,'Next page');next.props.onClick();next.props.onClick();host.render();
   assert.equal(requests.length,2);assert.match(requests[1].url,/page=2$/);
@@ -148,7 +148,7 @@ test('ordinary message success clears its unchanged draft and failure preserves 
   assert.match(text(host),/Unable to send/);assert.equal(button(host,'Send').props.disabled,false);
 });
 
-for(const component of [Categories,SearchPage,JourneyPage,Wall])test(`${component.name} restores its requested page from the URL`,context=>{
+for(const component of [Categories,SearchPage,JourneyPage,Jotting])test(`${component.name} restores its requested page from the URL`,context=>{
   const {requests}=setup(context,component,'?q=first&sort_id=1&label_id=2&page=2&lang=zh-CN');
   assert.match(requests.at(-1).url,/page=2/);
 });
@@ -195,7 +195,7 @@ test('editing a search draft and retrying the same query do not add history entr
   assert.equal(window.history.length,1);assert.equal(requests.length,1);
   submit(host,'first');assert.equal(window.history.length,1);assert.equal(requests.length,2);
 });
-for(const component of [JourneyPage,Wall])test(`${component.name} keeps pagination in history and ignores an abandoned response`,async context=>{
+for(const component of [JourneyPage,Jotting])test(`${component.name} keeps pagination in history and ignores an abandoned response`,async context=>{
   const {host,requests}=setup(context,component,'?lang=zh-CN');
   const result=component===JourneyPage?journeyPage:notePage;
   requests[0].resolve(component===JourneyPage?result('PAGE_ONE',41):result('PAGE_ONE'));await settle(host);
@@ -211,7 +211,7 @@ for(const component of [JourneyPage,Wall])test(`${component.name} keeps paginati
   assert.match(text(host),/RESTORED_ONE/);assert.doesNotMatch(text(host),/ABANDONED_TWO/);
 });
 
-for (const [component,size] of [[JourneyPage,20],[Wall,10],[Categories,12],[SearchPage,12]]) test(`${component.name} keeps previous-page recovery when the restored page is now empty`,async context=>{
+for (const [component,size] of [[JourneyPage,20],[Jotting,10],[Categories,12],[SearchPage,12]]) test(`${component.name} keeps previous-page recovery when the restored page is now empty`,async context=>{
   const {host,requests}=setup(context,component,'?q=needle&page=2&lang=en');
   requests.at(-1).resolve({items:[],total:0,page:2,size});await settle(host);
   assert.equal(button(host,'Previous page')?.props.disabled,false,'An empty page must retain its existing previous-page navigation.');
@@ -246,7 +246,7 @@ test('recommendation selection resets category, tag and page while keeping langu
   assert.match(requests.at(-1).url,/page=1&size=12&recommended=true$/);
 });
 
-for(const [component,size] of [[JourneyPage,20],[Wall,10],[Categories,12]]) {
+for(const [component,size] of [[JourneyPage,20],[Jotting,10],[Categories,12]]) {
   test(`${component.name} keeps an empty first page free of unnecessary paging controls`,async context=>{
     const {host,requests}=setup(context,component);
     const count=requests.length;

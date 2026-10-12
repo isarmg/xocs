@@ -1,16 +1,18 @@
 export const session = { authenticated: true, user_id: 'A'.repeat(43), username: 'admin', role: 'admin', csrf_token: 'A'.repeat(43) };
-export const site = { web_name: 'XOCS', web_title: null, notices: null, footer: null, background_image: null, avatar: null, random_cover: null };
+export const site = { web_name: 'XOCS', web_title: null, notices: null, background_image: null, avatar: null, random_cover: null };
+export const adminSite = { ...site, author_name: 'Site owner' };
+export const letter = { recipient: 'Reader', sender: 'Writer', content: 'A letter from the site.\nEveryday stories belong here.' };
 const category = { id: 1, sort_name: '中文分类', sort_description: null, priority: 0, article_count: 1 };
 export const summary = { id: 1, article_title: '中文文章标题', article_cover: null, sort_id: 1, label_id: 1, sort_name: category.sort_name, label_name: null, view_count: 1, like_count: 0, comment_count: 0, recommend_status: 0, view_status: 1, create_time: '2026-10-08', excerpt: '中文摘要', search_snippet: null };
 const { excerpt: _excerpt, search_snippet: _snippet, ...articleFields } = summary;
 export const article = { ...articleFields, user_id: 1, article_content: '## 中文正文\n\n中文内容\n\n```js\nconst example = 1;\n```', video_url: null, username: '中文作者', comment_status: 1, password_required: 0, tips: null, update_time: null };
-const adminPagePaths = new Set(['users', 'comments', 'resources', 'tree-hole', 'notes', 'links'].map(name => `/api/v1/content/${name}`));
+const adminPagePaths = new Set(['comments', 'resources', 'tree-hole', 'notes', 'links'].map(name => `/api/v1/content/${name}`));
 // Mirror the request's pagination, including production defaults and bounds.
 // Keep total before slicing so a later page never repeats the first-page rows.
 export function pageOf(items, url) {
   const comments = /^\/api\/v1\/(?:comments|message-comments|love-comments)(?:\/|$)/.test(url.pathname);
   const notes = url.pathname === '/api/v1/notes/page';
-  const defaultSize = adminPagePaths.has(url.pathname) ? 20 : comments && url.pathname.endsWith('/replies') ? 5 : comments || notes ? 10 : 12;
+  const defaultSize = adminPagePaths.has(url.pathname) || /^\/api\/v1\/content\/articles\/\d+\/news$/.test(url.pathname) ? 20 : comments && url.pathname.endsWith('/replies') ? 5 : comments || notes ? 10 : 12;
   const integer = (name, fallback, maximum) => {
     const value = Number(url.searchParams.get(name) ?? fallback);
     if (!Number.isSafeInteger(value)) throw new TypeError(`Invalid fixture ${name}: ${url.href}`);
@@ -30,14 +32,16 @@ export async function mockApi(page, state) {
       return route.fulfill({ status: 409, json: { code: 'conflict', message: '内部错误 SECRET /private/db', retryable: false, request_id: 'language-409' } });
     }
     if (path === '/api/v1/auth/session') return state.authenticated ? route.fulfill({ json: session }) : route.fulfill({ status: 401, json: { code: 'unauthorized' } });
-    const value = path.endsWith('/site') ? site
+    const value = path === '/api/v1/content/site' ? adminSite : path.endsWith('/site') ? site
+      : path === '/api/v1/letter' ? letter
+      : path === '/api/v1/content/letter' ? { ...letter, is_public: true }
       : path === '/api/v1/site/stats' ? { article_count: 1, view_count: 1 }
       : path === '/api/v1/content/statistics' ? { articles: 1, comments: 0, members: 0, categories: 1 }
       : path.endsWith('/home-sections') ? sections
       : path.endsWith('/categories') ? [category]
       : path === '/api/v1/articles/1' || path === '/api/v1/content/articles/1' ? article
       : path.endsWith('/articles') || path.endsWith('/articles/search') ? pageOf([summary], url)
-      : path.includes('/news') ? []
+      : path.includes('/news') ? path.startsWith('/api/v1/content/') ? pageOf([], url) : []
       : adminPagePaths.has(path) || path.endsWith('/page') || /^\/api\/v1\/(?:comments|message-comments|love-comments)/.test(path) ? pageOf([], url)
       : [];
     await route.fulfill({ json: value });

@@ -21,7 +21,7 @@ async function fixtureApi() {
 test('browser fixtures honor requested page and size across all paginated admin and public reads', async () => {
   const read = await fixtureApi();
   for (const path of [
-    '/api/v1/content/users', '/api/v1/content/comments', '/api/v1/content/resources',
+    '/api/v1/content/comments', '/api/v1/content/resources',
     '/api/v1/content/tree-hole', '/api/v1/content/notes', '/api/v1/content/links',
     '/api/v1/content/articles', '/api/v1/articles', '/api/v1/notes/page', '/api/v1/links/page',
     '/api/v1/comments', '/api/v1/message-comments', '/api/v1/love-comments',
@@ -64,8 +64,8 @@ const components = await originalModule(new URL('../src/AdminExtras.tsx', import
   './AdminLayout': 'export const adminGroups=[];',
 });
 for (const [name, empty] of [
-  ['UsersPage', 'No users yet'], ['CommentsPage', 'No comments yet'], ['ResourcesPage', 'No files yet'],
-  ['TreeHolePage', 'No messages yet'], ['NotesPage', 'No posts yet'], ['LinksPage', 'No content resources yet'],
+  ['CommentsPage', 'No comments yet'], ['ResourcesPage', 'No files yet'],
+  ['TreeHolePage', 'No messages yet'], ['NotesPage', 'No notes yet'], ['LinksPage', 'No content resources yet'],
 ]) {
   test(`${name}: real browser fixture is accepted by the unchanged production validator and reaches its success empty state`, async context => {
     const read = await fixtureApi(), observations = [];

@@ -46,7 +46,7 @@ export type EditorLabel = { id: number; sort_id: number; label_name: string; lab
 export const isEditorLabels = arrayOf((value: unknown): value is EditorLabel => isRecord(value) && isId(value.id) && isId(value.sort_id)
   && isString(value.label_name) && isNullableString(value.label_description));
 export const isSiteInfo = (value: unknown): value is SiteInfo => isRecord(value)
-  && strings(value, ['web_name', 'web_title', 'notices', 'footer', 'background_image', 'avatar', 'random_cover']);
+  && strings(value, ['web_name', 'web_title', 'notices', 'background_image', 'avatar', 'random_cover']);
 export const isSiteStats = (value: unknown): value is { article_count: number; view_count: number } => isRecord(value)
   && isCount(value.article_count) && isCount(value.view_count);
 
@@ -62,6 +62,8 @@ export const isPublicCommentPage = pageOf(isPublicComment, 50);
 export type NewsEntry = { id: number; content: string; create_time: string | null };
 export const isNewsEntry = (value: unknown): value is NewsEntry => isRecord(value) && isId(value.id) && isString(value.content) && isNullableString(value.create_time);
 export const isNews = arrayOf(isNewsEntry);
+export type PublicLetter = { recipient:string; sender:string; content:string };
+export const isPublicLetter = (value:unknown):value is PublicLetter|null => value === null || (isRecord(value) && ['recipient','sender','content'].every(key => typeof value[key] === 'string'));
 export type Note = { id: number; user_id: number | null; username: string | null; content: string; image_path: string | null; like_count: number; is_public: number; create_time: string | null };
 export const isNote = (value: unknown): value is Note => isRecord(value) && isId(value.id) && isNullableId(value.user_id)
   && strings(value, ['username', 'image_path', 'create_time']) && isString(value.content) && isCount(value.like_count) && isFlag(value.is_public);
