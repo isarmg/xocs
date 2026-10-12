@@ -538,6 +538,137 @@ async fn comments_and_replies_are_anonymous_and_stay_in_their_source() {
 }
 
 #[tokio::test]
+async fn guest_tree_hole_visitors_have_independent_quotas_behind_a_configured_proxy() {
+    let (_dir, app, pool) = setup_with_proxies(vec!["127.0.0.1".parse().unwrap()]).await;
+    let request = |visitor: &str| {
+        with_peer(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/tree-hole/guest")
+                .header("content-type", "application/json")
+                .header("x-real-ip", visitor)
+                .body(Body::from(r#"{"message":"A visitor's message"}"#))
+                .unwrap(),
+        )
+    };
+    for visitor in 1..=6 {
+        let response = app
+            .clone()
+            .oneshot(request(&format!("192.0.2.{visitor}")))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK, "visitor {visitor}");
+        assert!(body_json(response).await["user_id"].is_null());
+    }
+    for attempt in 2..=6 {
+        let response = app.clone().oneshot(request("192.0.2.1")).await.unwrap();
+        assert_eq!(
+            response.status(),
+            if attempt <= 5 {
+                StatusCode::OK
+            } else {
+                StatusCode::TOO_MANY_REQUESTS
+            },
+            "attempt {attempt} by the same visitor"
+        );
+    }
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tree_hole")
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+        10
+    );
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM member_login_failures")
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+        6
+    );
+}
+
+#[tokio::test]
+async fn guest_tree_hole_proxy_headers_are_strict_and_untrusted_headers_do_not_bypass_limits() {
+    let (_dir, app, pool) = setup_with_proxies(vec!["127.0.0.1".parse().unwrap()]).await;
+    for headers in [
+        vec![],
+        vec!["unknown"],
+        vec!["192.0.2.1, 192.0.2.2"],
+        vec!["0.0.0.0"],
+        vec!["224.0.0.1"],
+        vec!["192.0.2.1", "192.0.2.2"],
+    ] {
+        let mut builder = Request::builder()
+            .method("POST")
+            .uri("/api/v1/tree-hole/guest")
+            .header("content-type", "application/json");
+        for value in headers {
+            builder = builder.header("x-real-ip", value);
+        }
+        let response = app
+            .clone()
+            .oneshot(with_peer(
+                builder
+                    .body(Body::from(r#"{"message":"Invalid proxy"}"#))
+                    .unwrap(),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tree_hole")
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM member_login_failures")
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+        0
+    );
+    for attempt in 1..=6 {
+        let mut request = Request::builder()
+            .method("POST")
+            .uri("/api/v1/tree-hole/guest")
+            .header("content-type", "application/json")
+            .header("x-real-ip", format!("198.51.100.{attempt}"))
+            .body(Body::from(r#"{"message":"Untrusted identity"}"#))
+            .unwrap();
+        request.extensions_mut().insert(ConnectInfo(
+            "203.0.113.1:1234".parse::<SocketAddr>().unwrap(),
+        ));
+        let response = app.clone().oneshot(request).await.unwrap();
+        assert_eq!(
+            response.status(),
+            if attempt <= 5 {
+                StatusCode::OK
+            } else {
+                StatusCode::TOO_MANY_REQUESTS
+            }
+        );
+    }
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tree_hole")
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+        5
+    );
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM member_login_failures")
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+        1
+    );
+}
+
+#[tokio::test]
 async fn anonymous_comments_enforce_content_article_visibility_and_ip_limits() {
     let (_directory, app, pool) = setup().await;
     sqlx::query("INSERT INTO article(id,user_id,sort_id,label_id,article_title,article_content,view_status,comment_status,password) VALUES(1,1,0,0,'Open','Body',1,1,NULL),(2,1,0,0,'Closed','Body',1,0,NULL),(3,1,0,0,'Hidden','Body',0,1,NULL),(4,1,0,0,'Protected','Body',1,1,'hash')")
@@ -1021,3 +1152,5 @@ mod media_names;
 mod family;
 
 mod schema_v3;
+
+mod public_browse;

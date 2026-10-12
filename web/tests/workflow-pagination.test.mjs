@@ -192,7 +192,7 @@ test('canceled selections send nothing and canceled uploads cannot publish a lat
   assert.doesNotMatch(text(host),/Image upload failed/);assert.deepEqual(notifications,[]);
 });
 test('a blocked in-use label move explains the conflict without exposing server diagnostics',async context=>{
-  const {host,requests}=setup(context,LabelsPage);requests[0].resolve([{id:1,sort_id:1,label_name:'Used',label_description:null}]);requests[1].resolve([{id:1,sort_name:'A'},{id:2,sort_name:'B'}]);await settle(host);
+  const {host,requests}=setup(context,LabelsPage);requests[0].resolve([{id:1,sort_id:1,label_name:'Used',label_description:null}]);requests[1].resolve([{id:1,sort_name:'A',sort_description:null,priority:0,article_count:1},{id:2,sort_name:'B',sort_description:null,priority:0,article_count:0}]);await settle(host);
   button(host,'Edit').props.onClick();host.render();walk(host.tree,node=>typeof node.type==='function'&&node.type.name==='Select')[0].props.onChange({target:{value:'2'}});host.render();
   walk(host.tree,node=>node.type==='form')[0].props.onSubmit({preventDefault(){}});requests.at(-1).resolve({code:'conflict',message:'PRIVATE SERVER DETAIL',retryable:false},409);await settle(host);
   assert.match(text(host),/This tag is still used by articles/);assert.doesNotMatch(text(host),/PRIVATE SERVER DETAIL/);

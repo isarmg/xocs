@@ -3,6 +3,7 @@ use crate::{ApiResult, AppState, db_error, invalid};
 use axum::{
     Json,
     extract::{ConnectInfo, State},
+    http::HeaderMap,
 };
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
@@ -36,6 +37,7 @@ pub(super) struct TreeHoleInput {
 pub(super) async fn create_guest_tree_hole(
     State(state): State<AppState>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     crate::ContractJson(input): crate::ContractJson<TreeHoleInput>,
 ) -> ApiResult<TreeHole> {
     let message = input.message.trim();
@@ -47,7 +49,8 @@ pub(super) async fn create_guest_tree_hole(
     {
         return Err(invalid("留言不能为空、不能超过 60 个字，也不能包含图片"));
     }
-    let key = rate_limit::attempt_key("guest_tree_hole", &peer.ip().to_string(), "");
+    let visitor = rate_limit::visitor_ip(peer, &headers, &state.trusted_proxies)?;
+    let key = rate_limit::attempt_key("guest_tree_hole", &visitor.to_string(), "");
     rate_limit::record_attempt(&state.pool, &key, 5).await?;
     let id = sqlx::query("INSERT INTO tree_hole(message) VALUES(?)")
         .bind(message)

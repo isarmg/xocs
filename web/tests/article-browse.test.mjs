@@ -21,7 +21,16 @@ const page = (title,total=1,number=1) => ({items:title?[{...summary,article_titl
 function setup(context, component, search='') {
   const old = { fetch:globalThis.fetch, window:globalThis.window };
   const requests=[];
-  globalThis.window={location:{search,origin:'https://example.test'},history:{replaceState(){}}};
+  const listeners=new Map(), entries=[new URL(`${component===SearchPage?'/search':'/sort'}${search}`,'https://example.test')];
+  let index=0;
+  const history={
+    get length(){return entries.length;},
+    pushState(_state,_title,url){entries.splice(++index);entries.push(new URL(url,entries[index-1]));window.location=entries[index];},
+    replaceState(_state,_title,url){entries[index]=new URL(url,entries[index]);window.location=entries[index];},
+    back(){if(index>0){window.location=entries[--index];for(const listener of listeners.get('popstate')||[])listener();}},
+    forward(){if(index<entries.length-1){window.location=entries[++index];for(const listener of listeners.get('popstate')||[])listener();}},
+  };
+  globalThis.window={location:entries[index],history,addEventListener(name,listener){if(!listeners.has(name))listeners.set(name,new Set());listeners.get(name).add(listener);},removeEventListener(name,listener){listeners.get(name)?.delete(listener);}};
   globalThis.fetch=(url,options={})=>new Promise((resolve,reject)=>requests.push({url:String(url),options,reject,resolve(value){resolve(new Response(JSON.stringify(value),{headers:{'Content-Type':'application/json'}}));}}));
   const host=new HookHost(component);context.after(()=>{host.unmount();Object.assign(globalThis,old);});host.render();return {host,requests};
 }
@@ -137,4 +146,67 @@ test('ordinary message success clears its unchanged draft and failure preserves 
   requests[2].reject(new Error('offline'));await settle(host);
   assert.equal(messageInput(host).props.value,' KEEP ON FAILURE ');
   assert.match(text(host),/Unable to send/);assert.equal(button(host,'Send').props.disabled,false);
+});
+
+for(const component of [Categories,SearchPage,JourneyPage,Wall])test(`${component.name} restores its requested page from the URL`,context=>{
+  const {requests}=setup(context,component,'?q=first&sort_id=1&label_id=2&page=2&lang=zh-CN');
+  assert.match(requests.at(-1).url,/page=2/);
+});
+test('search keeps history, page and explicit language through repeated searches',async context=>{
+  const {host,requests}=setup(context,SearchPage,'?q=first&lang=zh-CN');
+  requests.at(-1).resolve(page('FIRST',25));await settle(host);
+  button(host,'Next page').props.onClick();host.render();
+  assert.equal(new URLSearchParams(window.location.search).get('page'),'2');
+  requests.at(-1).resolve(page('SECOND_PAGE',25,2));await settle(host);
+  submit(host,'second');
+  assert.equal(new URLSearchParams(window.location.search).get('lang'),'zh-CN');
+  assert.equal(window.history.length,3);
+  window.history.back();host.render();
+  assert.match(requests.at(-1).url,/search=first&page=2/);
+  assert.equal(walk(host.tree,node=>node.type==='input')[0].props.value,'first');
+  window.history.forward();host.render();
+  assert.match(requests.at(-1).url,/search=second&page=1/);
+});
+test('category and tag choices keep prior filters and explicit language in history',async context=>{
+  const {host,requests}=setup(context,Categories,'?sort_id=1&lang=zh-CN');
+  requests.find(r=>r.url==='/api/v1/categories').resolve([{id:1,sort_name:'A',sort_description:null,priority:0,article_count:25},{id:2,sort_name:'B',sort_description:null,priority:0,article_count:1}]);
+  requests.find(r=>r.url.includes('/labels')).resolve([{id:2,sort_id:1,label_name:'TAG',label_description:null,article_count:25}]);
+  requests.at(-1).resolve(page('FIRST',25));await settle(host);
+  walk(expand(host.tree),node=>node.type==='button'&&textContent(node).startsWith('TAG '))[0].props.onClick();host.render();
+  assert.equal(new URLSearchParams(window.location.search).get('lang'),'zh-CN');
+  requests.at(-1).resolve(page('TAG_PAGE',25));await settle(host);
+  button(host,'Next page').props.onClick();host.render();
+  requests.at(-1).resolve(page('TAG_PAGE_TWO',25,2));await settle(host);
+  walk(expand(host.tree),node=>node.type==='button'&&textContent(node).startsWith('B '))[0].props.onClick();host.render();
+  assert.equal(window.history.length,4);
+  assert.doesNotMatch(text(host),/TAG_PAGE_TWO/);
+  assert.match(requests.at(-1).url,/page=1&size=12&sort_id=2$/);
+  const obsolete=requests.at(-1);
+  window.history.back();host.render();
+  assert.match(requests.at(-1).url,/page=2&size=12&sort_id=1&label_id=2/);
+  requests.at(-1).resolve(page('RESTORED_PAGE_TWO',25,2));await settle(host);
+  obsolete.resolve(page('OBSOLETE_B'));await settle(host);
+  assert.match(text(host),/RESTORED_PAGE_TWO/);assert.doesNotMatch(text(host),/OBSOLETE_B/);
+});
+
+test('editing a search draft and retrying the same query do not add history entries',async context=>{
+  const {host,requests}=setup(context,SearchPage,'?q=first&lang=en');
+  walk(host.tree,node=>node.type==='input')[0].props.onChange({target:{value:'typing'}});host.render();
+  assert.equal(window.history.length,1);assert.equal(requests.length,1);
+  submit(host,'first');assert.equal(window.history.length,1);assert.equal(requests.length,2);
+});
+for(const component of [JourneyPage,Wall])test(`${component.name} keeps pagination in history and ignores an abandoned response`,async context=>{
+  const {host,requests}=setup(context,component,'?lang=zh-CN');
+  const result=component===JourneyPage?journeyPage:notePage;
+  requests[0].resolve(component===JourneyPage?result('PAGE_ONE',41):result('PAGE_ONE'));await settle(host);
+  const next=button(host,'Next page');next.props.onClick();next.props.onClick();host.render();
+  assert.equal(new URLSearchParams(window.location.search).get('page'),'2');
+  assert.equal(new URLSearchParams(window.location.search).get('lang'),'zh-CN');
+  assert.equal(window.history.length,2);
+  const abandoned=requests.at(-1);
+  window.history.back();host.render();
+  assert.match(requests.at(-1).url,/page=1/);
+  requests.at(-1).resolve(component===JourneyPage?result('RESTORED_ONE',41):result('RESTORED_ONE'));await settle(host);
+  abandoned.resolve(component===JourneyPage?result('ABANDONED_TWO',41,2):result('ABANDONED_TWO',2));await settle(host);
+  assert.match(text(host),/RESTORED_ONE/);assert.doesNotMatch(text(host),/ABANDONED_TWO/);
 });

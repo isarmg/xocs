@@ -4,13 +4,27 @@ const category = { id: 1, sort_name: '中文分类', sort_description: null, pri
 export const summary = { id: 1, article_title: '中文文章标题', article_cover: null, sort_id: 1, label_id: 1, sort_name: category.sort_name, label_name: null, view_count: 1, like_count: 0, comment_count: 0, recommend_status: 0, view_status: 1, create_time: '2026-10-08', excerpt: '中文摘要', search_snippet: null };
 const { excerpt: _excerpt, search_snippet: _snippet, ...articleFields } = summary;
 export const article = { ...articleFields, user_id: 1, article_content: '## 中文正文\n\n中文内容\n\n```js\nconst example = 1;\n```', video_url: null, username: '中文作者', comment_status: 1, password_required: 0, tips: null, update_time: null };
-const pageOf = items => ({ items, total: items.length, page: 1, size: 15 });
+const adminPagePaths = new Set(['users', 'comments', 'resources', 'tree-hole', 'notes', 'links'].map(name => `/api/v1/content/${name}`));
+// Mirror the request's pagination, including production defaults and bounds.
+// Keep total before slicing so a later page never repeats the first-page rows.
+export function pageOf(items, url) {
+  const comments = /^\/api\/v1\/(?:comments|message-comments|love-comments)(?:\/|$)/.test(url.pathname);
+  const notes = url.pathname === '/api/v1/notes/page';
+  const defaultSize = adminPagePaths.has(url.pathname) ? 20 : comments && url.pathname.endsWith('/replies') ? 5 : comments || notes ? 10 : 12;
+  const integer = (name, fallback, maximum) => {
+    const value = Number(url.searchParams.get(name) ?? fallback);
+    if (!Number.isSafeInteger(value)) throw new TypeError(`Invalid fixture ${name}: ${url.href}`);
+    return Math.max(1, Math.min(maximum, value));
+  };
+  const page = integer('page', 1, 100_000), size = integer('size', defaultSize, comments || notes ? 50 : 100);
+  return { items: items.slice((page - 1) * size, page * size), total: items.length, page, size };
+}
 const sections = [{ id: 1, title: '中文栏目', kind: 'latest', sort_id: null, priority: 0, enabled: true }];
 export const authored = ['中文分类', '中文文章标题', '中文摘要', '中文正文', '中文内容', '中文作者', '中文栏目'];
 export const schemaPrefixes = ['推送标题：', '推送封面：', '推送链接：'];
 export async function mockApi(page, state) {
   await page.route('**/api/v1/**', async route => {
-    const path = new URL(route.request().url()).pathname;
+    const url = new URL(route.request().url()), path = url.pathname;
     if (route.request().method() !== 'GET') {
       if (path === '/api/v1/auth/login') { state.authenticated = true; return route.fulfill({ json: session }); }
       return route.fulfill({ status: 409, json: { code: 'conflict', message: '内部错误 SECRET /private/db', retryable: false, request_id: 'language-409' } });
@@ -22,12 +36,9 @@ export async function mockApi(page, state) {
       : path.endsWith('/home-sections') ? sections
       : path.endsWith('/categories') ? [category]
       : path === '/api/v1/articles/1' || path === '/api/v1/content/articles/1' ? article
-      : path.endsWith('/articles') || path.endsWith('/articles/search') ? pageOf([summary])
+      : path.endsWith('/articles') || path.endsWith('/articles/search') ? pageOf([summary], url)
       : path.includes('/news') ? []
-      : path === '/api/v1/links/page' ? {items:[],total:0,page:Number(new URL(route.request().url()).searchParams.get('page'))||1,size:Number(new URL(route.request().url()).searchParams.get('size'))||20}
-      : ['/api/v1/content/users','/api/v1/content/comments','/api/v1/content/resources','/api/v1/content/tree-hole'].includes(path) || path.endsWith('/page') || /^\/api\/v1\/(?:comments|message-comments|love-comments)/.test(path) ? pageOf([])
-      : path.endsWith('/notes') ? pageOf([])
-      : path === '/api/v1/content/links' ? { items: [], total: 0, page: Number(new URL(route.request().url()).searchParams.get('page')) || 1, size: 20 }
+      : adminPagePaths.has(path) || path.endsWith('/page') || /^\/api\/v1\/(?:comments|message-comments|love-comments)/.test(path) ? pageOf([], url)
       : [];
     await route.fulfill({ json: value });
   });

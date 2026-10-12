@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { chromium, firefox, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { preview } from 'vite';
-import { mockApi } from './browser-fixtures.mjs';
+import { mockApi, pageOf } from './browser-fixtures.mjs';
 
 async function checkHeaderScrolling(page, width, english) {
   const articleUrl = page.url();
@@ -87,7 +87,7 @@ try {
           }
           const root = /\/(\d+)\/replies$/.exec(url.pathname);
           const visible = items.filter(item => root ? item.floor_comment_id === Number(root[1]) : !item.parent_comment_id);
-          return route.fulfill({ json: { items: visible, total: visible.length, page: 1, size: root ? 5 : 10 } });
+          return route.fulfill({ json: pageOf(visible, url) });
         });
         const english = language === 'en';
         const button = english ? 'Post anonymous comment' : '匿名发表评论';

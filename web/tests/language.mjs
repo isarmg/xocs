@@ -14,6 +14,10 @@ const routes = [
     ['notes','Posts'],['tree-hole','Message board'],['users','Users'],['resources','Files'],['links','Content resources'],
     ['family','Love journal'],['site','Site settings'],['home','Home sections'],['new','Add article'],['edit/1','Edit article']].map(([hash,heading])=>['/admin#'+hash,heading]),
 ];
+const adminEmptyStates = {
+  users: 'No users yet', comments: 'No comments yet', resources: 'No files yet',
+  'tree-hole': 'No messages yet', notes: 'No posts yet', links: 'No content resources yet',
+};
 
 async function assertEnglish(page) {
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
@@ -45,6 +49,17 @@ try {
         await page.goto(url.href);
         await page.waitForLoadState('networkidle');
         await expect(page.getByRole('heading', { name: heading, exact: true }).first()).toBeVisible();
+        // Hash navigation can reuse the old document's network-idle state.
+        // Wait for the actual successful list result, not just its heading.
+        const adminPage = url.pathname === '/admin' ? url.hash.slice(1) : '';
+        if (adminEmptyStates[adminPage]) {
+          await expect(page.locator('.xcss-admin-shell .xcss-empty')).toHaveText(adminEmptyStates[adminPage]);
+          await expect(page.locator('.xcss-admin-shell .xcss-loading')).toHaveCount(0);
+        } else if (adminPage === 'labels') {
+          await expect(page.getByRole('combobox', { name: 'Category', exact: true })).toBeEnabled();
+          await expect(page.getByRole('combobox', { name: 'Category', exact: true })).toContainText('中文分类');
+          await expect(page.locator('.xcss-admin-shell .xcss-loading')).toHaveCount(0);
+        }
         assert.equal(await page.getByRole('alert').count(), 0, `${path}: ${await page.getByRole('alert').allTextContents()}`);
         await assertEnglish(page);
       }
