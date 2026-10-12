@@ -77,7 +77,7 @@ async function articleBrowseHistory(browser, base) {
     await expect(page.locator('.original-list-card')).toHaveCount(1);
 
     await page.goto(`${base}/?lang=en`);
-    await page.getByLabel('Search', { exact: true }).fill('first');
+    await page.locator('.aside-search').getByRole('textbox').fill('first');
     await page.locator('.aside-search').getByRole('button', { name: 'Search', exact: true }).click();
     await expect(page).toHaveURL(/\/search\?.*lang=en/);
     await expect(page.locator('.original-list-card').first()).toContainText('first 1');
