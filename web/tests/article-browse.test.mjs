@@ -210,3 +210,62 @@ for(const component of [JourneyPage,Wall])test(`${component.name} keeps paginati
   abandoned.resolve(component===JourneyPage?result('ABANDONED_TWO',41,2):result('ABANDONED_TWO',2));await settle(host);
   assert.match(text(host),/RESTORED_ONE/);assert.doesNotMatch(text(host),/ABANDONED_TWO/);
 });
+
+for (const [component,size] of [[JourneyPage,20],[Wall,10],[Categories,12],[SearchPage,12]]) test(`${component.name} keeps previous-page recovery when the restored page is now empty`,async context=>{
+  const {host,requests}=setup(context,component,'?q=needle&page=2&lang=en');
+  requests.at(-1).resolve({items:[],total:0,page:2,size});await settle(host);
+  assert.equal(button(host,'Previous page')?.props.disabled,false,'An empty page must retain its existing previous-page navigation.');
+  assert.equal(button(host,'Next page')?.props.disabled,true);
+  button(host,'Previous page').props.onClick();host.render();
+  assert.match(requests.at(-1).url,/page=1/);
+  assert.equal(new URLSearchParams(window.location.search).get('lang'),'en');
+});
+
+test('timeline shrunk to one page still permits reaching the remaining article',async context=>{
+  const {host,requests}=setup(context,JourneyPage,'?page=2');
+  requests[0].resolve({items:[],total:1,page:2,size:20});await settle(host);
+  assert.ok(button(host,'Previous page'));
+  button(host,'Previous page').props.onClick();host.render();
+  requests.at(-1).resolve({items:[{...summary,article_title:'Remaining story'}],total:1,page:1,size:20});await settle(host);
+  assert.match(text(host),/Remaining story/);
+  assert.equal(button(host,'Previous page'),undefined);
+});
+
+for(const [input,expected] of [['0',1],['-1',1],['2.5',1],['abc',1],['Infinity',1],['100001',100000],['9007199254740992',1]]) test(`page input ${input} normalizes to ${expected}`,context=>{
+  const {requests}=setup(context,SearchPage,`?q=needle&page=${input}`);
+  assert.equal(new URL(requests[0].url,'https://example.test').searchParams.get('page'),String(expected));
+});
+
+test('recommendation selection resets category, tag and page while keeping language',async context=>{
+  const {host,requests}=setup(context,Categories,'?sort_id=2&label_id=3&page=2&lang=en');
+  button(host,'Recommended').props.onClick();host.render();
+  const query=new URLSearchParams(window.location.search);
+  assert.equal(query.get('recommended'),'1');
+  for(const name of ['sort_id','label_id','page'])assert.equal(query.get(name),null);
+  assert.equal(query.get('lang'),'en');
+  assert.match(requests.at(-1).url,/page=1&size=12&recommended=true$/);
+});
+
+for(const [component,size] of [[JourneyPage,20],[Wall,10],[Categories,12]]) {
+  test(`${component.name} keeps an empty first page free of unnecessary paging controls`,async context=>{
+    const {host,requests}=setup(context,component);
+    const count=requests.length;
+    requests.at(-1).resolve({items:[],total:0,page:1,size});await settle(host);
+    assert.equal(button(host,'Previous page'),undefined);
+    assert.equal(button(host,'Next page'),undefined);
+    assert.equal(requests.length,count);
+  });
+  for(const total of [0,1]) test(`${component.name} preserves a high restored page after total shrinks to ${total}`,async context=>{
+    const {host,requests}=setup(context,component,'?page=100000&lang=en');
+    const count=requests.length;
+    requests.at(-1).resolve({items:[],total,page:100000,size});await settle(host);
+    assert.equal(requests.length,count,'Settling an empty page must not trigger an automatic replacement request.');
+    assert.equal(new URLSearchParams(window.location.search).get('page'),'100000');
+    assert.equal(button(host,'Previous page')?.props.disabled,false);
+    assert.equal(button(host,'Next page')?.props.disabled,true);
+    button(host,'Previous page').props.onClick();host.render();
+    assert.match(requests.at(-1).url,/page=99999/);
+    assert.equal(new URLSearchParams(window.location.search).get('page'),'99999');
+    assert.equal(new URLSearchParams(window.location.search).get('lang'),'en');
+  });
+}
