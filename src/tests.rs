@@ -1069,3 +1069,5 @@ mod media_names;
 mod family;
 
 mod schema_v3;
+
+mod public_browse;

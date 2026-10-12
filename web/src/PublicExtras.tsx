@@ -18,8 +18,24 @@ function Shell({title,subtitle,children}:{title:string;subtitle?:string;children
   return <PublicChrome title={title} subtitle={subtitle}>{children}</PublicChrome>;
 }
 
+// Browsing state belongs to the URL so reloads and Back/Forward restore it.
+function useBrowseParams(){
+  const [search,setSearch]=useState(()=>window.location.search);
+  useEffect(()=>{const restore=()=>setSearch(window.location.search);window.addEventListener('popstate',restore);return()=>window.removeEventListener('popstate',restore);},[]);
+  function navigate(changes:Record<string,string|null>){
+    const url=new URL(window.location.href);
+    for(const [key,value] of Object.entries(changes)){if(value===null)url.searchParams.delete(key);else url.searchParams.set(key,value);}
+    if(url.href!==window.location.href)window.history.pushState(null,'',url.pathname+url.search+url.hash);
+    setSearch(url.search);
+  }
+  return {params:new URLSearchParams(search),navigate};
+}
+function browsePage(params:URLSearchParams){const page=Number(params.get('page'));return Number.isSafeInteger(page)&&page>0?Math.min(page,100_000):1;}
+function pageParam(page:number){return page===1?null:String(page);}
+
 function JourneyPage(){
-  const [page,setPage]=useState(1);
+  const {params,navigate}=useBrowseParams();
+  const page=browsePage(params),setPage=(value:number)=>navigate({page:pageParam(value)});
   const data=useBrowseData(`/api/v1/articles?page=${page}&size=20`,isArticlePage,t("游记加载失败", "Unable to load travels"));
   const result=data.value,error=data.error;
   return <PublicChrome title="xocs" cover="/live/xocs-current-menory.jpg"><ReferencePetals/><div className="journey-page">
@@ -38,7 +54,8 @@ function JourneyPage(){
 
 function Wall(){
   const jotting=window.location.pathname==='/jotting';
-  const [page,setPage]=useState(1);
+  const {params,navigate}=useBrowseParams();
+  const page=browsePage(params),setPage=(value:number)=>navigate({page:pageParam(value)});
   const [lightbox,setLightbox]=useState<string|null>(null);
   const data=useBrowseData(`/api/v1/notes/page?page=${page}`,isNotePage,t('内容加载失败','Unable to load content'),true);
   const result=data.value,error=data.error;
@@ -164,19 +181,18 @@ function useBrowseData<T>(url:string|null, validate:ResponseValidator<T>, messag
 }
 
 function Categories(){
-  const params=new URLSearchParams(window.location.search);
+  const {params,navigate}=useBrowseParams();
   const initial=params.get('recommended')==='1'?-1:Number(params.get('sort_id')||0);
   const initialLabel=Number(params.get('label_id')||0);
-  const [selected,setSelected]=useState(Number.isInteger(initial)?initial:0);
-  const [label,setLabel]=useState(Number.isInteger(initialLabel)?initialLabel:0);
-  const [page,setPage]=useState(1);
+  const selected=Number.isInteger(initial)?initial:0,label=Number.isInteger(initialLabel)?initialLabel:0;
+  const page=browsePage(params),setPage=(value:number)=>navigate({page:pageParam(value)});
   const categoryData=useBrowseData('/api/v1/categories',isCategories,t("分类加载失败", "Unable to load categories"));
   const labelData=useBrowseData(selected>0?`/api/v1/labels?sort_id=${selected}`:null,isPublicLabels,t("标签加载失败", "Unable to load tags"));
   const filter=selected===-1?'&recommended=true':selected>0?`&sort_id=${selected}${label>0?`&label_id=${label}`:''}`:'';
   const articleData=useBrowseData(`/api/v1/articles?page=${page}&size=12${filter}`,isArticlePage,t("文章加载失败", "Unable to load articles"));
   const categories=categoryData.value||[],labels=labelData.value||[],articles=articleData.value;
-  function choose(value:number){setSelected(value);setLabel(0);setPage(1);window.history.replaceState(null,'',value===-1?'/sort?recommended=1':value>0?`/sort?sort_id=${value}`:'/sort');}
-  function chooseLabel(value:number){setLabel(value);setPage(1);window.history.replaceState(null,'',value>0?`/sort?sort_id=${selected}&label_id=${value}`:`/sort?sort_id=${selected}`);}
+  function choose(value:number){navigate({sort_id:value>0?String(value):null,recommended:value===-1?'1':null,label_id:null,page:null});}
+  function chooseLabel(value:number){navigate({label_id:value>0?String(value):null,page:null});}
   return <Shell title={categories.find(item=>item.id===selected)?.sort_name||t("文章分类", "Article categories")} subtitle={t("就算风吹散了冰雪，想念也会留下来。", "Memories remain after the snow has melted.")}>
     <div className="original-tag-panel original-category-panel"><button className={selected===0?'active':''} onClick={()=>choose(0)}>{t("全部 ", "All ")}<small>{categories.reduce((sum,item)=>sum+item.article_count,0)}</small></button><button className={selected===-1?'active':''} onClick={()=>choose(-1)}>{t("推荐", "Recommended")}</button>{categories.map(item=><button className={selected===item.id?'active':''} key={item.id} onClick={()=>choose(item.id)}>{item.sort_name} <small>{item.article_count}</small></button>)}</div>
     {selected>0&&labels.length>0&&<div className="original-tag-panel original-label-panel"><button className={label===0?'active':''} onClick={()=>chooseLabel(0)}>{t("全部标签 ", "All tags ")}<small>{categories.find(item=>item.id===selected)?.article_count||0}</small></button>{labels.map(item=><button className={label===item.id?'active':''} onClick={()=>chooseLabel(item.id)} key={item.id}>{item.label_name} <small>{item.article_count}</small></button>)}</div>}
@@ -187,10 +203,13 @@ function Categories(){
 function Highlight({text,term}:{text:string;term:string}){if(!term)return text;const lower=text.toLocaleLowerCase();const needle=term.toLocaleLowerCase();const parts:ReactNode[]=[];let start=0;let index=lower.indexOf(needle,start);while(index!==-1){parts.push(text.slice(start,index));parts.push(<mark key={index}>{text.slice(index,index+term.length)}</mark>);start=index+term.length;index=lower.indexOf(needle,start);}parts.push(text.slice(start));return <>{parts}</>;}
 
 function SearchPage(){
-  const initial=(new URLSearchParams(window.location.search).get('q')||'').trim();const [draft,setDraft]=useState(initial);const [term,setTerm]=useState(initial);const [page,setPage]=useState(1);
+  const {params,navigate}=useBrowseParams();
+  const term=(params.get('q')||'').trim(),page=browsePage(params),setPage=(value:number)=>navigate({page:pageParam(value)});
+  const [draft,setDraft]=useState(term);
+  useEffect(()=>setDraft(term),[term]);
   const data=useBrowseData(term?`/api/v1/articles?search=${encodeURIComponent(term)}&page=${page}&size=12`:null,isArticlePage,t("搜索失败", "Search failed"));
   const result=data.value,error=data.error;
-  function submit(event:FormEvent){event.preventDefault();const next=draft.trim();if(next===term&&page===1)data.retry();setPage(1);setTerm(next);window.history.replaceState(null,'',`/search?q=${encodeURIComponent(next)}`);}
+  function submit(event:FormEvent){event.preventDefault();const next=draft.trim();if(next===term&&page===1)data.retry();navigate({q:next||null,page:null});}
   return <Shell title={t("搜索文章", "Search articles")} subtitle={t("在文字里寻找熟悉的故事。", "Find familiar stories in these words.")}><form className="search-form" onSubmit={submit}><input aria-label={t("搜索标题或正文", "Search titles or content")} value={draft} maxLength={200} placeholder={t("搜索标题或正文", "Search titles or content")} onChange={event=>setDraft(event.target.value)}/><button type="submit">{t("搜索", "Search")}</button></form>{error&&<p role="alert">{error} <button type="button" onClick={data.retry}>{t("重试", "Try again")}</button></p>}{data.busy&&<p role="status">{t("正在搜索…", "Searching…")}</p>}{term&&result&&<p className="original-search-count">“{term}{t("” 找到 ", "” found ")}{result?.total??0}{t(" 篇文章；标题匹配优先。", " articles; title matches come first.")}</p>}<div className="original-article-list"><h2>{t("🍃 发现", "🍃 Discover")}</h2>{(!term||result?.items.length===0)&&<div className="public-empty-state search-empty-state"><span aria-hidden="true">⌕</span><h3>{term?t('没有找到匹配的文章','No matching articles'):t('输入关键词开始搜索','Enter a keyword to start searching')}</h3><p>{term?t('试试其它关键词，或浏览全部文章。','Try another keyword, or browse all articles.'):t('可以搜索文章标题，也可以寻找正文里的一句话。','Search for an article title or a phrase from its content.')}</p><a href="/sort">{t('浏览全部文章','Browse all articles')} <span aria-hidden="true">↗</span></a></div>}{result?.items.map(item=><a className="original-list-card" href={`/article/${item.id}`} key={item.id}><div className="original-list-cover">{safeHttpUrl(item.article_cover)?<img src={safeHttpUrl(item.article_cover)||''} alt="" loading="lazy"/>:<span>{t("遇事不决，可问春风", "Let the spring breeze guide you")}</span>}</div><div className="original-list-body"><small>{item.search_snippet?t("正文匹配", "Content match"):t("标题匹配", "Title match")} · {item.create_time}</small><h3><Highlight text={item.article_title} term={term}/></h3>{item.search_snippet&&<p className="search-snippet"><Highlight text={item.search_snippet} term={term}/></p>}<span className="original-list-tag">{item.view_status?t("公开", "Public"):t("需要访问密码", "Access password required")}</span></div></a>)}{result&&<div className="pager"><button disabled={page<=1} onClick={()=>setPage(page-1)}>{t("上一页", "Previous page")}</button><span>{t("第 {0} 页", "Page {0}", [page])}</span><button disabled={page*12>=result.total} onClick={()=>setPage(page+1)}>{t("下一页", "Next page")}</button></div>}</div></Shell>;
 }
 

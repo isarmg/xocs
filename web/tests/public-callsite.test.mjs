@@ -27,7 +27,7 @@ const settle = async host => {
 const text = host => textContent(expand(host.tree)).replace(/\s+/g, ' ');
 function setup(context, component, props, path, fetch) {
   const originalFetch = globalThis.fetch, originalWindow = globalThis.window;
-  globalThis.window = { location: { pathname: path, search: '?q=story', origin: 'https://example.test' }, history: { replaceState() {} } };
+  globalThis.window = { location: { pathname: path, search: '?q=story', origin: 'https://example.test' }, history: { replaceState() {} }, addEventListener() {}, removeEventListener() {} };
   globalThis.fetch = fetch;
   const element = component ? { type: component, props } : PublicExtras();
   const host = new HookHost(element.type, element.props);
