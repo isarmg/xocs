@@ -24,10 +24,19 @@ async fn setup() -> (tempfile::TempDir, Router, SqlitePool) {
 async fn setup_with_proxies(
     trusted_proxies: Vec<std::net::IpAddr>,
 ) -> (tempfile::TempDir, Router, SqlitePool) {
+    setup_with_pool_limit(trusted_proxies, 8).await
+}
+
+async fn setup_with_pool_limit(
+    trusted_proxies: Vec<std::net::IpAddr>,
+    limit: u32,
+) -> (tempfile::TempDir, Router, SqlitePool) {
     let dir = tempfile::tempdir().unwrap();
     std::fs::set_permissions(dir.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
     let db = dir.path().join("site.sqlite");
-    let pool = open_database(&db, true).await.unwrap();
+    let pool = crate::database::open_database_with_limit(&db, true, limit)
+        .await
+        .unwrap();
     initialize(&pool, "admin", "TemporaryPassphrase123")
         .await
         .unwrap();
@@ -961,8 +970,8 @@ async fn comment_submission_requires_current_identity_and_current_ddl() {
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     }
     let identity = crate::schema::current_identity().unwrap();
-    assert_eq!(identity.application_version, "xocs-db-v3");
-    assert_eq!(identity.schema_revision, 3);
+    assert_eq!(identity.application_version, "xocs-db-v4");
+    assert_eq!(identity.schema_revision, 4);
     crate::schema::validate(&pool).await.unwrap();
     sqlx::query("DROP TABLE comment_submission")
         .execute(&pool)
@@ -1007,3 +1016,5 @@ mod taxonomy;
 mod media_names;
 
 mod family;
+
+mod schema_v3;

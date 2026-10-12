@@ -302,3 +302,282 @@ async fn category_deletion_and_label_creation_cannot_leave_orphan_labels() {
     .unwrap();
     assert_eq!(orphans, 0);
 }
+
+async fn create_with_key(
+    app: &Router,
+    session: &(String, String),
+    key: &str,
+    value: serde_json::Value,
+) -> Response {
+    app.clone()
+        .oneshot(with_peer(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/content/articles")
+                .header(header::HOST, "127.0.0.1:18881")
+                .header(header::ORIGIN, "http://127.0.0.1:18881")
+                .header("sec-fetch-site", "same-origin")
+                .header(header::COOKIE, &session.0)
+                .header("x-csrf-token", &session.1)
+                .header(header::CONTENT_TYPE, "application/json")
+                .header("Idempotency-Key", key)
+                .body(Body::from(value.to_string()))
+                .unwrap(),
+        ))
+        .await
+        .unwrap()
+}
+
+#[tokio::test]
+async fn article_create_receipt_tracks_initial_payload_and_current_article() {
+    let (_dir, app, pool) = setup().await;
+    seed(&pool).await;
+    let session = login(&app).await;
+    let original = article(1, 1);
+    let mut bad = original.clone();
+    bad["article_title"] = "".into();
+    assert_eq!(
+        create_with_key(&app, &session, "stable-key", bad)
+            .await
+            .status(),
+        StatusCode::BAD_REQUEST
+    );
+    let first = create_with_key(&app, &session, "stable-key", original.clone()).await;
+    assert_eq!(first.status(), StatusCode::OK);
+    let first = body_json(first).await;
+    let id = first["id"].as_i64().unwrap();
+    let mut edited = original.clone();
+    edited["article_title"] = "Edited after initial save".into();
+    assert_eq!(
+        write(
+            &app,
+            &session,
+            "PUT",
+            &format!("/api/v1/content/articles/{id}"),
+            edited.clone()
+        )
+        .await
+        .status(),
+        StatusCode::OK
+    );
+    let replay = create_with_key(&app, &session, "stable-key", original.clone()).await;
+    assert_eq!(replay.status(), StatusCode::OK);
+    let replay = body_json(replay).await;
+    assert_eq!(replay["id"], id);
+    assert_eq!(replay["article_title"], edited["article_title"]);
+    assert_eq!(
+        create_with_key(&app, &session, "stable-key", edited)
+            .await
+            .status(),
+        StatusCode::CONFLICT
+    );
+    assert_eq!(
+        write(
+            &app,
+            &session,
+            "DELETE",
+            &format!("/api/v1/content/articles/{id}"),
+            serde_json::json!({})
+        )
+        .await
+        .status(),
+        StatusCode::OK
+    );
+    assert_eq!(
+        create_with_key(&app, &session, "stable-key", original)
+            .await
+            .status(),
+        StatusCode::CONFLICT
+    );
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM article")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(count, 1);
+}
+
+#[tokio::test]
+async fn article_search_uses_html_utf16_limit() {
+    let (_dir, app, pool) = setup().await;
+    seed(&pool).await;
+    let session = login(&app).await;
+    let mut value = article(1, 1);
+    value["article_title"] = "文".repeat(80).into();
+    assert_eq!(
+        write(&app, &session, "POST", "/api/v1/content/articles", value)
+            .await
+            .status(),
+        StatusCode::OK
+    );
+    for (search, status, total) in [
+        ("文".repeat(80), StatusCode::OK, Some(1)),
+        ("😀".repeat(100), StatusCode::OK, Some(0)),
+        ("😀".repeat(101), StatusCode::BAD_REQUEST, None),
+    ] {
+        let query =
+            percent_encoding::utf8_percent_encode(&search, percent_encoding::NON_ALPHANUMERIC)
+                .to_string();
+        let response = app
+            .clone()
+            .oneshot(with_peer(
+                Request::builder()
+                    .uri(format!("/api/v1/articles?search={query}"))
+                    .body(Body::empty())
+                    .unwrap(),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), status);
+        if let Some(total) = total {
+            assert_eq!(body_json(response).await["total"], total);
+        }
+    }
+}
+
+#[tokio::test]
+async fn hard_deleted_ids_are_never_reused() {
+    let (_dir, _app, pool) = setup().await;
+    for (table, columns, values) in [
+        ("comment", "source,comment_content", "1,'test'"),
+        ("resource_path", "title", "'test'"),
+        ("wei_yan", "content", "'test'"),
+        ("tree_hole", "message", "'test'"),
+        ("family", "man_name", "'test'"),
+        ("sort", "sort_name", "'test'"),
+        ("label", "sort_id,label_name", "1,'test'"),
+    ] {
+        let insert = format!("INSERT INTO {table}({columns}) VALUES({values})");
+        let first = sqlx::query(sqlx::AssertSqlSafe(insert.clone()))
+            .execute(&pool)
+            .await
+            .unwrap()
+            .last_insert_rowid();
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "DELETE FROM {table} WHERE id=?"
+        )))
+        .bind(first)
+        .execute(&pool)
+        .await
+        .unwrap();
+        let second = sqlx::query(sqlx::AssertSqlSafe(insert))
+            .execute(&pool)
+            .await
+            .unwrap()
+            .last_insert_rowid();
+        assert!(second > first, "{table} reused {first}");
+        let changed = sqlx::query(sqlx::AssertSqlSafe(format!(
+            "DELETE FROM {table} WHERE id=?"
+        )))
+        .bind(first)
+        .execute(&pool)
+        .await
+        .unwrap();
+        assert_eq!(changed.rows_affected(), 0);
+    }
+}
+
+#[tokio::test]
+async fn concurrent_article_replays_share_one_receipt_on_a_single_connection() {
+    let (_dir, app, pool) = setup_with_pool_limit(Vec::new(), 1).await;
+    seed(&pool).await;
+    let session = login(&app).await;
+    let (first, second) = tokio::time::timeout(std::time::Duration::from_secs(10), async {
+        tokio::join!(
+            create_with_key(&app, &session, "concurrent", article(1, 1)),
+            create_with_key(&app, &session, "concurrent", article(1, 1))
+        )
+    })
+    .await
+    .expect("a receipt must not perform nested pool checkout");
+    assert_eq!(first.status(), StatusCode::OK);
+    assert_eq!(second.status(), StatusCode::OK);
+    assert_eq!(body_json(first).await["id"], body_json(second).await["id"]);
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM article")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(count, 1);
+}
+
+#[tokio::test]
+async fn failed_taxonomy_leaves_key_available_and_legacy_posts_remain_independent() {
+    let (_dir, app, pool) = setup().await;
+    seed(&pool).await;
+    let session = login(&app).await;
+    assert_eq!(
+        create_with_key(&app, &session, "correctable", article(1, 3))
+            .await
+            .status(),
+        StatusCode::BAD_REQUEST
+    );
+    assert_eq!(
+        create_with_key(&app, &session, "correctable", article(1, 1))
+            .await
+            .status(),
+        StatusCode::OK
+    );
+    for _ in 0..2 {
+        assert_eq!(
+            write(
+                &app,
+                &session,
+                "POST",
+                "/api/v1/content/articles",
+                article(1, 1)
+            )
+            .await
+            .status(),
+            StatusCode::OK
+        );
+    }
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM article")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(count, 3);
+}
+
+#[tokio::test]
+async fn article_receipt_survives_database_reopen_with_initial_fingerprint() {
+    let (dir, app, pool) = setup().await;
+    seed(&pool).await;
+    let session = login(&app).await;
+    let original = article(1, 1);
+    assert_eq!(
+        create_with_key(&app, &session, "durable", original.clone())
+            .await
+            .status(),
+        StatusCode::OK
+    );
+    let before: (Vec<u8>, i64) = sqlx::query_as(
+        "SELECT request_hash,article_id FROM article_submission WHERE request_id='durable'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    let mut updated = original;
+    updated["article_title"] = "changed".into();
+    assert_eq!(
+        write(
+            &app,
+            &session,
+            "PUT",
+            &format!("/api/v1/content/articles/{}", before.1),
+            updated
+        )
+        .await
+        .status(),
+        StatusCode::OK
+    );
+    close_fixture_pool(&pool).await;
+    let reopened = open_database(&dir.path().join("site.sqlite"), false)
+        .await
+        .unwrap();
+    let after: (Vec<u8>, i64) = sqlx::query_as(
+        "SELECT request_hash,article_id FROM article_submission WHERE request_id='durable'",
+    )
+    .fetch_one(&reopened)
+    .await
+    .unwrap();
+    assert_eq!(before, after);
+}

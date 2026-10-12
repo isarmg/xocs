@@ -78,3 +78,12 @@ test('known POST rejection remains visible through successful list navigation',a
  button(host,'Next page').props.onClick();host.render();requests[2].resolve(json(page(2)));await settle(host);
  assert.match(snapshot(host).alerts.join(' '),/Too many requests/);assert.equal(walk(host.tree,n=>n.type==='textarea')[0].props.disabled,false);
 });
+
+for (const total of [0, 10]) test(`deleted last comment returns to last available page (total ${total})`, async t => {
+ const {host,requests}=setup(t,{kind:'message'});requests[0].resolve(json(page(1)));await settle(host);
+ button(host,'Next page').props.onClick();host.render();
+ requests[1].resolve(json({items:[],page:2,size:10,total}));await settle(host);
+ assert.equal(requests.length,3);assert.match(requests[2].url,/page=1/);assert.deepEqual(snapshot(host).rowIds,[]);
+ requests[2].resolve(json({items:total ? page(1).items : [],page:1,size:10,total}));await settle(host);
+ assert.equal(snapshot(host).rowIds.length,total);assert.doesNotMatch(textContent(host.tree),/Page 2/);
+});

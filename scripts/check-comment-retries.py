@@ -48,7 +48,7 @@ def main():
         subprocess.run([binary, '--data-dir', directory, 'init'], input='TemporaryTestPassphrase123\n', text=True, check=True)
         with sqlite3.connect(database) as db:
             version, revision, fingerprint = db.execute('SELECT application_version,schema_revision,schema_sha256 FROM product_metadata').fetchone()
-            assert (version, revision) == ('xocs-db-v3', 3)
+            assert (version, revision) == ('xocs-db-v4', 4)
             print('initialized actual DDL:', version, revision, fingerprint)
         address = port()
         base = f'http://127.0.0.1:{address}'

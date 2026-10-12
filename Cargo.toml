@@ -1,6 +1,6 @@
 [package]
 name = "xocs"
-version = "1.0.1"
+version = "1.0.2"
 edition = "2024"
 rust-version = "1.99"
 publish = false
@@ -23,10 +23,10 @@ tower-http = { version = "0.6", features = ["fs", "trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tempfile = "3"
-xcss = { git = "https://github.com/isarmg/xcss.git", rev = "0fb8d744c75e829dff48eadc5e50137f5ad589fd", version = "=1.0.4", features = ["tracing"] }
+xcss = { git = "https://github.com/isarmg/xcss.git", rev = "6a8113d4be76e5e8977ac7be08c1a7c57963ae49", version = "=1.0.5", features = ["tracing"] }
 
 [build-dependencies]
-xcss = { git = "https://github.com/isarmg/xcss.git", rev = "0fb8d744c75e829dff48eadc5e50137f5ad589fd", version = "=1.0.4" }
+xcss = { git = "https://github.com/isarmg/xcss.git", rev = "6a8113d4be76e5e8977ac7be08c1a7c57963ae49", version = "=1.0.5" }
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }

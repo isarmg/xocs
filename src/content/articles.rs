@@ -4,7 +4,7 @@ use crate::{ApiResult, AppError, AppState, absent, db_error, invalid};
 use axum::{
     Json,
     extract::{ConnectInfo, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
 };
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
@@ -77,7 +77,7 @@ async fn list_articles(
     let page = query.page.unwrap_or(1).clamp(1, 100_000);
     let size = query.size.unwrap_or(12).clamp(1, 100);
     let search = query.search.unwrap_or_default().trim().to_owned();
-    if search.len() > 200 {
+    if search.encode_utf16().count() > 200 {
         return Err(invalid("搜索词过长"));
     }
     let pattern = format!(
@@ -336,7 +336,7 @@ pub(super) async fn unlock_article(
     Ok(Json(load_article(&state.pool, id, true).await?))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct ArticleInput {
     article_title: String,
@@ -396,9 +396,28 @@ async fn validate_article_taxonomy(
 
 pub(super) async fn create_article(
     State(state): State<AppState>,
+    headers: HeaderMap,
     crate::ContractJson(input): crate::ContractJson<ArticleInput>,
 ) -> ApiResult<Article> {
     validate_article(&input, false)?;
+    let request_id = headers
+        .get("Idempotency-Key")
+        .map(|value| {
+            value
+                .to_str()
+                .ok()
+                .filter(|key| {
+                    !key.is_empty()
+                        && key.len() <= 128
+                        && key.bytes().all(|byte| byte.is_ascii_graphic())
+                })
+                .map(str::to_owned)
+                .ok_or_else(|| invalid("文章请求标识无效"))
+        })
+        .transpose()?;
+    use sha2::{Digest, Sha256};
+    let request_hash =
+        Sha256::digest(serde_json::to_vec(&input).map_err(|_| invalid("文章内容无效"))?).to_vec();
     let password = input
         .password
         .as_deref()
@@ -411,12 +430,34 @@ pub(super) async fn create_article(
         .begin_with("BEGIN IMMEDIATE")
         .await
         .map_err(db_error)?;
+    if let Some(key) = &request_id {
+        let receipt: Option<(Vec<u8>, i64, i64)> = sqlx::query_as("SELECT s.request_hash,s.article_id,a.deleted FROM article_submission s JOIN article a ON a.id=s.article_id WHERE s.request_id=?")
+            .bind(key).fetch_optional(&mut *transaction).await.map_err(db_error)?;
+        if let Some((hash, id, deleted)) = receipt {
+            if hash != request_hash || deleted != 0 {
+                return Err(AppError(StatusCode::CONFLICT, "文章请求已使用或文章已删除"));
+            }
+            transaction.commit().await.map_err(db_error)?;
+            return Ok(Json(load_article(&state.pool, id, true).await?));
+        }
+    }
     validate_article_taxonomy(&mut transaction, &input).await?;
     let id = sqlx::query("INSERT INTO article(user_id,sort_id,label_id,article_cover,article_title,article_content,video_url,view_status,recommend_status,comment_status,password,tips) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)")
         .bind(author)
         .bind(input.sort_id).bind(input.label_id).bind(input.article_cover).bind(input.article_title).bind(input.article_content).bind(input.video_url)
         .bind(i64::from(input.view_status)).bind(i64::from(input.recommend_status)).bind(i64::from(input.comment_status)).bind(password).bind(input.tips)
         .execute(&mut *transaction).await.map_err(db_error)?.last_insert_rowid();
+    if let Some(key) = request_id {
+        sqlx::query(
+            "INSERT INTO article_submission(request_id,request_hash,article_id) VALUES(?,?,?)",
+        )
+        .bind(key)
+        .bind(request_hash)
+        .bind(id)
+        .execute(&mut *transaction)
+        .await
+        .map_err(db_error)?;
+    }
     transaction.commit().await.map_err(db_error)?;
     Ok(Json(load_article(&state.pool, id, true).await?))
 }

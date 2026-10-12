@@ -140,12 +140,19 @@ function ArticleEditor({id}: {id?: number}) {
   const [loadedId,setLoadedId]=useState<number|null|undefined>(id?null:undefined);
   const [loadFailure,setLoadFailure]=useState(''),[loadAttempt,setLoadAttempt]=useState(0);
   const articleReady=loadedId===id;
+  const [categoryFailure,setCategoryFailure]=useState(''),[categoryAttempt,setCategoryAttempt]=useState(0);
+  const [labelFailure,setLabelFailure]=useState(''),[labelAttempt,setLabelAttempt]=useState(0);
+  const creation=useRef<{key:string;id?:number}>({key:crypto.randomUUID()});
   useEffect(() => {
-    const controller = new AbortController();
-    void request('/api/v1/categories', isCategories, {signal: controller.signal}).then(value => {if (!controller.signal.aborted) setCategories(value);}).catch(() => {if(!controller.signal.aborted)setFailure(t("分类加载失败", "Unable to load categories"));});
-    void client.request('/api/v1/content/labels', isEditorLabels, {signal:controller.signal}).then(value => {if (!controller.signal.aborted) setLabels(value);}).catch(() => {if(!controller.signal.aborted)setFailure(t("标签加载失败", "Unable to load tags"));});
-    return () => controller.abort();
-  }, [client]);
+    const controller = new AbortController();setCategoryFailure('');
+    void request('/api/v1/categories', isCategories, {signal:controller.signal}).then(value=>{if(!controller.signal.aborted)setCategories(value);}).catch(()=>{if(!controller.signal.aborted)setCategoryFailure(t("分类加载失败", "Unable to load categories"));});
+    return()=>controller.abort();
+  },[categoryAttempt]);
+  useEffect(() => {
+    const controller = new AbortController();setLabelFailure('');
+    void client.request('/api/v1/content/labels', isEditorLabels, {signal:controller.signal}).then(value=>{if(!controller.signal.aborted)setLabels(value);}).catch(()=>{if(!controller.signal.aborted)setLabelFailure(t("标签加载失败", "Unable to load tags"));});
+    return()=>controller.abort();
+  },[client,labelAttempt]);
   useEffect(() => {
     const controller = new AbortController();setLoadFailure('');setFailure('');
     if (!id) {setArticle(emptyArticle);setLoadedId(undefined);return()=>controller.abort();}
@@ -168,13 +175,26 @@ function ArticleEditor({id}: {id?: number}) {
     if(!articleReady||uploadRequest.current||saveRequest.current)return;
     const controller=new AbortController();saveRequest.current=controller;setSaving(true);setFailure('');
     try {
-      await client.request(id ? `/api/v1/content/articles/${id}` : '/api/v1/content/articles', isArticle, {method:id?'PUT':'POST',body:JSON.stringify(article),signal:controller.signal});
+      const targetId=id??creation.current.id;
+      const saved=await client.request(targetId ? `/api/v1/content/articles/${targetId}` : '/api/v1/content/articles', isArticle, {method:targetId?'PUT':'POST',headers:targetId?undefined:{'Idempotency-Key':creation.current.key},body:JSON.stringify(article),signal:controller.signal});
       if(controller.signal.aborted||saveRequest.current!==controller)return;
+      if(!id)creation.current.id=saved.id;
       notify(t("文章已保存", "Article saved")); window.location.hash='articles';
-    } catch { if(!controller.signal.aborted)setFailure(t("文章保存失败，请检查内容后重试", "Unable to save article. Check the content and retry.")); }
+    } catch(reason) {
+      if(!controller.signal.aborted){
+        const status=reason&&typeof reason==='object'&&'status'in reason?reason.status:undefined;
+        setFailure(status===409&&!id&&!creation.current.id
+          ?t("创建请求内容冲突，请返回文章列表确认是否已创建。", "This creation request conflicts with an earlier attempt. Check the article list to confirm whether it was created.")
+          :publicErrorMessage(reason,!id&&!creation.current.id
+            ?t("尚未确认文章是否已创建，请保留原内容重试。", "Article creation is not yet confirmed. Retry with the original content unchanged.")
+            :t("文章保存失败，请重试。", "Unable to save article. Please retry.")));
+      }
+    }
     finally {if(saveRequest.current===controller){saveRequest.current=null;setSaving(false);}}
   }
   return <section className="xcss-content-stack"><PageHeader><div><h1>{id ? t("编辑文章", "Edit article") : t("新增文章", "Add article")}</h1><p>{t("支持 Markdown 正文，发布后可从网站访问。", "Write in Markdown. Published articles are available on the site.")}</p></div></PageHeader>
+    {categoryFailure&&<ErrorState onRetry={()=>setCategoryAttempt(value=>value+1)}>{categoryFailure}</ErrorState>}
+    {labelFailure&&<ErrorState onRetry={()=>setLabelAttempt(value=>value+1)}>{labelFailure}</ErrorState>}
     {failure && <ErrorState>{failure}</ErrorState>}
     {!articleReady?<>{loadFailure?<ErrorState onRetry={()=>setLoadAttempt(value=>value+1)}>{loadFailure}</ErrorState>:<LoadingState/>}<Button onClick={()=>{window.location.hash='articles';}}>{t("取消", "Cancel")}</Button></>:<>
     <form className="editor-form" onSubmit={event => void save(event)}>
@@ -198,20 +218,26 @@ function ArticleEditor({id}: {id?: number}) {
 function ArticleNewsEditor({id}:{id:number}){
   const {client,notify}=useAdminApplication();
   const [entries,setEntries]=useState<NewsEntry[]>([]);const [content,setContent]=useState('');const [date,setDate]=useState('');const [failure,setFailure]=useState('');
-  const [saving,setSaving]=useState(false);const savePending=useRef(false);
-  useEffect(()=>{const controller=new AbortController();void client.request(`/api/v1/content/articles/${id}/news`,isNews,{signal:controller.signal}).then(setEntries).catch(()=>{if(!controller.signal.aborted)setFailure(t("文章进展加载失败", "Unable to load article updates"));});return()=>controller.abort();},[client,id]);
+  const [saving,setSaving]=useState(false);const savePending=useRef<AbortController|null>(null);
+  const [loadedId,setLoadedId]=useState<number|null>(null),[loadFailure,setLoadFailure]=useState(''),[attempt,setAttempt]=useState(0);
+  const ready=loadedId===id;
+  useEffect(()=>{const controller=new AbortController();setLoadedId(null);setEntries([]);setContent('');setDate('');setFailure('');setLoadFailure('');setSaving(false);
+    void client.request(`/api/v1/content/articles/${id}/news`,isNews,{signal:controller.signal}).then(value=>{if(!controller.signal.aborted){setEntries(value);setLoadedId(id);}}).catch(()=>{if(!controller.signal.aborted)setLoadFailure(t("文章进展加载失败", "Unable to load article updates"));});
+    return()=>{controller.abort();savePending.current?.abort();savePending.current=null;};
+  },[client,id,attempt]);
   async function publish(event:React.FormEvent){
-    event.preventDefault();if(savePending.current)return;
-    savePending.current=true;setSaving(true);
+    event.preventDefault();if(!ready||savePending.current)return;
+    const controller=new AbortController();savePending.current=controller;setSaving(true);setFailure('');
     try{
-      const saved=await client.request(`/api/v1/content/articles/${id}/news`,isNewsEntry,{method:'POST',body:JSON.stringify({content,create_time:date ? new Date(date).toISOString() : null})});
+      const saved=await client.request(`/api/v1/content/articles/${id}/news`,isNewsEntry,{method:'POST',signal:controller.signal,body:JSON.stringify({content,create_time:date ? new Date(date).toISOString() : null})});
+      if(controller.signal.aborted||savePending.current!==controller)return;
       setEntries(current=>[saved,...current].sort((a,b)=>(b.create_time||'').localeCompare(a.create_time||'')));
       setContent('');setDate('');setFailure('');notify(t("文章进展已发布", "Article update published"));
-    }catch(reason){setFailure(publicErrorMessage(reason, t("发布失败", "Unable to publish")));}
-    finally{savePending.current=false;setSaving(false);}
+    }catch(reason){if(!controller.signal.aborted)setFailure(publicErrorMessage(reason, t("发布失败", "Unable to publish")));}
+    finally{if(savePending.current===controller){savePending.current=null;setSaving(false);}}
   }
   async function remove(entryId:number){if(!window.confirm(t("确定删除这条文章进展？", "Delete this article update?")))return;try{await client.request(`/api/v1/content/articles/${id}/news/${entryId}`,isDelete,{method:'DELETE'});setEntries(current=>current.filter(item=>item.id!==entryId));notify(t("文章进展已删除", "Article update deleted"));}catch(reason){setFailure(publicErrorMessage(reason, t("删除失败", "Unable to delete")));}}
-  return <section className="editor-form"><h2>{t("最新进展", "Recent updates")}</h2>{failure&&<ErrorState>{failure}</ErrorState>}<form className="editor-form" onSubmit={event=>void publish(event)}><fieldset className="xocs-fieldset" disabled={saving}><FormField label={t("进展内容", "Update content")}><textarea className="xcss-input" required maxLength={1024} value={content} onChange={event=>setContent(event.target.value)}/></FormField><FormField label={t("进展时间", "Update time")}><TextField type="datetime-local" value={date} onChange={event=>setDate(event.target.value)}/></FormField><Button type="submit" disabled={saving}>{saving?t("发布中…", "Publishing…"):t("发布进展", "Publish update")}</Button></fieldset></form>{entries.length?<Table aria-label={t("文章进展", "Article updates")}><thead><tr><th>{t("时间", "Time")}</th><th>{t("内容", "Content")}</th><th>{t("操作", "Actions")}</th></tr></thead><tbody>{entries.map(item=><tr key={item.id}><td>{formatArticleNewsTime(item.create_time)||'—'}</td><td className="comment-cell">{item.content}</td><td><Button className="xcss-danger" onClick={()=>void remove(item.id)}>{t("删除", "Delete")}</Button></td></tr>)}</tbody></Table>:<EmptyState>{t("暂无进展", "No updates yet")}</EmptyState>}</section>;
+  return <section className="editor-form"><h2>{t("最新进展", "Recent updates")}</h2>{loadFailure&&<ErrorState onRetry={()=>setAttempt(value=>value+1)}>{loadFailure}</ErrorState>}{!ready&&!loadFailure&&<LoadingState/>}{failure&&<ErrorState>{failure}</ErrorState>}<form className="editor-form" onSubmit={event=>void publish(event)}><fieldset className="xocs-fieldset" disabled={saving||!ready}><FormField label={t("进展内容", "Update content")}><textarea className="xcss-input" required maxLength={1024} value={content} onChange={event=>setContent(event.target.value)}/></FormField><FormField label={t("进展时间", "Update time")}><TextField type="datetime-local" value={date} onChange={event=>setDate(event.target.value)}/></FormField><Button type="submit" disabled={saving||!ready}>{saving?t("发布中…", "Publishing…"):t("发布进展", "Publish update")}</Button></fieldset></form>{entries.length?<Table aria-label={t("文章进展", "Article updates")}><thead><tr><th>{t("时间", "Time")}</th><th>{t("内容", "Content")}</th><th>{t("操作", "Actions")}</th></tr></thead><tbody>{entries.map(item=><tr key={item.id}><td>{formatArticleNewsTime(item.create_time)||'—'}</td><td className="comment-cell">{item.content}</td><td><Button className="xcss-danger" onClick={()=>void remove(item.id)}>{t("删除", "Delete")}</Button></td></tr>)}</tbody></Table>:ready?<EmptyState>{t("暂无进展", "No updates yet")}</EmptyState>:null}</section>;
 }
 
 function CategoryManager() {
