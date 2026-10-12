@@ -107,10 +107,17 @@ try {
         await expect(page.getByRole('button', { name: 'Load more photos', exact: true })).toHaveCount(0);
         await page.locator('.love-photo-filters').getByRole('button', { name: /^City/ }).click();
         await expect(page.locator('.travel-photo-card')).toHaveCount(1);
-        await page.getByRole('button', { name: 'View photo: Memory 14', exact: true }).click();
-        await expect(page.getByRole('dialog', { name: 'View image', exact: true })).toBeVisible();
-        await page.keyboard.press('Escape');
-        await expect(page.getByRole('dialog', { name: 'View image', exact: true })).toHaveCount(0);
+        const photoTrigger = page.getByRole('button', { name: 'View photo: Memory 14', exact: true });
+        for (let opening = 0; opening < 2; opening++) {
+          await photoTrigger.focus();
+          await photoTrigger.click();
+          const lightbox = page.getByRole('dialog', { name: 'View image', exact: true });
+          await expect(lightbox).toBeVisible();
+          await expect(lightbox.getByRole('button', { name: 'Close image', exact: true })).toBeFocused();
+          await page.keyboard.press('Escape');
+          await expect(lightbox).toHaveCount(0);
+          await expect(photoTrigger).toBeFocused();
+        }
         if (width === 1920) await accessible(page);
         const tabs = page.locator('.love-tabs');
         await tabs.getByRole('button', { name: /^Moments/ }).click();
