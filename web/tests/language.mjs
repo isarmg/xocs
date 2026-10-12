@@ -56,8 +56,8 @@ try {
           await expect(page.locator('.xcss-admin-shell .xcss-empty')).toHaveText(adminEmptyStates[adminPage]);
           await expect(page.locator('.xcss-admin-shell .xcss-loading')).toHaveCount(0);
         } else if (adminPage === 'labels') {
-          await expect(page.getByLabel('Category', { exact: true })).toBeEnabled();
-          await expect(page.getByLabel('Category', { exact: true })).toContainText('中文分类');
+          await expect(page.getByRole('combobox', { name: 'Category', exact: true })).toBeEnabled();
+          await expect(page.getByRole('combobox', { name: 'Category', exact: true })).toContainText('中文分类');
           await expect(page.locator('.xcss-admin-shell .xcss-loading')).toHaveCount(0);
         }
         assert.equal(await page.getByRole('alert').count(), 0, `${path}: ${await page.getByRole('alert').allTextContents()}`);
