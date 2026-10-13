@@ -42,15 +42,21 @@ def post(base, content, identity=None, visitor=None):
 
 def main():
     binary = str(Path(sys.argv[1]).resolve())
+    fixture = os.environ.get('XOCS_SMOKE_FIXTURE')
+    fixture_command = [str(Path(fixture).resolve(strict=True))] if fixture else ['cargo', 'run', '--quiet', '--locked', '--example', 'smoke-fixture', '--']
     with tempfile.TemporaryDirectory(prefix='xocs-comment-regression-') as directory:
         os.chmod(directory, 0o700)
-        database = Path(directory) / 'site.sqlite'
-        subprocess.run([binary, '--data-dir', directory, 'init'], input='TemporaryTestPassphrase123\n', text=True, check=True)
+        database = Path(directory) / 'state/site.sqlite'
+        address = port()
+        config = Path(directory) / 'config/config.json'
+        config.parent.mkdir(mode=0o700)
+        config.write_text(json.dumps({'bind': f'127.0.0.1:{address}', 'development': True}))
+        config.chmod(0o600)
+        subprocess.run([*fixture_command, directory], cwd=Path(__file__).resolve().parents[1], check=True)
         with sqlite3.connect(database) as db:
             version, revision, fingerprint = db.execute('SELECT application_version,schema_revision,schema_sha256 FROM product_metadata').fetchone()
-            assert (version, revision) == ('xocs-db-v4', 4)
+            assert (version, revision) == ('xocs-db-v5', 5)
             print('initialized actual DDL:', version, revision, fingerprint)
-        address = port()
         base = f'http://127.0.0.1:{address}'
         server = None
         log = open(Path(directory) / 'server.log', 'w+')
@@ -62,11 +68,9 @@ def main():
                 server.wait(timeout=15)
                 server = None
 
-        def start(trusted):
+        def start():
             nonlocal server
-            command = [binary, '--data-dir', directory, 'run', '--bind', f'127.0.0.1:{address}', '--development']
-            if trusted:
-                command += ['--trusted-proxies', '127.0.0.1']
+            command = [binary, '--root', directory]
             server = subprocess.Popen(command, stdout=log, stderr=log)
             for _ in range(100):
                 if server.poll() is not None:
@@ -80,15 +84,15 @@ def main():
             raise AssertionError('fixture server did not become ready')
 
         try:
-            start(False)
+            start()
             statuses = [post(base, f'Direct visitor {i}', visitor=f'192.0.2.{i}')[0] for i in range(1, 12)]
-            assert statuses == [200] * 10 + [429], statuses
-            print('PASS: direct mode ignores forwarded identities and enforces its peer quota')
-            stop(); start(True)
+            assert statuses == [200] * 11, statuses
+            print('PASS: arbitrary forwarding identities do not create rate buckets')
+            stop(); start()
             statuses = [post(base, f'Proxy visitor {i}', visitor=f'192.0.2.{i}')[0] for i in range(1, 12)]
             assert statuses == [200] * 11, statuses
-            assert post(base, 'Missing trusted header')[0] == 429  # Falls back to the exhausted socket-peer quota.
-            print('PASS: eleven visitors behind the configured proxy each receive independent quota')
+            assert post(base, 'No forwarding header')[0] == 200
+            print('PASS: repeated anonymous writes retain the same behavior after restart')
 
             class DropFirstResponse(http.server.BaseHTTPRequestHandler):
                 count = 0
@@ -123,7 +127,7 @@ def main():
                     raise AssertionError('the first successful response should have been lost')
                 except http.client.RemoteDisconnected:
                     pass
-                stop(); start(True)
+                stop(); start()
                 status, comment = post(f'http://127.0.0.1:{proxy.server_port}', 'Committed before disconnection', identity)
                 assert status == 200
                 with sqlite3.connect(database) as db:
@@ -143,7 +147,7 @@ def main():
                 proxy.shutdown(); proxy.server_close(); worker.join()
         finally:
             stop(); log.close()
-        subprocess.run([binary, '--data-dir', directory, 'check'], check=True)
+        subprocess.run([*fixture_command, directory, 'check'], cwd=Path(__file__).resolve().parents[1], check=True)
 
 
 if __name__ == '__main__':

@@ -3,7 +3,7 @@ use super::*;
 async fn login(app: &Router) -> (String, String) {
     let response = app
         .clone()
-        .oneshot(with_peer(
+        .oneshot(
             Request::builder()
                 .method("POST")
                 .uri("/api/v1/auth/login")
@@ -15,7 +15,7 @@ async fn login(app: &Router) -> (String, String) {
                     r#"{"username":"admin","password":"TemporaryPassphrase123"}"#,
                 ))
                 .unwrap(),
-        ))
+        )
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::OK);
@@ -46,7 +46,7 @@ async fn admin_request(
     value: serde_json::Value,
 ) -> Response {
     app.clone()
-        .oneshot(with_peer(
+        .oneshot(
             Request::builder()
                 .method(method)
                 .uri(path)
@@ -58,7 +58,7 @@ async fn admin_request(
                 .header(header::CONTENT_TYPE, "application/json")
                 .body(Body::from(value.to_string()))
                 .unwrap(),
-        ))
+        )
         .await
         .unwrap()
 }
@@ -66,12 +66,12 @@ async fn admin_request(
 async fn public_home(app: &Router) -> serde_json::Value {
     let response = app
         .clone()
-        .oneshot(with_peer(
+        .oneshot(
             Request::builder()
                 .uri("/api/v1/family")
                 .body(Body::empty())
                 .unwrap(),
-        ))
+        )
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::OK);
@@ -100,14 +100,14 @@ async fn family_is_admin_owned_and_other_authors_stay_isolated() {
     ] {
         let response = app
             .clone()
-            .oneshot(with_peer(
+            .oneshot(
                 Request::builder()
                     .method(method)
                     .uri(path)
                     .header(header::CONTENT_TYPE, "application/json")
                     .body(Body::from(details(true).to_string()))
                     .unwrap(),
-            ))
+            )
             .await
             .unwrap();
         assert_eq!(
@@ -244,6 +244,10 @@ async fn duplicate_family_owners_are_rejected_without_rewriting_state() {
     close_fixture_pool(&pool).await;
     let database = directory.path().join("site.sqlite");
     let before = std::fs::read(&database).unwrap();
-    assert!(validate_existing_database(&database).await.is_err());
+    assert!(
+        validate_existing_database(&database, database.parent().unwrap())
+            .await
+            .is_err()
+    );
     assert_eq!(std::fs::read(&database).unwrap(), before);
 }

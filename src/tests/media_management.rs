@@ -4,7 +4,7 @@ use serde_json::{Value, json};
 async fn login(app: &Router) -> (String, String) {
     let response = app
         .clone()
-        .oneshot(with_peer(
+        .oneshot(
             Request::builder()
                 .method("POST")
                 .uri("/api/v1/auth/login")
@@ -16,7 +16,7 @@ async fn login(app: &Router) -> (String, String) {
                     r#"{"username":"admin","password":"TemporaryPassphrase123"}"#,
                 ))
                 .unwrap(),
-        ))
+        )
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::OK);
@@ -39,7 +39,7 @@ async fn admin(
     value: Value,
 ) -> Response {
     app.clone()
-        .oneshot(with_peer(
+        .oneshot(
             Request::builder()
                 .method(method)
                 .uri(path)
@@ -51,16 +51,14 @@ async fn admin(
                 .header(header::CONTENT_TYPE, "application/json")
                 .body(Body::from(value.to_string()))
                 .unwrap(),
-        ))
+        )
         .await
         .unwrap()
 }
 
 async fn get(app: &Router, path: &str) -> Response {
     app.clone()
-        .oneshot(with_peer(
-            Request::builder().uri(path).body(Body::empty()).unwrap(),
-        ))
+        .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
         .await
         .unwrap()
 }
@@ -69,7 +67,7 @@ async fn upload(app: &Router, session: &(String, String), marker: &str) -> Value
     let bytes = [b"\x89PNG\r\n\x1a\n".as_slice(), marker.as_bytes()].concat();
     let response = app
         .clone()
-        .oneshot(with_peer(
+        .oneshot(
             Request::builder()
                 .method("POST")
                 .uri("/api/v1/content/upload")
@@ -82,7 +80,7 @@ async fn upload(app: &Router, session: &(String, String), marker: &str) -> Value
                 .header("x-file-name", "fixture.png")
                 .body(Body::from(bytes))
                 .unwrap(),
-        ))
+        )
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::OK);
@@ -122,20 +120,20 @@ async fn unused_media_requires_auth_csrf_and_current_object_identity_then_really
     );
     let anonymous = app
         .clone()
-        .oneshot(with_peer(
+        .oneshot(
             Request::builder()
                 .method("DELETE")
                 .uri(&uri)
                 .header(header::CONTENT_TYPE, "application/json")
                 .body(Body::from(json!({"path":image["path"]}).to_string()))
                 .unwrap(),
-        ))
+        )
         .await
         .unwrap();
     assert_eq!(anonymous.status(), StatusCode::UNAUTHORIZED);
     let no_csrf = app
         .clone()
-        .oneshot(with_peer(
+        .oneshot(
             Request::builder()
                 .method("DELETE")
                 .uri(&uri)
@@ -146,7 +144,7 @@ async fn unused_media_requires_auth_csrf_and_current_object_identity_then_really
                 .header(header::CONTENT_TYPE, "application/json")
                 .body(Body::from(json!({"path":image["path"]}).to_string()))
                 .unwrap(),
-        ))
+        )
         .await
         .unwrap();
     assert_eq!(no_csrf.status(), StatusCode::FORBIDDEN);

@@ -1,9 +1,8 @@
 use super::PageResult;
-use crate::{ApiResult, AppError, AppState, absent, db_error, invalid, rate_limit};
-use axum::{Extension, Json, extract::State, http::StatusCode};
+use crate::{ApiResult, AppError, AppState, absent, db_error, invalid};
+use axum::{Json, extract::State, http::StatusCode};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::net::IpAddr;
 use xcss::server_cli::{ContractPath as Path, ContractQuery as Query};
 
 #[derive(Deserialize)]
@@ -25,12 +24,10 @@ pub(super) struct MessageCommentInput {
 
 pub(super) async fn create_comment(
     State(state): State<AppState>,
-    Extension(xcss::client_ip::ClientIp(visitor)): Extension<xcss::client_ip::ClientIp>,
     crate::ContractJson(input): crate::ContractJson<CommentInput>,
 ) -> ApiResult<Comment> {
     create_anonymous_comment(
         &state,
-        visitor,
         input.article_id,
         "article",
         MessageCommentInput {
@@ -44,19 +41,17 @@ pub(super) async fn create_comment(
 
 pub(super) async fn create_message_comment(
     State(state): State<AppState>,
-    Extension(xcss::client_ip::ClientIp(visitor)): Extension<xcss::client_ip::ClientIp>,
     crate::ContractJson(input): crate::ContractJson<MessageCommentInput>,
 ) -> ApiResult<Comment> {
-    create_anonymous_comment(&state, visitor, 0, "message", input).await
+    create_anonymous_comment(&state, 0, "message", input).await
 }
 
 pub(super) async fn create_love_comment(
     State(state): State<AppState>,
-    Extension(xcss::client_ip::ClientIp(visitor)): Extension<xcss::client_ip::ClientIp>,
     crate::ContractJson(input): crate::ContractJson<MessageCommentInput>,
 ) -> ApiResult<Comment> {
     let source = crate::site_author_id(&state.pool).await?;
-    create_anonymous_comment(&state, visitor, source, "love", input).await
+    create_anonymous_comment(&state, source, "love", input).await
 }
 
 fn valid_request_id(value: &str) -> bool {
@@ -71,7 +66,6 @@ fn valid_request_id(value: &str) -> bool {
 
 async fn create_anonymous_comment(
     state: &AppState,
-    visitor: IpAddr,
     source: i64,
     kind: &'static str,
     input: MessageCommentInput,
@@ -96,15 +90,15 @@ async fn create_anonymous_comment(
     hash.update(content.as_bytes());
     hash.update(parent.to_be_bytes());
     let request_hash = hash.finalize().to_vec();
-    // Serialize receipt lookup and insertion with the comment and its quota.
+    // Serialize receipt lookup and insertion with the comment.
     // A lost response, concurrent retry or process restart cannot create a second row.
     let mut transaction = state
         .pool
         .begin_with("BEGIN IMMEDIATE")
         .await
         .map_err(db_error)?;
-    // The article gate and comment insertion share the writer transaction.
-    // A concurrent hide, delete or comment-disable must fence new submissions.
+    // Gate and insert share the writer boundary so a queued request observes
+    // administrator changes to publication, comments, deletion or protection.
     if kind == "article" {
         let enabled: Option<i64> = sqlx::query_scalar("SELECT comment_status FROM article WHERE id=? AND deleted=0 AND view_status=1 AND password IS NULL")
             .bind(source).fetch_optional(&mut *transaction).await.map_err(db_error)?;
@@ -150,8 +144,6 @@ async fn create_anonymous_comment(
     } else {
         (None, None)
     };
-    let key = rate_limit::attempt_key("anonymous_comment", &visitor.to_string(), "");
-    rate_limit::record_attempt_on(&mut transaction, &key, 10).await?;
     let id = sqlx::query("INSERT INTO comment(source,type,parent_comment_id,user_id,floor_comment_id,parent_user_id,comment_content) VALUES(?,?,?,NULL,?,?,?)")
         .bind(source).bind(kind).bind(parent).bind(floor).bind(parent_user).bind(content)
         .execute(&mut *transaction).await.map_err(db_error)?.last_insert_rowid();

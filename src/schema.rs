@@ -4,8 +4,8 @@ use xcss::schema_identity::SchemaIdentity;
 pub fn current_identity() -> anyhow::Result<SchemaIdentity> {
     Ok(SchemaIdentity::new(
         "xocs",
-        "xocs-db-v4",
-        4,
+        "xocs-db-v5",
+        5,
         env!("XOCS_SCHEMA_SHA256"),
     )?)
 }

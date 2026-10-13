@@ -1,102 +1,127 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
-if [[ $# -ne 1 || ! "${1}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  echo "Usage: $0 v<major>.<minor>.<patch>" >&2
-  exit 2
-fi
-
-release_version="${1#v}"
-project_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-dist_dir="${project_dir}/dist"
-package_name="xocs-${release_version}-linux-x86_64"
-package_dir="${dist_dir}/${package_name}"
-archive="${dist_dir}/${package_name}.tar.gz"
-release_target="${XOCS_RELEASE_CARGO_TARGET_DIR:-${project_dir}/target}"
-if [[ "${release_target}" != /* ]]; then
-  echo 'XOCS_RELEASE_CARGO_TARGET_DIR must be an absolute directory.' >&2
-  exit 2
-fi
-binary="${release_target}/x86_64-unknown-linux-gnu/release/xocs"
-if [[ ! -x "${binary}" ]]; then
-  echo 'Build the Server with embedded Web resources before packaging.' >&2
-  exit 1
-fi
-
-if [[ -n "$(git -C "${project_dir}" status --porcelain)" ]]; then
-  echo 'Formal release packaging requires a clean, recorded source revision.' >&2
-  exit 1
-fi
-source_revision="$(git -C "${project_dir}" rev-parse HEAD)"
-if [[ "$(git -C "${project_dir}" cat-file -t "refs/tags/v${release_version}" 2>/dev/null || true)" != tag ]] ||
-   [[ "$(git -C "${project_dir}" rev-parse "refs/tags/v${release_version}^{commit}" 2>/dev/null || true)" != "${source_revision}" ]]; then
-  echo 'Formal release packaging requires an annotated version tag on the exact source revision.' >&2
-  exit 1
-fi
-for output in "${package_dir}" "${archive}" "${archive}.sha256"; do
-  if [[ -e "${output}" || -L "${output}" ]]; then
-    echo "Refusing to reuse release output: ${output}" >&2
-    exit 1
-  fi
+source_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
+product="xocs"
+output=""
+signing_key="${XSSI_SIGNING_KEY:-}"
+while (($#)); do
+  case "$1" in
+    --output-dir) output="${2:?missing output directory}"; shift 2 ;;
+    --signing-key) signing_key="${2:?missing signing key}"; shift 2 ;;
+    /*) [[ -z "$output" ]] || { echo 'Duplicate output directory' >&2; exit 2; }; output="$1"; shift ;;
+    *) echo 'Usage: package-release.sh --output-dir ABSOLUTE --signing-key PEM' >&2; exit 2 ;;
+  esac
 done
-mkdir -p "${dist_dir}"
-staging_dir="$(mktemp -d "${dist_dir}/.xocs-package.XXXXXXXX")"
-trap 'rm -rf -- "${staging_dir}"' EXIT
-staged_package="${staging_dir}/${package_name}"
-mkdir -p "${staged_package}/bin" "${staged_package}/share" "${staged_package}/systemd" "${staged_package}/config"
-install -m 0755 "${binary}" "${staged_package}/bin/xocs"
-"${staged_package}/bin/xocs" release-identity > "${staged_package}/share/release-identity.json"
-"${staged_package}/bin/xocs" state-contract > "${staged_package}/share/state-contract.json"
-"${staged_package}/bin/xocs" web-assets > "${staged_package}/share/web-assets.json"
-python3 - "${staged_package}/share/release-identity.json" "${release_version}" "${source_revision}" "${staged_package}/bin/xocs" <<'PY'
-import hashlib, json, pathlib, sys
-with open(sys.argv[1], encoding='utf-8') as stream:
-    identity = json.load(stream)
-if identity['product'] != 'xocs' or identity['version'] != sys.argv[2] or identity['source_revision'] != sys.argv[3] or identity['target'] != 'x86_64-unknown-linux-gnu':
-    raise SystemExit('The binary identity does not match the immutable release inputs.')
-with open(sys.argv[4], 'rb') as stream:
-    digest = hashlib.file_digest(stream, 'sha256').hexdigest()
-with open(sys.argv[4], 'rb') as stream:
-    header = stream.read(20)
-if header[:6] != b'\x7fELF\x02\x01' or header[18:20] != b'\x3e\x00':
-    raise SystemExit('The packaged binary is not Linux x86_64 ELF.')
-pathlib.Path(sys.argv[1]).with_name('binary.sha256').write_text(digest + '  bin/xocs\n', encoding='ascii')
-PY
-install -m 0755 "${project_dir}/deploy/linux-x86_64/install.sh" "${staged_package}/install.sh"
-install -m 0644 "${project_dir}/deploy/linux-x86_64/README.md" "${staged_package}/README.md"
-install -m 0644 "${project_dir}/deploy/linux-x86_64/xocs.service" "${staged_package}/systemd/xocs.service"
-install -m 0644 "${project_dir}/deploy/linux-x86_64/config.json.example" "${staged_package}/config/config.json.example"
-install -m 0644 "${project_dir}/LICENSE" "${staged_package}/LICENSE"
-printf '%s\n' "${release_version}" > "${staged_package}/VERSION"
-
-set -o noclobber
-tar --create --gzip --file - --directory "${staging_dir}" "${package_name}" > "${staging_dir}/${package_name}.tar.gz"
-(
-  cd -- "${staging_dir}"
-  sha256sum "${package_name}.tar.gz" > "${package_name}.tar.gz.sha256"
-)
-python3 - "${staging_dir}" "${dist_dir}" "${package_name}" <<'PY'
-import ctypes, os, pathlib, sys
-source, destination, name = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2]), sys.argv[3]
-for path in source.rglob('*'):
-    if path.is_file():
-        with path.open('rb') as stream:
-            os.fsync(stream.fileno())
-for path in sorted((p for p in source.rglob('*') if p.is_dir()), reverse=True):
-    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
-    try: os.fsync(fd)
-    finally: os.close(fd)
-# Publish only the verified complete directory. RENAME_NOREPLACE also rejects a race.
-libc = ctypes.CDLL(None, use_errno=True)
-libc.renameat2.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
-if libc.renameat2(-100, os.fsencode(source/name), -100, os.fsencode(destination/name), 1):
-    raise OSError(ctypes.get_errno(), 'Could not publish the verified package without overwriting')
-for suffix in ['.tar.gz', '.tar.gz.sha256']:
-    os.link(source/(name+suffix), destination/(name+suffix), follow_symlinks=False)
-fd = os.open(destination, os.O_RDONLY | os.O_DIRECTORY)
-try: os.fsync(fd)
-finally: os.close(fd)
-PY
-
-echo "Created ${archive}"
-echo "Created ${archive}.sha256"
+[[ "$output" = /* && -d "$output" && -n "$signing_key" ]] || { echo 'Existing absolute output directory and signing key are required.' >&2; exit 2; }
+[[ -z "$(git -C "$source_root" status --porcelain=v1 --untracked-files=all)" ]] || { echo 'Release source must be clean.' >&2; exit 1; }
+source_revision="$(git -C "$source_root" rev-parse --verify HEAD)"
+version="$(python3 - "$source_root/Cargo.toml" <<'VERSION'
+import sys, tomllib
+with open(sys.argv[1], 'rb') as stream: print(tomllib.load(stream)['package']['version'])
+VERSION
+)"
+[[ "$(git -C "$source_root" cat-file -t "refs/tags/v$version")" = tag && "$(git -C "$source_root" rev-parse "refs/tags/v$version^{commit}")" = "$source_revision" ]] || { echo 'A source-bound annotated release tag is required.' >&2; exit 1; }
+xssi_revision="$(sed -n 's/^git_rev=//p' "$source_root/config/xssi.lock")"
+[[ "$xssi_revision" =~ ^[0-9a-f]{40}$ && "$xssi_revision" != 0000000000000000000000000000000000000000 ]] || { echo 'Pin the reviewed xssi commit before building a release.' >&2; exit 1; }
+archive="$product-$version-linux-x86_64.tar.gz"
+[[ ! -e "$output/$archive" && ! -L "$output/$archive" && ! -e "$output/SHA256SUMS" && ! -L "$output/SHA256SUMS" ]] || { echo 'Refusing to overwrite release assets.' >&2; exit 1; }
+work="$(mktemp -d "$output/.$product-package.XXXXXXXX")"
+trap 'rm -rf -- "$work"' EXIT
+# Build only immutable, verified source objects; dependencies cannot mutate the
+# working tree that supplies the source-bound identity or packaging inputs.
+original_source="$source_root"
+mkdir -m 0700 "$work/source"
+git -C "$original_source" archive --format=tar --output="$work/source.tar" "$source_revision"
+python3 - "$original_source" "$source_revision" "$work/source.tar" "$work/source" <<'SOURCE'
+import pathlib,subprocess,sys,tarfile
+repository,revision,archive,destination=sys.argv[1:]
+raw=subprocess.check_output(['git','-C',repository,'ls-tree','-rz','--full-tree',revision])
+expected={}
+for record in raw.split(b'\0'):
+    if not record: continue
+    identity,name=record.split(b'\t',1);mode,kind,object_id=identity.split()
+    if mode not in (b'100644',b'100755') or kind!=b'blob': raise SystemExit('Source tree contains an unsupported entry')
+    expected[name.decode('utf-8')]=(mode,object_id)
+seen=set()
+with tarfile.open(archive,'r:') as source:
+    for item in source.getmembers():
+        relative=pathlib.PurePosixPath(item.name)
+        if relative.is_absolute() or '..' in relative.parts: raise SystemExit('Unsafe source archive path')
+        target=pathlib.Path(destination)/relative
+        if item.isdir(): target.mkdir(parents=True,exist_ok=True);continue
+        if not item.isfile() or item.name not in expected or item.name in seen: raise SystemExit('Unexpected source entry')
+        mode,object_id=expected[item.name]
+        content=source.extractfile(item).read()
+        trusted=subprocess.check_output(['git','-C',repository,'cat-file','blob',object_id.decode()])
+        if content!=trusted: raise SystemExit('Source archive bytes differ from the commit')
+        target.parent.mkdir(parents=True,exist_ok=True)
+        target.write_bytes(content);target.chmod(0o755 if mode==b'100755' else 0o644)
+        seen.add(item.name)
+if seen!=set(expected): raise SystemExit('Source archive omitted committed files')
+SOURCE
+source_root="$work/source"
+# Bind the verified private source snapshot to its own exact Git checkout.
+git -C "$source_root" init --quiet
+git -C "$source_root" fetch --quiet --no-tags "$original_source" "$source_revision"
+git -C "$source_root" reset --quiet --soft FETCH_HEAD
+git -C "$source_root" read-tree HEAD
+[[ "$(git -C "$source_root" rev-parse HEAD)" = "$source_revision" && -z "$(git -C "$source_root" status --porcelain=v1 --untracked-files=all)" ]]
+mkdir -p "$work/stage/bin" "$work/stage/share/systemd" "$work/stage/config" "$work/metadata"
+git init --quiet "$work/xssi"
+git -C "$work/xssi" remote add origin https://github.com/isarmg/xssi.git
+python3 - "$work/xssi" "$xssi_revision" <<'FETCH'
+import base64,os,subprocess,sys
+root,revision=sys.argv[1:]
+environment=os.environ.copy()
+# Scope optional read-only private-repository authentication to this Git fetch.
+# The token is neither put in URLs nor passed as a command argument or logged.
+token=environment.pop('XSSI_REPOSITORY_TOKEN','')
+if token:
+    count=int(environment.get('GIT_CONFIG_COUNT','0'))
+    environment[f'GIT_CONFIG_KEY_{count}']='http.https://github.com/isarmg/xssi.git.extraheader'
+    encoded=base64.b64encode(('x-access-token:'+token).encode()).decode()
+    environment[f'GIT_CONFIG_VALUE_{count}']='AUTHORIZATION: basic '+encoded
+    environment['GIT_CONFIG_COUNT']=str(count+1)
+result=subprocess.run(['git','-C',root,'fetch','--quiet','--depth=1','origin',revision],env=environment)
+if result.returncode: raise SystemExit('Unable to fetch the pinned xssi source; verify read-only repository access')
+FETCH
+unset XSSI_REPOSITORY_TOKEN
+git -C "$work/xssi" checkout --quiet --detach FETCH_HEAD
+[[ "$(git -C "$work/xssi" rev-parse HEAD)" = "$xssi_revision" ]]
+npm ci --prefix "$source_root/web"
+builder="$source_root/web/node_modules/.bin/xcss-build-server"
+export XOCS_SOURCE_REVISION="$source_revision"
+export XCSS_WEB_DIST="$source_root/web/dist"
+export XSSI_BUILD_METADATA_DIR="$work/metadata"
+"$builder" --config "$source_root/xcss-web-build.json" --mode release --no-install --source-revision "$source_revision" > "$work/build.log"
+server_binary="$(tail -n 1 "$work/build.log")"
+[[ "$server_binary" = /* && -f "$server_binary" && ! -L "$server_binary" && -x "$server_binary" ]] || { echo 'Builder did not return a physical executable.' >&2; exit 1; }
+install -m 0755 "$server_binary" "$work/stage/bin/$product"
+python3 - "$server_binary.xssi-web-build.json" "$work/stage/bin/$product" "$product" "$source_revision" <<'RECEIPT'
+import hashlib,json,pathlib,sys
+receipt_file,binary_file,product,revision=sys.argv[1:]
+receipt=json.loads(pathlib.Path(receipt_file).read_bytes())
+identity=receipt['identity']
+if receipt['format']!='xssi-web-build-receipt-v1' or identity['product']!=product or identity['source_revision']!=revision or identity['target']!='x86_64-unknown-linux-gnu':
+    raise SystemExit('Staged binary differs from its source-bound build receipt')
+with open(binary_file,'rb') as stream: digest=hashlib.file_digest(stream,'sha256').hexdigest()
+if digest!=receipt['binary_sha256']: raise SystemExit('Staged binary was replaced after verification')
+RECEIPT
+install -m 0644 "$work/metadata/$product-state-contract.json" "$work/stage/share/state-contract.json"
+install -m 0644 "$work/metadata/$product-web-assets.json" "$work/stage/share/web-assets.json"
+install -m 0644 "$source_root/LICENSE" "$work/stage/share/LICENSE"
+install -m 0644 "$source_root/deploy/linux-x86_64/config.json.example" "$work/stage/config/config.json.example"
+export XSSI_SOURCE_REVISION="$source_revision"
+export XSSI_IDENTITY_FILE="$work/metadata/$product-identity.json"
+export XSSI_SCHEMA_FILE="$work/metadata/$product-schema.json"
+export XSSI_SIGNING_KEY="$signing_key"
+bash "$work/xssi/scripts/build-package.sh" "$product" "$source_root" "$work/stage"
+[[ "$(git -C "$source_root" rev-parse HEAD)" = "$source_revision" && -z "$(git -C "$source_root" status --porcelain=v1 --untracked-files=all)" ]] || { echo 'Private source snapshot changed during build.' >&2; exit 1; }
+[[ "$(git -C "$original_source" rev-parse HEAD)" = "$source_revision" && "$(git -C "$original_source" rev-parse "refs/tags/v$version^{commit}")" = "$source_revision" ]] || { echo 'Release identity changed during build.' >&2; exit 1; }
+[[ -z "$(git -C "$original_source" status --porcelain=v1 --untracked-files=all)" ]] || { echo 'Source changed during build.' >&2; exit 1; }
+epoch="$(git -C "$original_source" show -s --format=%ct "$source_revision")"
+tar --sort=name --mtime="@$epoch" --owner=0 --group=0 --numeric-owner -C "$work/stage" -czf "$work/$archive" .
+(cd "$work" && sha256sum "$archive" > SHA256SUMS)
+# Publish without replacing any existing release asset, even if another build races.
+ln "$work/SHA256SUMS" "$output/SHA256SUMS"
+ln "$work/$archive" "$output/$archive"

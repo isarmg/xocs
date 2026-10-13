@@ -6,11 +6,9 @@ use crate::{
 use axum::{Router, http::StatusCode, response::Response};
 use axum::{
     body::{Body, to_bytes},
-    extract::ConnectInfo,
     http::{Request, header},
 };
 use sqlx::SqlitePool;
-use std::net::SocketAddr;
 use std::{os::unix::fs::PermissionsExt, sync::Arc};
 use tower::ServiceExt;
 use xcss::admin_auth::AdministratorOriginMode;
@@ -18,19 +16,10 @@ use xcss::admin_core::AdministratorService;
 use xcss::admin_sqlite::SqliteAdministratorStore;
 
 async fn setup() -> (tempfile::TempDir, Router, SqlitePool) {
-    setup_with_proxies(Vec::new()).await
+    setup_with_pool_limit(8).await
 }
 
-async fn setup_with_proxies(
-    trusted_proxies: Vec<String>,
-) -> (tempfile::TempDir, Router, SqlitePool) {
-    setup_with_pool_limit(trusted_proxies, 8).await
-}
-
-async fn setup_with_pool_limit(
-    trusted_proxies: Vec<String>,
-    limit: u32,
-) -> (tempfile::TempDir, Router, SqlitePool) {
+async fn setup_with_pool_limit(limit: u32) -> (tempfile::TempDir, Router, SqlitePool) {
     let dir = tempfile::tempdir().unwrap();
     std::fs::set_permissions(dir.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
     let db = dir.path().join("site.sqlite");
@@ -51,7 +40,8 @@ async fn setup_with_pool_limit(
         origin: AdministratorOriginMode::LoopbackDevelopmentHttp,
         media: dir.path().to_path_buf(),
         media_operations: Arc::new(tokio::sync::Mutex::new(())),
-        trusted_proxies,
+        public_mutations: Arc::new(crate::app::PublicMutationCapacity::default()),
+        password_slots: Arc::new(tokio::sync::Semaphore::new(2)),
     };
     let app = router(state, Some(dir.path().to_path_buf())).unwrap();
     (dir, app, pool)
@@ -84,12 +74,12 @@ async fn native_value_limits_preserve_valid_articles_and_survive_connection_repl
     sqlx::query("INSERT INTO article(id,user_id,sort_id,label_id,article_title,article_content) VALUES(77,1,0,0,'large current article',?)")
         .bind(&content).execute(&pool).await.unwrap();
     let response = app
-        .oneshot(with_peer(
+        .oneshot(
             Request::builder()
                 .uri("/api/v1/articles/77")
                 .body(Body::empty())
                 .unwrap(),
-        ))
+        )
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::OK);
@@ -133,7 +123,11 @@ async fn schema_drift_is_rejected_without_changing_the_source_generation() {
     let before = std::fs::read(&database).unwrap();
     let sidecars = ["-wal", "-shm", "-journal"]
         .map(|suffix| std::fs::read(format!("{}{suffix}", database.display())).ok());
-    assert!(validate_existing_database(&database).await.is_err());
+    assert!(
+        validate_existing_database(&database, database.parent().unwrap())
+            .await
+            .is_err()
+    );
     assert_eq!(std::fs::read(&database).unwrap(), before);
     assert_eq!(
         sidecars,
@@ -153,7 +147,9 @@ async fn initialization_publishes_only_complete_data_and_never_overwrites() {
     initialize_new_database(&database, "admin", "TemporaryPassphrase123")
         .await
         .unwrap();
-    validate_existing_database(&database).await.unwrap();
+    validate_existing_database(&database, database.parent().unwrap())
+        .await
+        .unwrap();
     let before = std::fs::read(&database).unwrap();
     assert!(
         initialize_new_database(&database, "other-admin", "AnotherPassphrase123")
@@ -167,7 +163,7 @@ async fn initialization_publishes_only_complete_data_and_never_overwrites() {
 async fn anonymous_contract_rejects_forged_identity_without_echoing_sensitive_values() {
     let (_directory, app, _pool) = setup().await;
     let response = app
-        .oneshot(with_peer(
+        .oneshot(
             Request::builder()
                 .method("POST")
                 .uri("/api/v1/tree-hole/guest")
@@ -176,7 +172,7 @@ async fn anonymous_contract_rejects_forged_identity_without_echoing_sensitive_va
                     r#"{"message":"SensitivePassphrase123","user_id":42}"#,
                 ))
                 .unwrap(),
-        ))
+        )
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
@@ -236,7 +232,7 @@ async fn public_rejections_keep_one_request_identity_and_safe_error_contract() {
     ] {
         let response = app
             .clone()
-            .oneshot(with_peer(
+            .oneshot(
                 Request::builder()
                     .method(method)
                     .uri(uri)
@@ -244,7 +240,7 @@ async fn public_rejections_keep_one_request_identity_and_safe_error_contract() {
                     .header("x-request-id", "product-check-123")
                     .body(Body::from(payload))
                     .unwrap(),
-            ))
+            )
             .await
             .unwrap();
         assert_eq!(response.status(), expected, "{uri}");
@@ -259,13 +255,6 @@ async fn public_rejections_keep_one_request_identity_and_safe_error_contract() {
         assert!(!value.to_string().contains("invalid-secret-json"));
     }
 }
-fn with_peer(mut request: Request<Body>) -> Request<Body> {
-    request.extensions_mut().insert(ConnectInfo(
-        "127.0.0.1:45678".parse::<SocketAddr>().unwrap(),
-    ));
-    request
-}
-
 #[tokio::test]
 async fn public_visibility_and_password_are_enforced() {
     let (_dir, app, pool) = setup().await;
@@ -274,12 +263,12 @@ async fn public_visibility_and_password_are_enforced() {
         .bind(hash).execute(&pool).await.unwrap();
     let list = app
         .clone()
-        .oneshot(with_peer(
+        .oneshot(
             Request::builder()
                 .uri("/api/v1/articles")
                 .body(Body::empty())
                 .unwrap(),
-        ))
+        )
         .await
         .unwrap();
     assert_eq!(list.status(), StatusCode::OK);
@@ -325,54 +314,47 @@ async fn public_visibility_and_password_are_enforced() {
     assert_eq!(body_json(access).await["password_required"], 1);
     let bad = app
         .clone()
-        .oneshot(with_peer(
+        .oneshot(
             Request::builder()
                 .method("POST")
                 .uri("/api/v1/articles/2/unlock")
                 .header("content-type", "application/json")
                 .body(Body::from(r#"{"password":"wrong"}"#))
                 .unwrap(),
-        ))
+        )
         .await
         .unwrap();
     assert_eq!(bad.status(), StatusCode::FORBIDDEN);
     let good = app
         .clone()
-        .oneshot(with_peer(
+        .oneshot(
             Request::builder()
                 .method("POST")
                 .uri("/api/v1/articles/2/unlock")
                 .header("content-type", "application/json")
                 .body(Body::from(r#"{"password":"ProtectedPassphrase123"}"#))
                 .unwrap(),
-        ))
+        )
         .await
         .unwrap();
     assert_eq!(good.status(), StatusCode::OK);
     let body = body_json(good).await.to_string();
     assert!(body.contains("private body"));
     assert!(!body.contains("ProtectedPassphrase123"));
-    for attempt in 1..=11 {
+    for _attempt in 1..=11 {
         let response = app
             .clone()
-            .oneshot(with_peer(
+            .oneshot(
                 Request::builder()
                     .method("POST")
                     .uri("/api/v1/articles/2/unlock")
                     .header("content-type", "application/json")
                     .body(Body::from(r#"{"password":"wrong"}"#))
                     .unwrap(),
-            ))
+            )
             .await
             .unwrap();
-        assert_eq!(
-            response.status(),
-            if attempt <= 10 {
-                StatusCode::FORBIDDEN
-            } else {
-                StatusCode::TOO_MANY_REQUESTS
-            }
-        );
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
     }
 }
 
@@ -400,7 +382,7 @@ async fn anonymous_post(app: &Router, path: &str, mut body: serde_json::Value) -
         body["request_id"] = format!("00000000-0000-4000-8000-{id:012x}").into();
     }
     app.clone()
-        .oneshot(with_peer(
+        .oneshot(
             Request::builder()
                 .method("POST")
                 .uri(path)
@@ -408,7 +390,7 @@ async fn anonymous_post(app: &Router, path: &str, mut body: serde_json::Value) -
                 .header("cookie", "xocs_member=obsolete-cookie")
                 .body(Body::from(body.to_string()))
                 .unwrap(),
-        ))
+        )
         .await
         .unwrap()
 }
@@ -441,14 +423,14 @@ async fn removed_account_application_and_chat_routes_are_not_available() {
     ] {
         let response = app
             .clone()
-            .oneshot(with_peer(
+            .oneshot(
                 Request::builder()
                     .method(method)
                     .uri(path)
                     .header("content-type", "application/json")
                     .body(Body::from("{}"))
                     .unwrap(),
-            ))
+            )
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::NOT_FOUND, "{path}");
@@ -472,12 +454,12 @@ async fn public_journal_pagination_keeps_author_entries_and_hides_private_entrie
     for (page, content) in [(1, "Second public entry"), (2, "First public entry")] {
         let response = app
             .clone()
-            .oneshot(with_peer(
+            .oneshot(
                 Request::builder()
                     .uri(format!("/api/v1/notes/page?page={page}&size=1"))
                     .body(Body::empty())
                     .unwrap(),
-            ))
+            )
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::OK);
@@ -539,136 +521,73 @@ async fn comments_and_replies_are_anonymous_and_stay_in_their_source() {
 }
 
 #[tokio::test]
-async fn guest_tree_hole_visitors_have_independent_quotas_behind_a_configured_proxy() {
-    let (_dir, app, pool) = setup_with_proxies(vec!["127.0.0.1".into()]).await;
-    let request = |visitor: &str| {
-        with_peer(
-            Request::builder()
-                .method("POST")
-                .uri("/api/v1/tree-hole/guest")
-                .header("content-type", "application/json")
-                .header("x-forwarded-for", visitor)
-                .body(Body::from(r#"{"message":"A visitor's message"}"#))
-                .unwrap(),
-        )
-    };
-    for visitor in 1..=6 {
+async fn anonymous_guest_writes_do_not_create_address_frequency_buckets() {
+    let (_dir, app, pool) = setup().await;
+    for index in 0..12 {
         let response = app
             .clone()
-            .oneshot(request(&format!("192.0.2.{visitor}")))
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/tree-hole/guest")
+                    .header("content-type", "application/json")
+                    .header("x-forwarded-for", "192.0.2.1")
+                    .body(Body::from(format!(r#"{{"message":"Message {index}"}}"#)))
+                    .unwrap(),
+            )
             .await
             .unwrap();
-        assert_eq!(response.status(), StatusCode::OK, "visitor {visitor}");
+        assert_eq!(response.status(), StatusCode::OK);
         assert!(body_json(response).await["user_id"].is_null());
     }
-    for attempt in 2..=6 {
-        let response = app.clone().oneshot(request("192.0.2.1")).await.unwrap();
-        assert_eq!(
-            response.status(),
-            if attempt <= 5 {
-                StatusCode::OK
-            } else {
-                StatusCode::TOO_MANY_REQUESTS
-            },
-            "attempt {attempt} by the same visitor"
-        );
-    }
     assert_eq!(
         sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tree_hole")
             .fetch_one(&pool)
             .await
             .unwrap(),
-        10
+        12
     );
     assert_eq!(
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM member_login_failures")
-            .fetch_one(&pool)
-            .await
-            .unwrap(),
-        6
+        sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM sqlite_schema WHERE name='member_login_failures'"
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap(),
+        0
     );
 }
 
 #[tokio::test]
-async fn guest_tree_hole_proxy_headers_are_strict_and_untrusted_headers_do_not_bypass_limits() {
-    let (_dir, app, pool) = setup_with_proxies(vec!["127.0.0.1".into()]).await;
-    for headers in [
-        vec!["unknown"],
-        vec!["192.0.2.1, invalid"],
-        vec![""],
-        vec!["192.0.2.1", "invalid"],
-    ] {
-        let mut builder = Request::builder()
-            .method("POST")
-            .uri("/api/v1/tree-hole/guest")
-            .header("content-type", "application/json");
-        for value in headers {
-            builder = builder.header("x-forwarded-for", value);
-        }
+async fn arbitrary_forwarding_headers_do_not_change_guest_business_behavior() {
+    let (_dir, app, pool) = setup().await;
+    for value in ["unknown", "192.0.2.1, invalid", "", "192.0.2.1"] {
         let response = app
             .clone()
-            .oneshot(with_peer(
-                builder
-                    .body(Body::from(r#"{"message":"Invalid proxy"}"#))
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/tree-hole/guest")
+                    .header("content-type", "application/json")
+                    .header("x-forwarded-for", value)
+                    .body(Body::from(r#"{"message":"Header independent message"}"#))
                     .unwrap(),
-            ))
+            )
             .await
             .unwrap();
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(response.status(), StatusCode::OK);
     }
     assert_eq!(
         sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tree_hole")
             .fetch_one(&pool)
             .await
             .unwrap(),
-        0
-    );
-    assert_eq!(
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM member_login_failures")
-            .fetch_one(&pool)
-            .await
-            .unwrap(),
-        0
-    );
-    for attempt in 1..=6 {
-        let mut request = Request::builder()
-            .method("POST")
-            .uri("/api/v1/tree-hole/guest")
-            .header("content-type", "application/json")
-            .header("x-forwarded-for", format!("198.51.100.{attempt}"))
-            .body(Body::from(r#"{"message":"Untrusted identity"}"#))
-            .unwrap();
-        request.extensions_mut().insert(ConnectInfo(
-            "203.0.113.1:1234".parse::<SocketAddr>().unwrap(),
-        ));
-        let response = app.clone().oneshot(request).await.unwrap();
-        assert_eq!(
-            response.status(),
-            if attempt <= 5 {
-                StatusCode::OK
-            } else {
-                StatusCode::TOO_MANY_REQUESTS
-            }
-        );
-    }
-    assert_eq!(
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tree_hole")
-            .fetch_one(&pool)
-            .await
-            .unwrap(),
-        5
-    );
-    assert_eq!(
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM member_login_failures")
-            .fetch_one(&pool)
-            .await
-            .unwrap(),
-        1
+        4
     );
 }
 
 #[tokio::test]
-async fn anonymous_comments_enforce_content_article_visibility_and_ip_limits() {
+async fn anonymous_comments_enforce_content_and_article_visibility() {
     let (_directory, app, pool) = setup().await;
     sqlx::query("INSERT INTO article(id,user_id,sort_id,label_id,article_title,article_content,view_status,comment_status,password) VALUES(1,1,0,0,'Open','Body',1,1,NULL),(2,1,0,0,'Closed','Body',1,0,NULL),(3,1,0,0,'Hidden','Body',0,1,NULL),(4,1,0,0,'Protected','Body',1,1,'hash')")
         .execute(&pool).await.unwrap();
@@ -715,28 +634,21 @@ async fn anonymous_comments_enforce_content_article_visibility_and_ip_limits() {
             serde_json::json!({"content":format!("Message {attempt}")}),
         )
         .await;
-        assert_eq!(
-            response.status(),
-            if attempt <= 10 {
-                StatusCode::OK
-            } else {
-                StatusCode::TOO_MANY_REQUESTS
-            }
-        );
+        assert_eq!(response.status(), StatusCode::OK);
     }
     let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM comment")
         .fetch_one(&pool)
         .await
         .unwrap();
-    assert_eq!(count, 10);
+    assert_eq!(count, 11);
     let restricted_delete = app
-        .oneshot(with_peer(
+        .oneshot(
             Request::builder()
                 .method("DELETE")
                 .uri("/api/v1/content/comments/1")
                 .body(Body::empty())
                 .unwrap(),
-        ))
+        )
         .await
         .unwrap();
     assert_eq!(restricted_delete.status(), StatusCode::UNAUTHORIZED);
@@ -804,9 +716,8 @@ async fn search_ranks_titles_and_hides_protected_body_matches() {
     assert_eq!(body_json(after).await["total"], 1);
 }
 
-async fn comment_from(
+async fn submit_message_comment(
     app: &Router,
-    peer: &str,
     forwarded: Option<&str>,
     request_id: &str,
     content: &str,
@@ -818,7 +729,7 @@ async fn comment_from(
     if let Some(ip) = forwarded {
         request = request.header("x-forwarded-for", ip);
     }
-    let mut request = request
+    let request = request
         .body(Body::from(
             serde_json::json!({
                 "request_id": request_id, "content": content,
@@ -826,9 +737,6 @@ async fn comment_from(
             .to_string(),
         ))
         .unwrap();
-    request
-        .extensions_mut()
-        .insert(ConnectInfo(peer.parse::<SocketAddr>().unwrap()));
     app.clone().oneshot(request).await.unwrap()
 }
 
@@ -837,100 +745,24 @@ fn comment_request_id(id: u64) -> String {
 }
 
 #[tokio::test]
-async fn comment_proxy_policy_is_explicit_and_visitors_have_independent_quotas() {
-    let (_dir, app, _pool) = setup_with_proxies(vec!["127.0.0.1".into()]).await;
-    for id in 1..=11 {
-        let visitor = format!("192.0.2.{id}");
-        assert_eq!(
-            comment_from(
-                &app,
-                "127.0.0.1:1234",
-                Some(&visitor),
-                &comment_request_id(id),
-                "Independent visitor"
-            )
-            .await
-            .status(),
-            StatusCode::OK
-        );
+async fn comments_ignore_network_identity_and_keep_submission_idempotency() {
+    let (_dir, app, pool) = setup().await;
+    for (index, forwarded) in [Some(""), Some("unknown"), Some("192.0.2.1, invalid"), None]
+        .into_iter()
+        .enumerate()
+    {
+        let id = comment_request_id(index as u64 + 100);
+        for _ in 0..2 {
+            let response = submit_message_comment(&app, forwarded, &id, "Same submission").await;
+            assert_eq!(response.status(), StatusCode::OK);
+        }
     }
-    for id in 12..=21 {
-        assert_eq!(
-            comment_from(
-                &app,
-                "127.0.0.1:1234",
-                Some("192.0.2.1"),
-                &comment_request_id(id),
-                "Same visitor"
-            )
-            .await
-            .status(),
-            if id < 21 {
-                StatusCode::OK
-            } else {
-                StatusCode::TOO_MANY_REQUESTS
-            }
-        );
-    }
-    for invalid in [Some(""), Some("unknown"), Some("192.0.2.1, invalid")] {
-        assert_eq!(
-            comment_from(
-                &app,
-                "127.0.0.1:1234",
-                invalid,
-                &comment_request_id(22),
-                "Invalid proxy identity"
-            )
-            .await
-            .status(),
-            StatusCode::BAD_REQUEST
-        );
-    }
-    // The same forwarding header from an untrusted immediate peer has no effect.
-    for id in 1..=11 {
-        let visitor = format!("198.51.100.{id}");
-        assert_eq!(
-            comment_from(
-                &app,
-                "203.0.113.1:1234",
-                Some(&visitor),
-                &comment_request_id(100 + id),
-                "Untrusted header"
-            )
-            .await
-            .status(),
-            if id <= 10 {
-                StatusCode::OK
-            } else {
-                StatusCode::TOO_MANY_REQUESTS
-            }
-        );
-    }
-    // Missing forwarded headers use the actual peer; multiple trusted hops are
-    // resolved by the shared boundary middleware, never the content handlers.
     assert_eq!(
-        comment_from(
-            &app,
-            "127.0.0.1:1234",
-            None,
-            &comment_request_id(200),
-            "No forwarded header"
-        )
-        .await
-        .status(),
-        StatusCode::OK
-    );
-    assert_eq!(
-        comment_from(
-            &app,
-            "127.0.0.1:1234",
-            Some("198.51.100.10, 127.0.0.1"),
-            &comment_request_id(201),
-            "Trusted chain"
-        )
-        .await
-        .status(),
-        StatusCode::OK
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM comment")
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+        4
     );
 }
 
@@ -939,20 +771,15 @@ async fn direct_comments_ignore_forwarding_headers_by_default() {
     let (_dir, app, _pool) = setup().await;
     for id in 1..=11 {
         assert_eq!(
-            comment_from(
+            submit_message_comment(
                 &app,
-                "127.0.0.1:1234",
                 Some(&format!("192.0.2.{id}")),
                 &comment_request_id(id),
                 "Direct visitor"
             )
             .await
             .status(),
-            if id <= 10 {
-                StatusCode::OK
-            } else {
-                StatusCode::TOO_MANY_REQUESTS
-            }
+            StatusCode::OK
         );
     }
 }
@@ -962,8 +789,8 @@ async fn comment_submission_retries_survive_concurrency_restart_and_deletion() {
     let (dir, app, pool) = setup().await;
     let id = comment_request_id(1);
     let (first, second) = tokio::join!(
-        comment_from(&app, "127.0.0.1:1234", None, &id, "One submission"),
-        comment_from(&app, "127.0.0.1:1234", None, &id, "One submission"),
+        submit_message_comment(&app, None, &id, "One submission"),
+        submit_message_comment(&app, None, &id, "One submission"),
     );
     assert_eq!(first.status(), StatusCode::OK);
     assert_eq!(second.status(), StatusCode::OK);
@@ -977,29 +804,13 @@ async fn comment_submission_retries_survive_concurrency_restart_and_deletion() {
         1
     );
     assert_eq!(
-        sqlx::query_scalar::<_, i64>("SELECT failures FROM member_login_failures")
-            .fetch_one(&pool)
-            .await
-            .unwrap(),
-        1
-    );
-    assert_eq!(
-        comment_from(&app, "127.0.0.1:1234", None, &id, "Changed payload")
+        submit_message_comment(&app, None, &id, "Changed payload")
             .await
             .status(),
         StatusCode::CONFLICT
     );
     // Dropping a committed response models a connection lost after commit.
-    drop(
-        comment_from(
-            &app,
-            "127.0.0.1:1234",
-            None,
-            &comment_request_id(2),
-            "Lost response",
-        )
-        .await,
-    );
+    drop(submit_message_comment(&app, None, &comment_request_id(2), "Lost response").await);
     drop(app);
     close_fixture_pool(&pool).await;
     let pool = open_database(&dir.path().join("site.sqlite"), false)
@@ -1015,19 +826,14 @@ async fn comment_submission_retries_survive_concurrency_restart_and_deletion() {
             origin: AdministratorOriginMode::LoopbackDevelopmentHttp,
             media: dir.path().to_path_buf(),
             media_operations: Arc::new(tokio::sync::Mutex::new(())),
-            trusted_proxies: Vec::new(),
+            public_mutations: Arc::new(crate::app::PublicMutationCapacity::default()),
+            password_slots: Arc::new(tokio::sync::Semaphore::new(2)),
         },
         Some(dir.path().to_path_buf()),
     )
     .unwrap();
-    let recovered = comment_from(
-        &app,
-        "127.0.0.1:1234",
-        None,
-        &comment_request_id(2),
-        "Lost response",
-    )
-    .await;
+    let recovered =
+        submit_message_comment(&app, None, &comment_request_id(2), "Lost response").await;
     assert_eq!(recovered.status(), StatusCode::OK);
     assert_eq!(
         sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM comment")
@@ -1038,32 +844,20 @@ async fn comment_submission_retries_survive_concurrency_restart_and_deletion() {
     );
     for next in 3..=10 {
         assert_eq!(
-            comment_from(
-                &app,
-                "127.0.0.1:1234",
-                None,
-                &comment_request_id(next),
-                "Fresh operation"
-            )
-            .await
-            .status(),
+            submit_message_comment(&app, None, &comment_request_id(next), "Fresh operation")
+                .await
+                .status(),
             StatusCode::OK
         );
     }
     assert_eq!(
-        comment_from(
-            &app,
-            "127.0.0.1:1234",
-            None,
-            &comment_request_id(11),
-            "Over quota"
-        )
-        .await
-        .status(),
-        StatusCode::TOO_MANY_REQUESTS
+        submit_message_comment(&app, None, &comment_request_id(11), "Another submission")
+            .await
+            .status(),
+        StatusCode::OK
     );
     assert_eq!(
-        comment_from(&app, "127.0.0.1:1234", None, &id, "One submission")
+        submit_message_comment(&app, None, &id, "One submission")
             .await
             .status(),
         StatusCode::OK
@@ -1074,7 +868,7 @@ async fn comment_submission_retries_survive_concurrency_restart_and_deletion() {
         .await
         .unwrap();
     assert_eq!(
-        comment_from(&app, "127.0.0.1:1234", None, &id, "One submission")
+        submit_message_comment(&app, None, &id, "One submission")
             .await
             .status(),
         StatusCode::CONFLICT
@@ -1084,14 +878,14 @@ async fn comment_submission_retries_survive_concurrency_restart_and_deletion() {
             .fetch_one(&pool)
             .await
             .unwrap(),
-        9
+        10
     );
     assert_eq!(
         sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM comment_submission")
             .fetch_one(&pool)
             .await
             .unwrap(),
-        10
+        11
     );
 }
 
@@ -1104,21 +898,21 @@ async fn comment_submission_requires_current_identity_and_current_ddl() {
     ] {
         let response = app
             .clone()
-            .oneshot(with_peer(
+            .oneshot(
                 Request::builder()
                     .method("POST")
                     .uri("/api/v1/message-comments")
                     .header("content-type", "application/json")
                     .body(Body::from(input.to_string()))
                     .unwrap(),
-            ))
+            )
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     }
     let identity = crate::schema::current_identity().unwrap();
-    assert_eq!(identity.application_version, "xocs-db-v4");
-    assert_eq!(identity.schema_revision, 4);
+    assert_eq!(identity.application_version, "xocs-db-v5");
+    assert_eq!(identity.schema_revision, 5);
     crate::schema::validate(&pool).await.unwrap();
     sqlx::query("DROP TABLE comment_submission")
         .execute(&pool)
@@ -1136,14 +930,8 @@ async fn comment_normalization_matches_shared_unicode_fixtures() {
         let input = fixture["input"].as_str().unwrap();
         let expected = fixture["expected"].as_str().unwrap();
         assert_eq!(input.trim(), expected, "{}", fixture["name"]);
-        let response = comment_from(
-            &app,
-            &format!("127.0.0.{}:1234", index + 1),
-            None,
-            &comment_request_id(index as u64 + 1),
-            input,
-        )
-        .await;
+        let response =
+            submit_message_comment(&app, None, &comment_request_id(index as u64 + 1), input).await;
         if expected.is_empty() {
             assert_eq!(response.status(), StatusCode::BAD_REQUEST);
         } else {
@@ -1173,39 +961,30 @@ mod management;
 mod media_management;
 
 #[tokio::test]
-async fn article_password_limits_share_the_resolved_proxy_address() {
-    let (_dir, app, pool) = setup_with_proxies(vec!["127.0.0.0/8".into()]).await;
+async fn article_password_checks_ignore_forwarding_headers_and_failure_history() {
+    let (_dir, app, pool) = setup().await;
     let hash = xcss::admin_auth::hash_password("ProtectedPassphrase123").unwrap();
     sqlx::query("INSERT INTO article(id,user_id,sort_id,label_id,article_title,article_content,view_status,password) VALUES(1,1,0,0,'Protected','Secret',0,?)")
         .bind(hash).execute(&pool).await.unwrap();
     let request = |visitor: &str, password: &str| {
-        with_peer(
-            Request::builder()
-                .method("POST")
-                .uri("/api/v1/articles/1/unlock")
-                .header("content-type", "application/json")
-                .header("x-forwarded-for", format!("{visitor}, 127.0.0.2"))
-                .header("x-real-ip", "203.0.113.250")
-                .body(Body::from(
-                    serde_json::json!({"password":password}).to_string(),
-                ))
-                .unwrap(),
-        )
+        Request::builder()
+            .method("POST")
+            .uri("/api/v1/articles/1/unlock")
+            .header("content-type", "application/json")
+            .header("x-forwarded-for", format!("{visitor}, 127.0.0.2"))
+            .header("x-real-ip", "203.0.113.250")
+            .body(Body::from(
+                serde_json::json!({"password":password}).to_string(),
+            ))
+            .unwrap()
     };
-    for attempt in 1..=11 {
+    for _attempt in 1..=11 {
         let response = app
             .clone()
             .oneshot(request("192.0.2.1", "wrong password"))
             .await
             .unwrap();
-        assert_eq!(
-            response.status(),
-            if attempt <= 10 {
-                StatusCode::FORBIDDEN
-            } else {
-                StatusCode::TOO_MANY_REQUESTS
-            }
-        );
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
     }
     let response = app
         .clone()
@@ -1228,7 +1007,7 @@ async fn article_comment_gate_is_rechecked_after_waiting_for_a_writer() {
         "comment_status=0",
         "password='protected'",
     ] {
-        let (_dir, app, pool) = setup_with_pool_limit(Vec::new(), 2).await;
+        let (_dir, app, pool) = setup_with_pool_limit(2).await;
         sqlx::query("INSERT INTO article(id,user_id,sort_id,label_id,article_title,article_content,view_status,comment_status) VALUES(1,1,0,0,'Open','Body',1,1)")
             .execute(&pool).await.unwrap();
         // WAL permits the old pre-transaction permission read while this
@@ -1252,12 +1031,27 @@ async fn article_comment_gate_is_rechecked_after_waiting_for_a_writer() {
         });
         // Give the request time to finish its read and reach the blocked
         // writer boundary. It must not complete until the writer releases it.
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        tokio::time::timeout(std::time::Duration::from_secs(5), async {
+            let mut held_since = None;
+            loop {
+                if pool.num_idle() == 0 {
+                    let since = held_since.get_or_insert_with(tokio::time::Instant::now);
+                    if since.elapsed() >= std::time::Duration::from_millis(50) {
+                        break;
+                    }
+                } else {
+                    held_since = None;
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+            }
+        })
+        .await
+        .expect("comment request did not reach the blocked writer");
         assert!(!request.is_finished());
         writer.commit().await.unwrap();
         let response = request.await.unwrap();
         assert_eq!(response.status(), StatusCode::FORBIDDEN, "{change}");
-        for table in ["comment", "comment_submission", "member_login_failures"] {
+        for table in ["comment", "comment_submission"] {
             let count: i64 =
                 sqlx::query_scalar(sqlx::AssertSqlSafe(format!("SELECT COUNT(*) FROM {table}")))
                     .fetch_one(&pool)

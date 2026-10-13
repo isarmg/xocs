@@ -8,7 +8,7 @@
 
 1. [安装与首次运行](getting-started.md)：构建或选择程序，初始化站点并打开页面。
 2. [发布和管理内容](usage.md)：文章、分类、图片、首页、资源与评论。
-3. [配置参考](configuration.md)：JSON、路径、监听地址与可信代理。
+3. [配置参考](configuration.md)：JSON、路径、监听地址与实例路径。
 4. [Linux 生产部署](../deploy/linux-x86_64/README.md)：服务账号、HTTPS、启动和检查。
 5. [运行维护与排障](operations.md)：状态、日志、登录和评论提交问题。
 
@@ -19,4 +19,6 @@
 - [账号设置](account-settings.md)、[公共支撑](common-support.md)。
 - [项目首页](../README.md)、[MIT 许可证](../LICENSE)。第三方前端许可证位于 `web/licenses/`。
 
-当前源码使用 `xocs-db-v4`。程序会校验实际数据结构；不匹配时只读失败，不自动迁移。
+当前源码使用 `xocs-db-v5`。程序会校验实际数据结构；不匹配时只读失败，不自动迁移。
+
+当前安装、运行和升级合同见 [1.0.5 发布说明](releases/1.0.5.md)。

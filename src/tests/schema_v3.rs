@@ -24,7 +24,11 @@ async fn genuine_v3_schema_is_rejected_without_changing_any_database_bytes() {
     let before = std::fs::read(&database).unwrap();
     let sidecars = ["-wal", "-shm", "-journal"]
         .map(|suffix| std::fs::read(format!("{}{suffix}", database.display())).ok());
-    assert!(validate_existing_database(&database).await.is_err());
+    assert!(
+        validate_existing_database(&database, database.parent().unwrap())
+            .await
+            .is_err()
+    );
     assert_eq!(std::fs::read(&database).unwrap(), before);
     assert_eq!(
         sidecars,

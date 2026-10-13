@@ -1,8 +1,7 @@
 use super::PageResult;
-use crate::rate_limit;
 use crate::{ApiResult, AppError, AppState, absent, db_error, invalid};
 use axum::{
-    Extension, Json,
+    Json,
     extract::State,
     http::{HeaderMap, StatusCode},
 };
@@ -429,14 +428,13 @@ pub(super) struct UnlockRequest {
 }
 pub(super) async fn unlock_article(
     State(state): State<AppState>,
-    Extension(xcss::client_ip::ClientIp(visitor)): Extension<xcss::client_ip::ClientIp>,
     Path(id): Path<i64>,
     crate::ContractJson(input): crate::ContractJson<UnlockRequest>,
 ) -> ApiResult<Article> {
     if input.password.len() > 1024 {
         return Err(invalid("访问密码无效"));
     }
-    let stored: Option<String> = sqlx::query_scalar(
+    let stored: String = sqlx::query_scalar(
         "SELECT password FROM article WHERE id=? AND deleted=0 AND password IS NOT NULL",
     )
     .bind(id)
@@ -444,30 +442,24 @@ pub(super) async fn unlock_article(
     .await
     .map_err(db_error)?
     .ok_or_else(absent)?;
-    let key = rate_limit::attempt_key("article", &visitor.to_string(), &id.to_string());
-    rate_limit::record_attempt(&state.pool, &key, 10)
-        .await
-        .map_err(|error| {
-            if error.0 == StatusCode::TOO_MANY_REQUESTS {
-                AppError(
-                    StatusCode::TOO_MANY_REQUESTS,
-                    "访问密码尝试过多，请稍后再试",
-                )
-            } else {
-                error
-            }
-        })?;
-    let allowed = stored
-        .as_deref()
-        .is_none_or(|hash| xcss::admin_auth::verify_password(&input.password, hash));
+    let permit = tokio::time::timeout(
+        std::time::Duration::from_secs(2),
+        state.password_slots.clone().acquire_owned(),
+    )
+    .await
+    .map_err(|_| AppError(StatusCode::SERVICE_UNAVAILABLE, "密码验证暂时繁忙"))?
+    .map_err(|_| AppError(StatusCode::SERVICE_UNAVAILABLE, "密码验证暂时不可用"))?;
+    let password = input.password;
+    // The permit remains held by the worker even if the HTTP request is cancelled.
+    let allowed = tokio::task::spawn_blocking(move || {
+        let _permit = permit;
+        xcss::admin_auth::verify_password(&password, &stored)
+    })
+    .await
+    .map_err(|_| AppError(StatusCode::INTERNAL_SERVER_ERROR, "密码验证失败"))?;
     if !allowed {
         return Err(AppError(StatusCode::FORBIDDEN, "访问密码错误"));
     }
-    sqlx::query("DELETE FROM member_login_failures WHERE failure_key=?")
-        .bind(&key)
-        .execute(&state.pool)
-        .await
-        .map_err(db_error)?;
     sqlx::query("UPDATE article SET view_count=view_count+1 WHERE id=?")
         .bind(id)
         .execute(&state.pool)
@@ -558,12 +550,7 @@ pub(super) async fn create_article(
     use sha2::{Digest, Sha256};
     let request_hash =
         Sha256::digest(serde_json::to_vec(&input).map_err(|_| invalid("文章内容无效"))?).to_vec();
-    let password = input
-        .password
-        .as_deref()
-        .map(xcss::admin_auth::hash_password)
-        .transpose()
-        .map_err(|_| invalid("文章密码无效"))?;
+    let password = hash_article_password(&state, input.password.as_deref()).await?;
     let author = crate::site_author_id(&state.pool).await?;
     let mut transaction = state
         .pool
@@ -602,11 +589,38 @@ pub(super) async fn create_article(
     Ok(Json(load_article(&state.pool, id, true).await?))
 }
 
+async fn hash_article_password(
+    state: &AppState,
+    value: Option<&str>,
+) -> Result<Option<String>, AppError> {
+    let Some(value) = value else {
+        return Ok(None);
+    };
+    xcss::admin_auth::validate_password(value).map_err(|_| invalid("文章密码无效"))?;
+    let permit = tokio::time::timeout(
+        std::time::Duration::from_secs(2),
+        state.password_slots.clone().acquire_owned(),
+    )
+    .await
+    .map_err(|_| AppError(StatusCode::SERVICE_UNAVAILABLE, "密码计算暂时繁忙"))?
+    .map_err(|_| AppError(StatusCode::SERVICE_UNAVAILABLE, "密码计算暂时不可用"))?;
+    let password = value.to_owned();
+    tokio::task::spawn_blocking(move || {
+        let _permit = permit;
+        xcss::admin_auth::hash_password(&password)
+    })
+    .await
+    .map_err(|_| AppError(StatusCode::INTERNAL_SERVER_ERROR, "密码计算失败"))?
+    .map(Some)
+    .map_err(|_| invalid("文章密码无效"))
+}
+
 pub(super) async fn update_article(
     State(state): State<AppState>,
     Path(id): Path<i64>,
     crate::ContractJson(input): crate::ContractJson<ArticleInput>,
 ) -> ApiResult<Article> {
+    let password = hash_article_password(&state, input.password.as_deref()).await?;
     let mut transaction = state
         .pool
         .begin_with("BEGIN IMMEDIATE")
@@ -623,12 +637,7 @@ pub(super) async fn update_article(
     };
     validate_article(&input, old_password.is_some())?;
     validate_article_taxonomy(&mut transaction, &input).await?;
-    let password = input
-        .password
-        .as_deref()
-        .map(xcss::admin_auth::hash_password)
-        .transpose()
-        .map_err(|_| invalid("文章密码无效"))?;
+
     let result = sqlx::query("UPDATE article SET sort_id=?,label_id=?,article_cover=?,article_title=?,article_content=?,video_url=?,view_status=?,recommend_status=?,comment_status=?,password=CASE WHEN ?=1 THEN NULL ELSE COALESCE(?,password) END,tips=?,update_time=CURRENT_TIMESTAMP WHERE id=? AND deleted=0")
         .bind(input.sort_id).bind(input.label_id).bind(input.article_cover).bind(input.article_title).bind(input.article_content).bind(input.video_url)
         .bind(i64::from(input.view_status)).bind(i64::from(input.recommend_status)).bind(i64::from(input.comment_status)).bind(i64::from(input.view_status)).bind(password).bind(input.tips).bind(id)

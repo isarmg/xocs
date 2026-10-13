@@ -1,30 +1,34 @@
-mod admin;
-mod config;
-mod content;
-mod home;
-mod lifecycle;
-mod media;
-mod rate_limit;
-mod release;
-mod schema;
-mod static_assets;
+use clap::Parser;
+use std::path::PathBuf;
 
-mod app;
-mod cli;
-mod database;
-
-pub(crate) use app::{
-    ApiResult, AppError, AppState, absent, db_error, invalid, now_micros, site_author_id,
-};
-use xcss::server_cli::CliError as CliFailure;
-pub use xcss::server_cli::ContractJson;
-
-const PRODUCT_ID: &str = "xocs";
+#[derive(Parser)]
+#[command(name = "xocs", version, about = "XOCS content server")]
+struct Cli {
+    #[arg(long, default_value = "/opt/isarmg/xocs")]
+    root: PathBuf,
+}
 
 #[tokio::main]
 async fn main() -> std::process::ExitCode {
-    cli::run().await
+    let cli = Cli::parse();
+    match xocs::run(&cli.root).await {
+        Ok(()) => std::process::ExitCode::SUCCESS,
+        Err(error) => {
+            tracing::error!(%error, "XOCS startup failed");
+            let envelope = if let Some(error) = error.downcast_ref::<xcss::config::ConfigError>() {
+                error.envelope()
+            } else if let Some(error) = error.downcast_ref::<xcss::state_file::Error>() {
+                xcss::server_cli::state_error(error)
+            } else if let Some(error) = error.downcast_ref::<xcss::sqlite::SnapshotError>() {
+                xcss::server_cli::snapshot_error(error)
+            } else {
+                xcss::server_cli::ErrorEnvelope::with_code(
+                    xcss::server_cli::ErrorCode::new("xocs.startup_failed")
+                        .expect("static error code"),
+                    "The service could not start. Check configuration and service diagnostics.",
+                )
+            };
+            xcss::server_cli::report_error(&envelope, false, 1)
+        }
+    }
 }
-
-#[cfg(test)]
-mod tests;

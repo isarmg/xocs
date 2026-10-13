@@ -3,7 +3,7 @@ use super::*;
 async fn login(app: &Router) -> (String, String) {
     let response = app
         .clone()
-        .oneshot(with_peer(
+        .oneshot(
             Request::builder()
                 .method("POST")
                 .uri("/api/v1/auth/login")
@@ -15,7 +15,7 @@ async fn login(app: &Router) -> (String, String) {
                     r#"{"username":"admin","password":"TemporaryPassphrase123"}"#,
                 ))
                 .unwrap(),
-        ))
+        )
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::OK);
@@ -38,7 +38,7 @@ async fn write(
     value: serde_json::Value,
 ) -> Response {
     app.clone()
-        .oneshot(with_peer(
+        .oneshot(
             Request::builder()
                 .method(method)
                 .uri(path)
@@ -50,7 +50,7 @@ async fn write(
                 .header(header::CONTENT_TYPE, "application/json")
                 .body(Body::from(value.to_string()))
                 .unwrap(),
-        ))
+        )
         .await
         .unwrap()
 }
@@ -310,7 +310,7 @@ async fn create_with_key(
     value: serde_json::Value,
 ) -> Response {
     app.clone()
-        .oneshot(with_peer(
+        .oneshot(
             Request::builder()
                 .method("POST")
                 .uri("/api/v1/content/articles")
@@ -323,7 +323,7 @@ async fn create_with_key(
                 .header("Idempotency-Key", key)
                 .body(Body::from(value.to_string()))
                 .unwrap(),
-        ))
+        )
         .await
         .unwrap()
 }
@@ -419,12 +419,12 @@ async fn article_search_uses_html_utf16_limit() {
                 .to_string();
         let response = app
             .clone()
-            .oneshot(with_peer(
+            .oneshot(
                 Request::builder()
                     .uri(format!("/api/v1/articles?search={query}"))
                     .body(Body::empty())
                     .unwrap(),
-            ))
+            )
             .await
             .unwrap();
         assert_eq!(response.status(), status);
@@ -478,7 +478,7 @@ async fn hard_deleted_ids_are_never_reused() {
 
 #[tokio::test]
 async fn concurrent_article_replays_share_one_receipt_on_a_single_connection() {
-    let (_dir, app, pool) = setup_with_pool_limit(Vec::new(), 1).await;
+    let (_dir, app, pool) = setup_with_pool_limit(1).await;
     seed(&pool).await;
     let session = login(&app).await;
     let (first, second) = tokio::time::timeout(std::time::Duration::from_secs(10), async {

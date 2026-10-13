@@ -6,8 +6,8 @@ import { chromium, firefox, expect } from '@playwright/test';
 // This script intentionally has no mock, preview server or production fallback.
 // scripts/smoke.sh owns this exact listener and its disposable database/media.
 const base = process.env.XOCS_SMOKE_URL;
-if (base !== 'http://127.0.0.1:18881') {
-  throw new Error('management-native requires XOCS_SMOKE_URL=http://127.0.0.1:18881 and the smoke fixture');
+if (typeof base !== 'string' || !/^http:\/\/127\.0\.0\.1:[1-9][0-9]{0,4}$/.test(base) || Number(new URL(base).port) > 65535) {
+  throw new Error('management-native requires an explicit loopback XOCS_SMOKE_URL and the smoke fixture');
 }
 
 function png(marker) {
@@ -95,7 +95,7 @@ for (const engine of [chromium, firefox]) {
   let failure;
   try {
     assert.equal((await read('/api/v1/health')).application, 'xocs');
-    // Refuse an unrelated listener even on the allowed port. Never edit the
+    // Refuse an unrelated listener even on a loopback port. Never edit the
     // existing fixture articles 1–3, news 1 or note 2.
     assert.equal((await read('/api/v1/articles/1')).article_title, 'Smoke');
     assert.ok((await read('/api/v1/notes/page?size=50')).items.some(item => item.id === 2 && item.content === 'Smoke author note'));

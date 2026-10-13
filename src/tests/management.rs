@@ -4,7 +4,7 @@ use serde_json::{Value, json};
 async fn session(app: &Router) -> (String, String) {
     let response = app
         .clone()
-        .oneshot(with_peer(
+        .oneshot(
             Request::builder()
                 .method("POST")
                 .uri("/api/v1/auth/login")
@@ -16,7 +16,7 @@ async fn session(app: &Router) -> (String, String) {
                     r#"{"username":"admin","password":"TemporaryPassphrase123"}"#,
                 ))
                 .unwrap(),
-        ))
+        )
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::OK);
@@ -39,7 +39,7 @@ async fn admin(
     value: Value,
 ) -> Response {
     app.clone()
-        .oneshot(with_peer(
+        .oneshot(
             Request::builder()
                 .method(method)
                 .uri(path)
@@ -51,7 +51,7 @@ async fn admin(
                 .header(header::CONTENT_TYPE, "application/json")
                 .body(Body::from(value.to_string()))
                 .unwrap(),
-        ))
+        )
         .await
         .unwrap()
 }
@@ -59,9 +59,7 @@ async fn admin(
 async fn public(app: &Router, path: &str) -> Value {
     let response = app
         .clone()
-        .oneshot(with_peer(
-            Request::builder().uri(path).body(Body::empty()).unwrap(),
-        ))
+        .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::OK, "{path}");
@@ -71,7 +69,7 @@ async fn public(app: &Router, path: &str) -> Value {
 async fn uploaded_image(app: &Router, session: &(String, String)) -> String {
     let response = app
         .clone()
-        .oneshot(with_peer(
+        .oneshot(
             Request::builder()
                 .method("POST")
                 .uri("/api/v1/content/upload")
@@ -84,7 +82,7 @@ async fn uploaded_image(app: &Router, session: &(String, String)) -> String {
                 .header("x-file-name", "note.png")
                 .body(Body::from(b"\x89PNG\r\n\x1a\nfixture".to_vec()))
                 .unwrap(),
-        ))
+        )
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::OK);
@@ -575,12 +573,12 @@ async fn letter_invalid_input_and_corrupt_storage_never_publish() {
             .unwrap();
         let response = app
             .clone()
-            .oneshot(with_peer(
+            .oneshot(
                 Request::builder()
                     .uri("/api/v1/letter")
                     .body(Body::empty())
                     .unwrap(),
-            ))
+            )
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::CONFLICT);
@@ -644,14 +642,14 @@ async fn management_routes_require_administrator_and_csrf() {
     ] {
         let response = app
             .clone()
-            .oneshot(with_peer(
+            .oneshot(
                 Request::builder()
                     .method(method)
                     .uri(path)
                     .header(header::CONTENT_TYPE, "application/json")
                     .body(Body::from(value.to_string()))
                     .unwrap(),
-            ))
+            )
             .await
             .unwrap();
         assert_eq!(
@@ -662,7 +660,7 @@ async fn management_routes_require_administrator_and_csrf() {
         if method == "PUT" {
             let response = app
                 .clone()
-                .oneshot(with_peer(
+                .oneshot(
                     Request::builder()
                         .method(method)
                         .uri(path)
@@ -673,7 +671,7 @@ async fn management_routes_require_administrator_and_csrf() {
                         .header(header::CONTENT_TYPE, "application/json")
                         .body(Body::from(value.to_string()))
                         .unwrap(),
-                ))
+                )
                 .await
                 .unwrap();
             assert_eq!(

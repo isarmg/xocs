@@ -33,14 +33,19 @@ jobs:
       - name: Install exact Rust toolchain
         run: rustup toolchain install 1.99.0 --profile minimal --component rustfmt,clippy
 
+      - name: Install exact supply-chain tools
+        run: |
+          cargo install cargo-audit --version 0.22.2 --locked
+          cargo install cargo-cyclonedx --version 0.5.9 --locked
+
       - name: Verify pinned xcss contracts
         run: |
           xcss_input="$RUNNER_TEMP/xocs-xcss-input"
           git init --quiet "$xcss_input"
           git -C "$xcss_input" remote add origin https://github.com/isarmg/xcss.git
-          git -C "$xcss_input" fetch --depth=1 origin 92f24f73ad629ac722f4f0632898b214edc76ead
+          git -C "$xcss_input" fetch --depth=1 origin b9b5858088510d0bf6832044353c92d09ee123fe
           git -C "$xcss_input" checkout --quiet --detach FETCH_HEAD
-          test "$(git -C "$xcss_input" rev-parse HEAD)" = 92f24f73ad629ac722f4f0632898b214edc76ead
+          test "$(git -C "$xcss_input" rev-parse HEAD)" = b9b5858088510d0bf6832044353c92d09ee123fe
           python3 "$xcss_input/scripts/xcss-conformance.py" verify-manifest --product-root "$GITHUB_WORKSPACE"
           python3 "$xcss_input/scripts/xcss-conformance.py" verify-source --product-root "$GITHUB_WORKSPACE"
 
@@ -84,7 +89,17 @@ jobs:
         run: bash scripts/smoke.sh
 
       - name: Package Linux x86_64 distribution
-        run: bash scripts/package-linux-x86_64.sh "${GITHUB_REF_NAME}"
+        env:
+          XSSI_SIGNING_KEY_PEM: ${{ secrets.XSSI_SIGNING_KEY_PEM }}
+          XSSI_REPOSITORY_TOKEN: ${{ secrets.XSSI_REPOSITORY_TOKEN }}
+        run: |
+          test -n "$XSSI_SIGNING_KEY_PEM"
+          key="$RUNNER_TEMP/xocs-release-signing.pem"
+          umask 077
+          printf '%s\n' "$XSSI_SIGNING_KEY_PEM" > "$key"
+          trap 'rm -f -- "$key"' EXIT
+          mkdir -p dist
+          bash scripts/package-linux-x86_64.sh --output-dir "$GITHUB_WORKSPACE/dist" --signing-key "$key"
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -92,7 +107,7 @@ jobs:
           name: xocs-${{ github.ref_name }}-linux-x86_64
           path: |
             dist/*.tar.gz
-            dist/*.sha256
+            dist/SHA256SUMS
           if-no-files-found: error
 
       - name: Create GitHub Release
@@ -105,7 +120,7 @@ jobs:
           fi
           gh release create "${GITHUB_REF_NAME}" \
             dist/*.tar.gz \
-            dist/*.sha256 \
+            dist/SHA256SUMS \
             --verify-tag \
             --notes-file "docs/releases/${GITHUB_REF_NAME#v}.md" \
             --title "Xocs ${GITHUB_REF_NAME}"

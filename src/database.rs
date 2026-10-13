@@ -219,10 +219,13 @@ pub(crate) async fn validate_database(pool: &SqlitePool) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub(crate) async fn validate_existing_database(path: &PathBuf) -> anyhow::Result<()> {
-    let snapshot =
-        xcss::sqlite::open_validation_snapshot_with_connection_limits(path, CONNECTION_LIMITS)
-            .await?;
+pub(crate) async fn validate_existing_database(
+    path: &PathBuf,
+    temporary_root: &Path,
+) -> anyhow::Result<()> {
+    let snapshot = xcss::sqlite::ValidationSnapshot::capture_in(path, temporary_root)?
+        .into_pool_with_connection_limits(CONNECTION_LIMITS)
+        .await?;
     let result = async {
         validate_database(snapshot.pool()).await?;
         let store = SqliteAdministratorStore::new(snapshot.pool().clone());
@@ -232,10 +235,6 @@ pub(crate) async fn validate_existing_database(path: &PathBuf) -> anyhow::Result
             "explicit initialization is required"
         );
         store.validate_all_administrators().await?;
-        let foreign_keys = sqlx::query("PRAGMA foreign_key_check")
-            .fetch_all(snapshot.pool())
-            .await?;
-        anyhow::ensure!(foreign_keys.is_empty(), "database foreign key check failed");
         let integrity: Vec<String> = sqlx::query_scalar("PRAGMA integrity_check")
             .fetch_all(snapshot.pool())
             .await?;

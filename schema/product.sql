@@ -20,11 +20,6 @@ CREATE TABLE user (
     update_by TEXT,
     deleted INTEGER NOT NULL DEFAULT 0
 );
-CREATE TABLE member_login_failures (
-    failure_key BLOB PRIMARY KEY CHECK(length(failure_key)=32),
-    failures INTEGER NOT NULL DEFAULT 0,
-    expires_at INTEGER NOT NULL
-);
 CREATE TABLE article (
     id INTEGER PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES user(id),

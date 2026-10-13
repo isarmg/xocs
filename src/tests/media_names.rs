@@ -5,7 +5,7 @@ async fn uploaded_unicode_names_roundtrip_through_resources_and_media() {
     let (_directory, app, pool) = setup().await;
     let response = app
         .clone()
-        .oneshot(with_peer(
+        .oneshot(
             Request::builder()
                 .method("POST")
                 .uri("/api/v1/auth/login")
@@ -17,7 +17,7 @@ async fn uploaded_unicode_names_roundtrip_through_resources_and_media() {
                     r#"{"username":"admin","password":"TemporaryPassphrase123"}"#,
                 ))
                 .unwrap(),
-        ))
+        )
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::OK);
@@ -38,7 +38,7 @@ async fn uploaded_unicode_names_roundtrip_through_resources_and_media() {
         image[13] = index as u8;
         let response = app
             .clone()
-            .oneshot(with_peer(
+            .oneshot(
                 Request::builder()
                     .method("POST")
                     .uri("/api/v1/content/upload")
@@ -51,7 +51,7 @@ async fn uploaded_unicode_names_roundtrip_through_resources_and_media() {
                     .header("x-file-name", fixture["header"].as_str().unwrap())
                     .body(Body::from(image.clone()))
                     .unwrap(),
-            ))
+            )
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::OK);
@@ -65,13 +65,13 @@ async fn uploaded_unicode_names_roundtrip_through_resources_and_media() {
         assert_eq!(stored, name);
         let listed = app
             .clone()
-            .oneshot(with_peer(
+            .oneshot(
                 Request::builder()
                     .uri("/api/v1/content/resources")
                     .header(header::COOKIE, &cookie)
                     .body(Body::empty())
                     .unwrap(),
-            ))
+            )
             .await
             .unwrap();
         assert_eq!(listed.status(), StatusCode::OK);
@@ -85,12 +85,12 @@ async fn uploaded_unicode_names_roundtrip_through_resources_and_media() {
         );
         let downloaded = app
             .clone()
-            .oneshot(with_peer(
+            .oneshot(
                 Request::builder()
                     .uri(uploaded["path"].as_str().unwrap())
                     .body(Body::empty())
                     .unwrap(),
-            ))
+            )
             .await
             .unwrap();
         assert_eq!(downloaded.status(), StatusCode::OK);

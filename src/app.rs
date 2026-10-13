@@ -29,7 +29,51 @@ pub(crate) struct AppState {
     pub(crate) origin: AdministratorOriginMode,
     pub(crate) media: PathBuf,
     pub(crate) media_operations: Arc<tokio::sync::Mutex<()>>,
-    pub(crate) trusted_proxies: Vec<String>,
+    pub(crate) public_mutations: Arc<PublicMutationCapacity>,
+    pub(crate) password_slots: Arc<tokio::sync::Semaphore>,
+}
+
+/// Concurrent write and bounded-wait capacity, independent of request identity.
+pub(crate) struct PublicMutationCapacity {
+    active: Arc<tokio::sync::Semaphore>,
+    admitted: Arc<tokio::sync::Semaphore>,
+}
+impl Default for PublicMutationCapacity {
+    fn default() -> Self {
+        Self {
+            active: Arc::new(tokio::sync::Semaphore::new(4)),
+            admitted: Arc::new(tokio::sync::Semaphore::new(36)),
+        }
+    }
+}
+async fn admit_public_mutation(
+    State(capacity): State<Arc<PublicMutationCapacity>>,
+    request: Request,
+    next: Next,
+) -> Response {
+    if request.method() != axum::http::Method::POST {
+        return next.run(request).await;
+    }
+    let Ok(_admission) = capacity.admitted.clone().try_acquire_owned() else {
+        return AppError(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "服务写入容量已满，请稍后重试",
+        )
+        .into_response();
+    };
+    let Ok(Ok(_execution)) = tokio::time::timeout(
+        Duration::from_secs(10),
+        capacity.active.clone().acquire_owned(),
+    )
+    .await
+    else {
+        return AppError(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "服务写入暂时繁忙，请稍后重试",
+        )
+        .into_response();
+    };
+    next.run(request).await
 }
 
 #[derive(Debug)]
@@ -92,7 +136,6 @@ pub(crate) fn now_micros() -> anyhow::Result<u64> {
 }
 
 pub(crate) fn router(state: AppState, web: Option<PathBuf>) -> anyhow::Result<Router> {
-    let trusted = xcss::client_ip::TrustedProxies::parse(&state.trusted_proxies)?;
     let admin_routes = content::admin_routes()
         .merge(admin::routes())
         .merge(media::admin_routes())
@@ -101,6 +144,10 @@ pub(crate) fn router(state: AppState, web: Option<PathBuf>) -> anyhow::Result<Ro
         .with_state(state.clone());
     let public_routes = content::public_routes()
         .merge(home::public_routes())
+        .route_layer(from_fn_with_state(
+            state.public_mutations.clone(),
+            admit_public_mutation,
+        ))
         .with_state(state.clone());
     let web_routes = if let Some(web) = web {
         let entry = web.join("index.html");
@@ -166,7 +213,6 @@ pub(crate) fn router(state: AppState, web: Option<PathBuf>) -> anyhow::Result<Ro
                 .on_failure(()),
         )
         .layer(from_fn_with_state(state.scope.clone(), admit_request))
-        .layer(from_fn_with_state(trusted, xcss::client_ip::middleware))
         .layer(from_fn_with_state(
             PRODUCT_ID.to_string(),
             xcss::server_cli::service_identity_middleware,
