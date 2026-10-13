@@ -1219,3 +1219,51 @@ async fn article_password_limits_share_the_resolved_proxy_address() {
         .unwrap();
     assert_eq!(response.status(), StatusCode::OK);
 }
+
+#[tokio::test]
+async fn article_comment_gate_is_rechecked_after_waiting_for_a_writer() {
+    for change in [
+        "view_status=0",
+        "deleted=1",
+        "comment_status=0",
+        "password='protected'",
+    ] {
+        let (_dir, app, pool) = setup_with_pool_limit(Vec::new(), 2).await;
+        sqlx::query("INSERT INTO article(id,user_id,sort_id,label_id,article_title,article_content,view_status,comment_status) VALUES(1,1,0,0,'Open','Body',1,1)")
+            .execute(&pool).await.unwrap();
+        // WAL permits the old pre-transaction permission read while this
+        // administrator write is uncommitted, but insertion has to wait.
+        let mut writer = pool.begin_with("BEGIN IMMEDIATE").await.unwrap();
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "UPDATE article SET {change} WHERE id=1"
+        )))
+        .execute(&mut *writer)
+        .await
+        .unwrap();
+        let request = tokio::spawn(async move {
+            anonymous_post(
+                &app,
+                "/api/v1/comments",
+                serde_json::json!({
+                    "article_id": 1, "content": "Racing comment"
+                }),
+            )
+            .await
+        });
+        // Give the request time to finish its read and reach the blocked
+        // writer boundary. It must not complete until the writer releases it.
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        assert!(!request.is_finished());
+        writer.commit().await.unwrap();
+        let response = request.await.unwrap();
+        assert_eq!(response.status(), StatusCode::FORBIDDEN, "{change}");
+        for table in ["comment", "comment_submission", "member_login_failures"] {
+            let count: i64 =
+                sqlx::query_scalar(sqlx::AssertSqlSafe(format!("SELECT COUNT(*) FROM {table}")))
+                    .fetch_one(&pool)
+                    .await
+                    .unwrap();
+            assert_eq!(count, 0, "{change}: {table}");
+        }
+    }
+}

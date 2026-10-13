@@ -9,7 +9,7 @@
 
 ## 固定输入
 
-Cargo manifest 指定官方 Git URL、完整 revision `53c24a2bc026b3c09e073f18cd26b01d15d6d354` 和精确 `=1.0.11`，Cargo.lock 固定依赖解析结果。
+Cargo manifest 指定官方 Git URL、完整 revision `92f24f73ad629ac722f4f0632898b214edc76ead` 和精确 `=1.0.11`，Cargo.lock 固定依赖解析结果。
 Web 的 package.json 依赖条目如下，合并到项目自身的 dependencies 中：
 
 ```json

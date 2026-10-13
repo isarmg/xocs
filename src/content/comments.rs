@@ -28,11 +28,6 @@ pub(super) async fn create_comment(
     Extension(xcss::client_ip::ClientIp(visitor)): Extension<xcss::client_ip::ClientIp>,
     crate::ContractJson(input): crate::ContractJson<CommentInput>,
 ) -> ApiResult<Comment> {
-    let enabled: Option<i64> = sqlx::query_scalar("SELECT comment_status FROM article WHERE id=? AND deleted=0 AND view_status=1 AND password IS NULL")
-        .bind(input.article_id).fetch_optional(&state.pool).await.map_err(db_error)?;
-    if enabled != Some(1) {
-        return Err(AppError(StatusCode::FORBIDDEN, "文章不允许评论"));
-    }
     create_anonymous_comment(
         &state,
         visitor,
@@ -108,6 +103,15 @@ async fn create_anonymous_comment(
         .begin_with("BEGIN IMMEDIATE")
         .await
         .map_err(db_error)?;
+    // The article gate and comment insertion share the writer transaction.
+    // A concurrent hide, delete or comment-disable must fence new submissions.
+    if kind == "article" {
+        let enabled: Option<i64> = sqlx::query_scalar("SELECT comment_status FROM article WHERE id=? AND deleted=0 AND view_status=1 AND password IS NULL")
+            .bind(source).fetch_optional(&mut *transaction).await.map_err(db_error)?;
+        if enabled != Some(1) {
+            return Err(AppError(StatusCode::FORBIDDEN, "文章不允许评论"));
+        }
+    }
     let previous: Option<(Vec<u8>, Option<i64>)> =
         sqlx::query_as("SELECT request_hash,comment_id FROM comment_submission WHERE request_id=?")
             .bind(&input.request_id)
