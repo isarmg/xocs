@@ -105,7 +105,10 @@ for (const engine of [chromium, firefox]) {
     await page.locator('input[name="password"]').fill('TemporaryPassphrase123');
     const signedIn = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/auth/login' && response.request().method() === 'POST');
     await page.locator('form button[type="submit"]').click();
-    const login = await signedIn; assert.equal(login.status(), 200); csrf = (await login.json()).csrf_token;
+    assert.equal((await signedIn).status(), 200);
+    // Login navigates immediately, so Chromium can discard that page response
+    // body. Read the real authenticated session with this context's cookies.
+    csrf = (await read('/api/v1/auth/session')).csrf_token;
     assert.equal(typeof csrf, 'string');
     originalSite = await read('/api/v1/content/site'); originalLetter = await read('/api/v1/content/letter');
     assert.ok(!Object.hasOwn(originalSite, 'footer'));
