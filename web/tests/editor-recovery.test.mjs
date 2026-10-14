@@ -47,3 +47,17 @@ test('news pending duplicate, failed publish retry, and successful second update
 test('news switching away while publish is pending ignores late mutation success',async t=>{const {host,requests}=setup(t,'ArticleNewsEditor',{id:1});requests[0].resolve(newsPage([]));await settle(host);newsDraft(host,'Old draft');submit(host);const old=mutations(requests)[0];host.props={id:2};host.render();requests.at(-1).resolve(newsPage([]));await settle(host);old.resolve({id:9,content:'Other article update',create_time:null});await settle(host);assert.doesNotMatch(textContent(host.tree),/Other article update/);assert.equal(nodes(host,'button').find(n=>textContent(n)==='Publish update').props.disabled,false);});
 test('home successful category read does not hide failed section read; section retry is isolated',async t=>{const {host,requests}=setup(t,'HomeSectionsPage');requests[0].reject(Error());await settle(host);requests[1].resolve([]);await settle(host);assert.equal(typeof retry(host,'Unable to load home sections'),'function');retry(host,'Unable to load home sections')();host.render();assert.equal(requests.filter(r=>r.url.endsWith('categories')).length,1);requests.at(-1).resolve([row]);await settle(host);assert.equal(nodes(host,'input')[0].props.value,'Original');assert.equal(nodes(host,'error').length,0);});
 test('home category failure and late retry cannot undo saved result',async t=>{const {host,requests}=setup(t,'HomeSectionsPage');requests[0].resolve([row]);requests[1].reject(Error());await settle(host);retry(host,'Unable to load categories')();host.render();const categoryRetry=requests.at(-1);nodes(host,'input')[0].props.onChange({target:{value:'Saved title'}});host.render();nodes(host,'button').find(n=>textContent(n)==='Save sections').props.onClick();mutations(requests)[0].resolve([{...row,title:'Saved title'}]);await settle(host);categoryRetry.resolve([]);await settle(host);assert.equal(nodes(host,'input')[0].props.value,'Saved title');assert.equal(requests.filter(r=>r.url.endsWith('home-sections')&&!r.options.method).length,1);});
+
+test('news publish recovery keeps one key, changed drafts and deliberate later repeats get fresh keys',async t=>{
+  const {host,requests}=setup(t,'ArticleNewsEditor',{id:1});requests[0].resolve(newsPage([]));await settle(host);
+  newsDraft(host,'One update');submit(host);const first=mutations(requests)[0];
+  const key=first.options.headers?.['Idempotency-Key'];assert.match(key??'',/^[0-9a-f-]{36}$/);
+  // The server may have committed even though its response was lost.
+  first.reject(new TypeError('Response lost'));await settle(host);submit(host);
+  const retry=mutations(requests)[1];assert.equal(retry.options.headers['Idempotency-Key'],key);assert.equal(retry.options.body,first.options.body);
+  retry.reject(new TypeError('Response lost'));await settle(host);newsDraft(host,'Changed draft');submit(host);
+  const changed=mutations(requests)[2];assert.notEqual(changed.options.headers['Idempotency-Key'],key);
+  const saved={id:3,content:'Changed draft',create_time:null};changed.resolve(saved);await settle(host);requests.at(-1).resolve(newsPage([saved]));await settle(host);
+  newsDraft(host,'Changed draft');submit(host);const later=mutations(requests)[3];
+  assert.equal(later.options.body,changed.options.body);assert.notEqual(later.options.headers['Idempotency-Key'],changed.options.headers['Idempotency-Key']);
+});

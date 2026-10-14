@@ -101,3 +101,10 @@ CREATE TABLE article_submission (
     request_hash BLOB NOT NULL CHECK(length(request_hash)=32),
     article_id INTEGER NOT NULL REFERENCES article(id)
 );
+
+-- Preserve publish identity after deletion so a retry cannot restore an update.
+CREATE TABLE article_news_submission (
+    request_id TEXT PRIMARY KEY NOT NULL CHECK(length(request_id) BETWEEN 1 AND 128),
+    request_hash BLOB NOT NULL CHECK(length(request_hash)=32),
+    news_id INTEGER REFERENCES wei_yan(id) ON DELETE SET NULL
+);

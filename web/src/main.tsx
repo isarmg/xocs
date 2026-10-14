@@ -232,11 +232,12 @@ function ArticleNewsEditor({id}:{id:number}){
   const [result,setResult]=useState<{client:typeof client;id:number;page:number;attempt:number;data:Page<NewsEntry>|null;failure:string}|null>(null);
   const [content,setContent]=useState(''),[date,setDate]=useState(''),[editing,setEditing]=useState<NewsEntry|null>(null),[failure,setFailure]=useState('');
   const [saving,setSaving]=useState(false);const savePending=useRef<AbortController|null>(null);
+  const creation=useRef<{key:string;body:string}|null>(null);
   const current=result?.client===client&&result.id===id&&result.page===page&&result.attempt===attempt?result:null;
   const data=current?.data??null,loadFailure=current?.failure??'',ready=!!data;
   function fieldDate(value:string|null){const timestamp=parseUtcDate(value);return Number.isFinite(timestamp)?new Date(timestamp).toISOString().slice(0,19):'';}
   const dirty=content!==(editing?.content??'')||date!==(editing?fieldDate(editing.create_time):'');
-  function reset(){setContent('');setDate('');setEditing(null);setFailure('');}
+  function reset(){creation.current=null;setContent('');setDate('');setEditing(null);setFailure('');}
   function reload(nextPage=page){setQuery(current=>({article:id,page:nextPage,version:current.article===id?current.version+1:1}));}
   useEffect(()=>{reset();setSaving(false);return()=>{savePending.current?.abort();savePending.current=null;};},[client,id]);
   useEffect(()=>{
@@ -258,8 +259,10 @@ function ArticleNewsEditor({id}:{id:number}){
     if(!content.trim()||Array.from(content.trim()).length>1024){setFailure(t('进展正文须为 1–1024 个字符','Update content must contain 1–1024 characters'));return;}
     const controller=new AbortController();savePending.current=controller;setSaving(true);setFailure('');
     try{
+      const body=JSON.stringify({content,create_time:utcDateTimeInput(date)});
+      if(!editing&&creation.current?.body!==body)creation.current={key:crypto.randomUUID(),body};
       await client.request(`/api/v1/content/articles/${id}/news${editing?`/${editing.id}`:''}`,(value):value is NewsEntry=>isNewsEntry(value)&&(!editing||value.id===editing.id)&&value.content===content.trim(),
-        {method:editing?'PUT':'POST',signal:controller.signal,body:JSON.stringify({content,create_time:utcDateTimeInput(date)})});
+        {method:editing?'PUT':'POST',headers:editing?undefined:{'Idempotency-Key':creation.current!.key},signal:controller.signal,body});
       if(controller.signal.aborted||savePending.current!==controller)return;
       reset();reload(1);notify(editing?t('文章进展已保存','Article update saved'):t('文章进展已发布','Article update published'));
     }catch(reason){if(!controller.signal.aborted)setFailure(publicErrorMessage(reason,t('保存进展失败','Unable to save update')));}

@@ -319,11 +319,26 @@ pub(super) struct ArticleNewsInput {
 pub(super) async fn admin_create_article_news(
     State(state): State<AppState>,
     Path(id): Path<i64>,
+    headers: HeaderMap,
     crate::ContractJson(input): crate::ContractJson<ArticleNewsInput>,
 ) -> ApiResult<ArticleNews> {
-    let article = load_article(&state.pool, id, true).await?;
+    let request_id = headers
+        .get("Idempotency-Key")
+        .map(|value| {
+            value
+                .to_str()
+                .ok()
+                .filter(|key| {
+                    !key.is_empty()
+                        && key.len() <= 128
+                        && key.bytes().all(|byte| byte.is_ascii_graphic())
+                })
+                .map(str::to_owned)
+                .ok_or_else(|| invalid("进展请求标识无效"))
+        })
+        .transpose()?;
     Ok(Json(
-        insert_article_news(&state, id, article.user_id, input).await?,
+        insert_article_news(&state, id, input, request_id).await?,
     ))
 }
 pub(super) async fn admin_delete_article_news(
@@ -397,21 +412,64 @@ async fn normalize_news_time(
 async fn insert_article_news(
     state: &AppState,
     id: i64,
-    author: i64,
     input: ArticleNewsInput,
+    request_id: Option<String>,
 ) -> Result<ArticleNews, AppError> {
     validate_news_content(&input.content)?;
     let content = input.content.trim();
     let time = normalize_news_time(state, input.create_time).await?;
-    let id_new=sqlx::query("INSERT INTO wei_yan(user_id,content,type,source,is_public,create_time) VALUES(?,?,'news',?,1,COALESCE(?,CURRENT_TIMESTAMP))")
-        .bind(author).bind(content).bind(id).bind(time).execute(&state.pool).await.map_err(db_error)?.last_insert_rowid();
-    sqlx::query_as::<_, ArticleNews>(sqlx::AssertSqlSafe(format!(
-        "{ARTICLE_NEWS_SQL} WHERE w.id=?"
+    use sha2::{Digest, Sha256};
+    // Bind the key to its article and normalized original draft, including time.
+    let request_hash = Sha256::digest(
+        serde_json::to_vec(&(id, content, &time)).map_err(|_| invalid("进展内容无效"))?,
+    )
+    .to_vec();
+    let mut transaction = state
+        .pool
+        .begin_with("BEGIN IMMEDIATE")
+        .await
+        .map_err(db_error)?;
+    let author: i64 = sqlx::query_scalar("SELECT user_id FROM article WHERE id=? AND deleted=0")
+        .bind(id)
+        .fetch_optional(&mut *transaction)
+        .await
+        .map_err(db_error)?
+        .ok_or_else(absent)?;
+    let previous: Option<(Vec<u8>, Option<i64>)> = if let Some(key) = &request_id {
+        sqlx::query_as(
+            "SELECT request_hash,news_id FROM article_news_submission WHERE request_id=?",
+        )
+        .bind(key)
+        .fetch_optional(&mut *transaction)
+        .await
+        .map_err(db_error)?
+    } else {
+        None
+    };
+    let news_id = if let Some((hash, news_id)) = previous {
+        if hash != request_hash {
+            return Err(AppError(StatusCode::CONFLICT, "进展请求标识已用于不同内容"));
+        }
+        news_id.ok_or(AppError(StatusCode::CONFLICT, "原进展已删除，不会重复发表"))?
+    } else {
+        let news_id = sqlx::query("INSERT INTO wei_yan(user_id,content,type,source,is_public,create_time) VALUES(?,?,'news',?,1,COALESCE(?,CURRENT_TIMESTAMP))")
+            .bind(author).bind(content).bind(id).bind(time).execute(&mut *transaction).await.map_err(db_error)?.last_insert_rowid();
+        if let Some(key) = request_id {
+            sqlx::query("INSERT INTO article_news_submission(request_id,request_hash,news_id) VALUES(?,?,?)")
+                .bind(key).bind(request_hash).bind(news_id).execute(&mut *transaction).await.map_err(db_error)?;
+        }
+        news_id
+    };
+    let result = sqlx::query_as::<_, ArticleNews>(sqlx::AssertSqlSafe(format!(
+        "{ARTICLE_NEWS_SQL} WHERE w.id=? AND w.source=? AND w.type='news'"
     )))
-    .bind(id_new)
-    .fetch_one(&state.pool)
+    .bind(news_id)
+    .bind(id)
+    .fetch_one(&mut *transaction)
     .await
-    .map_err(db_error)
+    .map_err(db_error)?;
+    transaction.commit().await.map_err(db_error)?;
+    Ok(result)
 }
 #[derive(Serialize, sqlx::FromRow)]
 pub(super) struct ArticleAccess {

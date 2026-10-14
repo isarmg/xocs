@@ -682,3 +682,203 @@ async fn management_routes_require_administrator_and_csrf() {
         }
     }
 }
+
+async fn publish_news_with_key(
+    app: &Router,
+    session: &(String, String),
+    article: i64,
+    key: &str,
+    value: Value,
+) -> Response {
+    app.clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri(format!("/api/v1/content/articles/{article}/news"))
+                .header(header::HOST, "127.0.0.1:18881")
+                .header(header::ORIGIN, "http://127.0.0.1:18881")
+                .header("sec-fetch-site", "same-origin")
+                .header(header::COOKIE, &session.0)
+                .header("x-csrf-token", &session.1)
+                .header(header::CONTENT_TYPE, "application/json")
+                .header("Idempotency-Key", key)
+                .body(Body::from(value.to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap()
+}
+
+#[tokio::test]
+async fn news_publish_retries_preserve_identity_and_deliberate_repeats() {
+    let (directory, app, pool) = setup().await;
+    let auth = session(&app).await;
+    assert_eq!(
+        admin(
+            &app,
+            &auth,
+            "POST",
+            "/api/v1/content/categories",
+            json!({"name":"Review"})
+        )
+        .await
+        .status(),
+        StatusCode::OK
+    );
+    assert_eq!(
+        admin(
+            &app,
+            &auth,
+            "POST",
+            "/api/v1/content/labels",
+            json!({"sort_id":1,"name":"Review"})
+        )
+        .await
+        .status(),
+        StatusCode::OK
+    );
+    let input = json!({"article_title":"Review article","article_content":"Review body","sort_id":1,"label_id":1,"view_status":true,"recommend_status":false,"comment_status":true});
+    let first = admin(
+        &app,
+        &auth,
+        "POST",
+        "/api/v1/content/articles",
+        input.clone(),
+    )
+    .await;
+    assert_eq!(first.status(), StatusCode::OK);
+    let id = body_json(first).await["id"].as_i64().unwrap();
+    let second = admin(&app, &auth, "POST", "/api/v1/content/articles", input).await;
+    assert_eq!(second.status(), StatusCode::OK);
+    let other_id = body_json(second).await["id"].as_i64().unwrap();
+    let payload = json!({"content":"One intended update","create_time":null});
+    let committed = publish_news_with_key(&app, &auth, id, "first-publish", payload.clone()).await;
+    assert_eq!(committed.status(), StatusCode::OK);
+    drop(committed); // Commit succeeded, but its response body never reached the editor.
+    let retry = publish_news_with_key(&app, &auth, id, "first-publish", payload.clone()).await;
+    assert_eq!(retry.status(), StatusCode::OK);
+    let saved = body_json(retry).await;
+    assert_eq!(
+        admin(
+            &app,
+            &auth,
+            "PUT",
+            &format!("/api/v1/content/articles/{id}/news/{}", saved["id"]),
+            json!({"content":"Edited after publication","create_time":null})
+        )
+        .await
+        .status(),
+        StatusCode::OK
+    );
+    let replay_after_edit =
+        publish_news_with_key(&app, &auth, id, "first-publish", payload.clone()).await;
+    assert_eq!(replay_after_edit.status(), StatusCode::OK);
+    let replay_after_edit = body_json(replay_after_edit).await;
+    assert_eq!(replay_after_edit["id"], saved["id"]);
+    assert_eq!(
+        replay_after_edit["content"], "Edited after publication",
+        "Retry must not overwrite a later edit"
+    );
+    let public_path = format!("/api/v1/articles/{id}/news");
+    assert_eq!(
+        public(&app, &public_path).await.as_array().unwrap().len(),
+        1
+    );
+    assert_eq!(
+        publish_news_with_key(
+            &app,
+            &auth,
+            id,
+            "first-publish",
+            json!({"content":"Different","create_time":null})
+        )
+        .await
+        .status(),
+        StatusCode::CONFLICT
+    );
+    assert_eq!(
+        publish_news_with_key(
+            &app,
+            &auth,
+            id,
+            "first-publish",
+            json!({"content":"One intended update","create_time":"2026-10-01T00:00:00Z"})
+        )
+        .await
+        .status(),
+        StatusCode::CONFLICT
+    );
+    assert_eq!(
+        publish_news_with_key(&app, &auth, other_id, "first-publish", payload.clone())
+            .await
+            .status(),
+        StatusCode::CONFLICT
+    );
+    let (one, two) = tokio::join!(
+        publish_news_with_key(&app, &auth, id, "second-publish", payload.clone()),
+        publish_news_with_key(&app, &auth, id, "second-publish", payload.clone())
+    );
+    assert_eq!(one.status(), StatusCode::OK);
+    assert_eq!(two.status(), StatusCode::OK);
+    assert_eq!(body_json(one).await["id"], body_json(two).await["id"]);
+    assert_eq!(
+        public(&app, &public_path).await.as_array().unwrap().len(),
+        2,
+        "A fresh key permits a deliberate identical update"
+    );
+    assert_eq!(
+        admin(
+            &app,
+            &auth,
+            "DELETE",
+            &format!("/api/v1/content/articles/{id}/news/{}", saved["id"]),
+            Value::Null
+        )
+        .await
+        .status(),
+        StatusCode::OK
+    );
+    assert_eq!(
+        publish_news_with_key(&app, &auth, id, "first-publish", payload.clone())
+            .await
+            .status(),
+        StatusCode::CONFLICT
+    );
+    assert_eq!(
+        public(&app, &public_path).await.as_array().unwrap().len(),
+        1
+    );
+    assert_eq!(
+        publish_news_with_key(&app, &auth, id, "", payload)
+            .await
+            .status(),
+        StatusCode::BAD_REQUEST
+    );
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM article_news_submission")
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+        2
+    );
+    let before: Vec<(String, Vec<u8>, Option<i64>)> = sqlx::query_as(
+        "SELECT request_id,request_hash,news_id FROM article_news_submission ORDER BY request_id",
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    close_fixture_pool(&pool).await;
+    let reopened = open_database(&directory.path().join("site.sqlite"), false)
+        .await
+        .unwrap();
+    let after: Vec<(String, Vec<u8>, Option<i64>)> = sqlx::query_as(
+        "SELECT request_id,request_hash,news_id FROM article_news_submission ORDER BY request_id",
+    )
+    .fetch_all(&reopened)
+    .await
+    .unwrap();
+    assert_eq!(
+        before, after,
+        "Live and deleted receipts survive database reopen"
+    );
+}
