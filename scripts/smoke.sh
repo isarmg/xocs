@@ -145,6 +145,24 @@ test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/jso
   --data '{"message":"Smoke anonymous message"}' http://127.0.0.1:$smoke_port/api/v1/tree-hole/guest)" = 200
 test "$(curl -s -o /dev/null -w '%{http_code}' -b "$scratch_dir/cookies" \
   http://127.0.0.1:$smoke_port/api/v1/content/notes)" = 200
+# Exercise the same application state in a fresh process before browser mutations.
+# Do not re-run fixture initialization: that would hide persistence failures.
+kill "$server_pid"
+wait "$server_pid"
+server_pid=''
+"$binary" --root "$smoke_dir" >>"$server_log" 2>&1 &
+server_pid=$!
+for _ in {1..40}; do
+  if curl -fsS "http://127.0.0.1:$smoke_port/api/v1/health" >/dev/null 2>&1; then break; fi
+  if ! kill -0 "$server_pid" 2>/dev/null; then cat "$server_log"; exit 1; fi
+  sleep .25
+done
+curl -fsS "http://127.0.0.1:$smoke_port/api/v1/articles/1" | grep -q 'Chapter One'
+curl -fsS "http://127.0.0.1:$smoke_port/api/v1/articles/1/news" | grep -q 'Smoke article news'
+curl -fsS "http://127.0.0.1:$smoke_port/api/v1/notes/page?page=1" | grep -q 'Smoke author note'
+curl -fsS "http://127.0.0.1:$smoke_port/api/v1/site" | grep -q 'Smoke site'
+curl -fsS -b "$scratch_dir/cookies" "http://127.0.0.1:$smoke_port/api/v1/content/notes" | grep -q 'Smoke author note'
+echo 'server restart persistence: ok'
 XOCS_SMOKE_URL=http://127.0.0.1:$smoke_port node "$project_root/web/tests/browser-smoke.mjs"
 XOCS_SMOKE_URL=http://127.0.0.1:$smoke_port node "$project_root/web/tests/management-native.mjs"
 test "$(curl -s -o /dev/null -w '%{http_code}' -X DELETE http://127.0.0.1:$smoke_port/api/v1/content/notes/2)" = 401
