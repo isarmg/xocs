@@ -57,11 +57,11 @@ jobs:
 
       - name: Verify and build server
         run: |
-          export XOCS_SOURCE_REVISION="$(git rev-parse HEAD)"
-          test "$XOCS_SOURCE_REVISION" = "${GITHUB_SHA}"
           cargo fmt --all -- --check
           cargo clippy --locked --all-targets -- -D warnings
           cargo test --locked
+          export XOCS_SOURCE_REVISION="$(git rev-parse HEAD)"
+          test "$XOCS_SOURCE_REVISION" = "${GITHUB_SHA}"
           web/node_modules/.bin/xcss-build-server \
             --config xcss-web-build.json --mode release --no-install \
             --rust-only --source-revision "$XOCS_SOURCE_REVISION"
