@@ -10,7 +10,7 @@ env:
   RUSTUP_TOOLCHAIN: 1.99.0
 
 jobs:
-  build-and-smoke:
+  server-and-smoke:
     permissions:
       contents: read
     runs-on: ubuntu-24.04
@@ -23,6 +23,8 @@ jobs:
         with:
           node-version: 26.7.0
           check-latest: false
+      - name: Validate parallel CI gates
+        run: node --test scripts/check-ci-parallelism.test.mjs
       - name: Install exact Rust toolchain
         run: rustup toolchain install 1.99.0 --profile minimal --component rustfmt,clippy
       - name: Verify pinned xcss contracts
@@ -52,15 +54,67 @@ jobs:
         run: npx playwright install --with-deps chromium firefox
       - name: End-to-end smoke test
         run: bash scripts/smoke.sh
-      - name: Bilingual layouts and anonymous interactions
+
+  browser:
+    name: Browser (${{ matrix.group }})
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [admin, public]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 26.7.0
+          check-latest: false
+      - name: Build web
         working-directory: web
         run: |
-          npm run test:unit
-          node tests/language.mjs
-          node tests/admin-layout.mjs
-          node tests/account-settings.mjs
-          node tests/admin-cleanup.mjs
-          node tests/management.mjs
-          node tests/public-footer.mjs
-          node tests/public-layout.mjs
-          node tests/anonymous-comments.mjs
+          npm ci
+          npm run build
+      - name: Install browsers
+        working-directory: web
+        run: npx playwright install --with-deps chromium firefox
+      - name: Bilingual layouts and anonymous interactions
+        working-directory: web
+        env:
+          TEST_GROUP: ${{ matrix.group }}
+        run: |
+          set -euo pipefail
+          case "$TEST_GROUP" in
+            admin)
+              npm run test:unit
+              node tests/language.mjs
+              node tests/admin-layout.mjs
+              node tests/account-settings.mjs
+              node tests/admin-cleanup.mjs
+              node tests/management.mjs
+              ;;
+            public)
+              node tests/public-footer.mjs
+              node tests/public-layout.mjs
+              node tests/anonymous-comments.mjs
+              ;;
+            *) exit 1 ;;
+          esac
+
+  build-and-smoke:
+    needs: [server-and-smoke, browser]
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every server and browser check
+        env:
+          SERVER_RESULT: ${{ needs.server-and-smoke.result }}
+          BROWSER_RESULT: ${{ needs.browser.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$SERVER_RESULT" == success && "$BROWSER_RESULT" == success ]]
