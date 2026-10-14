@@ -1,6 +1,6 @@
 # 安装第一个站点
 
-从独立可信渠道取得当前发行包、公钥及其 DER SHA256 指纹，核验归档摘要、签名和文件清单。复制 `share/config/config.json.example` 为自己的私有配置，执行[部署说明](../deploy/linux-x86_64/README.md)中的 `install.sh`，从 stdin 提供唯一管理员密码。
+下载当前发行包和 SHA256SUMS，核验归档摘要以及包内完整文件清单。复制 `share/config/config.json.example` 为自己的私有配置，执行[部署说明](../deploy/linux-x86_64/README.md)中的 `install.sh`，从 stdin 提供唯一管理员密码。
 
 安装完成后自行执行 `sudo systemctl enable --now xocs.service`，通过配置监听地址的 `/readyz` 确认真实就绪，再打开公开首页和 `/admin`。前台和后台资源内嵌同一 Server，运行命令只有 `bin/xocs --root ROOT`。
 

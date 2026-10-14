@@ -89,17 +89,9 @@ jobs:
         run: bash scripts/smoke.sh
 
       - name: Package Linux x86_64 distribution
-        env:
-          XSSI_SIGNING_KEY_PEM: ${{ secrets.XSSI_SIGNING_KEY_PEM }}
-          XSSI_REPOSITORY_TOKEN: ${{ secrets.XSSI_REPOSITORY_TOKEN }}
         run: |
-          test -n "$XSSI_SIGNING_KEY_PEM"
-          key="$RUNNER_TEMP/xocs-release-signing.pem"
-          umask 077
-          printf '%s\n' "$XSSI_SIGNING_KEY_PEM" > "$key"
-          trap 'rm -f -- "$key"' EXIT
           mkdir -p dist
-          bash scripts/package-linux-x86_64.sh --output-dir "$GITHUB_WORKSPACE/dist" --signing-key "$key"
+          bash scripts/package-linux-x86_64.sh --output-dir "$GITHUB_WORKSPACE/dist"
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

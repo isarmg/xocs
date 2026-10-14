@@ -8,11 +8,7 @@ use axum::{
     routing::get,
 };
 use sqlx::SqlitePool;
-use std::{
-    path::PathBuf,
-    sync::Arc,
-    time::{Duration, SystemTime, UNIX_EPOCH},
-};
+use std::{path::PathBuf, sync::Arc, time::Duration};
 use tower_http::{
     services::{ServeDir, ServeFile},
     trace::TraceLayer,
@@ -129,7 +125,9 @@ pub(crate) async fn site_author_id(pool: &SqlitePool) -> Result<i64, AppError> {
     .map_err(db_error)?
     .ok_or(AppError(StatusCode::CONFLICT, "缺少站点作者账号"))
 }
+#[cfg(test)]
 pub(crate) fn now_micros() -> anyhow::Result<u64> {
+    use std::time::{SystemTime, UNIX_EPOCH};
     Ok(u64::try_from(
         SystemTime::now().duration_since(UNIX_EPOCH)?.as_micros(),
     )?)

@@ -1,37 +1,8 @@
 use anyhow::ensure;
-use serde::{Deserialize, Serialize};
-use std::{
-    net::SocketAddr,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 use xcss::config::{EnvMapping, EnvValueKind, Loaded};
 
-#[derive(Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Settings {
-    #[serde(skip)]
-    pub root: PathBuf,
-    pub data_dir: PathBuf,
-    pub log_level: String,
-    pub media: Option<PathBuf>,
-    pub bind: SocketAddr,
-    pub development: bool,
-    pub web: Option<PathBuf>,
-}
-
-impl Default for Settings {
-    fn default() -> Self {
-        Self {
-            root: PathBuf::from("/opt/isarmg/xocs"),
-            data_dir: PathBuf::from("/opt/isarmg/xocs/state"),
-            log_level: "info".into(),
-            media: None,
-            bind: "127.0.0.1:8081".parse().expect("static loopback address"),
-            development: false,
-            web: None,
-        }
-    }
-}
+pub use crate::config_definition::Settings;
 
 pub fn load(root: &Path, config: &Path) -> anyhow::Result<Loaded<Settings>> {
     ensure!(
@@ -43,7 +14,10 @@ pub fn load(root: &Path, config: &Path) -> anyhow::Result<Loaded<Settings>> {
             )),
         "ROOT must be an absolute normalized directory"
     );
-    let bytes = xcss::config::read_private_file(config)?;
+    let bytes = xcss::config::read_managed_file(
+        config,
+        cfg!(debug_assertions) && env!("XOCS_SOURCE_REVISION") == "unbound",
+    )?;
     let mappings = [
         EnvMapping {
             variable: "XOCS_DATA_DIR",
@@ -134,76 +108,20 @@ impl Settings {
         Ok(self.data_dir.clone())
     }
     pub fn validate(&self) -> anyhow::Result<()> {
-        ensure!(
-            matches!(
-                self.log_level.as_str(),
-                "off" | "error" | "warn" | "info" | "debug" | "trace"
-            ),
-            "log_level must be off, error, warn, info, debug or trace"
-        );
-        for path in std::iter::once(&self.data_dir)
-            .chain(self.media.iter())
-            .chain(self.web.iter())
-        {
-            ensure!(path.is_absolute(), "configured paths must be absolute");
-            ensure!(
-                !path.components().any(|p| matches!(
-                    p,
-                    std::path::Component::ParentDir | std::path::Component::CurDir
-                )),
-                "configured paths must not contain traversal components"
-            );
-        }
-        for selected in [&self.data_dir, &self.media_path()?] {
-            for name in [
-                "bin",
-                "libexec",
-                "share",
-                "config",
-                "logs",
-                "run",
-                "maintenance",
-            ] {
-                let protected = self.root.join(name);
-                ensure!(
-                    !selected.starts_with(&protected) && !protected.starts_with(selected),
-                    "state and media cannot overlap private or immutable ROOT namespaces"
-                );
-            }
-        }
-        let media = self.media_path()?;
-        ensure!(
-            !self.data_dir.starts_with(&media)
-                && !media
-                    .strip_prefix(&self.data_dir)
-                    .ok()
-                    .and_then(|path| path.components().next())
-                    .and_then(|part| part.as_os_str().to_str())
-                    .is_some_and(|name| name.starts_with("site.sqlite")
-                        || name.starts_with(".state-")
-                        || name.starts_with(".xocs-init-")),
-            "media directory must not expose private application state"
-        );
-        ensure!(
-            !self.development || self.bind.ip().is_loopback(),
-            "development HTTP may only bind loopback"
-        );
-        ensure!(
-            self.web.is_none()
-                || (self.development
-                    && cfg!(debug_assertions)
-                    && env!("XOCS_SOURCE_REVISION") == "unbound"),
-            "Web directory overrides require an unbound development build"
-        );
+        let source_bound = !cfg!(debug_assertions) || env!("XOCS_SOURCE_REVISION") != "unbound";
+        xcss::configuration_contract::validate_rules(
+            &crate::config_definition::current_rules(source_bound),
+            &serde_json::to_value(self)?,
+            &self.root,
+            xcss::config::ConfigSource::File,
+        )?;
         Ok(())
     }
 }
 
 pub fn runtime_lock(settings: &Settings) -> anyhow::Result<xcss::state_file::InstanceLock> {
     let state = xcss::state_file::PrivateStateDirectory::open(settings.state_directory()?)?;
-    xcss::server_cli::runtime_allowed(state.path()).map_err(crate::CliFailure)?;
     let lock = state.try_instance_lock()?;
-    xcss::server_cli::runtime_allowed(state.path()).map_err(crate::CliFailure)?;
     state.verify_identity()?;
     Ok(lock)
 }

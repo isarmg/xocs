@@ -17,9 +17,9 @@ web/node_modules/.bin/xcss-build-server \
   --rust-only --source-revision "$XOCS_SOURCE_REVISION"
 ```
 
-Rust 公共依赖固定官方 xcss 仓库的版本 `=1.0.13` 与完整 revision `b9b5858088510d0bf6832044353c92d09ee123fe`；一个 @xcss/web 包固定同版 `v1.0.13` 官方发行 URL 和真实归档的 lockfile integrity，不读取相邻工作区。Xocs 软件版本为 `1.0.5`，数据库格式身份为 `xocs-db-v5`，软件版本与数据格式版本分别管理。
+Rust 公共依赖固定官方 xcss 仓库的版本 `=1.0.0` 与完整 revision `b34b3861e15edd2b1348e7d03b9c9a93e97d6521`；一个 @xcss/web 包固定同版 `v1.0.0` 官方发行 URL 和真实归档的 lockfile integrity，不读取相邻工作区。Xocs 软件版本为 `1.0.0`，数据库格式身份为 `xocs-db-v1`，软件版本与数据格式版本分别管理。
 
-根目录是唯一 Cargo workspace 与 lock。共同 builder 验证 Linux AMD64 GNU target、真实源码 revision 和实际二进制资源清单，报告真实输出路径；默认正式输出为 `target/x86_64-unknown-linux-gnu/release/xocs`。独立缓存通过 `CARGO_TARGET_DIR` 选择，打包脚本从精确源码提交生成私有快照，并使用固定 xssi 修订编译同源 setup。正式包要求干净源码、annotated `v1.0.5` 精确指向 HEAD 和匹配该 HEAD 的二进制身份，不允许 unbound 程序打包。
+根目录是唯一 Cargo workspace 与 lock。共同 builder 验证 Linux AMD64 GNU target、真实源码 revision 和实际二进制资源清单，报告真实输出路径；默认正式输出为 `target/x86_64-unknown-linux-gnu/release/xocs`。独立缓存通过 `CARGO_TARGET_DIR` 选择，打包脚本从精确源码提交生成私有快照，并使用固定 xssi 修订编译同源 setup。正式包要求干净源码、annotated `v1.0.0` 精确指向 HEAD 和匹配该 HEAD 的二进制身份，不允许 unbound 程序打包。
 
 ## 验证
 
@@ -44,4 +44,4 @@ bash scripts/smoke.sh
 
 首次启动按[安装指南](getting-started.md)准备隔离的测试数据。配置、页面操作和评论重试分别见[配置](configuration.md)、[使用](usage.md)和[实现参考](current-guide.md)。
 
-集成测试调用当前 offline 数据适配器，并运行仅接受 --root 的实际程序，验证未初始化拒绝、重复初始化拒绝、密码重置互斥与真实就绪；xssi 独立验证签名安装和 xssc 的升级恢复事务。系统级服务验收仍需部署主机执行。
+集成测试使用仅供测试的当前 DDL fixture，并运行仅接受 --root 的实际程序，验证未初始化拒绝、重复实例拒绝、管理员结构损坏拒绝与真实就绪；xssi 独立验证安装、密码重置和 xssc 的升级恢复事务。系统级服务验收仍需部署主机执行。

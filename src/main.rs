@@ -4,7 +4,7 @@ use std::path::PathBuf;
 #[derive(Parser)]
 #[command(name = "xocs", version, about = "XOCS content server")]
 struct Cli {
-    #[arg(long, default_value = "/opt/isarmg/xocs")]
+    #[arg(long)]
     root: PathBuf,
 }
 

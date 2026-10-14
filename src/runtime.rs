@@ -22,7 +22,7 @@ pub(crate) async fn run(root: &Path) -> anyhow::Result<()> {
                 .log_level
                 .parse::<tracing_subscriber::filter::LevelFilter>()?,
         )
-        .with(log_layer.clone())
+        .with(log_layer)
         .try_init()?;
     let database = settings.database_path()?;
     let media = settings.media_path()?;
@@ -67,7 +67,7 @@ pub(crate) async fn run(root: &Path) -> anyhow::Result<()> {
             "explicit initialization is required"
         );
         xcss::fs_safety::PrivateDirectory::open_existing(settings.root.join("logs"))?;
-        attach_log_file(settings, &log_layer)?;
+        attach_log_file(settings)?;
         tracing::info!(event = "common.config.loaded");
         let scope = xcss::server_runtime::WorkScope::new();
         let participant = Arc::new(lifecycle::Lifecycle {
@@ -135,12 +135,9 @@ pub(crate) async fn run(root: &Path) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn attach_log_file(
-    settings: &config::Settings,
-    layer: &xcss::log::XcssStructuredLayer,
-) -> anyhow::Result<()> {
+fn attach_log_file(settings: &config::Settings) -> anyhow::Result<()> {
     xcss::fs_safety::PrivateDirectory::open_existing(settings.root.join("logs"))?;
-    layer.set_rotating_file(xcss::log::RotatingLogFile::open(
+    xcss::log::install_rotating_file(xcss::log::RotatingLogFile::open(
         settings.root.join("logs"),
         "server",
         xcss::log::LogRetention::default(),

@@ -48,16 +48,24 @@ fn start(root: &Path, address: SocketAddr) -> Running {
             .arg("--root")
             .arg(root)
             .stdout(Stdio::null())
-            .stderr(Stdio::null())
+            .stderr(Stdio::piped())
             .spawn()
             .unwrap(),
     );
     let deadline = Instant::now() + Duration::from_secs(15);
     loop {
-        assert!(
-            child.0.try_wait().unwrap().is_none(),
-            "runtime exited before ready"
-        );
+        if let Some(status) = child.0.try_wait().unwrap() {
+            let mut diagnostic = String::new();
+            child
+                .0
+                .stderr
+                .take()
+                .unwrap()
+                .take(65536)
+                .read_to_string(&mut diagnostic)
+                .unwrap();
+            panic!("runtime exited before ready: {status}: {diagnostic}");
+        }
         if let Ok(mut socket) = TcpStream::connect_timeout(&address, Duration::from_millis(200)) {
             socket
                 .set_read_timeout(Some(Duration::from_millis(500)))
@@ -79,31 +87,24 @@ fn start(root: &Path, address: SocketAddr) -> Running {
     }
 }
 
-#[tokio::test]
-async fn offline_contract_is_pure_and_runtime_never_initializes_state() {
+#[test]
+fn runtime_never_initializes_state_and_has_no_offline_commands() {
     let root = fixture(available_address());
     let config = root.path().join("config/config.json");
-    let report = xocs::offline::validate_config(root.path(), &config)
-        .await
+    let original = fs::read(&config).unwrap();
+    let rejected = Command::new(BINARY)
+        .env_clear()
+        .arg("--root")
+        .arg(root.path())
+        .output()
         .unwrap();
-    assert_eq!(report.data_dir, root.path().join("state"));
-    assert!(!report.data_dir.exists());
-    assert!(
-        !Command::new(BINARY)
-            .env_clear()
-            .arg("--root")
-            .arg(root.path())
-            .output()
-            .unwrap()
-            .status
-            .success()
-    );
-    assert!(!report.data_dir.exists());
-    for old in [
+    assert!(!rejected.status.success());
+    for command in [
         "init",
         "check",
         "config",
         "admin",
+        "reset-password",
         "status",
         "web-assets",
         "release-identity",
@@ -114,97 +115,55 @@ async fn offline_contract_is_pure_and_runtime_never_initializes_state() {
                 .env_clear()
                 .arg("--root")
                 .arg(root.path())
-                .arg(old)
+                .arg(command)
                 .output()
                 .unwrap()
                 .status
                 .success()
         );
     }
-    assert!(
-        xocs::offline::initialize(root.path(), &config, "admin", "short")
-            .await
-            .is_err()
-    );
-    assert!(!report.data_dir.exists());
+    assert!(!root.path().join("state").exists());
+    assert!(!root.path().join("run").exists());
+    assert!(!root.path().join("logs").exists());
+    assert_eq!(fs::read(&config).unwrap(), original);
     fs::write(&config, br#"{"trusted_proxies":["127.0.0.1"]}"#).unwrap();
     assert!(
-        xocs::offline::validate_config(root.path(), &config)
-            .await
-            .is_err()
+        !Command::new(BINARY)
+            .env_clear()
+            .arg("--root")
+            .arg(root.path())
+            .output()
+            .unwrap()
+            .status
+            .success()
     );
-    assert!(!report.data_dir.exists());
+    assert!(!root.path().join("state").exists());
 }
 
+#[path = "support/database.rs"]
+mod database;
+
 #[tokio::test]
-async fn initialization_password_reset_and_runtime_share_one_database() {
+async fn current_installed_state_starts_and_foreign_state_rejects_without_writes() {
     let address = available_address();
     let root = fixture(address);
-    let config = root.path().join("config/config.json");
-    xocs::offline::initialize(root.path(), &config, "admin", "TemporaryPassphrase123")
+    let database = database::initialize(root.path(), "admin", "TemporaryPassphrase123")
         .await
         .unwrap();
-    let before = xocs::offline::check(root.path(), &config).await.unwrap();
-    assert!(before.initialized);
-    assert!(
-        xocs::offline::initialize(root.path(), &config, "admin", "OverwritePassphrase123")
-            .await
-            .is_err()
-    );
-    let schema = before.config.schema_identity.clone();
-    xocs::offline::migrate(
-        root.path(),
-        &config,
-        &before.config.data_dir,
-        &schema,
-        &schema,
-    )
-    .await
-    .unwrap();
-    let mut wrong = schema.clone();
-    wrong.schema_revision += 1;
-    assert!(
-        xocs::offline::migrate(
-            root.path(),
-            &config,
-            &before.config.data_dir,
-            &schema,
-            &wrong
-        )
-        .await
-        .is_err()
-    );
     let running = start(root.path(), address);
+    let duplicate = Command::new(BINARY)
+        .env_clear()
+        .arg("--root")
+        .arg(root.path())
+        .output()
+        .unwrap();
     assert!(
-        xocs::offline::reset_password(root.path(), &config, "admin", "ReplacementPassphrase123")
-            .await
-            .is_err()
+        !duplicate.status.success(),
+        "accepted concurrent runtime for the same physical state"
     );
     drop(running);
-    xocs::offline::reset_password(root.path(), &config, "admin", "ReplacementPassphrase123")
-        .await
-        .unwrap();
-    let options = sqlx::sqlite::SqliteConnectOptions::new()
-        .filename(before.config.data_dir.join("site.sqlite"))
-        .read_only(true);
-    let pool = sqlx::SqlitePool::connect_with(options).await.unwrap();
-    let (hash, version): (String, i64) = sqlx::query_as(
-        "SELECT password_hash,session_version FROM _common_administrators WHERE username='admin'",
-    )
-    .fetch_one(&pool)
-    .await
-    .unwrap();
-    assert!(xcss::admin_auth::verify_password(
-        "ReplacementPassphrase123",
-        &hash
-    ));
-    assert_eq!(version, 2);
-    pool.close().await;
-    xocs::offline::check(root.path(), &config).await.unwrap();
     let restarted = start(root.path(), address);
     drop(restarted);
-
-    let database = before.config.data_dir.join("site.sqlite");
     let options = sqlx::sqlite::SqliteConnectOptions::new()
         .filename(&database)
         .journal_mode(sqlx::sqlite::SqliteJournalMode::Delete);
@@ -216,7 +175,16 @@ async fn initialization_password_reset_and_runtime_share_one_database() {
     pool.close().await;
     let bytes = fs::read(&database).unwrap();
     for _ in 0..3 {
-        assert!(xocs::offline::check(root.path(), &config).await.is_err());
+        assert!(
+            !Command::new(BINARY)
+                .env_clear()
+                .arg("--root")
+                .arg(root.path())
+                .output()
+                .unwrap()
+                .status
+                .success()
+        );
         assert_eq!(fs::read(&database).unwrap(), bytes);
         assert_eq!(fs::read_dir(root.path().join("run")).unwrap().count(), 0);
     }

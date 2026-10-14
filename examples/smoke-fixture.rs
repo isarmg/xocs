@@ -1,4 +1,6 @@
 //! Isolated test provisioning; never included in a release package.
+#[path = "../tests/support/database.rs"]
+mod database;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let root = std::path::PathBuf::from(
@@ -8,17 +10,11 @@ async fn main() -> anyhow::Result<()> {
     );
     match std::env::args().nth(2).as_deref() {
         None => {
-            xocs::offline::initialize(
-                &root,
-                &root.join("config/config.json"),
-                "admin",
-                "TemporaryPassphrase123",
-            )
-            .await?;
+            database::initialize(&root, "admin", "TemporaryPassphrase123").await?;
         }
         Some("check") => {}
         Some(_) => anyhow::bail!("unknown fixture action"),
     }
-    xocs::offline::check(&root, &root.join("config/config.json")).await?;
+    database::check(&root).await?;
     Ok(())
 }

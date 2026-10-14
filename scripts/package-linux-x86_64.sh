@@ -3,16 +3,14 @@ set -euo pipefail
 source_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 product="xocs"
 output=""
-signing_key="${XSSI_SIGNING_KEY:-}"
 while (($#)); do
   case "$1" in
     --output-dir) output="${2:?missing output directory}"; shift 2 ;;
-    --signing-key) signing_key="${2:?missing signing key}"; shift 2 ;;
     /*) [[ -z "$output" ]] || { echo 'Duplicate output directory' >&2; exit 2; }; output="$1"; shift ;;
-    *) echo 'Usage: package-release.sh --output-dir ABSOLUTE --signing-key PEM' >&2; exit 2 ;;
+    *) echo 'Usage: package-release.sh --output-dir ABSOLUTE' >&2; exit 2 ;;
   esac
 done
-[[ "$output" = /* && -d "$output" && -n "$signing_key" ]] || { echo 'Existing absolute output directory and signing key are required.' >&2; exit 2; }
+[[ "$output" = /* && -d "$output" ]] || { echo 'Existing absolute output directory is required.' >&2; exit 2; }
 [[ -z "$(git -C "$source_root" status --porcelain=v1 --untracked-files=all)" ]] || { echo 'Release source must be clean.' >&2; exit 1; }
 source_revision="$(git -C "$source_root" rev-parse --verify HEAD)"
 version="$(python3 - "$source_root/Cargo.toml" <<'VERSION'
@@ -70,22 +68,16 @@ mkdir -p "$work/stage/bin" "$work/stage/share/systemd" "$work/stage/config" "$wo
 git init --quiet "$work/xssi"
 git -C "$work/xssi" remote add origin https://github.com/isarmg/xssi.git
 python3 - "$work/xssi" "$xssi_revision" <<'FETCH'
-import base64,os,subprocess,sys
+import os,subprocess,sys
 root,revision=sys.argv[1:]
-environment=os.environ.copy()
-# Scope optional read-only private-repository authentication to this Git fetch.
-# The token is neither put in URLs nor passed as a command argument or logged.
-token=environment.pop('XSSI_REPOSITORY_TOKEN','')
-if token:
-    count=int(environment.get('GIT_CONFIG_COUNT','0'))
-    environment[f'GIT_CONFIG_KEY_{count}']='http.https://github.com/isarmg/xssi.git.extraheader'
-    encoded=base64.b64encode(('x-access-token:'+token).encode()).decode()
-    environment[f'GIT_CONFIG_VALUE_{count}']='AUTHORIZATION: basic '+encoded
-    environment['GIT_CONFIG_COUNT']=str(count+1)
-result=subprocess.run(['git','-C',root,'fetch','--quiet','--depth=1','origin',revision],env=environment)
-if result.returncode: raise SystemExit('Unable to fetch the pinned xssi source; verify read-only repository access')
+environment={key:value for key,value in os.environ.items()
+             if not any(part in key.upper() for part in ('TOKEN','PASSWORD','SECRET','SIGNING','PRIVATE_KEY'))}
+environment['GIT_TRACE_REDACT']='1'
+environment['GIT_TERMINAL_PROMPT']='0'
+subprocess.run(['git','-C',root,'fetch','--quiet','--depth=1','origin',revision],env=environment,check=True)
 FETCH
-unset XSSI_REPOSITORY_TOKEN
+export XSSI_BUILD_TOOLS_DIR="$work/xssi"
+export XSSI_FRONTEND_METADATA_FILE="$work/metadata/frontend.json"
 git -C "$work/xssi" checkout --quiet --detach FETCH_HEAD
 [[ "$(git -C "$work/xssi" rev-parse HEAD)" = "$xssi_revision" ]]
 npm ci --prefix "$source_root/web"
@@ -108,13 +100,14 @@ with open(binary_file,'rb') as stream: digest=hashlib.file_digest(stream,'sha256
 if digest!=receipt['binary_sha256']: raise SystemExit('Staged binary was replaced after verification')
 RECEIPT
 install -m 0644 "$work/metadata/$product-state-contract.json" "$work/stage/share/state-contract.json"
+install -d -m 0755 "$work/stage/share/contracts"
+cp -a -- "$work/metadata/contracts/." "$work/stage/share/contracts/"
 install -m 0644 "$work/metadata/$product-web-assets.json" "$work/stage/share/web-assets.json"
 install -m 0644 "$source_root/LICENSE" "$work/stage/share/LICENSE"
 install -m 0644 "$source_root/deploy/linux-x86_64/config.json.example" "$work/stage/config/config.json.example"
 export XSSI_SOURCE_REVISION="$source_revision"
 export XSSI_IDENTITY_FILE="$work/metadata/$product-identity.json"
 export XSSI_SCHEMA_FILE="$work/metadata/$product-schema.json"
-export XSSI_SIGNING_KEY="$signing_key"
 bash "$work/xssi/scripts/build-package.sh" "$product" "$source_root" "$work/stage"
 [[ "$(git -C "$source_root" rev-parse HEAD)" = "$source_revision" && -z "$(git -C "$source_root" status --porcelain=v1 --untracked-files=all)" ]] || { echo 'Private source snapshot changed during build.' >&2; exit 1; }
 [[ "$(git -C "$original_source" rev-parse HEAD)" = "$source_revision" && "$(git -C "$original_source" rev-parse "refs/tags/v$version^{commit}")" = "$source_revision" ]] || { echo 'Release identity changed during build.' >&2; exit 1; }

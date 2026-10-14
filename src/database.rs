@@ -1,4 +1,6 @@
-use crate::{now_micros, schema};
+#[cfg(test)]
+use crate::now_micros;
+use crate::schema;
 use anyhow::{Context, bail};
 use sqlx::{
     SqlitePool,
@@ -10,6 +12,7 @@ use std::{
     path::{Path, PathBuf},
     time::Duration,
 };
+#[cfg(test)]
 use xcss::admin_core::AdministratorService;
 use xcss::admin_sqlite::SqliteAdministratorStore;
 
@@ -104,6 +107,7 @@ pub(crate) async fn open_database_with_limit(
     Ok(pool)
 }
 
+#[cfg(test)]
 pub(crate) async fn initialize_new_database(
     database: &Path,
     username: &str,
@@ -149,6 +153,7 @@ pub(crate) async fn initialize_new_database(
     Ok(())
 }
 
+#[cfg(test)]
 pub(crate) async fn initialize(
     pool: &SqlitePool,
     username: &str,
@@ -161,13 +166,11 @@ pub(crate) async fn initialize(
     .execute(pool)
     .await?;
     schema::initialize_identity(pool).await?;
-    sqlx::query("INSERT INTO user(id,username,user_type) VALUES(1,'site-author',0)")
+    sqlx::query(include_str!("../schema/initialize-site-author.sql"))
         .execute(pool)
         .await?;
     let service = AdministratorService::new(SqliteAdministratorStore::new(pool.clone()));
-    service
-        .bootstrap_administrator(username, password, now_micros()?)
-        .await?;
+    crate::test_support::seed_administrator(&service, username, password, now_micros()?).await?;
     validate_database(pool).await
 }
 

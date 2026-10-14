@@ -1,3 +1,10 @@
+#[path = "src/config_definition.rs"]
+#[allow(dead_code)] // Runtime-only fields are intentionally absent from exported configuration.
+mod config_definition;
+#[path = "src/installation_definition.rs"]
+mod installation_definition;
+#[path = "src/schema_definition.rs"]
+mod schema_definition;
 use std::{collections::BTreeSet, env, fs, path::PathBuf};
 
 fn main() {
@@ -88,21 +95,17 @@ fn emit_offline_metadata(schema_hash: &str) {
     );
     let revision =
         env::var("XOCS_SOURCE_REVISION").expect("source-bound metadata requires source revision");
-    let schema = xcss::contracts::SchemaIdentity::new("xocs", "xocs-db-v5", 5, schema_hash)
-        .expect("current schema");
+    let schema = schema_definition::identity(schema_hash).expect("current schema");
     let contract = StateContract {
         contract_version: xcss::contracts::STATE_CONTRACT_VERSION,
         application: "xocs".into(),
         application_version: env::var("CARGO_PKG_VERSION").unwrap(),
         source_revision: revision.clone(),
         schema: Some(StateSchemaIdentity {
-            revision: 5,
+            revision: schema.schema_revision,
             sha256: schema_hash.into(),
         }),
-        maintenance_locks: vec![
-            ".state-instance.lock".into(),
-            ".state-maintenance.lock".into(),
-        ],
+        maintenance_locks: vec![".state-instance.lock".into()],
         resources: vec![
             StateResource {
                 name: "state".into(),
@@ -142,6 +145,11 @@ fn emit_offline_metadata(schema_hash: &str) {
         state_contract_sha256: digest,
     };
     identity.validate().expect("bound release identity");
+    let ddl = std::fs::read_to_string(
+        PathBuf::from(env::var_os("OUT_DIR").unwrap()).join("xocs-current-schema.sql"),
+    )
+    .expect("read exact current composed DDL");
+    installation_definition::emit(&destination, &identity, &schema, &ddl);
     fs::write(
         destination.join("xocs-identity.json"),
         serde_json::to_vec(&identity).unwrap(),

@@ -2,14 +2,12 @@ use sqlx::SqlitePool;
 use xcss::schema_identity::SchemaIdentity;
 
 pub fn current_identity() -> anyhow::Result<SchemaIdentity> {
-    Ok(SchemaIdentity::new(
-        "xocs",
-        "xocs-db-v5",
-        5,
-        env!("XOCS_SCHEMA_SHA256"),
-    )?)
+    Ok(crate::schema_definition::identity(env!(
+        "XOCS_SCHEMA_SHA256"
+    ))?)
 }
 
+#[cfg(test)]
 pub async fn initialize_identity(pool: &SqlitePool) -> anyhow::Result<()> {
     let identity = current_identity()?;
     sqlx::query("INSERT INTO product_metadata(singleton,application,application_version,schema_revision,schema_sha256) VALUES(1,?,?,?,?)")

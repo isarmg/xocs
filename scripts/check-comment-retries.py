@@ -55,7 +55,7 @@ def main():
         subprocess.run([*fixture_command, directory], cwd=Path(__file__).resolve().parents[1], check=True)
         with sqlite3.connect(database) as db:
             version, revision, fingerprint = db.execute('SELECT application_version,schema_revision,schema_sha256 FROM product_metadata').fetchone()
-            assert (version, revision) == ('xocs-db-v5', 5)
+            assert (version, revision) == ('xocs-db-v1', 1)
             print('initialized actual DDL:', version, revision, fingerprint)
         base = f'http://127.0.0.1:{address}'
         server = None
