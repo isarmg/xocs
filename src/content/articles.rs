@@ -269,9 +269,20 @@ pub(super) async fn article_news(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> ApiResult<Vec<ArticleNews>> {
-    load_article(&state.pool, id, false).await?;
+    let mut transaction = state.pool.begin().await.map_err(db_error)?;
+    let visible: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM article WHERE id=? AND deleted=0 AND view_status=1 AND password IS NULL)",
+    )
+    .bind(id)
+    .fetch_one(&mut *transaction)
+    .await
+    .map_err(db_error)?;
+    if !visible {
+        return Err(absent());
+    }
     let rows=sqlx::query_as::<_,ArticleNews>(sqlx::AssertSqlSafe(format!("{ARTICLE_NEWS_SQL} WHERE w.type='news' AND w.source=? AND w.is_public=1 ORDER BY w.create_time DESC,w.id DESC LIMIT 100")))
-        .bind(id).fetch_all(&state.pool).await.map_err(db_error)?;
+        .bind(id).fetch_all(&mut *transaction).await.map_err(db_error)?;
+    transaction.commit().await.map_err(db_error)?;
     Ok(Json(rows))
 }
 pub(super) async fn admin_article_news(
@@ -451,21 +462,48 @@ pub(super) async fn unlock_article(
     .map_err(|_| AppError(StatusCode::SERVICE_UNAVAILABLE, "密码验证暂时不可用"))?;
     let password = input.password;
     // The permit remains held by the worker even if the HTTP request is cancelled.
-    let allowed = tokio::task::spawn_blocking(move || {
+    let (allowed, stored) = tokio::task::spawn_blocking(move || {
         let _permit = permit;
-        xcss::admin_auth::verify_password(&password, &stored)
+        (
+            xcss::admin_auth::verify_password(&password, &stored),
+            stored,
+        )
     })
     .await
     .map_err(|_| AppError(StatusCode::INTERNAL_SERVER_ERROR, "密码验证失败"))?;
     if !allowed {
         return Err(AppError(StatusCode::FORBIDDEN, "访问密码错误"));
     }
-    sqlx::query("UPDATE article SET view_count=view_count+1 WHERE id=?")
-        .bind(id)
-        .execute(&state.pool)
+    // Recheck access after waiting/hashing, and read the body under the same
+    // writer boundary so a concurrent password change cannot expose new content.
+    let mut transaction = state
+        .pool
+        .begin_with("BEGIN IMMEDIATE")
         .await
         .map_err(db_error)?;
-    Ok(Json(load_article(&state.pool, id, true).await?))
+    let changed = sqlx::query(
+        "UPDATE article SET view_count=view_count+1 WHERE id=? AND deleted=0 AND password=?",
+    )
+    .bind(id)
+    .bind(stored)
+    .execute(&mut *transaction)
+    .await
+    .map_err(db_error)?;
+    if changed.rows_affected() != 1 {
+        return Err(AppError(
+            StatusCode::FORBIDDEN,
+            "文章访问权限已变更，请重试",
+        ));
+    }
+    let article = sqlx::query_as::<_, Article>(sqlx::AssertSqlSafe(format!(
+        "{ARTICLE_SQL} WHERE id=? AND deleted=0"
+    )))
+    .bind(id)
+    .fetch_one(&mut *transaction)
+    .await
+    .map_err(db_error)?;
+    transaction.commit().await.map_err(db_error)?;
+    Ok(Json(article))
 }
 
 #[derive(Deserialize, Serialize)]

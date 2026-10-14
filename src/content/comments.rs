@@ -185,12 +185,15 @@ pub(super) struct Comment {
     reply_count: i64,
 }
 const COMMENT_SQL: &str = "SELECT c.id,c.user_id,u.username,u.avatar,c.comment_content,c.create_time,c.parent_comment_id,pu.username AS parent_username,c.floor_comment_id,(SELECT COUNT(*) FROM comment child WHERE child.floor_comment_id=c.id AND child.type=c.type) AS reply_count FROM comment c LEFT JOIN user u ON u.id=c.user_id LEFT JOIN user pu ON pu.id=c.parent_user_id";
-async fn visible_comment_article(state: &AppState, id: i64) -> Result<(), AppError> {
+async fn visible_comment_article(
+    connection: &mut sqlx::SqliteConnection,
+    id: i64,
+) -> Result<(), AppError> {
     let visible: Option<i64> = sqlx::query_scalar(
         "SELECT id FROM article WHERE id=? AND deleted=0 AND view_status=1 AND password IS NULL",
     )
     .bind(id)
-    .fetch_optional(&state.pool)
+    .fetch_optional(&mut *connection)
     .await
     .map_err(db_error)?;
     if visible.is_none() {
@@ -202,13 +205,16 @@ pub(super) async fn comments(
     State(state): State<AppState>,
     Query(query): Query<CommentsQuery>,
 ) -> ApiResult<PageResult<Comment>> {
-    visible_comment_article(&state, query.article_id).await?;
+    // Authorization and returned comments must describe the same snapshot.
+    let mut transaction = state.pool.begin().await.map_err(db_error)?;
+    visible_comment_article(&mut transaction, query.article_id).await?;
     let page = query.page.unwrap_or(1).clamp(1, 100_000);
     let size = query.size.unwrap_or(10).clamp(1, 50);
     let total:i64=sqlx::query_scalar("SELECT COUNT(*) FROM comment WHERE source=? AND type='article' AND (parent_comment_id IS NULL OR parent_comment_id=0)")
-        .bind(query.article_id).fetch_one(&state.pool).await.map_err(db_error)?;
+        .bind(query.article_id).fetch_one(&mut *transaction).await.map_err(db_error)?;
     let items=sqlx::query_as::<_,Comment>(sqlx::AssertSqlSafe(format!("{COMMENT_SQL} WHERE c.source=? AND c.type='article' AND (c.parent_comment_id IS NULL OR c.parent_comment_id=0) ORDER BY c.create_time DESC,c.id DESC LIMIT ? OFFSET ?")))
-        .bind(query.article_id).bind(size).bind((page-1)*size).fetch_all(&state.pool).await.map_err(db_error)?;
+        .bind(query.article_id).bind(size).bind((page-1)*size).fetch_all(&mut *transaction).await.map_err(db_error)?;
+    transaction.commit().await.map_err(db_error)?;
     Ok(Json(PageResult {
         items,
         total,
@@ -227,20 +233,22 @@ pub(super) async fn comment_replies(
     Path(id): Path<i64>,
     Query(query): Query<RepliesQuery>,
 ) -> ApiResult<PageResult<Comment>> {
+    let mut transaction = state.pool.begin().await.map_err(db_error)?;
     let article:Option<i64>=sqlx::query_scalar("SELECT source FROM comment WHERE id=? AND type='article' AND (parent_comment_id IS NULL OR parent_comment_id=0)")
-        .bind(id).fetch_optional(&state.pool).await.map_err(db_error)?;
-    visible_comment_article(&state, article.ok_or_else(absent)?).await?;
+        .bind(id).fetch_optional(&mut *transaction).await.map_err(db_error)?;
+    visible_comment_article(&mut transaction, article.ok_or_else(absent)?).await?;
     let page = query.page.unwrap_or(1).clamp(1, 100_000);
     let size = query.size.unwrap_or(5).clamp(1, 50);
     let total: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM comment WHERE floor_comment_id=? AND type='article'",
     )
     .bind(id)
-    .fetch_one(&state.pool)
+    .fetch_one(&mut *transaction)
     .await
     .map_err(db_error)?;
     let items=sqlx::query_as::<_,Comment>(sqlx::AssertSqlSafe(format!("{COMMENT_SQL} WHERE c.floor_comment_id=? AND c.type='article' ORDER BY c.create_time,c.id LIMIT ? OFFSET ?")))
-        .bind(id).bind(size).bind((page-1)*size).fetch_all(&state.pool).await.map_err(db_error)?;
+        .bind(id).bind(size).bind((page-1)*size).fetch_all(&mut *transaction).await.map_err(db_error)?;
+    transaction.commit().await.map_err(db_error)?;
     Ok(Json(PageResult {
         items,
         total,

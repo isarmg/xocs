@@ -20,6 +20,13 @@ async fn setup() -> (tempfile::TempDir, Router, SqlitePool) {
 }
 
 async fn setup_with_pool_limit(limit: u32) -> (tempfile::TempDir, Router, SqlitePool) {
+    setup_with_password_slots(limit, Arc::new(tokio::sync::Semaphore::new(2))).await
+}
+
+async fn setup_with_password_slots(
+    limit: u32,
+    password_slots: Arc<tokio::sync::Semaphore>,
+) -> (tempfile::TempDir, Router, SqlitePool) {
     let dir = tempfile::tempdir().unwrap();
     std::fs::set_permissions(dir.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
     let db = dir.path().join("site.sqlite");
@@ -41,7 +48,7 @@ async fn setup_with_pool_limit(limit: u32) -> (tempfile::TempDir, Router, Sqlite
         media: dir.path().to_path_buf(),
         media_operations: Arc::new(tokio::sync::Mutex::new(())),
         public_mutations: Arc::new(crate::app::PublicMutationCapacity::default()),
-        password_slots: Arc::new(tokio::sync::Semaphore::new(2)),
+        password_slots,
     };
     let app = router(state, Some(dir.path().to_path_buf())).unwrap();
     (dir, app, pool)
@@ -356,6 +363,55 @@ async fn public_visibility_and_password_are_enforced() {
             .unwrap();
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
     }
+}
+
+#[tokio::test]
+async fn article_unlock_rechecks_password_after_waiting_for_verification() {
+    let slots = Arc::new(tokio::sync::Semaphore::new(0));
+    let (_dir, app, pool) = setup_with_password_slots(8, slots.clone()).await;
+    let old_hash = xcss::admin_auth::hash_password("ProtectedPassphrase123").unwrap();
+    let new_hash = xcss::admin_auth::hash_password("ReplacementPassphrase456").unwrap();
+    sqlx::query("INSERT INTO article(id,user_id,sort_id,label_id,article_title,article_content,view_status,password) VALUES(2,1,1,1,'Protected','old body',0,?)")
+        .bind(old_hash).execute(&pool).await.unwrap();
+    let request = app.oneshot(
+        Request::builder()
+            .method("POST")
+            .uri("/api/v1/articles/2/unlock")
+            .header("content-type", "application/json")
+            .body(Body::from(r#"{"password":"ProtectedPassphrase123"}"#))
+            .unwrap(),
+    );
+    tokio::pin!(request);
+    assert!(
+        tokio::time::timeout(std::time::Duration::from_millis(100), &mut request)
+            .await
+            .is_err()
+    );
+    // A queued verifier reserves this permit. The request is not spawned, so it
+    // cannot resume until explicitly polled again below, after the admin write.
+    slots.add_permits(1);
+    assert!(
+        slots.try_acquire().is_err(),
+        "request must already be queued for verification"
+    );
+    sqlx::query("UPDATE article SET password=?,article_content='new restricted body' WHERE id=2")
+        .bind(new_hash)
+        .execute(&pool)
+        .await
+        .unwrap();
+    let response = request.await.unwrap();
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    assert!(
+        !body_json(response)
+            .await
+            .to_string()
+            .contains("new restricted body")
+    );
+    let views: i64 = sqlx::query_scalar("SELECT view_count FROM article WHERE id=2")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(views, 0);
 }
 
 #[tokio::test]
@@ -1059,5 +1115,73 @@ async fn article_comment_gate_is_rechecked_after_waiting_for_a_writer() {
                     .unwrap();
             assert_eq!(count, 0, "{change}: {table}");
         }
+    }
+}
+
+#[tokio::test]
+async fn article_related_reads_keep_authorization_and_content_in_one_snapshot() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    for (path, release_after_gate) in [
+        ("/api/v1/comments?article_id=1", 1),
+        ("/api/v1/comments/1/replies", 2),
+        ("/api/v1/articles/1/news", 1),
+    ] {
+        let (directory, _app, fixture_pool) = setup().await;
+        sqlx::raw_sql("INSERT INTO article(id,user_id,sort_id,label_id,article_title,article_content) VALUES(1,1,0,0,'Public','Body'); INSERT INTO comment(id,source,type,parent_comment_id,floor_comment_id,comment_content) VALUES(1,1,'article',0,NULL,'public root'),(2,1,'article',1,1,'public reply'); INSERT INTO wei_yan(id,user_id,content,type,source,is_public) VALUES(1,1,'public news','news',1,1);")
+            .execute(&fixture_pool).await.unwrap();
+        let releases = Arc::new(AtomicUsize::new(0));
+        let observed = releases.clone();
+        // A one-connection pool deterministically commits an administrator edit
+        // when the handler releases its authorization read. A read transaction
+        // keeps that connection until its complete response has been assembled.
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .after_release(move |connection, _| {
+                let observed = observed.clone();
+                Box::pin(async move {
+                    if observed.fetch_add(1, Ordering::SeqCst) + 1 == release_after_gate {
+                        sqlx::raw_sql("BEGIN IMMEDIATE; UPDATE article SET view_status=0,password='new protection' WHERE id=1; UPDATE comment SET comment_content='new restricted comment' WHERE source=1; UPDATE wei_yan SET content='new restricted news' WHERE source=1; COMMIT;")
+                            .execute(connection).await?;
+                    }
+                    Ok(true)
+                })
+            })
+            .connect_lazy_with((*fixture_pool.connect_options()).clone());
+        let state = AppState {
+            scope: xcss::server_runtime::WorkScope::new(),
+            pool: pool.clone(),
+            admin: Arc::new(AdministratorService::new(SqliteAdministratorStore::new(
+                pool.clone(),
+            ))),
+            origin: AdministratorOriginMode::LoopbackDevelopmentHttp,
+            media: directory.path().to_path_buf(),
+            media_operations: Arc::new(tokio::sync::Mutex::new(())),
+            public_mutations: Arc::new(crate::app::PublicMutationCapacity::default()),
+            password_slots: Arc::new(tokio::sync::Semaphore::new(2)),
+        };
+        let app = router(state, None).unwrap();
+        let response = app
+            .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK, "{path}");
+        let body = body_json(response).await;
+        if path.ends_with("/news") {
+            assert_eq!(body.as_array().unwrap().len(), 1);
+            assert_eq!(body[0]["content"], "public news");
+            pool.close().await;
+            continue;
+        }
+        assert_eq!(body["total"], 1, "{path}");
+        assert_eq!(
+            body["items"][0]["comment_content"],
+            if release_after_gate == 1 {
+                "public root"
+            } else {
+                "public reply"
+            },
+            "{path}: permission and content must describe the same snapshot"
+        );
+        pool.close().await;
     }
 }
