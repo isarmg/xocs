@@ -88,22 +88,11 @@ export XSSI_BUILD_METADATA_DIR="$work/metadata"
 "$builder" --config "$source_root/xcss-web-build.json" --mode release --no-install --source-revision "$source_revision" > "$work/build.log"
 server_binary="$(tail -n 1 "$work/build.log")"
 [[ "$server_binary" = /* && -f "$server_binary" && ! -L "$server_binary" && -x "$server_binary" ]] || { echo 'Builder did not return a physical executable.' >&2; exit 1; }
-install -m 0755 "$server_binary" "$work/stage/bin/$product"
-python3 - "$server_binary.xssi-web-build.json" "$work/stage/bin/$product" "$product" "$source_revision" <<'RECEIPT'
-import hashlib,json,pathlib,sys
-receipt_file,binary_file,product,revision=sys.argv[1:]
-receipt=json.loads(pathlib.Path(receipt_file).read_bytes())
-identity=receipt['identity']
-if receipt['format']!='xssi-web-build-receipt-v1' or identity['product']!=product or identity['source_revision']!=revision or identity['target']!='x86_64-unknown-linux-gnu':
-    raise SystemExit('Staged binary differs from its source-bound build receipt')
-with open(binary_file,'rb') as stream: digest=hashlib.file_digest(stream,'sha256').hexdigest()
-if digest!=receipt['binary_sha256']: raise SystemExit('Staged binary was replaced after verification')
-RECEIPT
+python3 -I -B "$source_root/scripts/package-release.py" "$server_binary" "$work/stage" "$source_revision" "$source_root"
 install -m 0644 "$work/metadata/$product-state-contract.json" "$work/stage/share/state-contract.json"
 install -d -m 0755 "$work/stage/share/contracts"
 cp -a -- "$work/metadata/contracts/." "$work/stage/share/contracts/"
 install -m 0644 "$work/metadata/$product-web-assets.json" "$work/stage/share/web-assets.json"
-install -m 0644 "$source_root/LICENSE" "$work/stage/share/LICENSE"
 install -m 0644 "$source_root/deploy/linux-x86_64/config.json.example" "$work/stage/config/config.json.example"
 export XSSI_SOURCE_REVISION="$source_revision"
 export XSSI_IDENTITY_FILE="$work/metadata/$product-identity.json"

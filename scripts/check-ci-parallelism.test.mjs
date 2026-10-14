@@ -9,7 +9,7 @@ const workflow = readFileSync(new URL('../.github/workflows/ci.yml', import.meta
 // Read only the fixed job/step blocks under test. YAML and Actions validation
 // remain separate; this test executes the exact aggregate shell from the file.
 function job(id) {
-  const match = workflow.match(new RegExp(`^  ${id}:\\n([\\s\\S]*?)(?=^  [a-z][a-z-]*:|$(?![\\s\\S]))`, 'm'));
+  const match = workflow.match(new RegExp(`^  ${id}:\\n([\\s\\S]*?)(?=^  [a-z][a-z_-]*:|$(?![\\s\\S]))`, 'm'));
   assert.ok(match, `missing CI job: ${id}`);
   return match[1];
 }
@@ -43,21 +43,24 @@ test('server and browser groups are independent and preserve every gate', () => 
 });
 
 test('the old required check fails closed for all server and matrix outcomes', () => {
-  assert.match(aggregate, /needs: \[server-and-smoke, browser\]/);
+  assert.match(aggregate, /needs: \[server-and-smoke, browser, installed_candidate\]/);
   assert.match(aggregate, /if: \$\{\{ always\(\) \}\}/);
   assert.match(aggregate, /SERVER_RESULT: \$\{\{ needs.server-and-smoke.result \}\}/);
   assert.match(aggregate, /BROWSER_RESULT: \$\{\{ needs.browser.result \}\}/);
+  assert.match(aggregate, /INSTALLED_RESULT: \$\{\{ needs.installed_candidate.result \}\}/);
   const run = aggregate.match(/        run: \|\n((?:          .*\n)+)/)?.[1];
   assert.ok(run, 'missing aggregate shell');
   for (const serverResult of ['success', 'failure', 'cancelled', 'skipped']) {
     for (const browserResult of ['success', 'failure', 'cancelled', 'skipped']) {
-      const result = spawnSync('bash', ['-c', run], {
-        encoding: 'utf8',
-        env: {...process.env, SERVER_RESULT: serverResult, BROWSER_RESULT: browserResult},
-      });
-      assert.ifError(result.error);
-      assert.equal(result.status === 0, serverResult === 'success' && browserResult === 'success',
-        `${serverResult}/${browserResult}`);
+      for (const installedResult of ['success', 'failure', 'cancelled', 'skipped']) {
+        const result = spawnSync('bash', ['-c', run], {
+          encoding: 'utf8',
+          env: {...process.env, SERVER_RESULT: serverResult, BROWSER_RESULT: browserResult, INSTALLED_RESULT: installedResult},
+        });
+        assert.ifError(result.error);
+        assert.equal(result.status === 0, serverResult === 'success' && browserResult === 'success' && installedResult === 'success',
+          `${serverResult}/${browserResult}/${installedResult}`);
+      }
     }
   }
 });
