@@ -30,9 +30,9 @@ jobs:
           xcss_input="$RUNNER_TEMP/xocs-xcss-input"
           git init --quiet "$xcss_input"
           git -C "$xcss_input" remote add origin https://github.com/isarmg/xcss.git
-          git -C "$xcss_input" fetch --depth=1 origin b9b5858088510d0bf6832044353c92d09ee123fe
+          git -C "$xcss_input" fetch --depth=1 origin b34b3861e15edd2b1348e7d03b9c9a93e97d6521
           git -C "$xcss_input" checkout --quiet --detach FETCH_HEAD
-          test "$(git -C "$xcss_input" rev-parse HEAD)" = b9b5858088510d0bf6832044353c92d09ee123fe
+          test "$(git -C "$xcss_input" rev-parse HEAD)" = b34b3861e15edd2b1348e7d03b9c9a93e97d6521
           python3 "$xcss_input/scripts/xcss-conformance.py" verify-manifest --product-root "$GITHUB_WORKSPACE"
           python3 "$xcss_input/scripts/xcss-conformance.py" verify-source --product-root "$GITHUB_WORKSPACE"
 

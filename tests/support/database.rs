@@ -44,7 +44,12 @@ pub async fn initialize(root: &Path, username: &str, password: &str) -> anyhow::
     let service = xcss::admin_core::AdministratorService::new(
         xcss::admin_sqlite::SqliteAdministratorStore::new(pool.clone()),
     );
-    administrator::seed_administrator(&service, username, password, 1_800_000_000_000_000).await?;
+    let now = u64::try_from(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)?
+            .as_micros(),
+    )?;
+    administrator::seed_administrator(&service, username, password, now).await?;
     pool.close().await;
     check(root).await?;
     Ok(database)
