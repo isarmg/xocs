@@ -140,7 +140,10 @@ export function SitePage(){
 
 export function LabelsPage(){
   const {client,notify}=useAdminApplication();const [labels,setLabels]=useState<Label[]>([]);const [name,setName]=useState('');const [description,setDescription]=useState('');const [sortId,setSortId]=useState(0);const [editing,setEditing]=useState<number|null>(null);const [failure,setFailure]=useState('');const [version,setVersion]=useState(0);
-  const [saving,setSaving]=useState(false);const savePending=useRef(false);
+  const [saving,setSaving]=useState(false);const savePending=useRef<AbortController|null>(null);
+  const deletePending=useRef<{id:number;controller:AbortController}|null>(null),editingId=useRef<number|null>(null);
+  const [deleting,setDeleting]=useState<number|null>(null);
+  useEffect(()=>{setSaving(false);setDeleting(null);return()=>{savePending.current?.abort();deletePending.current?.controller.abort();savePending.current=null;deletePending.current=null;};},[client]);
   const [categoryVersion,setCategoryVersion]=useState(0);
   const [categoryResult,setCategoryResult]=useState<{client:typeof client;version:number;data:Category[]|null;failure:string}|null>(null);
   const currentCategories=categoryResult?.client===client&&categoryResult.version===categoryVersion?categoryResult:null;
@@ -156,19 +159,31 @@ export function LabelsPage(){
     });
     return()=>controller.abort();
   },[client,categoryVersion]);
-  function edit(item:Label){setEditing(item.id);setSortId(item.sort_id);setName(item.label_name);setDescription(item.label_description||'');}
-  function reset(){setEditing(null);setSortId(0);setName('');setDescription('');}
+  function edit(item:Label){if(savePending.current)return;editingId.current=item.id;setEditing(item.id);setSortId(item.sort_id);setName(item.label_name);setDescription(item.label_description||'');}
+  function reset(){editingId.current=null;setEditing(null);setSortId(0);setName('');setDescription('');}
   async function save(event:FormEvent){
-    event.preventDefault();if(savePending.current||!canSave)return;
-    savePending.current=true;setSaving(true);
+    event.preventDefault();if((deletePending.current&&deletePending.current.id===editing)||savePending.current||!canSave)return;
+    const controller=new AbortController();savePending.current=controller;setSaving(true);
     try{
-      await client.request(editing?`/api/v1/content/labels/${editing}`:'/api/v1/content/labels',isLabel,{method:editing?'PUT':'POST',body:JSON.stringify({sort_id:sortId,name,description:description||null})});
+      await client.request(editing?`/api/v1/content/labels/${editing}`:'/api/v1/content/labels',isLabel,{method:editing?'PUT':'POST',signal:controller.signal,body:JSON.stringify({sort_id:sortId,name,description:description||null})});
+      if(controller.signal.aborted)return;
       reset();setVersion(v=>v+1);notify(t("标签已保存", "Tag saved"));setFailure('');
-    }catch(reason){setFailure(editing&&typeof reason==='object'&&reason!==null&&'status'in reason&&reason.status===409?t("标签仍被文章使用，不能更改分类。请先修改文章的分类和标签。", "This tag is still used by articles. Update their categories and tags before moving this tag."):publicErrorMessage(reason, t("标签保存失败", "Unable to save tag")));}
-    finally{savePending.current=false;setSaving(false);}
+    }catch(reason){if(!controller.signal.aborted)setFailure(editing&&typeof reason==='object'&&reason!==null&&'status'in reason&&reason.status===409?t("标签仍被文章使用，不能更改分类。请先修改文章的分类和标签。", "This tag is still used by articles. Update their categories and tags before moving this tag."):publicErrorMessage(reason, t("标签保存失败", "Unable to save tag")));}
+    finally{if(savePending.current===controller){savePending.current=null;setSaving(false);}}
   }
-  async function remove(id:number){if(!window.confirm(t("确定删除这个标签？", "Delete this tag?")))return;try{await client.request(`/api/v1/content/labels/${id}`,isDeleted,{method:'DELETE'});setVersion(v=>v+1);notify(t("标签已删除", "Tag deleted"));}catch(reason){setFailure(publicErrorMessage(reason, t("标签删除失败", "Unable to delete tag")));}}
-  return <section className="xcss-content-stack"><PageHeader><div><h1>{t("标签管理", "Tags")}</h1></div></PageHeader>{failure&&<ErrorState onRetry={()=>setVersion(value=>value+1)}>{failure}</ErrorState>}{currentCategories?.failure&&<ErrorState onRetry={()=>setCategoryVersion(value=>value+1)}>{currentCategories.failure}</ErrorState>}{!currentCategories&&<LoadingState>{t("正在加载分类…", "Loading categories…")}</LoadingState>}{categories?.length===0&&<p>{t("请先创建分类，再添加标签。", "Create a category before adding tags.")} <a href="/admin#categories">{t("分类管理", "Categories")}</a></p>}<fieldset className="xocs-fieldset" disabled={saving}><form className="inline-form" onSubmit={event=>void save(event)}><FormField label={t("分类", "Category")}><Select required disabled={!categories} value={sortId} onChange={event=>setSortId(Number(event.target.value))}><option value={0}>{t("选择分类", "Select a category")}</option>{categories?.map(item=><option key={item.id} value={item.id}>{item.sort_name}</option>)}</Select></FormField><FormField label={t("标签名称", "Tag name")}><TextField value={name} required maxLength={32} onChange={event=>setName(event.target.value)}/></FormField><FormField label={t("标签描述", "Tag description")}><TextField value={description} maxLength={200} onChange={event=>setDescription(event.target.value)}/></FormField><Button type="submit" disabled={saving||!canSave}>{saving?t("保存中…", "Saving…"):editing?t("保存修改", "Save changes"):t("新增标签", "Add tag")}</Button>{editing&&<Button type="button" onClick={reset}>{t("取消编辑", "Cancel editing")}</Button>}</form>{labels.length?<Table aria-label={t("标签列表", "Tag list")}><thead><tr><th>ID</th><th>{t("标签", "Tags")}</th><th>{t("描述", "Description")}</th><th>{t("分类", "Category")}</th><th>{t("操作", "Actions")}</th></tr></thead><tbody>{labels.map(item=><tr key={item.id}><td>{item.id}</td><td>{item.label_name}</td><td>{item.label_description||'—'}</td><td>{categories?.find(category=>category.id===item.sort_id)?.sort_name||item.sort_id}</td><td><div className="xcss-actions"><Button onClick={()=>edit(item)}>{t("编辑", "Edit")}</Button><Button className="xcss-danger" onClick={()=>void remove(item.id)}>{t("删除", "Delete")}</Button></div></td></tr>)}</tbody></Table>:<EmptyState>{t("暂无标签", "No tags yet")}</EmptyState>}</fieldset></section>;
+  async function remove(id:number){
+    if(savePending.current||deletePending.current||!window.confirm(t("确定删除这个标签？", "Delete this tag?")))return;
+    const controller=new AbortController();deletePending.current={id,controller};setDeleting(id);setFailure('');
+    try{
+      await client.request(`/api/v1/content/labels/${id}`,isDeleted,{method:'DELETE',signal:controller.signal});
+      if(controller.signal.aborted)return;
+      setLabels(current=>current.filter(item=>item.id!==id));
+      if(editingId.current===id)reset();
+      setVersion(v=>v+1);notify(t("标签已删除", "Tag deleted"));
+    }catch(reason){if(!controller.signal.aborted){setFailure(publicErrorMessage(reason, t("标签删除失败", "Unable to delete tag")));}}
+    finally{if(deletePending.current?.controller===controller){deletePending.current=null;setDeleting(null);}}
+  }
+  return <section className="xcss-content-stack"><PageHeader><div><h1>{t("标签管理", "Tags")}</h1></div></PageHeader>{failure&&<ErrorState onRetry={()=>setVersion(value=>value+1)}>{failure}</ErrorState>}{currentCategories?.failure&&<ErrorState onRetry={()=>setCategoryVersion(value=>value+1)}>{currentCategories.failure}</ErrorState>}{!currentCategories&&<LoadingState>{t("正在加载分类…", "Loading categories…")}</LoadingState>}{categories?.length===0&&<p>{t("请先创建分类，再添加标签。", "Create a category before adding tags.")} <a href="/admin#categories">{t("分类管理", "Categories")}</a></p>}<fieldset className="xocs-fieldset" disabled={saving}><form className="inline-form" onSubmit={event=>void save(event)}><FormField label={t("分类", "Category")}><Select required disabled={!categories} value={sortId} onChange={event=>setSortId(Number(event.target.value))}><option value={0}>{t("选择分类", "Select a category")}</option>{categories?.map(item=><option key={item.id} value={item.id}>{item.sort_name}</option>)}</Select></FormField><FormField label={t("标签名称", "Tag name")}><TextField value={name} required maxLength={32} onChange={event=>setName(event.target.value)}/></FormField><FormField label={t("标签描述", "Tag description")}><TextField value={description} maxLength={200} onChange={event=>setDescription(event.target.value)}/></FormField><Button type="submit" disabled={saving||!canSave||(deleting!==null&&deleting===editing)}>{saving?t("保存中…", "Saving…"):editing?t("保存修改", "Save changes"):t("新增标签", "Add tag")}</Button>{editing&&<Button type="button" onClick={reset}>{t("取消编辑", "Cancel editing")}</Button>}</form>{labels.length?<Table aria-label={t("标签列表", "Tag list")}><thead><tr><th>ID</th><th>{t("标签", "Tags")}</th><th>{t("描述", "Description")}</th><th>{t("分类", "Category")}</th><th>{t("操作", "Actions")}</th></tr></thead><tbody>{labels.map(item=><tr key={item.id}><td>{item.id}</td><td>{item.label_name}</td><td>{item.label_description||'—'}</td><td>{categories?.find(category=>category.id===item.sort_id)?.sort_name||item.sort_id}</td><td><div className="xcss-actions"><Button onClick={()=>edit(item)}>{t("编辑", "Edit")}</Button><Button className="xcss-danger" disabled={deleting!==null} onClick={()=>void remove(item.id)}>{t("删除", "Delete")}</Button></div></td></tr>)}</tbody></Table>:<EmptyState>{t("暂无标签", "No tags yet")}</EmptyState>}</fieldset></section>;
 }
 
 export function ResourcesPage(){

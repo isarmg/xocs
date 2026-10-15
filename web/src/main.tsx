@@ -308,7 +308,10 @@ function CategoryManager() {
   const [failure, setFailure] = useState('');
   const [refresh, setRefresh] = useState(0);
   const [busy, setBusy] = useState(true);
-  const [saving,setSaving]=useState(false);const savePending=useRef(false);
+  const [saving,setSaving]=useState(false);const savePending=useRef<AbortController|null>(null);
+  const deletePending=useRef<{id:number;controller:AbortController}|null>(null),editingId=useRef<number|null>(null);
+  const [deleting,setDeleting]=useState<number|null>(null);
+  useEffect(()=>{setSaving(false);setDeleting(null);return()=>{savePending.current?.abort();deletePending.current?.controller.abort();savePending.current=null;deletePending.current=null;};},[client]);
   useEffect(() => {
     const controller = new AbortController();setBusy(true);setFailure('');
     void client.request('/api/v1/categories',isCategories,{signal:controller.signal})
@@ -317,19 +320,31 @@ function CategoryManager() {
       .finally(() => {if (!controller.signal.aborted) setBusy(false);});
     return () => controller.abort();
   },[client,refresh]);
-  function edit(item:Category){setEditing(item.id);setName(item.sort_name);setDescription(item.sort_description||'');setPriority(item.priority??0);}
-  function reset(){setEditing(null);setName('');setDescription('');setPriority(0);}
+  function edit(item:Category){if(savePending.current)return;editingId.current=item.id;setEditing(item.id);setName(item.sort_name);setDescription(item.sort_description||'');setPriority(item.priority??0);}
+  function reset(){editingId.current=null;setEditing(null);setName('');setDescription('');setPriority(0);}
   async function save(event: React.FormEvent) {
-    event.preventDefault();if(savePending.current)return;
-    savePending.current=true;setSaving(true);
+    event.preventDefault();if((deletePending.current&&deletePending.current.id===editing)||savePending.current)return;
+    const controller=new AbortController();savePending.current=controller;setSaving(true);
     try {
-      await client.request(editing?`/api/v1/content/categories/${editing}`:'/api/v1/content/categories',isCategory,{method:editing?'PUT':'POST',body:JSON.stringify({name,description:description||null,priority})});
+      await client.request(editing?`/api/v1/content/categories/${editing}`:'/api/v1/content/categories',isCategory,{method:editing?'PUT':'POST',signal:controller.signal,body:JSON.stringify({name,description:description||null,priority})});
+      if(controller.signal.aborted)return;
       reset();setRefresh(value=>value+1);notify(t("分类已保存", "Category saved"));setFailure('');
-    } catch(reason) {setFailure(publicErrorMessage(reason, t("分类保存失败", "Unable to save category")));}
-    finally{savePending.current=false;setSaving(false);}
+    } catch(reason) {if(!controller.signal.aborted)setFailure(publicErrorMessage(reason, t("分类保存失败", "Unable to save category")));}
+    finally{if(savePending.current===controller){savePending.current=null;setSaving(false);}}
   }
-  async function remove(id:number){if(!window.confirm(t("确定删除这个分类？", "Delete this category?")))return;try{await client.request(`/api/v1/content/categories/${id}`,isDelete,{method:'DELETE'});setRefresh(value=>value+1);notify(t("分类已删除", "Category deleted"));}catch(reason){setFailure(typeof reason==='object'&&reason!==null&&'status'in reason&&reason.status===409?t("分类仍被文章使用，或删除后首页将没有启用的栏目。请先移走文章或启用其他首页栏目，再删除此分类。", "This category still contains articles, or deleting it would leave no enabled home sections. Move its articles or enable another home section before deleting it."):publicErrorMessage(reason, t("分类删除失败", "Unable to delete category")));}}
-  return <section className="xcss-content-stack"><PageHeader><div><h1>{t("分类管理", "Categories")}</h1></div></PageHeader>{failure&&<ErrorState onRetry={()=>setRefresh(value=>value+1)}>{failure}</ErrorState>}<fieldset className="xocs-fieldset" disabled={saving}><form className="inline-form" onSubmit={event=>void save(event)}><FormField label={t("分类名称", "Category name")}><TextField required maxLength={64} value={name} onChange={event=>setName(event.target.value)} /></FormField><FormField label={t("分类描述", "Category description")}><TextField maxLength={200} value={description} onChange={event=>setDescription(event.target.value)}/></FormField><FormField label={t("优先级", "Priority")}><TextField type="number" value={priority} onChange={event=>setPriority(Number(event.target.value)||0)}/></FormField><Button type="submit" disabled={saving}>{saving?t("保存中…", "Saving…"):editing?t("保存修改", "Save changes"):t("创建分类", "Create category")}</Button>{editing&&<Button type="button" onClick={reset}>{t("取消编辑", "Cancel editing")}</Button>}</form>{categories.length?<Table aria-label={t("分类列表", "Category list")}><thead><tr><th>{t("名称", "Name")}</th><th>{t("描述", "Description")}</th><th>{t("排序", "Order")}</th><th>{t("操作", "Actions")}</th></tr></thead><tbody>{categories.map(item=><tr key={item.id}><td>{item.sort_name}</td><td>{item.sort_description||'—'}</td><td>{item.priority??0}</td><td><div className="xcss-actions"><Button onClick={()=>edit(item)}>{t("编辑", "Edit")}</Button><Button className="xcss-danger" onClick={()=>void remove(item.id)}>{t("删除", "Delete")}</Button></div></td></tr>)}</tbody></Table>:busy?<LoadingState />:!failure&&<EmptyState>{t("暂无分类", "No categories yet")}</EmptyState>}</fieldset></section>;
+  async function remove(id:number){
+    if(savePending.current||deletePending.current||!window.confirm(t("确定删除这个分类？", "Delete this category?")))return;
+    const controller=new AbortController();deletePending.current={id,controller};setDeleting(id);setFailure('');
+    try{
+      await client.request(`/api/v1/content/categories/${id}`,isDelete,{method:'DELETE',signal:controller.signal});
+      if(controller.signal.aborted)return;
+      setCategories(current=>current.filter(item=>item.id!==id));
+      if(editingId.current===id)reset();
+      setRefresh(value=>value+1);notify(t("分类已删除", "Category deleted"));
+    }catch(reason){if(!controller.signal.aborted){setFailure(typeof reason==='object'&&reason!==null&&'status'in reason&&reason.status===409?t("分类仍被文章使用，或删除后首页将没有启用的栏目。请先移走文章或启用其他首页栏目，再删除此分类。", "This category still contains articles, or deleting it would leave no enabled home sections. Move its articles or enable another home section before deleting it."):publicErrorMessage(reason, t("分类删除失败", "Unable to delete category")));}}
+    finally{if(deletePending.current?.controller===controller){deletePending.current=null;setDeleting(null);}}
+  }
+  return <section className="xcss-content-stack"><PageHeader><div><h1>{t("分类管理", "Categories")}</h1></div></PageHeader>{failure&&<ErrorState onRetry={()=>setRefresh(value=>value+1)}>{failure}</ErrorState>}<fieldset className="xocs-fieldset" disabled={saving}><form className="inline-form" onSubmit={event=>void save(event)}><FormField label={t("分类名称", "Category name")}><TextField required maxLength={64} value={name} onChange={event=>setName(event.target.value)} /></FormField><FormField label={t("分类描述", "Category description")}><TextField maxLength={200} value={description} onChange={event=>setDescription(event.target.value)}/></FormField><FormField label={t("优先级", "Priority")}><TextField type="number" value={priority} onChange={event=>setPriority(Number(event.target.value)||0)}/></FormField><Button type="submit" disabled={saving||(deleting!==null&&deleting===editing)}>{saving?t("保存中…", "Saving…"):editing?t("保存修改", "Save changes"):t("创建分类", "Create category")}</Button>{editing&&<Button type="button" onClick={reset}>{t("取消编辑", "Cancel editing")}</Button>}</form>{categories.length?<Table aria-label={t("分类列表", "Category list")}><thead><tr><th>{t("名称", "Name")}</th><th>{t("描述", "Description")}</th><th>{t("排序", "Order")}</th><th>{t("操作", "Actions")}</th></tr></thead><tbody>{categories.map(item=><tr key={item.id}><td>{item.sort_name}</td><td>{item.sort_description||'—'}</td><td>{item.priority??0}</td><td><div className="xcss-actions"><Button onClick={()=>edit(item)}>{t("编辑", "Edit")}</Button><Button className="xcss-danger" disabled={deleting!==null} onClick={()=>void remove(item.id)}>{t("删除", "Delete")}</Button></div></td></tr>)}</tbody></Table>:busy?<LoadingState />:!failure&&<EmptyState>{t("暂无分类", "No categories yet")}</EmptyState>}</fieldset></section>;
 }
 
 function HomeArticleCard({item}:{item:ArticleSummary}){
