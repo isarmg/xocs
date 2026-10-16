@@ -4,9 +4,9 @@ import { HookHost, expand, textContent, walk } from './fixtures/hook-host.mjs';
 import { originalModule } from './fixtures/original-module.mjs';
 import { summary } from './browser-fixtures.mjs';
 const reexport = path => `export * from ${JSON.stringify(new URL(path, import.meta.url).href)};`;
-const { Categories, SearchPage, JourneyPage, Jotting, MessagePage } = await originalModule(new URL('../src/PublicExtras.tsx', import.meta.url), {
-  './api': reexport('../src/api.ts'), './public-contracts': reexport('../src/public-contracts.ts'),
-  './comment-submission': reexport('../src/comment-submission.ts'),
+const { Categories, SearchPage, JourneyPage, Jotting, MessagePage } = await originalModule(new URL('./fixtures/react-baseline/src/PublicExtras.tsx', import.meta.url), {
+  './api': reexport('./fixtures/react-baseline/src/api.ts'), './public-contracts': reexport('./fixtures/react-baseline/src/public-contracts.ts'),
+  './comment-submission': reexport('./fixtures/react-baseline/src/comment-submission.ts'),
   './SlidingTitle': 'export const SlidingTitle=({text})=>text;',
   './ReferencePetals': 'export const ReferencePetals=()=>null;',
   './PublicChrome': 'export const PublicChrome=({children})=>children;',

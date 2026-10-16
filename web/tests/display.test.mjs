@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { ApiError, DisplayError, publicErrorMessage } from '../src/api.ts';
+import { ApiError, DisplayError, publicErrorMessage } from './fixtures/react-baseline/src/api.ts';
 
 test('API and unexpected errors show local text rather than server diagnostics', () => {
   const error = new ApiError(409, { code: 'conflict', message: '内部路径 /private/secret', retryable: false });

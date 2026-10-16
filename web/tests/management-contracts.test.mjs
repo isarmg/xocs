@@ -4,10 +4,10 @@ import { originalModule } from './fixtures/original-module.mjs';
 import { HookHost, expand, walk, textContent } from './fixtures/hook-host.mjs';
 import { adminSite } from './browser-fixtures.mjs';
 
-const pages = await originalModule(new URL('../src/AdminExtras.tsx', import.meta.url), {
+const pages = await originalModule(new URL('./fixtures/react-baseline/src/AdminExtras.tsx', import.meta.url), {
   '@xcss/web/admin-shell': 'export const useAdminApplication=()=>globalThis.__MANAGEMENT_APP;',
   './AdminLayout': 'export const adminGroups=[];',
-  './api': `export * from ${JSON.stringify(new URL('../src/api.ts', import.meta.url).href)};`,
+  './api': `export * from ${JSON.stringify(new URL('./fixtures/react-baseline/src/api.ts', import.meta.url).href)};`,
   './MediaPreview': 'export const ImageLightbox=()=>null;export const safeImageUrl=value=>value;',
 });
 const note = { id: 1, user_id: 1, username: 'Writer', content: 'Original note', image_path: null, is_public: 1, create_time: '2026-10-12 04:05:06' };

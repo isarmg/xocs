@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { ApiContractError, ApiError, publicErrorMessage, request } from '../src/api.ts';
-import * as contracts from '../src/public-contracts.ts';
+import { ApiContractError, ApiError, publicErrorMessage, request } from './fixtures/react-baseline/src/api.ts';
+import * as contracts from './fixtures/react-baseline/src/public-contracts.ts';
 import { article, site, summary } from './browser-fixtures.mjs';
 
 const comment = { id: 1, user_id: null, username: null, avatar: null, comment_content: 'A comment', create_time: null, parent_username: null, reply_count: 0 };

@@ -57,7 +57,7 @@ test('omitted fixture pagination uses each production endpoint default', async (
   }
 });
 
-const components = await originalModule(new URL('../src/AdminExtras.tsx', import.meta.url), {
+const components = await originalModule(new URL('./fixtures/react-baseline/src/AdminExtras.tsx', import.meta.url), {
   '@xcss/web/admin-shell': 'export const useAdminApplication=()=>globalThis.__BROWSER_FIXTURE_APP;',
   './api': 'export const publicErrorMessage=(_reason,fallback)=>fallback;',
   './MediaPreview': 'export const ImageLightbox=()=>null; export const safeImageUrl=value=>value;',
@@ -89,3 +89,11 @@ for (const [name, empty] of [
     assert.equal(textContent(walk(tree, node => node.props.className === 'xcss-empty')[0]), empty);
   });
 }
+
+// The real router exposes category reads publicly; its managed endpoint is POST-only.
+test('browser fixture rejects the nonexistent managed category GET rather than masking a 405',async()=>{
+ let handler;await mockApi({async route(_pattern,callback){handler=callback;}},{authenticated:true});let response;
+ await handler({request:()=>({url:()=> 'https://fixture.test/api/v1/content/categories',method:()=> 'GET'}),async fulfill(value){response=value;}});
+ assert.equal(response.status,405);assert.equal(response.json.code,'method_not_allowed');
+ const read=await fixtureApi();assert.ok((await read('/api/v1/categories')).length>0);
+});

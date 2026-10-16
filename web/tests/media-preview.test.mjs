@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {HookHost,walk} from './fixtures/hook-host.mjs';
 import {originalModule} from './fixtures/original-module.mjs';
-const {ImageLightbox}=await originalModule(new URL('../src/MediaPreview.tsx',import.meta.url));
+const {ImageLightbox}=await originalModule(new URL('./fixtures/react-baseline/src/MediaPreview.tsx',import.meta.url));
 
 test('native dialog opens once per open lifetime and restores a connected opener',t=>{
  const oldDocument=globalThis.document,oldElement=globalThis.HTMLElement;

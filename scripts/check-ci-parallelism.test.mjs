@@ -27,10 +27,13 @@ test('server and browser groups are independent and preserve every gate', () => 
     'cargo fmt --all -- --check', 'cargo clippy --locked --all-targets -- -D warnings',
     'cargo test --locked', 'cargo build --locked', 'bash scripts/smoke.sh',
     'verify-manifest --product-root', 'verify-source --product-root',
+    'fmt --manifest-path web/leptos/Cargo.toml -- --check',
+    'clippy --manifest-path web/leptos/Cargo.toml --target wasm32-unknown-unknown --locked -- -D warnings',
+    'python3 scripts/build-leptos.py test', 'python3 -I -B scripts/test-leptos-build.py',
   ]) assert.ok(server.includes(command), `missing server check: ${command}`);
   const expected = [
     'language', 'admin-layout', 'account-settings', 'admin-cleanup',
-    'management', 'public-footer', 'public-layout', 'anonymous-comments',
+    'management', 'contract-fixes', 'leptos-runtime', 'public-footer', 'public-layout', 'anonymous-comments',
   ];
   const actual = [...browser.matchAll(/node tests\/([a-z-]+)\.mjs/g)].map(match => match[1]);
   assert.deepEqual(actual.sort(), expected.sort());
@@ -39,6 +42,8 @@ test('server and browser groups are independent and preserve every gate', () => 
   for (const block of [server, browser]) {
     assert.match(block, /npm ci\n          npm run build/);
     assert.match(block, /playwright install --with-deps chromium firefox/);
+    assert.match(block, /rustup toolchain install 1\.99\.0 .*--target wasm32-unknown-unknown/);
+    assert.match(block, /cargo \+1\.99\.0 install wasm-bindgen-cli --version 0\.2\.129 --locked/);
   }
 });
 
@@ -88,6 +93,7 @@ test('both matrix branches execute every original UI script exactly once', () =>
     assert.deepEqual(actual.sort(), [
       'run test:unit', 'tests/language.mjs', 'tests/admin-layout.mjs',
       'tests/account-settings.mjs', 'tests/admin-cleanup.mjs', 'tests/management.mjs',
+      'tests/contract-fixes.mjs', 'tests/leptos-runtime.mjs',
       'tests/public-footer.mjs', 'tests/public-layout.mjs', 'tests/anonymous-comments.mjs',
     ].sort());
     const unknown = spawnSync('bash', ['-c', run], {

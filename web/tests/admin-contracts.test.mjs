@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import * as contracts from '../src/admin-contracts.ts';
+import * as contracts from './fixtures/react-baseline/src/admin-contracts.ts';
 import {originalModule} from './fixtures/original-module.mjs';
 import {HookHost,expand,walk,textContent} from './fixtures/hook-host.mjs';
-const pages=await originalModule(new URL('../src/AdminExtras.tsx',import.meta.url),{
+const pages=await originalModule(new URL('./fixtures/react-baseline/src/AdminExtras.tsx',import.meta.url),{
  '@xcss/web/admin-shell':'export const useAdminApplication=()=>globalThis.__CONTRACT_APP;',
  './api':'export const publicErrorMessage=(_reason,fallback)=>fallback;',
  './AdminLayout':'export const adminGroups=[];',

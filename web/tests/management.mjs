@@ -21,7 +21,8 @@ try {
       await page.route('**/api/v1/**', async route => {
         const request = route.request(), url = new URL(request.url()), pathname = url.pathname, method = request.method();
         if (method !== 'GET') { assert.equal(request.headers()['x-csrf-token'], session.csrf_token); mutations.push({ path: pathname, method, body: method === 'POST' && pathname.endsWith('/upload') ? null : request.postDataJSON() }); }
-        const json = value => route.fulfill({ json: value });
+        // Axum Json(null) sends application/json; Playwright omits it for json:null.
+        const json = value => route.fulfill({ json: value, contentType: 'application/json' });
         if (pathname === '/api/v1/content/site') {
           if (method === 'PUT') { const input = request.postDataJSON(); assert.ok(!Object.hasOwn(input, 'footer')); author = input.author_name; }
           return json({ ...site, author_name: author });

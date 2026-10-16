@@ -38,7 +38,7 @@ async function checkHeaderScrolling(page, width, english) {
   assert.equal(await homeLink.getAttribute('aria-expanded'), null);
   await expect(header.locator('nav > a[href="/sort"]')).toBeVisible();
   await homeLink.click();
-  await expect(page).toHaveURL(url => url.pathname === '/' && url.searchParams.get('lang') === (english ? 'en' : 'zh-CN'));
+  await expect.poll(()=>{const url=new URL(page.url());return url.pathname==='/'&&url.searchParams.get('lang')===(english?'en':'zh-CN');}).toBe(true);
   await expect(page.getByRole('heading', { name: english ? 'Believe in the power of stories' : '相信记录的力量', exact: true })).toBeVisible();
   await page.goto(articleUrl);
   await expect(page.locator('.comment-form textarea')).toBeVisible();

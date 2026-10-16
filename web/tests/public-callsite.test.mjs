@@ -7,8 +7,8 @@ import { summary } from './browser-fixtures.mjs';
 
 const reexport = path => `export * from ${JSON.stringify(new URL(path, import.meta.url).href)};`;
 const boundaries = {
-  './api': reexport('../src/api.ts'),
-  './public-contracts': reexport('../src/public-contracts.ts'),
+  './api': reexport('./fixtures/react-baseline/src/api.ts'),
+  './public-contracts': reexport('./fixtures/react-baseline/src/public-contracts.ts'),
   './SlidingTitle': 'export const SlidingTitle=({text})=>text;',
   './ReferencePetals': 'export const ReferencePetals=()=>null;',
   './PublicChrome': 'export const PublicChrome=({children})=>children;',
@@ -17,8 +17,8 @@ const boundaries = {
   './PhotoGallery': 'export const PhotoGrid=({items})=>items.map(item=>item.title);',
   './LovePage': 'export const LovePage=()=>null;',
 };
-const { PublicExtras } = await originalModule(new URL('../src/PublicExtras.tsx', import.meta.url), boundaries);
-const { ArticleNews } = await originalModule(new URL('../src/ArticleNews.tsx', import.meta.url), boundaries);
+const { PublicExtras } = await originalModule(new URL('./fixtures/react-baseline/src/PublicExtras.tsx', import.meta.url), boundaries);
+const { ArticleNews } = await originalModule(new URL('./fixtures/react-baseline/src/ArticleNews.tsx', import.meta.url), boundaries);
 const page = items => ({ items, total: items.length, page: 1, size: 10 });
 const settle = async host => {
   await new Promise(resolve => setImmediate(resolve));

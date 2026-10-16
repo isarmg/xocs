@@ -1,6 +1,6 @@
 # xocs
 
-Rust 博客与内容服务，含文章、随笔、匿名评论、媒体和管理后台，支持 Linux x86_64 GNU。Web 资源内嵌运行二进制。
+Rust 博客与内容服务，含文章、随笔、匿名评论、媒体和管理后台，支持 Linux x86_64 GNU。Web 使用 Rust/Leptos，资源与 WebAssembly 内嵌 Axum 运行二进制。构建与验收见 [Web 迁移记录](docs/leptos-migration.md)。
 
 安装使用独立 [xssi](https://github.com/isarmg/xssi) 仓库提供的当前发行包及 `install.sh`。Server 仅接受 `xocs --root /opt/isarmg/xocs` 运行；初始化、只读检查和离线密码重置由 `libexec/setup` 执行。升级由 `upgrade.sh` 调用独立 xssc，下载校验后自动停服、备份、检查数据、执行受支持的数据升级、切换并启动验收。
 

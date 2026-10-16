@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { timeTogether } from '../src/love-time.ts';
+import { timeTogether } from './fixtures/react-baseline/src/love-time.ts';
 
 const date = (...parts) => Date.UTC(...parts);
 test('the home timer counts calendar years and months at leap days and month ends', () => {

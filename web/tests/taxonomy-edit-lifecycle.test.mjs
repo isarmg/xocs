@@ -4,13 +4,13 @@ import {readFile} from 'node:fs/promises';
 import {transformWithOxc} from 'vite';
 import {HookHost,expand,walk,textContent} from './fixtures/hook-host.mjs';
 import {originalModule} from './fixtures/original-module.mjs';
-const {LabelsPage}=await originalModule(new URL('../src/AdminExtras.tsx',import.meta.url),{
+const {LabelsPage}=await originalModule(new URL('./fixtures/react-baseline/src/AdminExtras.tsx',import.meta.url),{
   '@xcss/web/admin-shell':'export const useAdminApplication=()=>globalThis.__TAXONOMY_APP;',
   './api':'export const publicErrorMessage=(_reason,fallback)=>fallback;',
   './MediaPreview':'export const ImageLightbox=()=>null; export const safeImageUrl=value=>value;',
   './AdminLayout':'export const adminGroups=[];',
 });
-const main=await readFile(new URL('../src/main.tsx',import.meta.url),'utf8');
+const main=await readFile(new URL('./fixtures/react-baseline/src/main.tsx',import.meta.url),'utf8');
 const prelude=`import {useState,useRef,useEffect,jsx,Fragment} from '${new URL('./fixtures/hook-host.mjs',import.meta.url).href}';
 const h=(type,props,...children)=>jsx(type,{...props,children});
 const useAdminApplication=()=>globalThis.__TAXONOMY_APP;

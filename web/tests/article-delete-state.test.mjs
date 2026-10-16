@@ -3,7 +3,7 @@ import {test} from 'node:test';
 import {readFile} from 'node:fs/promises';
 import {transformWithOxc} from 'vite';
 import {HookHost,walk,textContent} from './fixtures/hook-host.mjs';
-const main=await readFile(new URL('../src/main.tsx',import.meta.url),'utf8');
+const main=await readFile(new URL('./fixtures/react-baseline/src/main.tsx',import.meta.url),'utf8');
 const prelude=`import {useState,useRef,useEffect,jsx,Fragment} from '${new URL('./fixtures/hook-host.mjs',import.meta.url).href}';
 const h=(type,props,...children)=>jsx(type,{...props,children});
 const useAdminApplication=()=>globalThis.__ARTICLE_DELETE_APP;

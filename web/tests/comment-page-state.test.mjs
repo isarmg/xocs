@@ -3,9 +3,9 @@ import { test } from 'node:test';
 import { HookHost, textContent, walk } from './fixtures/hook-host.mjs';
 import { originalModule } from './fixtures/original-module.mjs';
 const reexport = path => `export * from ${JSON.stringify(new URL(path, import.meta.url).href)};`;
-const { CommentThread } = await originalModule(new URL('../src/PublicComments.tsx', import.meta.url), {
-  './api': reexport('../src/api.ts'), './public-contracts': reexport('../src/public-contracts.ts'),
-  './comment-submission': reexport('../src/comment-submission.ts'), './MediaPreview': 'export const safeImageUrl=value=>value;',
+const { CommentThread } = await originalModule(new URL('./fixtures/react-baseline/src/PublicComments.tsx', import.meta.url), {
+  './api': reexport('./fixtures/react-baseline/src/api.ts'), './public-contracts': reexport('./fixtures/react-baseline/src/public-contracts.ts'),
+  './comment-submission': reexport('./fixtures/react-baseline/src/comment-submission.ts'), './MediaPreview': 'export const safeImageUrl=value=>value;',
 });
 const json = body => new Response(JSON.stringify(body));
 const row = id => ({ id, user_id: null, username: null, avatar: null, comment_content: `Comment ${id}`, create_time: null, parent_username: null, reply_count: 0 });

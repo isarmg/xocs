@@ -1,3 +1,21 @@
+// Track application requests separately from media and browser lifecycle events.
+const applicationRequests=new WeakMap();
+function observeApplicationRequests(page){
+  if(applicationRequests.has(page)||typeof page.on!=='function')return;
+  const pending=new Set();applicationRequests.set(page,pending);
+  page.on('framenavigated',frame=>{if(frame===page.mainFrame())pending.clear();});
+  page.on('request',request=>{if(new URL(request.url()).pathname.startsWith('/api/v1/'))pending.add(request);});
+  page.on('requestfinished',request=>pending.delete(request));
+  page.on('requestfailed',request=>pending.delete(request));
+}
+export async function waitForApplication(page){
+  const {expect}=await import('@playwright/test');
+  await expect(page.locator('html')).toHaveAttribute('data-xcss-runtime','leptos');
+  for(let pass=0;pass<2;pass++){
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    await expect.poll(()=>[...(applicationRequests.get(page)??[])].map(request=>request.url()),{message:`Current application reads: ${page.url()}`}).toEqual([]);
+  }
+}
 export const session = { authenticated: true, user_id: 'A'.repeat(43), username: 'admin', role: 'admin', csrf_token: 'A'.repeat(43) };
 export const site = { web_name: 'XOCS', web_title: null, notices: null, background_image: null, avatar: null, random_cover: null };
 export const adminSite = { ...site, author_name: 'Site owner' };
@@ -25,12 +43,14 @@ const sections = [{ id: 1, title: '中文栏目', kind: 'latest', sort_id: null,
 export const authored = ['中文分类', '中文文章标题', '中文摘要', '中文正文', '中文内容', '中文作者', '中文栏目'];
 export const schemaPrefixes = ['推送标题：', '推送封面：', '推送链接：'];
 export async function mockApi(page, state) {
+  observeApplicationRequests(page);
   await page.route('**/api/v1/**', async route => {
     const url = new URL(route.request().url()), path = url.pathname;
     if (route.request().method() !== 'GET') {
       if (path === '/api/v1/auth/login') { state.authenticated = true; return route.fulfill({ json: session }); }
       return route.fulfill({ status: 409, json: { code: 'conflict', message: '内部错误 SECRET /private/db', retryable: false, request_id: 'language-409' } });
     }
+    if (path === '/api/v1/content/categories') return route.fulfill({status:405,json:{code:'method_not_allowed'}});
     if (path === '/api/v1/auth/session') return state.authenticated ? route.fulfill({ json: session }) : route.fulfill({ status: 401, json: { code: 'unauthorized' } });
     const value = path === '/api/v1/content/site' ? adminSite : path.endsWith('/site') ? site
       : path === '/api/v1/letter' ? letter
@@ -38,7 +58,7 @@ export async function mockApi(page, state) {
       : path === '/api/v1/site/stats' ? { article_count: 1, view_count: 1 }
       : path === '/api/v1/content/statistics' ? { articles: 1, comments: 0, members: 0, categories: 1 }
       : path.endsWith('/home-sections') ? sections
-      : path.endsWith('/categories') ? [category]
+      : path === '/api/v1/categories' ? [category]
       : path === '/api/v1/articles/1' || path === '/api/v1/content/articles/1' ? article
       : path.endsWith('/articles') || path.endsWith('/articles/search') ? pageOf([summary], url)
       : path.includes('/news') ? path.startsWith('/api/v1/content/') ? pageOf([], url) : []

@@ -15,6 +15,7 @@
 ## 开发与参考
 
 - [开发与验证](development.md)：源码构建、自动化检查与发行输入。
+- [Leptos 迁移记录](leptos-migration.md)：Rust/WASM 页面、公共快照与浏览器验收。
 - [当前实现参考](current-guide.md)：数据库身份、公开响应与评论重试语义。
 - [账号设置](account-settings.md)、[公共支撑](common-support.md)。
 - [项目首页](../README.md)、[MIT 许可证](../LICENSE)。第三方前端许可证位于 `web/licenses/`。

@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { HookHost, expand, textContent, walk } from './fixtures/hook-host.mjs';
 import { originalModule } from './fixtures/original-module.mjs';
 
-const { LabelsPage } = await originalModule(new URL('../src/AdminExtras.tsx', import.meta.url), {
+const { LabelsPage } = await originalModule(new URL('./fixtures/react-baseline/src/AdminExtras.tsx', import.meta.url), {
   '@xcss/web/admin-shell': 'export const useAdminApplication=()=>globalThis.__LABEL_CATEGORIES_APP;',
   './api': 'export const publicErrorMessage=(_reason,fallback)=>fallback;',
   './MediaPreview': 'export const ImageLightbox=()=>null; export const safeImageUrl=value=>value;',

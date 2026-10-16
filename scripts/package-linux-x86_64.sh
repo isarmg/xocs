@@ -80,6 +80,8 @@ export XSSI_BUILD_TOOLS_DIR="$work/xssi"
 export XSSI_FRONTEND_METADATA_FILE="$work/metadata/frontend.json"
 git -C "$work/xssi" checkout --quiet --detach FETCH_HEAD
 [[ "$(git -C "$work/xssi" rev-parse HEAD)" = "$xssi_revision" ]]
+rustup toolchain install 1.99.0 --profile minimal --component rustfmt,clippy --target wasm32-unknown-unknown
+cargo +1.99.0 install wasm-bindgen-cli --version 0.2.129 --locked
 npm ci --prefix "$source_root/web"
 builder="$source_root/web/node_modules/.bin/xcss-build-server"
 export XOCS_SOURCE_REVISION="$source_revision"

@@ -1,3 +1,5 @@
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import { chromium, expect } from '@playwright/test';
 import { pageOf, site } from './browser-fixtures.mjs';
 import { readFile } from 'node:fs/promises';
@@ -9,7 +11,8 @@ const base = process.env.XOCS_SMOKE_URL || 'http://xocs.test';
 const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
 try {
   const page = await browser.newPage({ locale: 'zh-CN' });
-  const errors = [];
+  const errors = [], wasmUrls = new Set();
+  page.on('response', response => { if (new URL(response.url()).pathname.endsWith('.wasm')) wasmUrls.add(response.url()); });
   page.on('pageerror', error => errors.push(error.message));
   if (!process.env.XOCS_SMOKE_URL) await page.route('http://xocs.test/**', async route => {
     const url = new URL(route.request().url());
@@ -30,7 +33,7 @@ try {
     }
     const asset = url.pathname.startsWith('/assets/') || /\.(png|svg)$/.test(url.pathname);
     const target = asset ? path.join(dist, url.pathname) : path.join(dist, 'index.html');
-    const contentType = target.endsWith('.js') ? 'application/javascript' : target.endsWith('.css') ? 'text/css' : target.endsWith('.woff2') ? 'font/woff2' : target.endsWith('.png') ? 'image/png' : target.endsWith('.svg') ? 'image/svg+xml' : 'text/html';
+    const contentType = target.endsWith('.wasm') ? 'application/wasm' : target.endsWith('.js') ? 'application/javascript' : target.endsWith('.css') ? 'text/css' : target.endsWith('.woff2') ? 'font/woff2' : target.endsWith('.png') ? 'image/png' : target.endsWith('.svg') ? 'image/svg+xml' : 'text/html';
     try {
       await route.fulfill({ status: 200, contentType, body: await readFile(target) });
     } catch (error) {
@@ -41,8 +44,36 @@ try {
   const homeHeading = process.env.XOCS_SMOKE_URL ? '相信记录的力量' : '测试站点';
   for (const [route, heading] of [['/', homeHeading], ['/search', '搜索文章'], ['/sort', '文章分类'], ['/jotting', 'xocs'], ['/menory', 'xocs'], ['/favorite', '百宝箱'], ['/favorite?tab=friends', '百宝箱'], ['/favorite?tab=music', '百宝箱'], ['/travel', '时光相册'], ['/love', '这是我们一起走过的'], ['/message', '弹幕']]) {
     await page.goto(`${base}${route}`);
+    await expect(page.locator("html")).toHaveAttribute("data-xcss-runtime", "leptos");
     await page.getByRole('heading', { name: heading }).first().waitFor();
     console.log(`${route}: rendered`);
+  }
+  if (process.env.XOCS_SMOKE_URL) {
+    assert.ok(wasmUrls.size, 'Axum served an independent WASM artifact');
+    const wasmUrl = [...wasmUrls][0];
+    const identity = await page.request.get(wasmUrl, {headers: {'Accept-Encoding': 'identity'}});
+    const gzip = await page.request.get(wasmUrl, {headers: {'Accept-Encoding': 'gzip'}});
+    assert.equal(identity.status(), 200);assert.equal(gzip.status(), 200);
+    assert.equal(identity.headers()['content-encoding'], undefined);
+    assert.equal(gzip.headers()['content-encoding'], 'gzip');
+    assert.equal(gzip.headers()['content-type'], 'application/wasm');
+    assert.match(gzip.headers().vary, /(?:^|,)\s*Accept-Encoding\s*(?:,|$)/i);
+    const raw = await identity.body();
+    assert.ok(raw.equals(await gzip.body()), 'Negotiated gzip decodes to the exact WASM');
+    assert.ok(Number(gzip.headers()['content-length']) < raw.length, 'The negotiated representation saves transfer bytes');
+    assert.notEqual(gzip.headers().etag, identity.headers().etag);
+    const metadata = await (await page.request.get(`${base}/assets/leptos-build.json`)).json();
+    assert.equal(createHash('sha256').update(raw).digest('hex'), metadata.files['xocs_web_bg.wasm']);
+    const head = await page.request.head(wasmUrl, {headers: {'Accept-Encoding': 'gzip'}});
+    assert.equal(head.status(), 200);assert.equal((await head.body()).length, 0);
+    assert.equal(head.headers()['content-length'], gzip.headers()['content-length']);
+    assert.equal(head.headers().etag, gzip.headers().etag);
+    const unchanged = await page.request.get(wasmUrl, {headers: {'Accept-Encoding': 'gzip', 'If-None-Match': gzip.headers().etag}});
+    assert.equal(unchanged.status(), 304);assert.equal((await unchanged.body()).length, 0);
+    const refused = await page.request.get(wasmUrl, {headers: {'Accept-Encoding': 'gzip;q=0, identity;q=1'}});
+    assert.equal(refused.status(), 200);assert.equal(refused.headers()['content-encoding'], undefined);
+    assert.ok(raw.equals(await refused.body()));
+    console.log('Axum: WASM MIME, gzip bytes, source inventory, representation ETags, HEAD, 304 and gzip refusal passed');
   }
   if (!process.env.XOCS_SMOKE_URL) {
     await page.goto(`${base}/`);

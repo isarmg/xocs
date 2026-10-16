@@ -1,17 +1,17 @@
 import uploadNameFixtures from './fixtures/upload-names.json' with { type: 'json' };
-import { uploadFilename } from '../src/upload-filename.ts';
+import { uploadFilename } from './fixtures/react-baseline/src/upload-filename.ts';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { HookHost, expand, textContent, walk } from './fixtures/hook-host.mjs';
 import { originalModule } from './fixtures/original-module.mjs';
-import { request } from '../src/api.ts';
+import { request } from './fixtures/react-baseline/src/api.ts';
 import { article, summary } from './browser-fixtures.mjs';
 
 const reexport = path => `export * from ${JSON.stringify(new URL(path, import.meta.url).href)};`;
 const boundaries = {
-  './api': reexport('../src/api.ts'),
-  './public-contracts': reexport('../src/public-contracts.ts'),
-  './comment-submission': reexport('../src/comment-submission.ts'),
+  './api': reexport('./fixtures/react-baseline/src/api.ts'),
+  './public-contracts': reexport('./fixtures/react-baseline/src/public-contracts.ts'),
+  './comment-submission': reexport('./fixtures/react-baseline/src/comment-submission.ts'),
   './SlidingTitle': 'export const SlidingTitle=({text})=>text;',
   './ReferencePetals': 'export const ReferencePetals=()=>null;',
   './PublicChrome': 'export const PublicChrome=({children})=>children;',
@@ -20,15 +20,15 @@ const boundaries = {
   './PhotoGallery': 'export const PhotoGrid=({items})=>items.map(item=>item.title);',
   './LovePage': 'export const LovePage=()=>null;',
 };
-const { CommentReplies } = await originalModule(new URL('../src/PublicComments.tsx', import.meta.url), boundaries, ['CommentReplies']);
-const { ArticleNews } = await originalModule(new URL('../src/ArticleNews.tsx', import.meta.url), boundaries);
-const { PublicExtras, MusicBody } = await originalModule(new URL('../src/PublicExtras.tsx', import.meta.url), boundaries, ['MusicBody']);
-const { LovePage } = await originalModule(new URL('../src/LovePage.tsx', import.meta.url), boundaries);
-const { LabelsPage, SitePage, ResourcesPage } = await originalModule(new URL('../src/AdminExtras.tsx', import.meta.url), { ...boundaries, '@xcss/web/admin-shell':'export const useAdminApplication=()=>globalThis.__WORKFLOW_APP;', './AdminLayout':'export const adminGroups=[];' });
-const { HomeSectionsPage } = await originalModule(new URL('../src/HomeSections.tsx', import.meta.url), { ...boundaries, '@xcss/web/admin-shell':'export const useAdminApplication=()=>globalThis.__WORKFLOW_APP;' });
+const { CommentReplies } = await originalModule(new URL('./fixtures/react-baseline/src/PublicComments.tsx', import.meta.url), boundaries, ['CommentReplies']);
+const { ArticleNews } = await originalModule(new URL('./fixtures/react-baseline/src/ArticleNews.tsx', import.meta.url), boundaries);
+const { PublicExtras, MusicBody } = await originalModule(new URL('./fixtures/react-baseline/src/PublicExtras.tsx', import.meta.url), boundaries, ['MusicBody']);
+const { LovePage } = await originalModule(new URL('./fixtures/react-baseline/src/LovePage.tsx', import.meta.url), boundaries);
+const { LabelsPage, SitePage, ResourcesPage } = await originalModule(new URL('./fixtures/react-baseline/src/AdminExtras.tsx', import.meta.url), { ...boundaries, '@xcss/web/admin-shell':'export const useAdminApplication=()=>globalThis.__WORKFLOW_APP;', './AdminLayout':'export const adminGroups=[];' });
+const { HomeSectionsPage } = await originalModule(new URL('./fixtures/react-baseline/src/HomeSections.tsx', import.meta.url), { ...boundaries, '@xcss/web/admin-shell':'export const useAdminApplication=()=>globalThis.__WORKFLOW_APP;' });
 const beforeImportWindow = globalThis.window;
 globalThis.window = { location: { pathname: '/admin' } };
-const { ArticleManager, ArticleEditor, ArticleNewsEditor, CategoryManager } = await originalModule(new URL('../src/main.tsx', import.meta.url), {
+const { ArticleManager, ArticleEditor, ArticleNewsEditor, CategoryManager } = await originalModule(new URL('./fixtures/react-baseline/src/main.tsx', import.meta.url), {
   ...boundaries,
   '@xcss/web/admin-shell': 'export const useAdminApplication=()=>globalThis.__WORKFLOW_APP;export const createXcssAdminApplication=()=>()=>null;export const InstanceHeaderActions=()=>null;export const AccountPage=()=>null;',
   'react-dom/client': 'export const createRoot=()=>({render(){}});',

@@ -31,19 +31,31 @@ function png(marker) {
   ]);
 }
 
-for (const engine of [chromium, firefox]) {
+const requestedEngines=process.env.XOCS_SMOKE_ENGINES?.split(',')??['chromium','firefox'];
+if(!requestedEngines.length||requestedEngines.some(name=>!['chromium','firefox'].includes(name))||new Set(requestedEngines).size!==requestedEngines.length)throw new Error('XOCS_SMOKE_ENGINES must list chromium and/or firefox once');
+for (const engine of [chromium, firefox].filter(engine=>requestedEngines.includes(engine.name()))) {
   const browser = await engine.launch({ headless: true });
   const context = await browser.newContext({ locale: 'en-US', reducedMotion: 'reduce', viewport: { width: 1280, height: 900 } });
   const publicContext = await browser.newContext({ locale: 'en-US', reducedMotion: 'reduce' });
   const page = await context.newPage(), publicPage = await publicContext.newPage();
+  await page.addInitScript(()=>{
+    window.__xocsSelectEvents=[];
+    for(const type of ['pointermove','pointerdown','mousedown','pointerup','mouseup','click','focusin'])document.addEventListener(type,event=>{
+      const target=event.target instanceof Element?event.target:null,option=target?.closest('[role=option]'),select=target?.closest('.xcss-select');
+      if(!select&&!['pointerdown','pointerup','click'].includes(type))return;
+      const record={type,tag:target?.tagName,role:target?.getAttribute('role'),id:target?.id,option:option?.getAttribute('data-option-index'),expanded:select?.querySelector('[role=combobox]')?.getAttribute('aria-expanded'),x:event.clientX,y:event.clientY,scrollY,panelScroll:select?.querySelector('[role=listbox]')?.scrollTop,rect:option?.getBoundingClientRect().toJSON(),panel:select?.querySelector('[role=listbox]')?.getBoundingClientRect().toJSON()};
+      window.__xocsSelectEvents.push(record);if(window.__xocsSelectEvents.length>80)window.__xocsSelectEvents.shift();
+      queueMicrotask(()=>{record.prevented=event.defaultPrevented;record.afterExpanded=select?.querySelector('[role=combobox]')?.getAttribute('aria-expanded');record.native=select?.querySelector('select')?.value;});
+    },true);
+  });
   const errors = [], receipts = [], cleanupErrors = [];
   page.on('pageerror', error => errors.push(error.message));
   publicPage.on('pageerror', error => errors.push(error.message));
   page.setDefaultTimeout(30_000); publicPage.setDefaultTimeout(30_000);
   const token = `N-${engine.name()}-${Date.now().toString(36)}`;
   const file = { name: `${token}.png`, mimeType: 'image/png', buffer: png(randomUUID()) };
-  const own = { note: null, media: null, category: null, label: null, article: null, news: null };
-  let csrf, originalSite, originalLetter, phase = 'fixture guard';
+  const own = { note: null, media: null, category: null, label: null, article: null, news: null, link: null };
+  let csrf, originalSite, originalLetter, originalFamily, phase = 'fixture guard';
 
   async function read(path) {
     const response = await context.request.get(`${base}${path}`, { maxRedirects: 0 });
@@ -58,6 +70,7 @@ for (const engine of [chromium, firefox]) {
     if (![200, 404].includes(response.status())) throw new Error(`cleanup ${method} ${path}: ${response.status()}`);
   }
   async function admin(hash, heading) {
+    console.log(JSON.stringify({engine:engine.name(),phase,navigating:hash}));
     await page.goto(`${base}/admin?lang=en#${hash}`);
     assert.equal(new URL(page.url()).origin, base);
     await page.getByRole('heading', { name: heading, exact: true }).waitFor();
@@ -68,6 +81,10 @@ for (const engine of [chromium, firefox]) {
     const response = await waiting;
     assert.equal(response.status(), expected, `${phase}: ${method} ${path}`);
     const value = await response.json();
+    const body = /^\/api\/v1\/content\/(?:categories|labels|family)(?:\/\d+)?$/.test(path) && method !== 'DELETE' ? response.request().postDataJSON() : null;
+    if (/^\/api\/v1\/content\/categories(?:\/\d+)?$/.test(path) && method !== 'DELETE') assert.deepEqual(Object.keys(body).sort(), ['description','name','priority']);
+    if (/^\/api\/v1\/content\/labels(?:\/\d+)?$/.test(path) && method !== 'DELETE') assert.deepEqual(Object.keys(body).sort(), ['description','name','sort_id']);
+    if (/^\/api\/v1\/content\/family\/\d+$/.test(path) && method === 'PUT') { assert.equal(typeof body.status,'boolean'); assert.equal(Object.hasOwn(body,'id'),false); }
     receipts.push({ method, path, status: response.status() });
     return value;
   }
@@ -78,9 +95,13 @@ for (const engine of [chromium, firefox]) {
   }
   async function chooseOption(label, value) {
     const trigger = page.getByRole('combobox', { name: label, exact: true });
+    await page.evaluate(()=>window.__xocsSelectEvents=[]);
     await trigger.click();
     await page.getByRole('option', { name: value, exact: true }).click();
-    await expect(trigger).toContainText(value);
+    try{await expect(trigger).toContainText(value);}catch(error){
+      const diagnostic=await page.evaluate(()=>({events:window.__xocsSelectEvents,controls:[...document.querySelectorAll('.xcss-select')].map(select=>({label:select.querySelector('[role=combobox]')?.getAttribute('aria-label'),expanded:select.querySelector('[role=combobox]')?.getAttribute('aria-expanded'),value:select.querySelector('select')?.value,options:[...select.querySelectorAll('[role=option]')].map(option=>({label:option.textContent,rect:option.getBoundingClientRect().toJSON()})),panel:select.querySelector('[role=listbox]')?.getBoundingClientRect().toJSON()}))}));
+      throw new Error(`${error.message}\nSelect event diagnostic: ${JSON.stringify(diagnostic)}`,{cause:error});
+    }
   }
   const noteRow = value => page.getByRole('table', { name: 'Note list', exact: true }).getByRole('row').filter({ hasText: value });
   async function publicNotes(value, visible) {
@@ -112,6 +133,38 @@ for (const engine of [chromium, firefox]) {
     assert.equal(typeof csrf, 'string');
     originalSite = await read('/api/v1/content/site'); originalLetter = await read('/api/v1/content/letter');
     assert.ok(!Object.hasOwn(originalSite, 'footer'));
+    const families = await read('/api/v1/content/family');
+    assert.equal(families.length,1); assert.equal(families[0].man_name,'A'); assert.equal(families[0].woman_name,'B');
+    const {id:familyId,...familyBody}=families[0];
+    originalFamily={id:familyId,body:{...Object.fromEntries(Object.entries(familyBody).map(([key,value])=>[key,['man_name','woman_name','timing'].includes(key)?value??'':value])),status:familyBody.status===1}};
+
+    phase = 'Love journal repeated saves retain boolean status and input schema';
+    await admin('family','Love journal');
+    await page.getByLabel('Introduction',{exact:true}).fill(`${token} first family edit`);
+    let home=await click('PUT',`/api/v1/content/family/${familyId}`,page.getByRole('button',{name:'Save',exact:true}));
+    assert.equal(home.family_info,`${token} first family edit`);
+    await expect(page.getByLabel('Introduction',{exact:true})).toHaveValue(`${token} first family edit`);
+    await expect(page.getByRole('checkbox',{name:'Show publicly',exact:true})).toBeChecked();
+    await page.getByLabel('Introduction',{exact:true}).fill(`${token} second family edit`);
+    home=await click('PUT',`/api/v1/content/family/${familyId}`,page.getByRole('button',{name:'Save',exact:true}));
+    assert.equal(home.family_info,`${token} second family edit`); assert.equal(home.status,1);
+    await cleanup('PUT',`/api/v1/content/family/${familyId}`,originalFamily.body);
+
+    phase = 'Content resources create edit approve and delete';
+    await admin('links','Content resources'); await chooseOption('Type','Friend links');
+    await page.getByLabel('Title',{exact:true}).fill(`${token} link`);
+    await page.getByLabel('Target URL',{exact:true}).fill('https://example.org/');
+    await page.getByRole('checkbox',{name:'Show publicly',exact:true}).uncheck();
+    own.link=await click('POST','/api/v1/content/links',page.getByRole('button',{name:'Add resource',exact:true}));
+    assert.equal(own.link.link_type,'friendUrl'); assert.equal(own.link.status,0);
+    const linkRow=()=>page.getByRole('table',{name:'Content resource list',exact:true}).getByRole('row').filter({hasText:`${token} link`});
+    await linkRow().getByRole('button',{name:'Edit',exact:true}).click();
+    await page.getByLabel('Introduction',{exact:true}).fill(`${token} link edit`);
+    own.link=await click('PUT',`/api/v1/content/links/${own.link.id}`,page.getByRole('button',{name:'Save changes',exact:true}));
+    assert.equal(own.link.introduction,`${token} link edit`);
+    await click('PUT',`/api/v1/content/links/${own.link.id}/status`,linkRow().getByRole('button',{name:'Approve',exact:true}));
+    await expect(linkRow()).toContainText('Public');
+
 
     phase = 'Files native picker upload';
     await admin('resources', 'Files');
@@ -200,9 +253,19 @@ for (const engine of [chromium, firefox]) {
     await admin('categories', 'Categories');
     await page.getByLabel('Category name', { exact: true }).fill(token);
     own.category = await click('POST', '/api/v1/content/categories', page.getByRole('button', { name: 'Create category', exact: true }));
+    await page.getByRole('row').filter({hasText:token}).getByRole('button',{name:'Edit',exact:true}).click();
+    await page.getByLabel('Category description',{exact:true}).fill(`${token} category edit`);
+    own.category=await click('PUT',`/api/v1/content/categories/${own.category.id}`,page.getByRole('button',{name:'Save changes',exact:true}));
+    assert.equal(own.category.sort_description,`${token} category edit`);
+
     await admin('labels', 'Tags'); await chooseOption('Category', token);
     await page.getByLabel('Tag name', { exact: true }).fill(token);
     own.label = await click('POST', '/api/v1/content/labels', page.getByRole('button', { name: 'Add tag', exact: true }));
+    await page.getByRole('row').filter({hasText:token}).getByRole('button',{name:'Edit',exact:true}).click();
+    await page.getByLabel('Tag description',{exact:true}).fill(`${token} tag edit`);
+    own.label=await click('PUT',`/api/v1/content/labels/${own.label.id}`,page.getByRole('button',{name:'Save changes',exact:true}));
+    assert.equal(own.label.label_description,`${token} tag edit`);
+
     await admin('new', 'Add article');
     await page.getByLabel('Title', { exact: true }).fill(`${token} article`);
     await page.getByLabel('Markdown content', { exact: true }).fill(`${token} independent article body`);
@@ -252,6 +315,8 @@ for (const engine of [chromium, firefox]) {
       if (own.media) jobs.push(['DELETE', `/api/v1/content/resources/${own.media.id}`, { path: own.media.path }]);
       if (own.label) jobs.push(['DELETE', `/api/v1/content/labels/${own.label.id}`, {}]);
       if (own.category) jobs.push(['DELETE', `/api/v1/content/categories/${own.category.id}`, {}]);
+      if (own.link) jobs.push(['DELETE', `/api/v1/content/links/${own.link.id}`, {}]);
+      if (originalFamily) jobs.push(['PUT', `/api/v1/content/family/${originalFamily.id}`, originalFamily.body]);
       if (originalSite) jobs.push(['PUT', '/api/v1/content/site', originalSite]);
       if (originalLetter) jobs.push(['PUT', '/api/v1/content/letter', originalLetter]);
       for (const [method, path, body] of jobs) {
@@ -271,5 +336,5 @@ for (const engine of [chromium, firefox]) {
   if (failure || cleanupErrors.length || errors.length) {
     throw new AggregateError([...(failure ? [failure] : []), ...cleanupErrors.map(message => new Error(message)), ...errors.map(message => new Error(message))], `${engine.name()} native management failed`);
   }
-  console.log(JSON.stringify({ engine: engine.name(), status: 'passed', real_http_ui_receipts: receipts, own_ids: Object.fromEntries(Object.entries(own).map(([kind, value]) => [kind, value?.id ?? null])), cleanup: 'own records removed; original site and Reader letter restored; fixture articles and note retained', pageerrors: errors }));
+  console.log(JSON.stringify({ engine: engine.name(), status: 'passed', real_http_ui_receipts: receipts, own_ids: Object.fromEntries(Object.entries(own).map(([kind, value]) => [kind, value?.id ?? null])), cleanup: 'own records removed; original family, site and Reader letter restored; fixture articles and note retained', pageerrors: errors }));
 }

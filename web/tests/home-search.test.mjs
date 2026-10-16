@@ -5,7 +5,7 @@ import { transformWithOxc } from 'vite';
 import { walk } from './fixtures/hook-host.mjs';
 
 // Render the original HomeAside declaration, stubbing only unrelated boundaries.
-const main = await readFile(new URL('../src/main.tsx', import.meta.url), 'utf8');
+const main = await readFile(new URL('./fixtures/react-baseline/src/main.tsx', import.meta.url), 'utf8');
 const source = `import { jsx } from '${new URL('./fixtures/hook-host.mjs', import.meta.url).href}';
 const h=(type,props,...children)=>jsx(type,{...props,children});
 const t=(_zh,en)=>en;const safeMediaUrl=value=>value;\n`

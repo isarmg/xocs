@@ -18,3 +18,17 @@ export function xcssFontLicenses(prefix = "assets/") {
     },
   };
 }
+
+export function leptosBuildMetadata() {
+  return {
+    name: "leptos-build-metadata",
+    generateBundle(_options, bundle) {
+      for (const chunk of Object.values(bundle)) {
+        if (chunk.type === "chunk" && Object.keys(chunk.modules).some(id => /node_modules\/(?:react|react-dom|@vitejs\/plugin-react)(?:\/|$)/.test(id))) {
+          this.error("React runtime must not enter the Leptos production bundle");
+        }
+      }
+      this.emitFile({type: "asset", fileName: "assets/leptos-build.json", source: readFileSync(new URL("./pkg/leptos-build.json", import.meta.url))});
+    },
+  };
+}

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { chromium, firefox, expect } from '@playwright/test';
 import { preview } from 'vite';
 
-import { authored, mockApi, schemaPrefixes, summary } from './browser-fixtures.mjs';
+import { authored, mockApi, schemaPrefixes, summary, waitForApplication } from './browser-fixtures.mjs';
 
 const routes = [
   ['/', 'Believe in the power of stories'], ['/search', 'Search articles'], ['/sort', 'Article categories'],
@@ -47,7 +47,7 @@ try {
       for (const [path, heading] of routes) {
         const url = new URL(path, base); url.searchParams.set('lang', 'en');
         await page.goto(url.href);
-        await page.waitForLoadState('networkidle');
+        await waitForApplication(page);
         await expect(page.getByRole('heading', { name: heading, exact: true }).first()).toBeVisible();
         // Hash navigation can reuse the old document's network-idle state.
         // Wait for the actual successful list result, not just its heading.

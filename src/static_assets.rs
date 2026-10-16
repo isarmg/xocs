@@ -1,5 +1,8 @@
 use axum::{extract::Request, response::Response};
 
+#[path = "leptos_assets.rs"]
+mod leptos_assets;
+
 include!(concat!(env!("OUT_DIR"), "/xcss-web-assets.rs"));
 
 pub fn verify() -> anyhow::Result<()> {
@@ -7,11 +10,11 @@ pub fn verify() -> anyhow::Result<()> {
 }
 
 pub async fn serve(request: Request) -> Response {
-    xcss::web_assets::response(
-        ASSETS,
+    leptos_assets::response(
         request.uri().path(),
         request.method(),
         request.headers(),
+        |path, method, headers| xcss::web_assets::response(ASSETS, path, method, headers),
     )
     .map(axum::body::Body::from)
 }

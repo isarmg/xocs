@@ -4,13 +4,16 @@ import {preview} from 'vite';
 import {mockApi,article} from './browser-fixtures.mjs';
 const server=await preview({preview:{host:'127.0.0.1',port:0,strictPort:true}});
 const base=`http://127.0.0.1:${server.httpServer.address().port}`;
+// A real, short PCM WAV lets Firefox finish media metadata loading. An empty
+// audio/mpeg body leaves its media request pending even after the UI is ready.
+const audio=Buffer.alloc(44+8820);audio.write('RIFF');audio.writeUInt32LE(audio.length-8,4);audio.write('WAVEfmt ',8);audio.writeUInt32LE(16,16);audio.writeUInt16LE(1,20);audio.writeUInt16LE(1,22);audio.writeUInt32LE(44100,24);audio.writeUInt32LE(88200,28);audio.writeUInt16LE(2,32);audio.writeUInt16LE(16,34);audio.write('data',36);audio.writeUInt32LE(audio.length-44,40);
 try{for(const engine of [chromium,firefox]){
  const browser=await engine.launch();
  try{
   const page=await browser.newPage({locale:'en',viewport:{width:1280,height:900}}),errors=[],calls=[],saved=[];
   page.on('pageerror',error=>errors.push(error.message));await mockApi(page,{authenticated:true});
   await page.route('**/api/v1/links/page?*',route=>{const params=new URL(route.request().url()).searchParams,kind=params.get('kind'),number=Number(params.get('page')),size=Number(params.get('size'));calls.push({kind,page:number,size});const ids=Array.from({length:201},(_,i)=>201-i).slice((number-1)*size,number*size);return route.fulfill({json:{items:ids.map(id=>({id,title:`${kind}-${id}`,classify:null,cover:null,url:kind==='funny'?`/media/music-${id}.mp3`:'https://example.test/'+id,introduction:null,link_type:kind,create_time:null})),total:201,page:number,size}});});
-  await page.route('**/media/music-*',route=>route.fulfill({status:200,body:'',contentType:'audio/mpeg'}));
+  await page.route('**/media/music-*',route=>route.fulfill({status:200,body:audio,contentType:'audio/wav'}));
   for(const [tab,kind] of [['favorites','favorites'],['friends','friendUrl'],['music','funny']]){
    await page.goto(`${base}/favorite?lang=en&tab=${tab}`);await expect(page.getByText(`${kind}-201`,{exact:true}).first()).toBeVisible();
    const pager=page.getByRole('navigation',{name:'Toolbox pages',exact:true});

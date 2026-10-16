@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { formatUtcTime, parseUtcDate, utcDateTimeInput } from '../src/utc-time.ts';
+import { formatUtcTime, parseUtcDate, utcDateTimeInput } from './fixtures/react-baseline/src/utc-time.ts';
 
 test('SQLite timestamps and offset-free date inputs mean UTC', () => {
   assert.equal(parseUtcDate('2026-10-12 23:59:59'), Date.parse('2026-10-12T23:59:59Z'));

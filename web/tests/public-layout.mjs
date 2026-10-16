@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { chromium, firefox, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { preview } from 'vite';
-import { article, mockApi, pageOf, summary } from './browser-fixtures.mjs';
+import { article, mockApi, pageOf, summary, waitForApplication } from './browser-fixtures.mjs';
 
 const families = [
   { id: 1, man_name: 'Lin', woman_name: 'Yu', timing: '2026-10-01', bg_cover: null, man_cover: null, woman_cover: null, family_info: 'We keep the little moments.\nOne photo and one story at a time.', countdown_title: 'A special day', countdown_time: '2026-10-08' },
@@ -62,6 +62,7 @@ async function articleBrowseHistory(browser, base) {
     await expect(page.locator('.original-list-card').first()).toContainText('Article 13');
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
     await page.locator('.original-list-card').first().click();
+    await waitForApplication(page);
     await expect(page.locator('.article-markdown')).toBeVisible();
     await expect(page).toHaveURL(/article\/13\?lang=en/);
     await page.goBack();
