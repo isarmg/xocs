@@ -14,12 +14,12 @@
     "test:language": "npm run build && node tests/language.mjs",
     "test:admin": "npm run build && node tests/admin-layout.mjs && node tests/account-settings.mjs",
     "test:public": "npm run build && node tests/public-layout.mjs && node tests/anonymous-comments.mjs",
-    "build:leptos": "cargo +1.99.0 run --quiet --locked --manifest-path ../tools/web-build/Cargo.toml -- build --product-root ..",
-    "check:leptos": "cargo +1.99.0 run --quiet --locked --manifest-path ../tools/web-build/Cargo.toml -- check --product-root ..",
-    "test:leptos": "cargo +1.99.0 run --quiet --locked --manifest-path ../tools/web-build/Cargo.toml -- test --product-root .. && cargo +1.99.0 test --locked --manifest-path leptos/domain-tests/Cargo.toml",
-    "test:browser:leptos": "npm run build && node tests/leptos-runtime.mjs && node tests/browser-smoke.mjs && node tests/rust-native-domain.mjs",
+    "build:xcss-web": "cargo +1.99.0 run --quiet --locked --manifest-path ../tools/web-build/Cargo.toml -- build --product-root ..",
+    "check:xcss-web": "cargo +1.99.0 run --quiet --locked --manifest-path ../tools/web-build/Cargo.toml -- check --product-root ..",
+    "test:xcss-web": "cargo +1.99.0 run --quiet --locked --manifest-path ../tools/web-build/Cargo.toml -- test --product-root .. && cargo +1.99.0 test --locked --manifest-path xcss-web/domain-tests/Cargo.toml",
+    "test:browser:xcss-web": "npm run build && node tests/xcss-web-runtime.mjs && node tests/browser-smoke.mjs && node tests/rust-native-domain.mjs",
     "test:react-baseline": "node --test tests/*.test.mjs",
-    "test:domain:rust": "cargo +1.99.0 test --locked --manifest-path leptos/domain-tests/Cargo.toml"
+    "test:domain:rust": "cargo +1.99.0 test --locked --manifest-path xcss-web/domain-tests/Cargo.toml"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.12.1",

@@ -59,11 +59,11 @@ jobs:
           cargo fmt --all -- --check
           cargo +1.99.0 fmt --manifest-path tools/web-build/Cargo.toml -- --check
           cargo +1.99.0 clippy --manifest-path tools/web-build/Cargo.toml --locked --all-targets -- -D warnings
-          cargo +1.99.0 fmt --manifest-path web/leptos/Cargo.toml -- --check
-          cargo +1.99.0 clippy --manifest-path web/leptos/Cargo.toml --target wasm32-unknown-unknown --locked -- -D warnings
+          cargo +1.99.0 fmt --manifest-path web/xcss-web/Cargo.toml -- --check
+          cargo +1.99.0 clippy --manifest-path web/xcss-web/Cargo.toml --target wasm32-unknown-unknown --locked -- -D warnings
           cargo +1.99.0 run --quiet --locked --manifest-path tools/web-build/Cargo.toml -- test --product-root .
-          cargo +1.99.0 test --locked --manifest-path web/leptos/domain-tests/Cargo.toml
-          python3 -I -B scripts/test-leptos-build.py
+          cargo +1.99.0 test --locked --manifest-path web/xcss-web/domain-tests/Cargo.toml
+          python3 -I -B scripts/test-xcss-web-build.py
           cargo clippy --locked --all-targets -- -D warnings
           cargo test --locked
           cargo build --locked
@@ -118,7 +118,7 @@ jobs:
               node tests/admin-cleanup.mjs
               node tests/management.mjs
               node tests/contract-fixes.mjs
-              node tests/leptos-runtime.mjs
+              node tests/xcss-web-runtime.mjs
               node tests/rust-native-domain.mjs
               ;;
             public)
@@ -200,7 +200,7 @@ jobs:
             ~/.cargo/git/db
             target
           # No fallback keys. Only a successful main push saves this cache.
-          key: xocs-installed-release-v1-${{ runner.os }}-${{ runner.arch }}-rust-1.99.0-${{ env.SERVER_TARGET }}-${{ steps.release_environment.outputs.fingerprint }}-${{ hashFiles('Cargo.lock', 'tools/web-build/Cargo.lock', 'tools/web-build/src/**', 'web/rust-web.toml', 'web/vendor/**', 'web/leptos/vendor/**', 'web/leptos/Cargo.lock', 'web/leptos/domain-tests/Cargo.lock', '**/Cargo.toml', '**/build.rs', '.cargo/**', 'rust-toolchain.toml', 'config/xssi.lock', 'web/package-lock.json', 'xcss-web-build.json', '.github/workflows/ci.yml') }}
+          key: xocs-installed-release-v1-${{ runner.os }}-${{ runner.arch }}-rust-1.99.0-${{ env.SERVER_TARGET }}-${{ steps.release_environment.outputs.fingerprint }}-${{ hashFiles('Cargo.lock', 'tools/web-build/Cargo.lock', 'tools/web-build/src/**', 'web/rust-web.toml', 'web/vendor/**', 'web/xcss-web/vendor/**', 'web/xcss-web/Cargo.lock', 'web/xcss-web/domain-tests/Cargo.lock', '**/Cargo.toml', '**/build.rs', '.cargo/**', 'rust-toolchain.toml', 'config/xssi.lock', 'web/package-lock.json', 'xcss-web-build.json', '.github/workflows/ci.yml') }}
       - name: Discard cached first-party candidate products
         run: |
           cargo clean --package xocs --release --target "$SERVER_TARGET"
@@ -266,8 +266,8 @@ jobs:
             ~/.cargo/git/db
             target
           key: ${{ steps.release_cache.outputs.cache-primary-key }}
-      - name: Audit the independent Leptos lockfile
-        run: cargo audit --file web/leptos/Cargo.lock --deny yanked
+      - name: Audit the independent xcss-web lockfile
+        run: cargo audit --file web/xcss-web/Cargo.lock --deny yanked
       - name: Package the exact release binary with real helper and audits
         id: package_candidate
         run: |

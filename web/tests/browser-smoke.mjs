@@ -44,7 +44,7 @@ try {
   const homeHeading = process.env.XOCS_SMOKE_URL ? '相信记录的力量' : '测试站点';
   for (const [route, heading] of [['/', homeHeading], ['/search', '搜索文章'], ['/sort', '文章分类'], ['/jotting', 'xocs'], ['/menory', 'xocs'], ['/favorite', '百宝箱'], ['/favorite?tab=friends', '百宝箱'], ['/favorite?tab=music', '百宝箱'], ['/travel', '时光相册'], ['/love', '这是我们一起走过的'], ['/message', '弹幕']]) {
     await page.goto(`${base}${route}`);
-    await expect(page.locator("html")).toHaveAttribute("data-xcss-runtime", "leptos");
+    await expect(page.locator("html")).toHaveAttribute("data-xcss-runtime", "xcss-web");
     await page.getByRole('heading', { name: heading }).first().waitFor();
     console.log(`${route}: rendered`);
   }
@@ -62,7 +62,7 @@ try {
     assert.ok(raw.equals(await gzip.body()), 'Negotiated gzip decodes to the exact WASM');
     assert.ok(Number(gzip.headers()['content-length']) < raw.length, 'The negotiated representation saves transfer bytes');
     assert.notEqual(gzip.headers().etag, identity.headers().etag);
-    const metadata = await (await page.request.get(`${base}/assets/leptos-build.json`)).json();
+    const metadata = await (await page.request.get(`${base}/assets/xcss-web-build.json`)).json();
     assert.equal(createHash('sha256').update(raw).digest('hex'), metadata.files['xocs_web_bg.wasm']);
     const head = await page.request.head(wasmUrl, {headers: {'Accept-Encoding': 'gzip'}});
     assert.equal(head.status(), 200);assert.equal((await head.body()).length, 0);

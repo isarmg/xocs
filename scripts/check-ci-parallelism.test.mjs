@@ -27,15 +27,15 @@ test('server and browser groups are independent and preserve every gate', () => 
     'cargo fmt --all -- --check', 'cargo clippy --locked --all-targets -- -D warnings',
     'cargo test --locked', 'cargo build --locked', 'bash scripts/smoke.sh',
     'verify-manifest --product-root', 'verify-source --product-root',
-    'fmt --manifest-path web/leptos/Cargo.toml -- --check',
-    'clippy --manifest-path web/leptos/Cargo.toml --target wasm32-unknown-unknown --locked -- -D warnings',
+    'fmt --manifest-path web/xcss-web/Cargo.toml -- --check',
+    'clippy --manifest-path web/xcss-web/Cargo.toml --target wasm32-unknown-unknown --locked -- -D warnings',
     'cargo +1.99.0 run --quiet --locked --manifest-path tools/web-build/Cargo.toml -- test --product-root .',
-    'cargo +1.99.0 test --locked --manifest-path web/leptos/domain-tests/Cargo.toml',
-    'python3 -I -B scripts/test-leptos-build.py',
+    'cargo +1.99.0 test --locked --manifest-path web/xcss-web/domain-tests/Cargo.toml',
+    'python3 -I -B scripts/test-xcss-web-build.py',
   ]) assert.ok(server.includes(command), `missing server check: ${command}`);
   const expected = [
     'language', 'admin-layout', 'account-settings', 'admin-cleanup',
-    'management', 'contract-fixes', 'leptos-runtime', 'rust-native-domain', 'public-footer', 'public-layout', 'anonymous-comments',
+    'management', 'contract-fixes', 'xcss-web-runtime', 'rust-native-domain', 'public-footer', 'public-layout', 'anonymous-comments',
   ];
   const actual = [...browser.matchAll(/node tests\/([a-z-]+)\.mjs/g)].map(match => match[1]);
   assert.deepEqual(actual.sort(), expected.sort());
@@ -95,7 +95,7 @@ test('both matrix branches execute every original UI script exactly once', () =>
     assert.deepEqual(actual.sort(), [
       'run test:unit', 'tests/language.mjs', 'tests/admin-layout.mjs',
       'tests/account-settings.mjs', 'tests/admin-cleanup.mjs', 'tests/management.mjs',
-      'tests/contract-fixes.mjs', 'tests/leptos-runtime.mjs', 'tests/rust-native-domain.mjs',
+      'tests/contract-fixes.mjs', 'tests/xcss-web-runtime.mjs', 'tests/rust-native-domain.mjs',
       'tests/public-footer.mjs', 'tests/public-layout.mjs', 'tests/anonymous-comments.mjs',
     ].sort());
     const unknown = spawnSync('bash', ['-c', run], {

@@ -17,8 +17,8 @@ xocs/media/
 /export/
 __pycache__/
 
-# Generated Leptos browser assets
+# Generated xcss-web browser assets
 /web/pkg/
-/web/leptos/target/
+/web/xcss-web/target/
 
 /tools/web-build/target/

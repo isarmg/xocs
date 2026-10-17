@@ -10,7 +10,7 @@ function observeApplicationRequests(page){
 }
 export async function waitForApplication(page){
   const {expect}=await import('@playwright/test');
-  await expect(page.locator('html')).toHaveAttribute('data-xcss-runtime','leptos');
+  await expect(page.locator('html')).toHaveAttribute('data-xcss-runtime','xcss-web');
   for(let pass=0;pass<2;pass++){
     await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
     await expect.poll(()=>[...(applicationRequests.get(page)??[])].map(request=>request.url()),{message:`Current application reads: ${page.url()}`}).toEqual([]);

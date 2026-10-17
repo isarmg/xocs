@@ -1,10 +1,10 @@
 # xocs 前端业务 Rust 化与交互优化
 
-本轮保持 Axum、API 路径、字段和鉴权/幂等约定，前端仍使用 Leptos CSR。生产资源构建的变更见工作区总说明；本文只记录 xocs 的业务状态、Markdown 与交互迁移。
+本轮保持 Axum、API 路径、字段和鉴权/幂等约定，前端仍使用 xcss-web CSR。生产资源构建的变更见工作区总说明；本文只记录 xocs 的业务状态、Markdown 与交互迁移。
 
 ## 明确类型进入实际页面
 
-`web/leptos/src/models.rs` 定义 `Site`、`SiteStats`、`AdminStats`、`Category`、`Label`、`HomeSection`、`ArticleSummary`、`Article`、`ArticleAccess`、`News` 与 `Page<T>`，在网络边界先执行原 `contracts::validate` 和 `matches_page`，再反序列化。缺失的必需可空字段、超出 JS 安全整数范围的数值、错误页码/页大小、错误数字标志等仍会被拒绝。允许后端增加未消费的字段。
+`web/xcss-web/src/models.rs` 定义 `Site`、`SiteStats`、`AdminStats`、`Category`、`Label`、`HomeSection`、`ArticleSummary`、`Article`、`ArticleAccess`、`News` 与 `Page<T>`，在网络边界先执行原 `contracts::validate` 和 `matches_page`，再反序列化。缺失的必需可空字段、超出 JS 安全整数范围的数值、错误页码/页大小、错误数字标志等仍会被拒绝。允许后端增加未消费的字段。
 
 类型实际用于首页/推荐/栏目、文章分类与搜索、文章详情和密码解锁、阅读元数据和文章进展、后台统计与文章列表、文章编辑器读取与分类/标签选项、文章进展列表。DTO 只保留页面实际消费的字段；未消费字段仍由原合同校验，避免重复保存/反序列化。`Data<T>` 与分页组件共用同一套请求取消、加载、错误、上一成功状态及重载逻辑。
 
@@ -14,7 +14,7 @@
 
 ## 阅读与表单行为移入 Rust
 
-删除 `web/leptos/src/browser.js`，移除其 npm Markdown/清理和管理界面 i18n imports。对应功能移入 `browser.rs` 与 `markdown.rs`：
+删除 `web/xcss-web/src/browser.js`，移除其 npm Markdown/清理和管理界面 i18n imports。对应功能移入 `browser.rs` 与 `markdown.rs`：
 
 - 使用固定版本 `pulldown-cmark 0.13.4` 解析 CommonMark 结构事件，启用表格和删除线；软换行仍变为换行标签。
 - 将所有原始 HTML/内联 HTML 事件变为转义文本。原始 HTML 始终禁用，没有接受任意 HTML 的自制清理器。
@@ -36,7 +36,7 @@
 
 ## 普通 Rust 函数式视图
 
-本项目的 268 个 authored `view!` 调用已转换为普通 Rust DOM/组件 builder，保留 `#[component]`、原业务表达式、受控状态、列表 key、事件和清理机制。使用 `leptos::html`、`leptos::svg`、`leptos::ev` 公开路径及明确导入的组件 props helper；没有以 HTML 字符串替代界面结构。Markdown 内容依然通过独立的安全内容渲染路径进入 `inner_html`。
+本项目的 268 个 authored `view!` 调用已转换为普通 Rust DOM/组件 builder，保留 `#[component]`、原业务表达式、受控状态、列表 key、事件和清理机制。使用 `xcss_web::html`、`xcss_web::svg`、`xcss_web::ev` 公开路径及明确导入的组件 props helper；没有以 HTML 字符串替代界面结构。Markdown 内容依然通过独立的安全内容渲染路径进入 `inner_html`。
 
 转换复用 xcss 正式集成宏的 `render_view`，只在维护工具执行一次；应用后续直接维护普通 Rust 源码；builder 和组件 props 适配比 RSX 更长，转换器不是每次构建的步骤。静态 inert HTML 优化关闭是用户选择函数式源码的取舍，不能据此宣称产物更小或更快。正式宏的无 props 组件适配块保留原求值顺序，只在该已生成块局部处理 `unit_arg`/`let_unit_value` lint，没有全文件允许警告。
 
@@ -49,26 +49,26 @@
 无需 Node 的原生安全/响应合同测试：
 
 ```sh
-cargo test --locked --offline --manifest-path web/leptos/domain-tests/Cargo.toml
+cargo test --locked --offline --manifest-path web/xcss-web/domain-tests/Cargo.toml
 ```
 
 这个轻量测试 crate 直接引入生产 `contracts.rs`、`models.rs`、`markdown.rs`，避免维护独立测试实现。13 个测试通过，覆盖必需可空字段、整数上界、分页身份、数字标志、写入空值/布尔字段、原始 HTML/SVG/MathML、URL 协议和实体/控制字符混淆、属性逃逸、代码、目录标题语法、表格/删除线/换行、裸链接与邮箱。
 
 本体已通过裁剪 CSR 的 WASM `cargo check` 与 `cargo clippy --locked --offline --target wasm32-unknown-unknown -- -D warnings`。canonical xcss 的公共组件与裁剪宏修复同步后，最终增量 clippy 含 vendor 一并通过，没有警告。
 
-`web/package.json` 的 `test:domain:rust` 与 `test:leptos` 已纳入上述 13 个原生测试；服务端与发布 CI 也使用 locked Cargo 执行它们。
+`web/package.json` 的 `test:domain:rust` 与 `test:xcss-web` 已纳入上述 13 个原生测试；服务端与发布 CI 也使用 locked Cargo 执行它们。
 
-新增 `web/tests/rust-native-domain.mjs` 对真实 WASM 做 6 组/引擎的 Markdown/DOM/安全 URL/复制和图片交互/菜单固定坐标 pointerdown→pointerup/键盘与原生校验验证。`test:browser:leptos` 与后台/发布 CI 浏览器序列已包含该脚本，原后台和公开页面矩阵、断言与失败传播守卫保留。该脚本的 API 使用明确的可丢弃路由 fixture，系统剪贴板使用 writeText 适配器；它不冒充真实后端数据库写入测试。
+新增 `web/tests/rust-native-domain.mjs` 对真实 WASM 做 6 组/引擎的 Markdown/DOM/安全 URL/复制和图片交互/菜单固定坐标 pointerdown→pointerup/键盘与原生校验验证。`test:browser:xcss-web` 与后台/发布 CI 浏览器序列已包含该脚本，原后台和公开页面矩阵、断言与失败传播守卫保留。该脚本的 API 使用明确的可丢弃路由 fixture，系统剪贴板使用 writeText 适配器；它不冒充真实后端数据库写入测试。
 
 该新增脚本已在 Chromium 153.0.8010.12 与 Firefox 155.0 首次运行全部通过，每个引擎各 6 组；固定坐标选择路径的 pointerdown/up 均落在 option 2，弹层 top 均为 250→250、window.scrollY 均为 0，未增加重试。End 键测试同时确认末项可见且只滚动列表。
 
-原有 11 套 `leptos-runtime`、`language`、`contract-fixes`、`management`、`admin-layout`、`account-settings`、`public-layout`、`anonymous-comments`、`admin-cleanup`、`public-footer`、`browser-smoke` 也首轮全部通过。原 smoke 依其设计只使用 Chromium，其余保留原两引擎、宽度与语言矩阵；未增加重试或弱化断言。完整 12 套（含新增 domain）的首轮摘要位于实验目录 `evidence/xocs/browser/first-results.json`，具体范围见 `evidence/xocs/final-domain-summary.json`。上述业务迁移保持 Axum API 合同，未修改线上服务或 React 主分支；生产构建与后端集成的优化另见工作区总说明。
+原有 11 套 `xcss-web-runtime`、`language`、`contract-fixes`、`management`、`admin-layout`、`account-settings`、`public-layout`、`anonymous-comments`、`admin-cleanup`、`public-footer`、`browser-smoke` 也首轮全部通过。原 smoke 依其设计只使用 Chromium，其余保留原两引擎、宽度与语言矩阵；未增加重试或弱化断言。完整 12 套（含新增 domain）的首轮摘要位于实验目录 `evidence/xocs/browser/first-results.json`，具体范围见 `evidence/xocs/final-domain-summary.json`。上述业务迁移保持 Axum API 合同，未修改线上服务或 React 主分支；生产构建与后端集成的优化另见工作区总说明。
 
 此外，同一生产 WASM 已在独立本地 Axum/SQLite 实例完成首轮真实全栈验证，Chromium 与 Firefox 各 6 组全部通过：实际管理员登录、界面创建分类/标签及依赖菜单、typed 文章写入、公开文章的 Rust Markdown/XSS/URL/代码 DOM、typed 编辑后全页重载与持久化、全流程零 pageError。
 
 该 harness 不拦截/替换请求，也不 mock Response；实例和数据库均为可丢弃测试资源。Axum 的所有发行文件逐字节 HTTP、WASM identity/gzip/ETag/HEAD/304，以及 MP4 的 MIME 也已核验。首轮结果位于实验目录 `native-verification/xocs-provider-first/{results.json,browser.json}`。这是代表性真实写入覆盖，不能替代全部业务与所有浏览器的生产环境验证。
 
-最终集成已将 `SOURCE.base_revision` 更新为 `f6ac3fb1b2d0754d12df0e2d3e0cd29ce10344b8`。移除产品 `web/node_modules`、阻止 Node/npm 等命令后，原生 Rust 前端生产构建通过；34 个发行文件中仅 `assets/leptos-build.json` 的 provenance 变化，其余 33 个文件逐字节相同，原 12 套浏览器断言覆盖的执行代码保持一致。证据为实验目录 `xocs-no-node-final-build.json` 与 `xocs-final-provenance-equivalence.json`。浏览器驱动的开发依赖通过独立原工作树加载，没有恢复产品依赖链接。
+最终集成已将 `SOURCE.base_revision` 更新为 `f6ac3fb1b2d0754d12df0e2d3e0cd29ce10344b8`。移除产品 `web/node_modules`、阻止 Node/npm 等命令后，原生 Rust 前端生产构建通过；34 个发行文件中仅 `assets/xcss-web-build.json` 的 provenance 变化，其余 33 个文件逐字节相同，原 12 套浏览器断言覆盖的执行代码保持一致。证据为实验目录 `xocs-no-node-final-build.json` 与 `xocs-final-provenance-equivalence.json`。浏览器驱动的开发依赖通过独立原工作树加载，没有恢复产品依赖链接。
 
 刷新后的 Axum 使用最终 CLI `server --mode development --rust-only --offline` 构建，冻结 binary/receipt 后再次 verify 通过。后端 67 个 all-targets 测试通过；相同真实 harness 的 SHA 未变，最终 Chromium/Firefox 各 6 组再次首轮全部通过，MP4 GET/HEAD 为 `video/mp4`，所有 HTTP/编码/ETag 合同通过，进程正常退出并释放监听。结果位于 `native-verification/xocs-final/{results.json,browser.json}`，完整汇总为 `xocs-final-integration.json`，冻结产物为 `artifacts/final-native/xocs/`。这是 `development/unbound` 的独立测试实例验收，未作为签名发布、部署或安装证明。
 

@@ -1,6 +1,6 @@
 # xocs 的公共依赖
 
-本服务通过一个 Rust 包 `xcss` 使用公共配置、日志、SQLite、认证和生命周期模块；管理与公开 Web 使用 Leptos/Rust；`vendor/xcss-web` 提供认证、请求与界面公共组件，`@xcss/web` 继续提供 CSS、字体、DOM 角标和构建工具。
+本服务通过一个 Rust 包 `xcss` 使用公共配置、日志、SQLite、认证和生命周期模块；管理与公开 Web 使用 xcss-web/Rust；`vendor/xcss-web` 提供认证、请求与界面公共组件，`@xcss/web` 继续提供 CSS、字体、DOM 角标和构建工具。
 
 | 依赖 | 用途 | 平台 |
 |---|---|---|
@@ -20,7 +20,7 @@ Web 的 package.json 依赖条目如下，合并到项目自身的 dependencies 
 }
 ```
 
-浏览器认证、HTTP、Shell、账号和语言状态由 Rust `xcss-web` 处理。npm 运行入口只导入纯 CSS、字体、i18n 文本与 DOM 角标适配器，不加载 React UI。Rust 公共快照由 `web/leptos/vendor/xcss-web/SOURCE.json` 记录来源与文件哈希，构建脚本校验该快照。
+浏览器认证、HTTP、Shell、账号和语言状态由 Rust `xcss-web` 处理。npm 运行入口只导入纯 CSS、字体、i18n 文本与 DOM 角标适配器，不加载 React UI。Rust 公共快照由 `web/xcss-web/vendor/xcss-web/SOURCE.json` 记录来源与文件哈希，构建脚本校验该快照。
 
 ## 构建和检查
 
