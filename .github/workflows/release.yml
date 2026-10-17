@@ -89,6 +89,7 @@ jobs:
           node tests/management.mjs
           node tests/contract-fixes.mjs
           node tests/xcss-web-runtime.mjs
+          node tests/async-state.mjs
           node tests/rust-native-domain.mjs
           node tests/public-footer.mjs
           node tests/public-layout.mjs

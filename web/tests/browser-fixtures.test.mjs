@@ -1,8 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { mockApi, summary } from './browser-fixtures.mjs';
-import { HookHost, expand, textContent, walk } from './fixtures/hook-host.mjs';
-import { originalModule } from './fixtures/original-module.mjs';
 
 // Run the same route handler used by Playwright, without launching a browser.
 async function fixtureApi() {
@@ -56,39 +54,6 @@ test('omitted fixture pagination uses each production endpoint default', async (
     assert.equal(value.size, size, path);
   }
 });
-
-const components = await originalModule(new URL('./fixtures/react-baseline/src/AdminExtras.tsx', import.meta.url), {
-  '@xcss/web/admin-shell': 'export const useAdminApplication=()=>globalThis.__BROWSER_FIXTURE_APP;',
-  './api': 'export const publicErrorMessage=(_reason,fallback)=>fallback;',
-  './MediaPreview': 'export const ImageLightbox=()=>null; export const safeImageUrl=value=>value;',
-  './AdminLayout': 'export const adminGroups=[];',
-});
-for (const [name, empty] of [
-  ['CommentsPage', 'No comments yet'], ['ResourcesPage', 'No files yet'],
-  ['TreeHolePage', 'No messages yet'], ['NotesPage', 'No notes yet'], ['LinksPage', 'No content resources yet'],
-]) {
-  test(`${name}: real browser fixture is accepted by the unchanged production validator and reaches its success empty state`, async context => {
-    const read = await fixtureApi(), observations = [];
-    const previous = globalThis.__BROWSER_FIXTURE_APP;
-    globalThis.__BROWSER_FIXTURE_APP = { notify() {}, client: { async request(path, validate) {
-      const value = await read(path), accepted = validate(value);
-      observations.push({ path, value, accepted });
-      if (!accepted) throw new Error('Fixture violates the production response contract');
-      return value;
-    } } };
-    const host = new HookHost(components[name]);
-    context.after(() => { host.unmount(); globalThis.__BROWSER_FIXTURE_APP = previous; });
-    host.render();
-    await new Promise(resolve => setImmediate(resolve)); host.render();
-    assert.equal(observations.length, 1);
-    assert.equal(observations[0].accepted, true, JSON.stringify(observations));
-    assert.equal(observations[0].value.size, 20);
-    const tree = expand(host.tree);
-    assert.equal(walk(tree, node => node.props.role === 'alert').length, 0);
-    assert.equal(walk(tree, node => node.props.className === 'xcss-loading').length, 0);
-    assert.equal(textContent(walk(tree, node => node.props.className === 'xcss-empty')[0]), empty);
-  });
-}
 
 // The real router exposes category reads publicly; its managed endpoint is POST-only.
 test('browser fixture rejects the nonexistent managed category GET rather than masking a 405',async()=>{

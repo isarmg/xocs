@@ -17,4 +17,4 @@ Rust 博客与内容服务，含文章、随笔、匿名评论、媒体和管理
 cargo +1.99.0 run --quiet --locked --manifest-path tools/web-build/Cargo.toml -- build --product-root .
 ```
 
-开发监听、Axum 集成和测试边界见 [Rust 原生 Web 构建与测试](docs/rust-native-web.md)。Node/Playwright/Vite 仅用于浏览器验收与历史 TypeScript/React 对照测试。
+开发监听、Axum 集成和测试边界见 [Rust 原生 Web 构建与测试](docs/rust-native-web.md)。Node/Playwright 仅用于浏览器验收；已退役的 TypeScript/React 对照实现与 Vite 转换依赖可通过 Git 历史查阅。
