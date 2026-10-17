@@ -24,14 +24,14 @@ tower-http = { version = "0.6", features = ["fs", "trace"] }
 tracing = "0.1"
 tracing-subscriber = "0.3"
 tempfile = "3"
-xcss = { git = "https://github.com/isarmg/xcss.git", rev = "b34b3861e15edd2b1348e7d03b9c9a93e97d6521", version = "=1.0.0", features = ["tracing"] }
+xcss = { git = "https://github.com/isarmg/xcss.git", rev = "f6ac3fb1b2d0754d12df0e2d3e0cd29ce10344b8", version = "=1.0.0", features = ["tracing"] }
 
 [build-dependencies]
 schemars = "=1.2.3"
 serde = { version = "1", features = ["derive"] }
 sha2 = "0.11"
 serde_json = "1"
-xcss = { git = "https://github.com/isarmg/xcss.git", rev = "b34b3861e15edd2b1348e7d03b9c9a93e97d6521", version = "=1.0.0" }
+xcss = { git = "https://github.com/isarmg/xcss.git", rev = "f6ac3fb1b2d0754d12df0e2d3e0cd29ce10344b8", version = "=1.0.0" }
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }

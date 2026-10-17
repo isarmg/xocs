@@ -20,3 +20,5 @@ __pycache__/
 # Generated Leptos browser assets
 /web/pkg/
 /web/leptos/target/
+
+/tools/web-build/target/

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {chromium,firefox,expect} from '@playwright/test';
-import {preview} from 'vite';
+import {preview} from '../../tools/web-build/test-preview.mjs';
 import {mockApi,article,summary,pageOf} from './browser-fixtures.mjs';
 
 // These assertions exercise Rust/WASM state, including contracts formerly covered

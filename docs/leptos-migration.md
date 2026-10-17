@@ -1,5 +1,7 @@
 # Web 前端迁移记录
 
+当前构建入口已更新为 [Rust 原生 Web 构建与测试](rust-native-web.md)。以下保留首次 Leptos 迁移时的流程与验证记录。
+
 Web 业务界面迁到 `web/leptos/src` 的 Rust/Leptos CSR，服务端仍为 Axum，原 `/api/v1` 路径、Cookie 会话、CSRF、数据库和媒体存储合同保持兼容。生成器输出独立 WebAssembly 文件，由 Vite 收集样式、字体、Markdown/DOM 清理适配器和 WASM 加载代码。
 
 分支约定：`main` 保留 React 实现，本文所述 Leptos CSR 实现在 `feat/leptos-migration`。构建与验收需先切换到该分支；合并、发行和线上部署按后续明确安排执行。

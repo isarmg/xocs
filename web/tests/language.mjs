@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { chromium, firefox, expect } from '@playwright/test';
-import { preview } from 'vite';
+import { preview } from '../../tools/web-build/test-preview.mjs';
 
 import { authored, mockApi, schemaPrefixes, summary, waitForApplication } from './browser-fixtures.mjs';
 

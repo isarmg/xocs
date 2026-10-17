@@ -82,12 +82,11 @@ git -C "$work/xssi" checkout --quiet --detach FETCH_HEAD
 [[ "$(git -C "$work/xssi" rev-parse HEAD)" = "$xssi_revision" ]]
 rustup toolchain install 1.99.0 --profile minimal --component rustfmt,clippy --target wasm32-unknown-unknown
 cargo +1.99.0 install wasm-bindgen-cli --version 0.2.129 --locked
-npm ci --prefix "$source_root/web"
-builder="$source_root/web/node_modules/.bin/xcss-build-server"
+builder=(cargo +1.99.0 run --quiet --locked --manifest-path "$source_root/tools/web-build/Cargo.toml" -- server --product-root "$source_root")
 export XOCS_SOURCE_REVISION="$source_revision"
 export XCSS_WEB_DIST="$source_root/web/dist"
 export XSSI_BUILD_METADATA_DIR="$work/metadata"
-"$builder" --config "$source_root/xcss-web-build.json" --mode release --no-install --source-revision "$source_revision" > "$work/build.log"
+"${builder[@]}" --config "$source_root/xcss-web-build.json" --mode release --source-revision "$source_revision" > "$work/build.log"
 server_binary="$(tail -n 1 "$work/build.log")"
 [[ "$server_binary" = /* && -f "$server_binary" && ! -L "$server_binary" && -x "$server_binary" ]] || { echo 'Builder did not return a physical executable.' >&2; exit 1; }
 python3 -I -B "$source_root/scripts/package-release.py" "$server_binary" "$work/stage" "$source_revision" "$source_root"

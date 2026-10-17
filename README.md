@@ -9,3 +9,12 @@ Rust 博客与内容服务，含文章、随笔、匿名评论、媒体和管理
 服务不识别代理或访问者 IP，不读取转发头用于限流。认证、CSRF、内容权限与幂等仍保留；匿名写入最多 4 个同时执行和 32 个等待，文章密码计算最多 2 个任务，超出容量返回 503。
 
 当前配置和数据库合同不接受旧 CLI、旧路径、旧字段或历史结构，也不自动转换旧数据。详见[部署与维护](deploy/linux-x86_64/README.md)、[配置](docs/configuration.md)和[当前行为](docs/current-guide.md)。
+
+
+生产前端构建使用仓库内 Rust 工具，无需安装 npm 依赖。准备 Rust 1.99.0、wasm32-unknown-unknown target 和 wasm-bindgen-cli 0.2.129 后，在产品根目录执行：
+
+```sh
+cargo +1.99.0 run --quiet --locked --manifest-path tools/web-build/Cargo.toml -- build --product-root .
+```
+
+开发监听、Axum 集成和测试边界见 [Rust 原生 Web 构建与测试](docs/rust-native-web.md)。Node/Playwright/Vite 仅用于浏览器验收与历史 TypeScript/React 对照测试。

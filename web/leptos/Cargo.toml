@@ -10,17 +10,19 @@ exclude = ["vendor/xcss-web"]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-leptos = { version = "=0.8.19", features = ["csr"] }
+leptos = { version = "=0.8.19", default-features = false, features = ["csr"] }
 xcss-web = { path = "vendor/xcss-web" }
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 js-sys = "0.3"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+pulldown-cmark = { version = "=0.13.4", default-features = false, features = ["html"] }
+linkify = "=0.11.0"
 send_wrapper = "0.6"
 gloo-events = "0.2"
 gloo-timers = { version = "0.3", features = ["futures"] }
-web-sys = { version = "0.3", features = ["Window", "Document", "Location", "History", "Event", "EventTarget", "SubmitEvent", "HtmlInputElement", "HtmlFormElement", "HtmlSelectElement", "FormData", "AbortController", "AbortSignal", "Crypto", "Storage", "HtmlDialogElement", "HtmlTextAreaElement", "HtmlImageElement", "HtmlMediaElement", "HtmlVideoElement", "HtmlAudioElement", "File", "FileList", "Blob", "Url", "UrlSearchParams", "ScrollToOptions", "ScrollBehavior", "Clipboard", "Navigator", "DomRect", "KeyboardEvent", "NodeList", "Element", "HtmlElement", "MutationObserver", "MutationObserverInit"] }
+web-sys = { version = "0.3", features = ["Window", "Document", "Location", "History", "Event", "EventTarget", "SubmitEvent", "HtmlInputElement", "HtmlFormElement", "HtmlSelectElement", "FormData", "AbortController", "AbortSignal", "Crypto", "Storage", "HtmlDialogElement", "HtmlTextAreaElement", "HtmlImageElement", "HtmlMediaElement", "HtmlVideoElement", "HtmlAudioElement", "File", "FileList", "Blob", "Url", "UrlSearchParams", "ScrollToOptions", "ScrollBehavior", "Clipboard", "Navigator", "DomRect", "KeyboardEvent", "NodeList", "Element", "HtmlElement", "MutationObserver", "MutationObserverInit", "ValidityState", "ResizeObserver", "FontFaceSet", "HtmlAnchorElement", "DomTokenList"] }
 
 [profile.release]
 opt-level = "s"
@@ -38,3 +40,11 @@ features = ["std"]
 version = "1"
 default-features = false
 features = ["std", "unicode-case", "perf"]
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+url = "=2.5.8"
+
+# The integrated xcss snapshot owns both CSR runtime and host macros.
+[patch.crates-io]
+leptos = { path = "vendor/xcss-web/vendor/leptos-csr" }
+leptos_macro = { path = "vendor/xcss-web/vendor/leptos-macro-csr" }

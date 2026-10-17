@@ -1,3 +1,4 @@
+use leptos::component::{component_props_builder, component_view};
 pub fn tr(zh: &str, en: &str, args: &[String]) -> String {
     let mut out = t(zh, en);
     for (i, arg) in args.iter().enumerate() {
@@ -7,6 +8,7 @@ pub fn tr(zh: &str, en: &str, args: &[String]) -> String {
 }
 use leptos::prelude::*;
 use send_wrapper::SendWrapper;
+use serde::de::DeserializeOwned;
 use serde_json::Value;
 use wasm_bindgen::JsCast;
 pub use xcss_web::api::{ApiError, RequestOptions};
@@ -185,6 +187,8 @@ pub fn public_error(e: &ApiError, fallback: &str) -> String {
         "invalid_response",
         "invalid_json_response",
         "invalid_response_shape",
+        "invalid_typed_response_shape",
+        "invalid_response_contract",
         "invalid_content_type",
     ]
     .contains(&e.code.as_str())
@@ -263,20 +267,42 @@ pub async fn request(
         Err(invalid())
     }
 }
-#[derive(Clone, Copy)]
-pub struct Data {
-    pub value: RwSignal<Option<Value>>,
-    pub previous: RwSignal<Option<Value>>,
+pub struct Data<T: Send + Sync + 'static = Value> {
+    pub value: RwSignal<Option<T>>,
+    pub previous: RwSignal<Option<T>>,
     pub error: RwSignal<Option<ApiError>>,
     pub busy: RwSignal<bool>,
     pub revision: RwSignal<u64>,
 }
-impl Data {
+impl<T: Send + Sync + 'static> Copy for Data<T> {}
+impl<T: Send + Sync + 'static> Clone for Data<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+impl<T: Send + Sync + 'static> Data<T> {
     pub fn reload(self) {
         self.revision.update(|v| *v += 1)
     }
 }
 pub fn load(path: Signal<String>) -> Data {
+    load_typed(path)
+}
+pub async fn request_typed<T: DeserializeOwned>(
+    path: &str,
+    method: &str,
+    body: Option<Value>,
+    options: RequestOptions,
+) -> Result<T, ApiError> {
+    xcss_web::api::request_typed_validated_with_options(path, method, body, options, |value| {
+        crate::contracts::validate(path, method, value)
+            && (method != "GET" || crate::contracts::matches_page(path, value))
+    })
+    .await
+}
+pub fn load_typed<T: DeserializeOwned + Clone + Send + Sync + 'static>(
+    path: Signal<String>,
+) -> Data<T> {
     let data = Data {
         value: RwSignal::new(None),
         previous: RwSignal::new(None),
@@ -299,7 +325,7 @@ pub fn load(path: Signal<String>) -> Data {
         let cleanup = SendWrapper::new(controller);
         on_cleanup(move || cleanup.abort());
         leptos::task::spawn_local(async move {
-            let result = request(
+            let result = request_typed::<T>(
                 &path,
                 "GET",
                 None,
@@ -358,6 +384,35 @@ impl Action {
     ) {
         self.run_options(path, method, body, RequestOptions::default(), done)
     }
+    pub fn run_typed<T: DeserializeOwned + 'static>(
+        self,
+        path: String,
+        method: &'static str,
+        body: Option<Value>,
+        done: impl FnOnce(T) + 'static,
+    ) {
+        self.run_typed_options(path, method, body, RequestOptions::default(), done)
+    }
+    pub fn run_typed_options<T: DeserializeOwned + 'static>(
+        self,
+        path: String,
+        method: &'static str,
+        body: Option<Value>,
+        options: RequestOptions,
+        done: impl FnOnce(T) + 'static,
+    ) {
+        let error = self.error;
+        self.run_options(
+            path,
+            method,
+            body,
+            options,
+            move |value| match serde_json::from_value(value) {
+                Ok(value) => done(value),
+                Err(_) => error.set(Some(invalid())),
+            },
+        );
+    }
     pub fn run_options(
         self,
         path: String,
@@ -415,7 +470,95 @@ pub fn Feedback(
     #[prop(default = false)] public: bool,
 ) -> impl IntoView {
     move || {
-        error.get().map(|e|{let message=if !public&&retry.is_some(){fallback.clone()}else{public_error(&e,&fallback)};if public{view!{<p role="alert">{message}{retry.map(|retry|view!{<button type="button" on:click=move |_|retry.run(())>{t("重试","Try again")}</button>})}</p>}.into_any()}else{view!{<div class="xcss-error" role="alert">{message}{e.request_id.map(|id|view!{<p class="xcss-request-id">{t("请求标识：","Request ID: ")}<code>{id}</code></p>})}{retry.map(|retry|view!{<button class="xcss-button" type="button" on:click=move |_|retry.run(())>{t("重试","Try again")}</button>})}</div>}.into_any()}})
+        error.get().map(|e| {
+            let message = if !public && retry.is_some() {
+                fallback.clone()
+            } else {
+                public_error(&e, &fallback)
+            };
+            if public {
+                View::new(
+                    leptos::html::p()
+                        .child((
+                            IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
+                                message
+                            })),
+                            IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
+                                retry.map(|retry| {
+                                    View::new(
+                                        leptos::html::button()
+                                            .child(
+                                                #[allow(unused_braces)]
+                                                {
+                                                    IntoRender::into_render({
+                                                        t("重试", "Try again")
+                                                    })
+                                                },
+                                            )
+                                            .r#type("button")
+                                            .on(leptos::ev::click, move |_| retry.run(())),
+                                    )
+                                })
+                            })),
+                        ))
+                        .role("alert"),
+                )
+                .into_any()
+            } else {
+                View::new(
+                    leptos::html::div()
+                        .child((
+                            IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
+                                message
+                            })),
+                            IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
+                                e.request_id.map(|id| {
+                                    View::new(
+                                        leptos::html::p()
+                                            .child((
+                                                IntoMaybeErased::into_maybe_erased(
+                                                    IntoRender::into_render({
+                                                        t("请求标识：", "Request ID: ")
+                                                    }),
+                                                ),
+                                                IntoMaybeErased::into_maybe_erased(
+                                                    leptos::html::code().child(
+                                                        #[allow(unused_braces)]
+                                                        {
+                                                            IntoRender::into_render({ id })
+                                                        },
+                                                    ),
+                                                ),
+                                            ))
+                                            .class("xcss-request-id"),
+                                    )
+                                })
+                            })),
+                            IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
+                                retry.map(|retry| {
+                                    View::new(
+                                        leptos::html::button()
+                                            .child(
+                                                #[allow(unused_braces)]
+                                                {
+                                                    IntoRender::into_render({
+                                                        t("重试", "Try again")
+                                                    })
+                                                },
+                                            )
+                                            .class("xcss-button")
+                                            .r#type("button")
+                                            .on(leptos::ev::click, move |_| retry.run(())),
+                                    )
+                                })
+                            })),
+                        ))
+                        .class("xcss-error")
+                        .role("alert"),
+                )
+                .into_any()
+            }
+        })
     }
 }
 #[component]
@@ -428,15 +571,184 @@ pub fn Field(
     #[prop(default = "text")] kind: &'static str,
     #[prop(default = 32768)] max: u32,
 ) -> impl IntoView {
-    view! {<label class="xcss-form-field"><span class="xcss-field-label">{label}</span>{if textarea{view!{<textarea class="xcss-input" required=required maxlength=max prop:value=move||text(&form.get(),key) on:input=move|ev|form.update(|f|f[key]=Value::String(event_target_value(&ev)))/>}.into_any()}else{view!{<input class="xcss-input" type=kind required=required maxlength=max prop:value=move||{let f=form.get();if kind=="number"{f[key].as_i64().map(|v|v.to_string()).unwrap_or_default()}else{text(&f,key)}} on:input=move|ev|{let v=event_target_value(&ev);form.update(|f|f[key]=if kind=="number"{Value::from(v.parse::<i64>().unwrap_or(0))}else{Value::String(v)})}/>}.into_any()}}</label>}
+    View::new(
+        leptos::html::label()
+            .child((
+                IntoMaybeErased::into_maybe_erased(
+                    leptos::html::span()
+                        .child(
+                            #[allow(unused_braces)]
+                            {
+                                IntoRender::into_render(label)
+                            },
+                        )
+                        .class("xcss-field-label"),
+                ),
+                IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
+                    if textarea {
+                        View::new(
+                            leptos::html::textarea()
+                                .class("xcss-input")
+                                .required(
+                                    ::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                                        required,
+                                    ),
+                                )
+                                .maxlength(
+                                    ::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                                        max,
+                                    ),
+                                )
+                                .prop("value", move || text(&form.get(), key))
+                                .on(leptos::ev::input, move |ev| {
+                                    form.update(|f| f[key] = Value::String(event_target_value(&ev)))
+                                }),
+                        )
+                        .into_any()
+                    } else {
+                        View::new(
+                            leptos::html::input()
+                                .class("xcss-input")
+                                .r#type(
+                                    ::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                                        kind,
+                                    ),
+                                )
+                                .required(
+                                    ::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                                        required,
+                                    ),
+                                )
+                                .maxlength(
+                                    ::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                                        max,
+                                    ),
+                                )
+                                .prop("value", move || {
+                                    let f = form.get();
+                                    if kind == "number" {
+                                        f[key].as_i64().map(|v| v.to_string()).unwrap_or_default()
+                                    } else {
+                                        text(&f, key)
+                                    }
+                                })
+                                .on(leptos::ev::input, move |ev| {
+                                    let v = event_target_value(&ev);
+                                    form.update(|f| {
+                                        f[key] = if kind == "number" {
+                                            Value::from(v.parse::<i64>().unwrap_or(0))
+                                        } else {
+                                            Value::String(v)
+                                        };
+                                    })
+                                }),
+                        )
+                        .into_any()
+                    }
+                })),
+            ))
+            .class("xcss-form-field"),
+    )
+}
+#[component]
+pub fn ControlledField(
+    label: String,
+    value: Signal<String>,
+    change: Callback<String>,
+    #[prop(default = false)] required: bool,
+    #[prop(default = 32768)] max: u32,
+) -> impl IntoView {
+    View::new(
+        leptos::html::label()
+            .child((
+                IntoMaybeErased::into_maybe_erased(
+                    leptos::html::span()
+                        .child(
+                            #[allow(unused_braces)]
+                            {
+                                IntoRender::into_render(label)
+                            },
+                        )
+                        .class("xcss-field-label"),
+                ),
+                IntoMaybeErased::into_maybe_erased(
+                    leptos::html::input()
+                        .class("xcss-input")
+                        .r#type("text")
+                        .required(::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                            required,
+                        ))
+                        .maxlength(::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                            max,
+                        ))
+                        .prop("value", move || value.get())
+                        .on(leptos::ev::input, move |ev| {
+                            change.run(event_target_value(&ev))
+                        }),
+                ),
+            ))
+            .class("xcss-form-field"),
+    )
+}
+#[component]
+pub fn ControlledCheck(
+    label: String,
+    value: Signal<bool>,
+    change: Callback<bool>,
+) -> impl IntoView {
+    View::new(
+        leptos::html::label().child((
+            IntoMaybeErased::into_maybe_erased(
+                leptos::html::input()
+                    .r#type("checkbox")
+                    .prop("checked", move || value.get())
+                    .on(leptos::ev::change, move |ev| {
+                        change.run(event_target_checked(&ev))
+                    }),
+            ),
+            IntoMaybeErased::into_maybe_erased(IntoRender::into_render(label)),
+        )),
+    )
 }
 #[component]
 pub fn Check(label: String, key: &'static str, form: RwSignal<Value>) -> impl IntoView {
-    view! {<label><input type="checkbox" prop:checked=move||flag(&form.get(),key) on:change=move|ev|form.update(|f|f[key]=Value::Bool(event_target_checked(&ev)))/>{label}</label>}
+    View::new(
+        leptos::html::label().child((
+            IntoMaybeErased::into_maybe_erased(
+                leptos::html::input()
+                    .r#type("checkbox")
+                    .prop("checked", move || flag(&form.get(), key))
+                    .on(leptos::ev::change, move |ev| {
+                        form.update(|f| f[key] = Value::Bool(event_target_checked(&ev)))
+                    }),
+            ),
+            IntoMaybeErased::into_maybe_erased(IntoRender::into_render(label)),
+        )),
+    )
+}
+pub trait PageMetadata {
+    fn total(&self) -> i64;
+    fn size(&self) -> i64;
+}
+impl PageMetadata for Value {
+    fn total(&self) -> i64 {
+        num(self, "total")
+    }
+    fn size(&self) -> i64 {
+        num(self, "size")
+    }
+}
+impl<T> PageMetadata for crate::models::Page<T> {
+    fn total(&self) -> i64 {
+        self.total
+    }
+    fn size(&self) -> i64 {
+        self.size
+    }
 }
 #[component]
-pub fn Pager(
-    data: Data,
+pub fn Pager<T: PageMetadata + Clone + Send + Sync + 'static>(
+    data: Data<T>,
     page: RwSignal<u64>,
     #[prop(default=t("分页","Pagination"))] label: String,
     #[prop(default = false)] public: bool,
@@ -445,20 +757,158 @@ pub fn Pager(
 ) -> impl IntoView {
     Effect::new(move |_| {
         if let Some(v) = data.value.get() {
-            let size = num(&v, "size").max(1);
-            let last = ((num(&v, "total") + size - 1) / size).max(1) as u64;
+            let size = v.size().max(1);
+            let last = ((v.total() + size - 1) / size).max(1) as u64;
             if page.get_untracked() > last {
                 page.set(last);
             }
         }
     });
     move || {
-        data.value.get().or_else(||preserve.then(||data.previous.get()).flatten()).filter(|v|num(v,"total")>num(v,"size")||page.get()>1).map(|v|view!{<nav class="pager" aria-label=label.clone()><button type="button" class=if public{""}else{"xcss-button"} disabled=move||locked.get()||(!preserve&&data.busy.get())||page.get()<=1 on:click=move |_|page.update(|p|*p=p.saturating_sub(1).max(1))>{t("上一页","Previous page")}</button><span>{tr("第 {0} 页 · 共 {1} 条","Page {0} · {1} items",&[page.get().to_string(),num(&v,"total").to_string()])}</span><button type="button" class=if public{""}else{"xcss-button"} disabled={move||locked.get()||(!preserve&&data.busy.get())||(page.get() as i64*num(&v,"size"))>=num(&v,"total")} on:click=move |_|page.update(|p|*p+=1)>{t("下一页","Next page")}</button></nav>})
+        data.value
+            .get()
+            .or_else(|| preserve.then(|| data.previous.get()).flatten())
+            .filter(|v| v.total() > v.size() || page.get() > 1)
+            .map(|v| {
+                View::new(
+                    leptos::html::nav()
+                        .child((
+                            IntoMaybeErased::into_maybe_erased(
+                                leptos::html::button()
+                                    .child(
+                                        #[allow(unused_braces)]
+                                        {
+                                            IntoRender::into_render({
+                                                t("上一页", "Previous page")
+                                            })
+                                        },
+                                    )
+                                    .class(if public { "" } else { "xcss-button" })
+                                    .r#type("button")
+                                    .disabled(
+                                        ::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                                            move || {
+                                                locked.get()
+                                                    || (!preserve && data.busy.get())
+                                                    || page.get() <= 1
+                                            },
+                                        ),
+                                    )
+                                    .on(leptos::ev::click, move |_| {
+                                        page.update(|p| *p = p.saturating_sub(1).max(1))
+                                    }),
+                            ),
+                            IntoMaybeErased::into_maybe_erased(leptos::html::span().child(
+                                #[allow(unused_braces)]
+                                {
+                                    IntoRender::into_render({
+                                        tr(
+                                            "第 {0} 页 · 共 {1} 条",
+                                            "Page {0} · {1} items",
+                                            &[page.get().to_string(), v.total().to_string()],
+                                        )
+                                    })
+                                },
+                            )),
+                            IntoMaybeErased::into_maybe_erased(
+                                leptos::html::button()
+                                    .child(
+                                        #[allow(unused_braces)]
+                                        {
+                                            IntoRender::into_render({ t("下一页", "Next page") })
+                                        },
+                                    )
+                                    .class(if public { "" } else { "xcss-button" })
+                                    .r#type("button")
+                                    .disabled(
+                                        ::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                                            {
+                                                move || {
+                                                    locked.get()
+                                                        || (!preserve && data.busy.get())
+                                                        || (page.get() as i64 * v.size())
+                                                            >= v.total()
+                                                }
+                                            },
+                                        ),
+                                    )
+                                    .on(leptos::ev::click, move |_| page.update(|p| *p += 1)),
+                            ),
+                        ))
+                        .class("pager")
+                        .aria_label(::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                            label.clone(),
+                        )),
+                )
+            })
     }
 }
 #[component]
 pub fn Lightbox(src: RwSignal<Option<String>>) -> impl IntoView {
-    view! {<For each={move||src.get().into_iter().collect::<Vec<_>>()} key=|s|s.clone() children=move|url|view!{<LightboxDialog url close=Callback::new(move|()|src.set(None))/>}/>}
+    View::new({
+        #[allow(unreachable_code)]
+        #[allow(unused_mut)]
+        #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
+        component_view(
+            #[allow(clippy::needless_borrows_for_generic_args)]
+            &For,
+            {
+                let mut props = component_props_builder(&For)
+                    .each(
+                        #[allow(unused_braces)]
+                        {
+                            { move || src.get().into_iter().collect::<Vec<_>>() }
+                        },
+                    )
+                    .key(
+                        #[allow(unused_braces)]
+                        {
+                            |s| s.clone()
+                        },
+                    )
+                    .children(
+                        #[allow(unused_braces)]
+                        {
+                            move |url| {
+                                View::new({
+                                    #[allow(unreachable_code)]
+                                    #[allow(unused_mut)]
+                                    #[allow(
+                                        clippy::let_and_return,
+                                        clippy::unit_arg,
+                                        clippy::let_unit_value
+                                    )]
+                                    component_view(
+                                        #[allow(clippy::needless_borrows_for_generic_args)]
+                                        &LightboxDialog,
+                                        {
+                                            let mut props =
+                                                component_props_builder(&LightboxDialog)
+                                                    .url(
+                                                        #[allow(unused_braces)]
+                                                        {
+                                                            url
+                                                        },
+                                                    )
+                                                    .close(
+                                                        #[allow(unused_braces)]
+                                                        {
+                                                            Callback::new(move |()| src.set(None))
+                                                        },
+                                                    )
+                                                    .build();
+                                            props
+                                        },
+                                    )
+                                })
+                            }
+                        },
+                    )
+                    .build();
+                props
+            },
+        )
+    })
 }
 #[component]
 fn LightboxDialog(url: String, close: Callback<()>) -> impl IntoView {
@@ -482,11 +932,81 @@ fn LightboxDialog(url: String, close: Callback<()>) -> impl IntoView {
             });
         }
     });
-    view! {<dialog node_ref=node class="image-lightbox" aria-label=t("查看图片","View image") on:cancel=move|ev:web_sys::Event|{ev.prevent_default();close.run(())} on:mousedown=move|ev|{if ev.target()==ev.current_target(){close.run(())}}><button class="image-lightbox-close" type="button" aria-label=t("关闭图片","Close image") on:click=move |_|close.run(())>"×"</button><img src=url alt=t("放大的图片","Enlarged image")/></dialog>}
+    View::new(
+        leptos::html::dialog()
+            .child((
+                IntoMaybeErased::into_maybe_erased(
+                    leptos::html::button()
+                        .child(
+                            #[allow(unused_braces)]
+                            {
+                                "×"
+                            },
+                        )
+                        .class("image-lightbox-close")
+                        .r#type("button")
+                        .aria_label(::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                            t("关闭图片", "Close image"),
+                        ))
+                        .on(leptos::ev::click, move |_| close.run(())),
+                ),
+                IntoMaybeErased::into_maybe_erased(
+                    leptos::html::img()
+                        .src(::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                            url,
+                        ))
+                        .alt(::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                            t("放大的图片", "Enlarged image"),
+                        )),
+                ),
+            ))
+            .class("image-lightbox")
+            .node_ref(node)
+            .aria_label(::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                t("查看图片", "View image"),
+            ))
+            .on(
+                leptos::ev::Custom::new("cancel"),
+                move |ev: web_sys::Event| {
+                    ev.prevent_default();
+                    close.run(())
+                },
+            )
+            .on(leptos::ev::mousedown, move |ev| {
+                if ev.target() == ev.current_target() {
+                    close.run(())
+                }
+            }),
+    )
 }
 #[component]
 pub fn Petals() -> impl IntoView {
-    view! {<div class="reference-petals" aria-hidden="true">{(0..18).map(|i|view!{<span style=format!("--petal-left:{}%;--petal-delay:{}s;--petal-duration:{}s;--petal-drift:{}px",(i*37+9)%100,-(i as f64*2.7),16+i%7,if i%2==1{-70}else{90})/>}).collect_view()}</div>}
+    View::new(
+        leptos::html::div()
+            .child(
+                #[allow(unused_braces)]
+                {
+                    IntoRender::into_render({
+                        (0..18)
+                            .map(|i| {
+                                View::new(
+    leptos::html::span()
+        .style(
+            format!(
+                "--petal-left:{}%;--petal-delay:{}s;--petal-duration:{}s;--petal-drift:{}px",
+                (i * 37 + 9) % 100,- (i as f64 * 2.7), 16 + i % 7, if i % 2 == 1 { -
+                70 } else { 90 }
+            ),
+        ),
+)
+                            })
+                            .collect_view()
+                    })
+                },
+            )
+            .class("reference-petals")
+            .aria_hidden("true"),
+    )
 }
 impl Action {
     pub fn upload(self, file: SendWrapper<web_sys::File>, done: impl FnOnce(Value) + 'static) {
@@ -557,15 +1077,135 @@ pub fn FilePicker(
         "xocs-file-{}",
         web_sys::window().unwrap().crypto().unwrap().random_uuid()
     );
-    view! {<div class="xcss-form-field"><label for=id.clone()>{label.clone()}</label><div class="xocs-file-picker"><input id=id.clone() node_ref=input type="file" hidden disabled=move||disabled.get() accept="image/png,image/jpeg,image/gif,image/webp" on:change=move|ev|{let node=event_target::<web_sys::HtmlInputElement>(&ev);let file=node.files().and_then(|f|f.get(0));node.set_value("");if let Some(file)=file{choose.run(SendWrapper::new(file));}}/><button type="button" class="xcss-button" disabled=move||disabled.get() aria-label=format!("{}{}",t("选择文件：","Choose file: "),label) aria-describedby=format!("{id}-filename") on:click=move |_|{if let Some(input)=input.get(){input.click();}}>{t("选择文件","Choose file")}</button><span class="xocs-file-picker-name" id=format!("{id}-filename") aria-live="polite">{move||{let f=filename.get();if f.is_empty(){t("未选择文件","No file chosen")}else{f}}}</span></div></div>}
+    View::new(
+        leptos::html::div()
+            .child((
+                IntoMaybeErased::into_maybe_erased(
+                    leptos::html::label()
+                        .child(
+                            #[allow(unused_braces)]
+                            {
+                                IntoRender::into_render({ label.clone() })
+                            },
+                        )
+                        .r#for(::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                            id.clone(),
+                        )),
+                ),
+                IntoMaybeErased::into_maybe_erased(
+                    leptos::html::div()
+                        .child((
+                            IntoMaybeErased::into_maybe_erased(
+                                leptos::html::input()
+                                    .id(
+                                        ::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                                            id.clone(),
+                                        ),
+                                    )
+                                    .node_ref(input)
+                                    .r#type("file")
+                                    .hidden(true)
+                                    .disabled(
+                                        ::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                                            move || disabled.get(),
+                                        ),
+                                    )
+                                    .accept("image/png,image/jpeg,image/gif,image/webp")
+                                    .on(leptos::ev::change, move |ev| {
+                                        let node = event_target::<web_sys::HtmlInputElement>(&ev);
+                                        let file = node.files().and_then(|f| f.get(0));
+                                        node.set_value("");
+                                        if let Some(file) = file {
+                                            choose.run(SendWrapper::new(file));
+                                        }
+                                    }),
+                            ),
+                            IntoMaybeErased::into_maybe_erased(
+                                leptos::html::button()
+                                    .child(
+                                        #[allow(unused_braces)]
+                                        {
+                                            IntoRender::into_render({
+                                                t("选择文件", "Choose file")
+                                            })
+                                        },
+                                    )
+                                    .class("xcss-button")
+                                    .r#type("button")
+                                    .disabled(
+                                        ::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                                            move || disabled.get(),
+                                        ),
+                                    )
+                                    .aria_label(
+                                        ::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                                            format!(
+                                                "{}{}",
+                                                t("选择文件：", "Choose file: "),
+                                                label
+                                            ),
+                                        ),
+                                    )
+                                    .aria_describedby(
+                                        ::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                                            format!("{id}-filename"),
+                                        ),
+                                    )
+                                    .on(leptos::ev::click, move |_| {
+                                        if let Some(input) = input.get() {
+                                            input.click();
+                                        }
+                                    }),
+                            ),
+                            IntoMaybeErased::into_maybe_erased(
+                                leptos::html::span()
+                                    .child(
+                                        #[allow(unused_braces)]
+                                        {
+                                            IntoRender::into_render({
+                                                move || {
+                                                    let f = filename.get();
+                                                    if f.is_empty() {
+                                                        t("未选择文件", "No file chosen")
+                                                    } else {
+                                                        f
+                                                    }
+                                                }
+                                            })
+                                        },
+                                    )
+                                    .class("xocs-file-picker-name")
+                                    .id(
+                                        ::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                                            format!("{id}-filename"),
+                                        ),
+                                    )
+                                    .aria_live("polite"),
+                            ),
+                        ))
+                        .class("xocs-file-picker"),
+                ),
+            ))
+            .class("xcss-form-field"),
+    )
 }
 
 #[component]
 pub fn ListState(data: Data, empty: String, #[prop(default = false)] array: bool) -> impl IntoView {
     move || {
         if data.busy.get() {
-            view! {<div class="xcss-loading" role="status">{t("正在加载…","Loading…")}</div>}
-                .into_any()
+            View::new(
+                leptos::html::div()
+                    .child(
+                        #[allow(unused_braces)]
+                        {
+                            IntoRender::into_render({ t("正在加载…", "Loading…") })
+                        },
+                    )
+                    .class("xcss-loading")
+                    .role("status"),
+            )
+            .into_any()
         } else if data.value.get().is_some_and(|v| {
             if array {
                 v.as_array().is_some_and(|a| a.is_empty())
@@ -573,7 +1213,17 @@ pub fn ListState(data: Data, empty: String, #[prop(default = false)] array: bool
                 rows(&v, "items").is_empty()
             }
         }) {
-            view! {<div class="xcss-empty">{empty.clone()}</div>}.into_any()
+            View::new(
+                leptos::html::div()
+                    .child(
+                        #[allow(unused_braces)]
+                        {
+                            IntoRender::into_render({ empty.clone() })
+                        },
+                    )
+                    .class("xcss-empty"),
+            )
+            .into_any()
         } else {
             ().into_any()
         }

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { chromium, firefox, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { preview } from 'vite';
+import { preview } from '../../tools/web-build/test-preview.mjs';
 import { mockApi, pageOf } from './browser-fixtures.mjs';
 
 async function checkHeaderScrolling(page, width, english) {

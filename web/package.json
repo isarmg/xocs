@@ -7,27 +7,26 @@
     "node": ">=26.7.0 <27"
   },
   "scripts": {
-    "dev": "python3 ../scripts/build-leptos.py build && vite --host 127.0.0.1",
-    "build": "python3 ../scripts/build-leptos.py build && tsc -b && vite build",
-    "preview": "vite preview --host 127.0.0.1",
-    "test:unit": "python3 ../scripts/build-leptos.py test && npm run test:react-baseline",
+    "dev": "cargo +1.99.0 run --quiet --locked --manifest-path ../tools/web-build/Cargo.toml -- serve --product-root .. --debug --bind 127.0.0.1:5173",
+    "build": "cargo +1.99.0 run --quiet --locked --manifest-path ../tools/web-build/Cargo.toml -- build --product-root ..",
+    "preview": "cargo +1.99.0 run --quiet --locked --manifest-path ../tools/web-build/Cargo.toml -- preview --product-root .. --bind 127.0.0.1:4173",
+    "test:unit": "cargo +1.99.0 run --quiet --locked --manifest-path ../tools/web-build/Cargo.toml -- test --product-root .. && npm run test:react-baseline",
     "test:language": "npm run build && node tests/language.mjs",
     "test:admin": "npm run build && node tests/admin-layout.mjs && node tests/account-settings.mjs",
     "test:public": "npm run build && node tests/public-layout.mjs && node tests/anonymous-comments.mjs",
-    "build:leptos": "npm run build",
-    "check:leptos": "python3 ../scripts/build-leptos.py check",
-    "test:leptos": "python3 ../scripts/build-leptos.py test",
-    "test:browser:leptos": "npm run build && node tests/leptos-runtime.mjs && node tests/browser-smoke.mjs",
-    "test:react-baseline": "node --test tests/*.test.mjs"
-  },
-  "dependencies": {
-    "@xcss/web": "https://github.com/isarmg/xcss/releases/download/v1.0.0/xcss-web-1.0.0.tgz",
-    "dompurify": "3.4.16",
-    "markdown-it": "15.0.2"
+    "build:leptos": "cargo +1.99.0 run --quiet --locked --manifest-path ../tools/web-build/Cargo.toml -- build --product-root ..",
+    "check:leptos": "cargo +1.99.0 run --quiet --locked --manifest-path ../tools/web-build/Cargo.toml -- check --product-root ..",
+    "test:leptos": "cargo +1.99.0 run --quiet --locked --manifest-path ../tools/web-build/Cargo.toml -- test --product-root .. && cargo +1.99.0 test --locked --manifest-path leptos/domain-tests/Cargo.toml",
+    "test:browser:leptos": "npm run build && node tests/leptos-runtime.mjs && node tests/browser-smoke.mjs && node tests/rust-native-domain.mjs",
+    "test:react-baseline": "node --test tests/*.test.mjs",
+    "test:domain:rust": "cargo +1.99.0 test --locked --manifest-path leptos/domain-tests/Cargo.toml"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.12.1",
     "@playwright/test": "1.63.0",
+    "@xcss/web": "https://github.com/isarmg/xcss/releases/download/v1.0.0/xcss-web-1.0.0.tgz",
+    "dompurify": "3.4.16",
+    "markdown-it": "15.0.2",
     "typescript": "7.0.2",
     "vite": "8.3.3"
   }

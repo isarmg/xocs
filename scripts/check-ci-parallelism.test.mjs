@@ -29,18 +29,20 @@ test('server and browser groups are independent and preserve every gate', () => 
     'verify-manifest --product-root', 'verify-source --product-root',
     'fmt --manifest-path web/leptos/Cargo.toml -- --check',
     'clippy --manifest-path web/leptos/Cargo.toml --target wasm32-unknown-unknown --locked -- -D warnings',
-    'python3 scripts/build-leptos.py test', 'python3 -I -B scripts/test-leptos-build.py',
+    'cargo +1.99.0 run --quiet --locked --manifest-path tools/web-build/Cargo.toml -- test --product-root .',
+    'cargo +1.99.0 test --locked --manifest-path web/leptos/domain-tests/Cargo.toml',
+    'python3 -I -B scripts/test-leptos-build.py',
   ]) assert.ok(server.includes(command), `missing server check: ${command}`);
   const expected = [
     'language', 'admin-layout', 'account-settings', 'admin-cleanup',
-    'management', 'contract-fixes', 'leptos-runtime', 'public-footer', 'public-layout', 'anonymous-comments',
+    'management', 'contract-fixes', 'leptos-runtime', 'rust-native-domain', 'public-footer', 'public-layout', 'anonymous-comments',
   ];
   const actual = [...browser.matchAll(/node tests\/([a-z-]+)\.mjs/g)].map(match => match[1]);
   assert.deepEqual(actual.sort(), expected.sort());
   assert.equal(browser.match(/npm run test:unit/g)?.length, 1);
   assert.match(browser, /TEST_GROUP: \$\{\{ matrix.group \}\}/);
   for (const block of [server, browser]) {
-    assert.match(block, /npm ci\n          npm run build/);
+    assert.match(block, /npm ci\n          cargo \+1\.99\.0 run --quiet --locked --manifest-path \.\.\/tools\/web-build\/Cargo\.toml -- build --product-root \.\./);
     assert.match(block, /playwright install --with-deps chromium firefox/);
     assert.match(block, /rustup toolchain install 1\.99\.0 .*--target wasm32-unknown-unknown/);
     assert.match(block, /cargo \+1\.99\.0 install wasm-bindgen-cli --version 0\.2\.129 --locked/);
@@ -93,7 +95,7 @@ test('both matrix branches execute every original UI script exactly once', () =>
     assert.deepEqual(actual.sort(), [
       'run test:unit', 'tests/language.mjs', 'tests/admin-layout.mjs',
       'tests/account-settings.mjs', 'tests/admin-cleanup.mjs', 'tests/management.mjs',
-      'tests/contract-fixes.mjs', 'tests/leptos-runtime.mjs',
+      'tests/contract-fixes.mjs', 'tests/leptos-runtime.mjs', 'tests/rust-native-domain.mjs',
       'tests/public-footer.mjs', 'tests/public-layout.mjs', 'tests/anonymous-comments.mjs',
     ].sort());
     const unknown = spawnSync('bash', ['-c', run], {
@@ -102,6 +104,14 @@ test('both matrix branches execute every original UI script exactly once', () =>
     });
     assert.equal(unknown.status, 1);
     assert.equal(unknown.stdout, '');
+    // The new real-WASM domain suite must fail the existing admin matrix gate.
+    writeFileSync(join(directory, 'node'), '#!/bin/sh\nif [ "$*" = "tests/rust-native-domain.mjs" ]; then exit 9; fi\nprintf "%s\\n" "$*"\n');
+    const domainFailure = spawnSync('bash', ['-c', run], {
+      encoding: 'utf8',
+      env: {...process.env, PATH: `${directory}:${process.env.PATH}`, TEST_GROUP: 'admin'},
+    });
+    assert.ifError(domainFailure.error);
+    assert.equal(domainFailure.status, 9);
   } finally {
     rmSync(directory, {recursive: true, force: true});
   }

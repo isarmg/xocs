@@ -18,6 +18,9 @@ pub fn Select(
     let panel = NodeRef::<leptos::html::Span>::new();
     let open = RwSignal::new(false);
     let active = RwSignal::new(0usize);
+    // Pointer hover only paints the active option. It must not move the popup
+    // between pointerdown and click (Firefox otherwise retargets the click).
+    let reveal = RwSignal::new(0u64);
     let message = RwSignal::new(String::new());
     let typed = StoredValue::new((String::new(), 0f64));
     let id = StoredValue::new(format!(
@@ -99,6 +102,7 @@ pub fn Select(
         }
         position.run(());
         open.set(true);
+        reveal.update(|n| *n += 1);
     });
     let commit = Callback::new(move |index: usize| {
         let Some(field) = native.get() else { return };
@@ -140,17 +144,26 @@ pub fn Select(
         if !open.get() {
             return;
         }
-        active.get();
-        position.run(());
+        reveal.get();
         if let Some(panel) = panel.get()
-            && let Ok(Some(item)) =
-                panel.query_selector(&format!("[data-option-index=\"{}\"]", active.get()))
+            && let Ok(Some(item)) = panel.query_selector(&format!(
+                "[data-option-index=\"{}\"]",
+                active.get_untracked()
+            ))
         {
             let rect = item.get_bounding_client_rect();
             let outer = panel.get_bounding_client_rect();
-            if rect.top() < outer.top() || rect.bottom() > outer.bottom() {
-                item.scroll_into_view_with_bool(rect.top() < outer.top());
-            }
+            // Scroll only the listbox, never the document/ancestor fieldset.
+            // scrollIntoView may scroll every ancestor, moving the trigger and
+            // causing a placement flip while a pointer selection is underway.
+            let delta = if rect.top() < outer.top() {
+                rect.top() - outer.top()
+            } else if rect.bottom() > outer.bottom() {
+                rect.bottom() - outer.bottom()
+            } else {
+                0.
+            };
+            panel.set_scroll_top(panel.scroll_top() + delta.round() as i32);
         }
     });
     let outside = move |event: &web_sys::Event| {
@@ -186,7 +199,15 @@ pub fn Select(
         &doc,
         "scroll",
         gloo_events::EventListenerOptions::run_in_capture_phase(),
-        move |_| {
+        move |event| {
+            // Scrolling options cannot change the anchor's viewport position.
+            if event
+                .target()
+                .and_then(|target| target.dyn_into::<web_sys::Node>().ok())
+                .is_some_and(|target| panel.get().is_some_and(|p| p.contains(Some(&target))))
+            {
+                return;
+            }
             if open.get_untracked() {
                 position.run(())
             }
@@ -293,6 +314,7 @@ pub fn Select(
                 _ => active.get_untracked().saturating_sub(1),
             };
             active.set(next);
+            reveal.update(|n| *n += 1);
             return;
         }
         if key == "Enter" || key == " " {
@@ -355,12 +377,321 @@ pub fn Select(
                 .find(|i| opts[*i].1.to_lowercase().starts_with(&term));
             if open.get_untracked() {
                 if let Some(i) = found {
-                    active.set(i)
+                    active.set(i);
+                    reveal.update(|n| *n += 1);
                 }
             } else {
                 show.run(found)
             }
         }
     };
-    view! {<span class="xcss-select"><button node_ref=trigger id=format!("{}-select",id.get_value()) type="button" role="combobox" aria-haspopup="listbox" aria-expanded=move||open.get().to_string() aria-controls=format!("{}-options",id.get_value()) aria-activedescendant=move||open.get().then(||format!("{}-options-{}",id.get_value(),active.get())) aria-label=move||label.get() aria-describedby=move||(!message.get().is_empty()).then(||format!("{}-error",id.get_value())) aria-required=required.to_string() aria-invalid=move||(!message.get().is_empty()).to_string() disabled=move||disabled.get() class="xcss-input xcss-select-trigger" on:click=move|ev|{ev.prevent_default();if open.get_untracked(){close.run(())}else{show.run(None)}} on:keydown=keydown><span class="xcss-select-value">{move||options.get().into_iter().find(|(v,_)|*v==value.get()).map(|(_,label)|label).unwrap_or_else(||"\u{a0}".into())}</span><svg class="xcss-select-arrow" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m9 6 6 6-6 6"/></svg></button><select node_ref=native id=format!("{}-native",id.get_value()) class="xcss-select-native" aria-hidden="true" tabindex="-1" required=required disabled=move||disabled.get() prop:value=move||{let v=value.get();if required&&v=="0"{String::new()}else{v}} on:change=move|ev|{message.set(String::new());let field=event_target::<web_sys::HtmlSelectElement>(&ev);field.set_custom_validity("");change.run(field.value());} on:invalid=move|ev:web_sys::Event|{ev.prevent_default();let field=event_target::<web_sys::HtmlSelectElement>(&ev);let m=t("请填写此项。","Please fill out this field.");field.set_custom_validity(&m);message.set(m);close.run(());let field=SendWrapper::new(field);gloo_timers::callback::Timeout::new(0,move||{if !field.is_connected(){return;}let first=field.form().and_then(|f|f.query_selector("input:invalid,select:invalid,textarea:invalid").ok().flatten());if first.is_none_or(|e|e==(*field).clone().unchecked_into::<web_sys::Element>())&& let Some(trigger)=trigger.get(){let _=trigger.focus();}}).forget();}>{move||options.get().into_iter().map(|(v,l)|view!{<option value=if required&&v=="0"{String::new()}else{v}>{l}</option>}).collect_view()}</select><span node_ref=panel id=format!("{}-options",id.get_value()) popover="manual" role="listbox" aria-label=move||label.get() class="xcss-select-panel" data-xcss-select-open=move||open.get().then_some("true") on:pointerdown=move|ev|{if ev.target().and_then(|t|t.dyn_into::<web_sys::Element>().ok()).is_some_and(|t|t.closest("[role=option]").ok().flatten().is_some()){ev.prevent_default();}}>{move||options.get().into_iter().enumerate().map(|(i,(v,l))|view!{<span><span id=format!("{}-options-{i}",id.get_value()) role="option" aria-selected={let v=v.clone();move||(value.get()==v).to_string()} data-option-index=i data-active=move||(active.get()==i).then_some("true") class="xcss-select-option" on:pointermove=move |_|active.set(i) on:click=move|ev|{ev.prevent_default();ev.stop_propagation();commit.run(i);} ><span>{l}</span><span aria-hidden="true">{{let v=v.clone();move||if value.get()==v{"✓"}else{""}}}</span></span></span>}).collect_view()}</span>{move||(!message.get().is_empty()).then(||view!{<span id=format!("{}-error",id.get_value()) class="xcss-select-error" role="alert">{message.get()}</span>})}</span>}
+    View::new(
+        leptos::html::span()
+            .child((
+                IntoMaybeErased::into_maybe_erased(
+                    leptos::html::button()
+                        .child((
+                            IntoMaybeErased::into_maybe_erased(
+                                leptos::html::span()
+                                    .child(
+                                        #[allow(unused_braces)]
+                                        {
+                                            IntoRender::into_render({
+                                                move || {
+                                                    options
+                                                        .get()
+                                                        .into_iter()
+                                                        .find(|(v, _)| *v == value.get())
+                                                        .map(|(_, label)| label)
+                                                        .unwrap_or_else(|| "\u{a0}".into())
+                                                }
+                                            })
+                                        },
+                                    )
+                                    .class("xcss-select-value"),
+                            ),
+                            IntoMaybeErased::into_maybe_erased(
+                                leptos::svg::svg()
+                                    .child(
+                                        #[allow(unused_braces)]
+                                        {
+                                            leptos::svg::path().attr("d", "m9 6 6 6-6 6")
+                                        },
+                                    )
+                                    .class("xcss-select-arrow")
+                                    .attr("aria-hidden", "true")
+                                    .attr("width", "16")
+                                    .attr("height", "16")
+                                    .attr("viewBox", "0 0 24 24")
+                                    .attr("fill", "none")
+                                    .attr("stroke", "currentColor")
+                                    .attr("stroke-width", "1.8"),
+                            ),
+                        ))
+                        .class("xcss-input xcss-select-trigger")
+                        .node_ref(trigger)
+                        .id(::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                            format!("{}-select", id.get_value()),
+                        ))
+                        .r#type("button")
+                        .role("combobox")
+                        .aria_haspopup("listbox")
+                        .aria_expanded(::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                            move || open.get().to_string(),
+                        ))
+                        .aria_controls(::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                            format!("{}-options", id.get_value()),
+                        ))
+                        .aria_activedescendant(
+                            ::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                                move || {
+                                    open.get().then(|| {
+                                        format!("{}-options-{}", id.get_value(), active.get())
+                                    })
+                                },
+                            ),
+                        )
+                        .aria_label(::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                            move || label.get(),
+                        ))
+                        .aria_describedby(
+                            ::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                                move || {
+                                    (!message.get().is_empty())
+                                        .then(|| format!("{}-error", id.get_value()))
+                                },
+                            ),
+                        )
+                        .aria_required(::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                            required.to_string(),
+                        ))
+                        .aria_invalid(::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                            move || (!message.get().is_empty()).to_string(),
+                        ))
+                        .disabled(::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                            move || disabled.get(),
+                        ))
+                        .on(leptos::ev::click, move |ev| {
+                            ev.prevent_default();
+                            if open.get_untracked() {
+                                close.run(())
+                            } else {
+                                show.run(None)
+                            }
+                        })
+                        .on(leptos::ev::keydown, keydown),
+                ),
+                IntoMaybeErased::into_maybe_erased(
+                    leptos::html::select()
+                        .child(
+                            #[allow(unused_braces)]
+                            {
+                                IntoRender::into_render({
+                                    move || {
+                                        options
+                                            .get()
+                                            .into_iter()
+                                            .map(|(v, l)| {
+                                                View::new(
+    leptos::html::option()
+        .child(
+            #[allow(unused_braces)]
+            { IntoRender::into_render({ l }) },
+        )
+        .value(
+            ::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                if required && v == "0" { String::new() } else { v },
+            ),
+        ),
+)
+                                            })
+                                            .collect_view()
+                                    }
+                                })
+                            },
+                        )
+                        .class("xcss-select-native")
+                        .node_ref(native)
+                        .id(::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                            format!("{}-native", id.get_value()),
+                        ))
+                        .aria_hidden("true")
+                        .tabindex("-1")
+                        .required(::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                            required,
+                        ))
+                        .disabled(::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                            move || disabled.get(),
+                        ))
+                        .prop("value", move || {
+                            let v = value.get();
+                            if required && v == "0" {
+                                String::new()
+                            } else {
+                                v
+                            }
+                        })
+                        .on(leptos::ev::change, move |ev| {
+                            message.set(String::new());
+                            let field = event_target::<web_sys::HtmlSelectElement>(&ev);
+                            field.set_custom_validity("");
+                            change.run(field.value());
+                        })
+                        .on(leptos::ev::invalid, move |ev: web_sys::Event| {
+                            ev.prevent_default();
+                            let field = event_target::<web_sys::HtmlSelectElement>(&ev);
+                            let m = t("请填写此项。", "Please fill out this field.");
+                            field.set_custom_validity(&m);
+                            message.set(m);
+                            close.run(());
+                            let field = SendWrapper::new(field);
+                            gloo_timers::callback::Timeout::new(0, move || {
+                                if !field.is_connected() {
+                                    return;
+                                }
+                                let first = field.form().and_then(|f| {
+                                    f.query_selector(
+                                        "input:invalid,select:invalid,textarea:invalid",
+                                    )
+                                    .ok()
+                                    .flatten()
+                                });
+                                if first.is_none_or(|e| {
+                                    e == (*field).clone().unchecked_into::<web_sys::Element>()
+                                }) && let Some(trigger) = trigger.get()
+                                {
+                                    let _ = trigger.focus();
+                                }
+                            })
+                            .forget();
+                        }),
+                ),
+                IntoMaybeErased::into_maybe_erased(
+                    leptos::html::span()
+                        .child(
+                            #[allow(unused_braces)]
+                            {
+                                IntoRender::into_render({
+                                    move || {
+                                        options
+                                            .get()
+                                            .into_iter()
+                                            .enumerate()
+                                            .map(|(i, (v, l))| {
+                                                View::new(leptos::html::span().child(
+                                                    #[allow(unused_braces)]
+                                                    {
+                                                        leptos::html::span()
+                    .child(
+                        (
+                                IntoMaybeErased::into_maybe_erased(leptos::html::span()
+                                .child(#[allow(unused_braces)] {
+                                IntoRender::into_render({ l }) })),
+                                IntoMaybeErased::into_maybe_erased(leptos::html::span()
+                                .child(#[allow(unused_braces)] {
+                                IntoRender::into_render({ { let v = v
+                                .clone(); move | | if value.get() == v { "✓" } else { "" }
+                                } }) }).aria_hidden("true"))
+                            ,),
+                    )
+                    .class("xcss-select-option")
+                    .id(
+                        ::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                            format!("{}-options-{i}", id.get_value()),
+                        ),
+                    )
+                    .role("option")
+                    .aria_selected(
+                        ::leptos::prelude::IntoAttributeValue::into_attribute_value({
+                            let v = v.clone();
+                            move || (value.get() == v).to_string()
+                        }),
+                    )
+                    .attr(
+                        "data-option-index",
+                        ::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                            i,
+                        ),
+                    )
+                    .attr(
+                        "data-active",
+                        ::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                            move || {
+                                (active.get() == i).then_some("true")
+                            },
+                        ),
+                    )
+                    .on(
+                        leptos::ev::pointermove,
+                        move |_| active.set(i),
+                    )
+                    .on(
+                        leptos::ev::click,
+                        move |ev| {
+                            ev.prevent_default();
+                            ev.stop_propagation();
+                            commit.run(i);
+                        },
+                    )
+                                                    },
+                                                ))
+                                            })
+                                            .collect_view()
+                                    }
+                                })
+                            },
+                        )
+                        .class("xcss-select-panel")
+                        .node_ref(panel)
+                        .id(::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                            format!("{}-options", id.get_value()),
+                        ))
+                        .popover("manual")
+                        .role("listbox")
+                        .aria_label(::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                            move || label.get(),
+                        ))
+                        .attr(
+                            "data-xcss-select-open",
+                            ::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                                move || open.get().then_some("true"),
+                            ),
+                        )
+                        .on(leptos::ev::pointerdown, move |ev| {
+                            if ev
+                                .target()
+                                .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
+                                .is_some_and(|t| {
+                                    t.closest("[role=option]").ok().flatten().is_some()
+                                })
+                            {
+                                ev.prevent_default();
+                            }
+                        }),
+                ),
+                IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
+                    move || {
+                        (!message.get().is_empty()).then(|| {
+                            View::new(
+                                leptos::html::span()
+                                    .child(
+                                        #[allow(unused_braces)]
+                                        {
+                                            IntoRender::into_render({ message.get() })
+                                        },
+                                    )
+                                    .class("xcss-select-error")
+                                    .id(
+                                        ::leptos::prelude::IntoAttributeValue::into_attribute_value(
+                                            format!("{}-error", id.get_value()),
+                                        ),
+                                    )
+                                    .role("alert"),
+                            )
+                        })
+                    }
+                })),
+            ))
+            .class("xcss-select"),
+    )
 }

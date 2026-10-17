@@ -3,7 +3,7 @@ import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { chromium, firefox, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { preview } from 'vite';
+import { preview } from '../../tools/web-build/test-preview.mjs';
 import { createServerCornerGeometry } from '@xcss/web/admin-ui/server-corners';
 import { mockApi, session } from './browser-fixtures.mjs';
 

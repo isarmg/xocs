@@ -1,5 +1,7 @@
 # xocs 开发与验证
 
+当前生产 Web 构建使用 `cargo +1.99.0 run --quiet --locked --manifest-path tools/web-build/Cargo.toml -- build --product-root .`（产品根目录），无需 npm 安装。开发监听与 Node 浏览器测试见 [Rust 原生 Web 构建](rust-native-web.md)；下述旧前端流程仅作历史验证参考。
+
 ## 构建
 
 后台的[账号设置](account-settings.md)作为普通后台菜单页面，使用随仓库记录来源的 xcss Leptos 账号组件提供用户名、当前密码、新密码、确认新密码和保存按钮。

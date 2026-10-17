@@ -53,13 +53,16 @@ jobs:
         working-directory: web
         run: |
           npm ci
-          npm run build
+          cargo +1.99.0 run --quiet --locked --manifest-path ../tools/web-build/Cargo.toml -- build --product-root ..
       - name: Check and build server
         run: |
           cargo fmt --all -- --check
+          cargo +1.99.0 fmt --manifest-path tools/web-build/Cargo.toml -- --check
+          cargo +1.99.0 clippy --manifest-path tools/web-build/Cargo.toml --locked --all-targets -- -D warnings
           cargo +1.99.0 fmt --manifest-path web/leptos/Cargo.toml -- --check
           cargo +1.99.0 clippy --manifest-path web/leptos/Cargo.toml --target wasm32-unknown-unknown --locked -- -D warnings
-          python3 scripts/build-leptos.py test
+          cargo +1.99.0 run --quiet --locked --manifest-path tools/web-build/Cargo.toml -- test --product-root .
+          cargo +1.99.0 test --locked --manifest-path web/leptos/domain-tests/Cargo.toml
           python3 -I -B scripts/test-leptos-build.py
           cargo clippy --locked --all-targets -- -D warnings
           cargo test --locked
@@ -96,7 +99,7 @@ jobs:
         working-directory: web
         run: |
           npm ci
-          npm run build
+          cargo +1.99.0 run --quiet --locked --manifest-path ../tools/web-build/Cargo.toml -- build --product-root ..
       - name: Install browsers
         working-directory: web
         run: npx playwright install --with-deps chromium firefox
@@ -116,6 +119,7 @@ jobs:
               node tests/management.mjs
               node tests/contract-fixes.mjs
               node tests/leptos-runtime.mjs
+              node tests/rust-native-domain.mjs
               ;;
             public)
               node tests/public-footer.mjs
@@ -196,7 +200,7 @@ jobs:
             ~/.cargo/git/db
             target
           # No fallback keys. Only a successful main push saves this cache.
-          key: xocs-installed-release-v1-${{ runner.os }}-${{ runner.arch }}-rust-1.99.0-${{ env.SERVER_TARGET }}-${{ steps.release_environment.outputs.fingerprint }}-${{ hashFiles('Cargo.lock', 'web/leptos/Cargo.lock', '**/Cargo.toml', '**/build.rs', '.cargo/**', 'rust-toolchain.toml', 'config/xssi.lock', 'web/package-lock.json', 'xcss-web-build.json', '.github/workflows/ci.yml') }}
+          key: xocs-installed-release-v1-${{ runner.os }}-${{ runner.arch }}-rust-1.99.0-${{ env.SERVER_TARGET }}-${{ steps.release_environment.outputs.fingerprint }}-${{ hashFiles('Cargo.lock', 'tools/web-build/Cargo.lock', 'tools/web-build/src/**', 'web/rust-web.toml', 'web/vendor/**', 'web/leptos/vendor/**', 'web/leptos/Cargo.lock', 'web/leptos/domain-tests/Cargo.lock', '**/Cargo.toml', '**/build.rs', '.cargo/**', 'rust-toolchain.toml', 'config/xssi.lock', 'web/package-lock.json', 'xcss-web-build.json', '.github/workflows/ci.yml') }}
       - name: Discard cached first-party candidate products
         run: |
           cargo clean --package xocs --release --target "$SERVER_TARGET"
@@ -242,8 +246,6 @@ jobs:
         with:
           path: ${{ runner.temp }}/install-inventory-tools
           key: ${{ steps.inventory_cache.outputs.cache-primary-key }}
-      - name: Install locked frontend dependencies
-        run: npm ci --prefix web
       - name: Build the source-bound release Server once
         id: release_binary
         env:
@@ -252,7 +254,7 @@ jobs:
           XSSI_FRONTEND_METADATA_FILE: ${{ runner.temp }}/install-metadata/frontend.json
           XOCS_SOURCE_REVISION: ${{ github.sha }}
         run: |
-          web/node_modules/.bin/xcss-build-server --config xcss-web-build.json --mode release --no-install --source-revision "$GITHUB_SHA"
+          cargo +1.99.0 run --quiet --locked --manifest-path tools/web-build/Cargo.toml -- server --product-root . --config xcss-web-build.json --mode release --source-revision "$GITHUB_SHA"
           "$CARGO_TARGET_DIR/$SERVER_TARGET/release/xocs" --version | grep -F 'xocs '
       - name: Save successfully compiled release dependencies
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.release_cache.outputs.cache-hit != 'true' && steps.release_binary.outcome == 'success' }}

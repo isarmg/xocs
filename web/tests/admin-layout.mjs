@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { chromium, firefox, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { preview } from 'vite';
+import { preview } from '../../tools/web-build/test-preview.mjs';
 import { adminSite, mockApi } from './browser-fixtures.mjs';
 import { paintedSurfaceColor } from './painted-surface.mjs';
 

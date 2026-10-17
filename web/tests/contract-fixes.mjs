@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {chromium,firefox,expect} from '@playwright/test';
-import {preview} from 'vite';
+import {preview} from '../../tools/web-build/test-preview.mjs';
 import {mockApi,article} from './browser-fixtures.mjs';
 const server=await preview({preview:{host:'127.0.0.1',port:0,strictPort:true}});
 const base=`http://127.0.0.1:${server.httpServer.address().port}`;
