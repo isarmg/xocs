@@ -44,7 +44,7 @@
 
 ## 验证方式与边界
 
-本次本地实验目录为 `/mnt/sarmg.org/.local/rust-native-web-2026-10-17`；下文的 evidence/native-verification 路径相对该目录，日志和测试数据不进入产品发行包。
+本次验收曾在 `/mnt/sarmg.org/.local/rust-native-web-2026-10-17` 完成；该临时目录已于 2026-10-17 随迁移收尾清理。下文保留当时 evidence/native-verification 的证据文件名、SHA 与验收结果；源码及结果摘要已合并 main，日志和测试数据不进入产品发行包。
 
 无需 Node 的原生安全/响应合同测试：
 
