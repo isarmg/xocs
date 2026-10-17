@@ -86,7 +86,7 @@ builder=(cargo +1.99.0 run --quiet --locked --manifest-path "$source_root/tools/
 export XOCS_SOURCE_REVISION="$source_revision"
 export XCSS_WEB_DIST="$source_root/web/dist"
 export XSSI_BUILD_METADATA_DIR="$work/metadata"
-"${builder[@]}" --config "$source_root/xcss-web-build.json" --mode release --source-revision "$source_revision" > "$work/build.log"
+"${builder[@]}" --config xcss-web-build.json --mode release --source-revision "$source_revision" > "$work/build.log"
 server_binary="$(tail -n 1 "$work/build.log")"
 [[ "$server_binary" = /* && -f "$server_binary" && ! -L "$server_binary" && -x "$server_binary" ]] || { echo 'Builder did not return a physical executable.' >&2; exit 1; }
 python3 -I -B "$source_root/scripts/package-release.py" "$server_binary" "$work/stage" "$source_revision" "$source_root"
