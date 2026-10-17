@@ -4,7 +4,7 @@ product_id = "xocs"
 [foundation]
 platform_generation = 1
 version = "1.0.0"
-git_rev = "f6ac3fb1b2d0754d12df0e2d3e0cd29ce10344b8"
+git_rev = "6d285cd1ba4707ed2350123d7b50dfeacfb7a4ac"
 
 # Source policy scans the whole product tree, including src and web.
 # Public blog and anonymous interactions remain owned by Xocs, alongside its admin UI.
@@ -12,7 +12,7 @@ git_rev = "f6ac3fb1b2d0754d12df0e2d3e0cd29ce10344b8"
 id = "server"
 profile = "server-control-plane"
 http_adapter = "axum"
-web_profile = "web-react-admin"
+web_profile = "web-csr-admin"
 capabilities = [
   "embedded-web",
   "platform-sqlite",
