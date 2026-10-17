@@ -4,7 +4,7 @@ product_id = "xocs"
 [foundation]
 platform_generation = 1
 version = "1.0.0"
-git_rev = "b34b3861e15edd2b1348e7d03b9c9a93e97d6521"
+git_rev = "f6ac3fb1b2d0754d12df0e2d3e0cd29ce10344b8"
 
 # Source policy scans the whole product tree, including src and web.
 # Public blog and anonymous interactions remain owned by Xocs, alongside its admin UI.

@@ -21,7 +21,7 @@ web/node_modules/.bin/xcss-build-server \
   --rust-only --source-revision "$XOCS_SOURCE_REVISION"
 ```
 
-Rust 公共依赖固定官方 xcss 仓库的版本 `=1.0.0` 与完整 revision `b34b3861e15edd2b1348e7d03b9c9a93e97d6521`；一个 @xcss/web 包固定同版 `v1.0.0` 官方发行 URL 和真实归档的 lockfile integrity，不读取相邻工作区。Xocs 软件版本为 `1.0.1`，数据库格式身份为 `xocs-db-v1`，软件版本与数据格式版本分别管理。
+Rust 公共依赖固定官方 xcss 仓库的版本 `=1.0.0` 与完整 revision `f6ac3fb1b2d0754d12df0e2d3e0cd29ce10344b8`；一个 @xcss/web 包固定同版 `v1.0.0` 官方发行 URL 和真实归档的 lockfile integrity，不读取相邻工作区。Xocs 软件版本为 `1.0.1`，数据库格式身份为 `xocs-db-v1`，软件版本与数据格式版本分别管理。
 
 服务端 Cargo workspace 与 lock 位于根目录；Leptos 浏览器工作区及独立锁位于 `web/leptos`，公共 Rust UI 快照位于其 `vendor/xcss-web` 并带逐文件来源校验。共同 builder 验证 Linux AMD64 GNU target、真实源码 revision 和实际二进制资源清单，报告真实输出路径；默认正式输出为 `target/x86_64-unknown-linux-gnu/release/xocs`。独立缓存通过 `CARGO_TARGET_DIR` 选择，打包脚本从精确源码提交生成私有快照，并使用固定 xssi 修订编译同源 setup。正式包要求干净源码、annotated `v1.0.1` 精确指向 HEAD 和匹配该 HEAD 的二进制身份，不允许 unbound 程序打包。
 
