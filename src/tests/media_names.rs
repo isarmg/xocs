@@ -30,7 +30,7 @@ async fn uploaded_unicode_names_roundtrip_through_resources_and_media() {
         .join("; ");
     let session = body_json(response).await;
     let fixtures: serde_json::Value =
-        serde_json::from_str(include_str!("../../web/tests/fixtures/upload-names.json")).unwrap();
+        serde_json::from_str(include_str!("../../tests/fixtures/upload-names.json")).unwrap();
     for (index, fixture) in fixtures.as_array().unwrap().iter().enumerate() {
         let name = fixture["name"].as_str().unwrap();
         // Distinct valid GIFs avoid content-addressed deduplication between names.
