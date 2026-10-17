@@ -119,6 +119,7 @@ jobs:
               node tests/management.mjs
               node tests/contract-fixes.mjs
               node tests/xcss-web-runtime.mjs
+              node tests/startup-failure.mjs
               node tests/rust-native-domain.mjs
               ;;
             public)

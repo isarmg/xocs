@@ -35,7 +35,7 @@ test('server and browser groups are independent and preserve every gate', () => 
   ]) assert.ok(server.includes(command), `missing server check: ${command}`);
   const expected = [
     'language', 'admin-layout', 'account-settings', 'admin-cleanup',
-    'management', 'contract-fixes', 'xcss-web-runtime', 'rust-native-domain', 'public-footer', 'public-layout', 'anonymous-comments',
+    'management', 'contract-fixes', 'xcss-web-runtime', 'startup-failure', 'rust-native-domain', 'public-footer', 'public-layout', 'anonymous-comments',
   ];
   const actual = [...browser.matchAll(/node tests\/([a-z-]+)\.mjs/g)].map(match => match[1]);
   assert.deepEqual(actual.sort(), expected.sort());
@@ -95,7 +95,7 @@ test('both matrix branches execute every original UI script exactly once', () =>
     assert.deepEqual(actual.sort(), [
       'run test:unit', 'tests/language.mjs', 'tests/admin-layout.mjs',
       'tests/account-settings.mjs', 'tests/admin-cleanup.mjs', 'tests/management.mjs',
-      'tests/contract-fixes.mjs', 'tests/xcss-web-runtime.mjs', 'tests/rust-native-domain.mjs',
+      'tests/contract-fixes.mjs', 'tests/xcss-web-runtime.mjs', 'tests/startup-failure.mjs', 'tests/rust-native-domain.mjs',
       'tests/public-footer.mjs', 'tests/public-layout.mjs', 'tests/anonymous-comments.mjs',
     ].sort());
     const unknown = spawnSync('bash', ['-c', run], {
@@ -104,14 +104,16 @@ test('both matrix branches execute every original UI script exactly once', () =>
     });
     assert.equal(unknown.status, 1);
     assert.equal(unknown.stdout, '');
-    // The new real-WASM domain suite must fail the existing admin matrix gate.
-    writeFileSync(join(directory, 'node'), '#!/bin/sh\nif [ "$*" = "tests/rust-native-domain.mjs" ]; then exit 9; fi\nprintf "%s\\n" "$*"\n');
-    const domainFailure = spawnSync('bash', ['-c', run], {
-      encoding: 'utf8',
-      env: {...process.env, PATH: `${directory}:${process.env.PATH}`, TEST_GROUP: 'admin'},
-    });
-    assert.ifError(domainFailure.error);
-    assert.equal(domainFailure.status, 9);
+    // Real WASM domain and startup failures must both stop the admin gate.
+    for (const script of ['rust-native-domain', 'startup-failure']) {
+      writeFileSync(join(directory, 'node'), `#!/bin/sh\nif [ "$*" = "tests/${script}.mjs" ]; then exit 9; fi\nprintf "%s\\n" "$*"\n`);
+      const failed = spawnSync('bash', ['-c', run], {
+        encoding: 'utf8',
+        env: {...process.env, PATH: `${directory}:${process.env.PATH}`, TEST_GROUP: 'admin'},
+      });
+      assert.ifError(failed.error);
+      assert.equal(failed.status, 9, script);
+    }
   } finally {
     rmSync(directory, {recursive: true, force: true});
   }
