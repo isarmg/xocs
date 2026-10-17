@@ -32,9 +32,9 @@ cargo fmt --all -- --check
 cargo clippy --locked --all-targets -- -D warnings
 cargo test --locked
 cargo build --locked
-python3 scripts/build-xcss-web.py check
-python3 scripts/build-xcss-web.py test
-python3 -I -B scripts/test-xcss-web-build.py
+cargo +1.99.0 run --locked --manifest-path tools/web-build/Cargo.toml -- check --product-root .
+cargo +1.99.0 run --locked --manifest-path tools/web-build/Cargo.toml -- test --product-root .
+cargo +1.99.0 test --locked --manifest-path tools/web-build/Cargo.toml
 python3 scripts/check-comment-retries.py "${CARGO_TARGET_DIR:-target}/debug/xocs"
 cd web
 npm run build

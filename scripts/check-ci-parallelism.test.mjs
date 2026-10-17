@@ -31,7 +31,7 @@ test('server and browser groups are independent and preserve every gate', () => 
     'clippy --manifest-path web/xcss-web/Cargo.toml --target wasm32-unknown-unknown --locked -- -D warnings',
     'cargo +1.99.0 run --quiet --locked --manifest-path tools/web-build/Cargo.toml -- test --product-root .',
     'cargo +1.99.0 test --locked --manifest-path web/xcss-web/domain-tests/Cargo.toml',
-    'python3 -I -B scripts/test-xcss-web-build.py',
+    'cargo +1.99.0 test --locked --manifest-path tools/web-build/Cargo.toml',
   ]) assert.ok(server.includes(command), `missing server check: ${command}`);
   const expected = [
     'language', 'admin-layout', 'account-settings', 'admin-cleanup',

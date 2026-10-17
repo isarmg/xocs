@@ -34,7 +34,7 @@ npm ci --prefix web
 npm run build --prefix web
 ```
 
-`web/pkg` 是生成目录，不提交。独立前端 Cargo 工作区及 Cargo.lock 位于 `web/xcss-web`。`scripts/build-xcss-web.py check` 检查 WASM 目标，`test` 执行可在原生环境运行的 Rust 合同与时间边界单测。可显式设置 `CARGO_TARGET_DIR` 共享编译缓存。
+`web/pkg` 是生成目录，不提交。独立前端 Cargo 工作区及 Cargo.lock 位于 `web/xcss-web`。当前 Rust CLI 的 `cargo +1.99.0 run --locked --manifest-path tools/web-build/Cargo.toml -- check --product-root .` 检查 WASM 目标；将 `check` 改为 `test` 执行原生 Rust 合同与时间边界单测。退役的 Python 构建器及其专属测试已移除。可显式设置 `CARGO_TARGET_DIR` 共享编译缓存。
 
 ## 验收规则
 

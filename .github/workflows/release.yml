@@ -65,7 +65,7 @@ jobs:
           cargo +1.99.0 clippy --manifest-path web/xcss-web/Cargo.toml --target wasm32-unknown-unknown --locked -- -D warnings
           cargo +1.99.0 run --quiet --locked --manifest-path tools/web-build/Cargo.toml -- test --product-root .
           cargo +1.99.0 test --locked --manifest-path web/xcss-web/domain-tests/Cargo.toml
-          python3 -I -B scripts/test-xcss-web-build.py
+          cargo +1.99.0 test --locked --manifest-path tools/web-build/Cargo.toml
           cargo clippy --locked --all-targets -- -D warnings
           cargo test --locked
           export XOCS_SOURCE_REVISION="$(git rev-parse HEAD)"
