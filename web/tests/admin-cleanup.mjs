@@ -4,7 +4,7 @@ import path from 'node:path';
 import { chromium, firefox, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { preview } from '../../tools/web-build/test-preview.mjs';
-import { createServerCornerGeometry } from '@xcss/web/admin-ui/server-corners';
+import { createServerCornerGeometry } from '../vendor/xcss/admin-ui/server-corners.js';
 import { mockApi, session } from './browser-fixtures.mjs';
 
 const output = process.env.XOCS_UI_ARTIFACT_DIR;
