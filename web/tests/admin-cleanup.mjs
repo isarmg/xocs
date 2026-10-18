@@ -4,7 +4,6 @@ import path from 'node:path';
 import { chromium, firefox, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { preview } from '../../tools/web-build/test-preview.mjs';
-import { createServerCornerGeometry } from '../vendor/xcss/admin-ui/server-corners.js';
 import { mockApi, session } from './browser-fixtures.mjs';
 
 const output = process.env.XOCS_UI_ARTIFACT_DIR;
@@ -32,10 +31,29 @@ async function assertProjectCurve(button) {
   assert.equal(paint.radius, '0px');
   assert.equal(paint.extent, 27);
   const extent = Math.min(paint.extent, paint.width / 2, paint.height / 2);
-  const expected = createServerCornerGeometry({ width: paint.compact ? extent * 2 + 1 : paint.width,
-    height: paint.compact ? extent * 2 + 1 : paint.height, extent, tolerance: .02 });
-  assert.equal(paint.actualPath, expected.path, 'The painted button must use the existing project curve');
-  assert.ok(expected.corners.every(corner => corner.extent > 0));
+  const width = paint.compact ? extent * 2 + 1 : paint.width;
+  const vertices = [...paint.actualPath.matchAll(/[ML](-?[\d.]+) (-?[\d.]+)/g)]
+    .map(match => ({ x: Number(match[1]), y: Number(match[2]) }));
+  assert.ok(vertices.length > 12, 'The actual SVG must contain the fitted corner contour');
+  // Independent Bernstein evaluation of the original seven-degree profile.
+  // Compare against actual SVG chords rather than importing production geometry.
+  const controls = [[0, 0], [.3633595684909532, 0], [.5804546942007682, 0], [.7281206143651912, 0],
+    [1, .27187938563480885], [1, .41954530579923177], [1, .6366404315090468], [1, 1]];
+  const choose = [1, 7, 21, 35, 35, 21, 7, 1];
+  const distance = (point, a, b) => {
+    const dx = b.x - a.x, dy = b.y - a.y, length = dx * dx + dy * dy;
+    const t = length ? Math.max(0, Math.min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / length)) : 0;
+    return Math.hypot(point.x - a.x - t * dx, point.y - a.y - t * dy);
+  };
+  for (let sample = 0; sample <= 100; sample++) {
+    const t = sample / 100;
+    const point = controls.reduce((point, [x, y], index) => {
+      const weight = choose[index] * t ** index * (1 - t) ** (7 - index);
+      return { x: point.x + extent * x * weight, y: point.y + extent * y * weight };
+    }, { x: width - extent, y: 0 });
+    const error = Math.min(...vertices.slice(1).map((vertex, index) => distance(point, vertices[index], vertex)));
+    assert.ok(error <= .02, `Actual project curve deviates by ${error} CSS px`);
+  }
 }
 
 async function choose(page, button, keyboard = false) {

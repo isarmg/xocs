@@ -14,8 +14,9 @@ use xcss_web::prelude::*;
 #[wasm_bindgen::prelude::wasm_bindgen(start)]
 pub fn start() {
     browser::install_document_policies();
-    xcss_web::mount("root", || {
-        if common::pathname().starts_with("/admin") {
+    let management = common::pathname().starts_with("/admin");
+    let app = move || {
+        if management {
             View::new({
                 #[allow(unreachable_code)]
                 #[allow(unused_mut)]
@@ -46,5 +47,6 @@ pub fn start() {
             })
             .into_any()
         }
-    });
+    };
+    xcss_web::mount_server("root", app);
 }
