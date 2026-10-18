@@ -2,7 +2,7 @@
 
 Rust 博客与内容服务，含文章、随笔、匿名评论、媒体和管理后台，支持 Linux x86_64 GNU。Web 使用 Rust / xcss-web，资源与 WebAssembly 内嵌 Axum 运行二进制。构建与验收见 [Web 迁移记录](docs/xcss-web-migration.md)。
 
-安装使用独立 [xssi](https://github.com/isarmg/xssi) 仓库提供的当前发行包及 `install.sh`。Server 仅接受 `xocs --root /opt/isarmg/xocs` 运行；初始化、只读检查和离线密码重置由 `libexec/setup` 执行。升级由 `upgrade.sh` 调用独立 xssc，下载校验后自动停服、备份、检查数据、执行受支持的数据升级、切换并启动验收。
+安装使用独立 [xssi](https://github.com/isarmg/xssi) 仓库提供的当前发行包及 `install.sh`。Server 仅接受 `xocs --root /opt/isarmg/xocs` 运行；初始化、只读检查和离线密码重置由 `libexec/setup` 执行。升级由 `upgrade.sh` 调用独立 xssc，下载校验后自动停服、备份、按目标当前结构只读检查、切换并启动验收。
 
 程序、配置、数据库、管理员凭据、媒体、日志和维护记录默认位于同一 ROOT。数据库或媒体可明确指定外置目录，日志和临时文件留在 ROOT。唯一管理员及会话持久化于 `state/site.sqlite` 的公共管理表，密码保存 Argon2id 哈希。
 
