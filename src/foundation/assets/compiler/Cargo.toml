@@ -1,0 +1,266 @@
+[package]
+name = "blog-assets-compiler"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+description = "宿主 JavaScript 与 CSS 解析、语义分析和压缩编译器"
+license = "MIT AND MPL-2.0 AND Apache-2.0 AND BSD-3-Clause AND Unicode-3.0"
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+[lib]
+name = "blog_assets_compiler"
+path = "src/lib.rs"
+[dependencies]
+[dependencies.ahash]
+package = "blog-collections-keyed-hash"
+path = "../../collections/keyed-hash"
+features = []
+default-features = true
+
+[dependencies.bitflags]
+package = "blog-collections-bit-set"
+path = "../../collections/bit-set"
+features = []
+default-features = true
+
+[dependencies.const_str]
+package = "blog-text-compile-time-text"
+path = "../../text/compile-time-text"
+features = []
+default-features = true
+
+[dependencies.data_encoding]
+package = "blog-encoding-radix-codecs"
+path = "../../encoding/radix-codecs"
+features = []
+default-features = true
+
+[dependencies.indexmap]
+package = "blog-collections-ordered-map"
+path = "../../collections/ordered-map"
+features = ["serde"]
+default-features = true
+
+[dependencies.itertools]
+package = "blog-syntax-style-iterators"
+path = "../../syntax/style-iterators"
+features = []
+default-features = true
+
+[dependencies.lazy_static]
+package = "blog-sync-lazy-global"
+path = "../../sync/lazy-global"
+features = []
+default-features = true
+
+[dependencies.lightningcss_derive]
+package = "blog-assets-style-value-derive"
+path = "../style-value-derive"
+features = []
+default-features = true
+
+[dependencies.pastey]
+package = "blog-syntax-token-concat"
+path = "../../syntax/token-concat"
+features = []
+default-features = true
+
+[dependencies.smallvec]
+package = "blog-collections-inline-vector"
+path = "../../collections/inline-vector"
+features = ["serde", "union"]
+default-features = true
+
+[dependencies.getrandom]
+package = "blog-platform-compiler-entropy"
+path = "../../platform/compiler-entropy"
+features = []
+default-features = false
+
+[dependencies.cssparser_macros]
+package = "blog-assets-style-token-macros"
+path = "../style-token-macros"
+features = []
+default-features = true
+
+[dependencies.itoa]
+package = "blog-encoding-integer-format"
+path = "../../encoding/integer-format"
+features = []
+default-features = true
+
+[dependencies.phf]
+package = "blog-lookup-style-table"
+path = "../../lookup/style-table"
+features = ["macros"]
+default-features = true
+
+[dependencies.log]
+package = "blog-diagnostics-event-facade"
+path = "../../diagnostics/event-facade"
+features = []
+default-features = true
+
+[dependencies.rustc_hash]
+package = "blog-collections-compiler-hash"
+path = "../../collections/compiler-hash"
+features = []
+default-features = true
+
+[dependencies.serde]
+package = "blog-format-data-model"
+path = "../../format/data-model"
+features = ["derive"]
+default-features = true
+
+[dependencies.postcard]
+package = "blog-format-binary-record"
+path = "../../format/binary-record"
+features = ["alloc"]
+default-features = false
+
+[dependencies.thiserror]
+package = "blog-diagnostics-typed-error"
+path = "../../diagnostics/typed-error"
+features = []
+default-features = true
+
+[dependencies.libc]
+package = "blog-platform-system-abi"
+path = "../../platform/system-abi"
+features = []
+default-features = true
+
+[dependencies.js_sys]
+package = "blog-interface-javascript-api"
+path = "../../interface/javascript-api"
+features = []
+default-features = true
+
+[dependencies.memchr]
+package = "blog-encoding-byte-search"
+path = "../../encoding/byte-search"
+features = []
+default-features = true
+
+[dependencies.textwrap]
+package = "blog-text-line-layout"
+path = "../../text/line-layout"
+features = []
+default-features = true
+
+[dependencies.unicode_segmentation]
+package = "blog-text-text-boundaries"
+path = "../../text/text-boundaries"
+features = []
+default-features = true
+
+[dependencies.unicode_width]
+package = "blog-text-terminal-width"
+path = "../../text/terminal-width"
+features = []
+default-features = true
+
+[dependencies.compact_str]
+package = "blog-collections-inline-string"
+path = "../../collections/inline-string"
+features = []
+default-features = true
+
+[dependencies.hashbrown]
+package = "blog-collections-hash-table"
+path = "../../collections/hash-table"
+features = ["allocator-api2", "inline-more"]
+default-features = false
+
+[dependencies.dragonbox_ecma]
+package = "blog-encoding-script-float-format"
+path = "../../encoding/script-float-format"
+features = []
+default-features = true
+
+[dependencies.num_bigint]
+package = "blog-math-large-integer"
+path = "../../math/large-integer"
+features = []
+default-features = true
+
+[dependencies.num_traits]
+package = "blog-math-numeric-traits"
+path = "../../math/numeric-traits"
+features = []
+default-features = true
+
+[dependencies.blog_syntax_compiler_iterators]
+package = "blog-syntax-compiler-iterators"
+path = "../../syntax/compiler-iterators"
+features = []
+default-features = true
+
+[dependencies.lazy_regex]
+package = "blog-text-constant-pattern"
+path = "../../text/constant-pattern"
+features = []
+default-features = true
+
+[dependencies.seq_macro]
+package = "blog-syntax-index-expansion"
+path = "../../syntax/index-expansion"
+features = []
+default-features = true
+
+[dependencies.oxc_ast_macros]
+package = "blog-javascript-syntax-derive"
+path = "../../javascript/syntax-derive"
+features = []
+default-features = true
+
+[dependencies.blog_lookup_script_table]
+package = "blog-lookup-script-table"
+path = "../../lookup/script-table"
+features = ["macros"]
+default-features = true
+
+[dependencies.self_cell]
+package = "blog-memory-owned-borrow"
+path = "../../memory/owned-borrow"
+features = []
+default-features = true
+
+[dependencies.base64_simd]
+package = "blog-encoding-vector-base-encoding"
+path = "../../encoding/vector-base-encoding"
+features = []
+default-features = true
+
+[dependencies.serde_json]
+package = "blog-format-json"
+path = "../../format/json"
+features = []
+default-features = true
+
+[dependencies.allocator_api2]
+package = "blog-memory-allocator"
+path = "../../memory/allocator"
+features = []
+default-features = true
+
+[dependencies.escape_simd]
+package = "blog-encoding-vector-escaping"
+path = "../../encoding/vector-escaping"
+features = ["json"]
+default-features = true
+
+[dependencies.compression]
+package = "blog-encoding-compression"
+path = "../../encoding/compression"
+features = ["codec", "alloc", "simd"]
+default-features = false
+
+[dependencies.url-encoding]
+package = "blog-network-web-address"
+path = "../../network/web-address"
+default-features = false
+features = ["std"]

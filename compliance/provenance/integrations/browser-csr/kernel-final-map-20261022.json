@@ -1,0 +1,1480 @@
+{
+  "phase": 2,
+  "destination_package": "blog-dom",
+  "modules": {
+    "blog-collections-generation-map": "slots",
+    "blog-collections-tuple-builder": "tuples",
+    "blog-diagnostics-browser-panic": "browser_panic",
+    "blog-interface-browser-events": "events",
+    "blog-interface-browser-timers": "timers",
+    "blog-interface-dom-operations": "browser_helpers",
+    "blog-interface-reactivity": "reactivity",
+    "blog-interface-vector-drain": "vector_drain",
+    "blog-interface-view-errors": "view_errors",
+    "blog-interface-view-tree": "view_tree",
+    "blog-memory-erased-reference": "erased_value",
+    "blog-memory-shared-value": "shared_value",
+    "blog-runtime-task-dispatch": "tasks",
+    "blog-sync-owned-guard": "owned_guard",
+    "blog-sync-poison-policy": "poison",
+    "blog-sync-thread-bound-value": "thread_bound",
+    "blog-syntax-typed-alternatives": "alternatives",
+    "blog-syntax-view-iterators": "iterators",
+    "blog-text-constant-text-join": "constant_text",
+    "blog-text-html-escaping": "html_escaping"
+  },
+  "source_paths": {
+    "blog-collections-generation-map": "src/foundation/collections/generation-map",
+    "blog-collections-literals": "src/foundation/collections/literals",
+    "blog-collections-tuple-builder": "src/foundation/collections/tuple-builder",
+    "blog-diagnostics-browser-panic": "src/foundation/diagnostics/browser-panic",
+    "blog-diagnostics-macro-error-entry": "src/foundation/diagnostics/macro-error-entry",
+    "blog-diagnostics-macro-errors": "src/foundation/diagnostics/macro-errors",
+    "blog-dom": "src/interface/dom",
+    "blog-interface-browser-events": "src/foundation/interface/browser-events",
+    "blog-interface-browser-timers": "src/foundation/interface/browser-timers",
+    "blog-interface-dom-operations": "src/foundation/interface/dom-operations",
+    "blog-interface-reactivity": "src/foundation/interface/reactivity",
+    "blog-interface-vector-drain": "src/foundation/interface/vector-drain",
+    "blog-interface-view-errors": "src/foundation/interface/view-errors",
+    "blog-interface-view-tree": "src/foundation/interface/view-tree",
+    "blog-memory-erased-reference": "src/foundation/memory/erased-reference",
+    "blog-memory-shared-value": "src/foundation/memory/shared-value",
+    "blog-native-compiler-version": "src/foundation/native/compiler-version",
+    "blog-runtime-async-toolkit": "src/foundation/runtime/async-toolkit",
+    "blog-runtime-task-dispatch": "src/foundation/runtime/task-dispatch",
+    "blog-sync-async-lock": "src/foundation/sync/async-lock",
+    "blog-sync-notification-wait": "src/foundation/sync/notification-wait",
+    "blog-sync-owned-guard": "src/foundation/sync/owned-guard",
+    "blog-sync-poison-policy": "src/foundation/sync/poison-policy",
+    "blog-sync-thread-bound-value": "src/foundation/sync/thread-bound-value",
+    "blog-syntax-attribute-derive": "src/foundation/syntax/attribute-derive",
+    "blog-syntax-attribute-model": "src/foundation/syntax/attribute-model",
+    "blog-syntax-macro-import-entry": "src/foundation/syntax/macro-import-entry",
+    "blog-syntax-macro-imports": "src/foundation/syntax/macro-imports",
+    "blog-syntax-rust-printer": "src/foundation/syntax/rust-printer",
+    "blog-syntax-token-join": "src/foundation/syntax/token-join",
+    "blog-syntax-token-utilities": "src/foundation/syntax/token-utilities",
+    "blog-syntax-typed-alternatives": "src/foundation/syntax/typed-alternatives",
+    "blog-syntax-typed-builder": "src/foundation/syntax/typed-builder",
+    "blog-syntax-typed-builder-derive": "src/foundation/syntax/typed-builder-derive",
+    "blog-syntax-view-iterators": "src/foundation/syntax/view-iterators",
+    "blog-text-constant-text-join": "src/foundation/text/constant-text-join",
+    "blog-text-dynamic-format": "src/foundation/text/dynamic-format",
+    "blog-text-html-escaping": "src/foundation/text/html-escaping",
+    "blog-text-identifier-case": "src/foundation/text/identifier-case",
+    "blog-text-identifier-variants": "src/foundation/text/identifier-variants"
+  },
+  "external_dependencies": {
+    "wasm-bindgen": {
+      "package": "blog-wasm-browser-bridge",
+      "path": "../../foundation/wasm/browser-bridge",
+      "features": [],
+      "default-features": true
+    },
+    "web-sys": {
+      "package": "blog-interface-browser-api",
+      "path": "../../foundation/interface/browser-api",
+      "features": [
+        "AddEventListenerOptions",
+        "AnimationEvent",
+        "BeforeUnloadEvent",
+        "ClipboardEvent",
+        "Comment",
+        "CompositionEvent",
+        "CssStyleDeclaration",
+        "CustomEvent",
+        "DeviceMotionEvent",
+        "DeviceOrientationEvent",
+        "Document",
+        "DocumentFragment",
+        "DomStringMap",
+        "DomTokenList",
+        "DragEvent",
+        "Element",
+        "ErrorEvent",
+        "Event",
+        "EventTarget",
+        "FocusEvent",
+        "GamepadEvent",
+        "HashChangeEvent",
+        "HtmlAnchorElement",
+        "HtmlAreaElement",
+        "HtmlAudioElement",
+        "HtmlBaseElement",
+        "HtmlBodyElement",
+        "HtmlBrElement",
+        "HtmlButtonElement",
+        "HtmlCanvasElement",
+        "HtmlCollection",
+        "HtmlDListElement",
+        "HtmlDataElement",
+        "HtmlDataListElement",
+        "HtmlDetailsElement",
+        "HtmlDialogElement",
+        "HtmlDivElement",
+        "HtmlElement",
+        "HtmlEmbedElement",
+        "HtmlFieldSetElement",
+        "HtmlFormElement",
+        "HtmlHeadElement",
+        "HtmlHeadingElement",
+        "HtmlHrElement",
+        "HtmlHtmlElement",
+        "HtmlIFrameElement",
+        "HtmlImageElement",
+        "HtmlInputElement",
+        "HtmlLabelElement",
+        "HtmlLegendElement",
+        "HtmlLiElement",
+        "HtmlLinkElement",
+        "HtmlMapElement",
+        "HtmlMenuElement",
+        "HtmlMetaElement",
+        "HtmlMeterElement",
+        "HtmlModElement",
+        "HtmlOListElement",
+        "HtmlObjectElement",
+        "HtmlOptGroupElement",
+        "HtmlOptionElement",
+        "HtmlOutputElement",
+        "HtmlParagraphElement",
+        "HtmlParamElement",
+        "HtmlPictureElement",
+        "HtmlPreElement",
+        "HtmlProgressElement",
+        "HtmlQuoteElement",
+        "HtmlScriptElement",
+        "HtmlSelectElement",
+        "HtmlSlotElement",
+        "HtmlSourceElement",
+        "HtmlSpanElement",
+        "HtmlStyleElement",
+        "HtmlTableCaptionElement",
+        "HtmlTableCellElement",
+        "HtmlTableColElement",
+        "HtmlTableElement",
+        "HtmlTableRowElement",
+        "HtmlTableSectionElement",
+        "HtmlTemplateElement",
+        "HtmlTextAreaElement",
+        "HtmlTimeElement",
+        "HtmlTitleElement",
+        "HtmlTrackElement",
+        "HtmlUListElement",
+        "HtmlVideoElement",
+        "InputEvent",
+        "KeyboardEvent",
+        "Location",
+        "MessageEvent",
+        "MouseEvent",
+        "Node",
+        "PageTransitionEvent",
+        "PointerEvent",
+        "PopStateEvent",
+        "ProgressEvent",
+        "PromiseRejectionEvent",
+        "SecurityPolicyViolationEvent",
+        "ShadowRoot",
+        "StorageEvent",
+        "SubmitEvent",
+        "SvgElement",
+        "Text",
+        "TouchEvent",
+        "TransitionEvent",
+        "UiEvent",
+        "WheelEvent",
+        "Window",
+        "console"
+      ],
+      "default-features": true
+    },
+    "blog_component_macros": {
+      "package": "blog-component-macros",
+      "path": "../macros",
+      "features": [],
+      "default-features": true
+    },
+    "cfg-if": {
+      "package": "blog-native-target-conditions",
+      "path": "../../foundation/native/target-conditions",
+      "features": [],
+      "default-features": true
+    },
+    "js-sys": {
+      "package": "blog-interface-javascript-api",
+      "path": "../../foundation/interface/javascript-api",
+      "features": [],
+      "default-features": true
+    },
+    "indexmap": {
+      "package": "blog-collections-ordered-map",
+      "path": "../../foundation/collections/ordered-map",
+      "features": [],
+      "default-features": true
+    },
+    "pin-project-lite": {
+      "package": "blog-sync-pinned-projection",
+      "path": "../../foundation/sync/pinned-projection",
+      "features": [],
+      "default-features": true
+    },
+    "rustc-hash": {
+      "package": "blog-collections-compiler-hash",
+      "path": "../../foundation/collections/compiler-hash",
+      "features": [],
+      "default-features": true
+    },
+    "thiserror": {
+      "package": "blog-diagnostics-typed-error",
+      "path": "../../foundation/diagnostics/typed-error",
+      "features": [],
+      "default-features": true
+    },
+    "futures": {
+      "package": "blog-runtime-async-toolkit",
+      "path": "../../foundation/runtime/async-toolkit",
+      "features": [
+        "async-await-macro",
+        "channel",
+        "executor",
+        "io",
+        "shared-state",
+        "sink",
+        "std",
+        "utilities"
+      ],
+      "default-features": true
+    },
+    "async-trait": {
+      "package": "blog-syntax-async-trait",
+      "path": "../../foundation/syntax/async-trait",
+      "features": [],
+      "default-features": true
+    },
+    "serde": {
+      "package": "blog-format-data-model",
+      "path": "../../foundation/format/data-model",
+      "features": [],
+      "default-features": true
+    },
+    "wasm-bindgen-futures": {
+      "package": "blog-wasm-browser-futures",
+      "path": "../../foundation/wasm/browser-futures",
+      "features": [],
+      "default-features": true
+    },
+    "either": {
+      "package": "blog-syntax-alternative",
+      "path": "../../foundation/syntax/alternative",
+      "features": [],
+      "default-features": false
+    }
+  },
+  "source_files": [
+    {
+      "from": "src/interface/dom/src/attribute_interceptor.rs",
+      "to": "src/interface/dom/src/attribute_interceptor.rs"
+    },
+    {
+      "from": "src/interface/dom/src/mount.rs",
+      "to": "src/interface/dom/src/mount.rs"
+    },
+    {
+      "from": "src/interface/dom/src/text_prop.rs",
+      "to": "src/interface/dom/src/text_prop.rs"
+    },
+    {
+      "from": "src/interface/dom/src/show_let.rs",
+      "to": "src/interface/dom/src/show_let.rs"
+    },
+    {
+      "from": "src/interface/dom/src/show.rs",
+      "to": "src/interface/dom/src/show.rs"
+    },
+    {
+      "from": "src/interface/dom/src/into_view.rs",
+      "to": "src/interface/dom/src/into_view.rs"
+    },
+    {
+      "from": "src/interface/dom/src/portal.rs",
+      "to": "src/interface/dom/src/portal.rs"
+    },
+    {
+      "from": "src/interface/dom/src/children.rs",
+      "to": "src/interface/dom/src/children.rs"
+    },
+    {
+      "from": "src/interface/dom/src/provider.rs",
+      "to": "src/interface/dom/src/provider.rs"
+    },
+    {
+      "from": "src/interface/dom/src/component.rs",
+      "to": "src/interface/dom/src/component.rs"
+    },
+    {
+      "from": "src/interface/dom/src/for_loop.rs",
+      "to": "src/interface/dom/src/for_loop.rs"
+    },
+    {
+      "from": "src/interface/dom/src/lib.rs",
+      "to": "src/interface/dom/src/lib.rs"
+    },
+    {
+      "from": "src/interface/dom/src/animated_show.rs",
+      "to": "src/interface/dom/src/animated_show.rs"
+    },
+    {
+      "from": "src/foundation/collections/generation-map/src/sparse_secondary.rs",
+      "to": "src/interface/dom/src/kernel/slots/sparse_secondary.rs"
+    },
+    {
+      "from": "src/foundation/collections/generation-map/src/hop.rs",
+      "to": "src/interface/dom/src/kernel/slots/hop.rs"
+    },
+    {
+      "from": "src/foundation/collections/generation-map/src/dense.rs",
+      "to": "src/interface/dom/src/kernel/slots/dense.rs"
+    },
+    {
+      "from": "src/foundation/collections/generation-map/src/util.rs",
+      "to": "src/interface/dom/src/kernel/slots/util.rs"
+    },
+    {
+      "from": "src/foundation/collections/generation-map/src/basic.rs",
+      "to": "src/interface/dom/src/kernel/slots/basic.rs"
+    },
+    {
+      "from": "src/foundation/collections/generation-map/src/secondary.rs",
+      "to": "src/interface/dom/src/kernel/slots/secondary.rs"
+    },
+    {
+      "from": "src/foundation/collections/generation-map/src/lib.rs",
+      "to": "src/interface/dom/src/kernel/slots/mod.rs"
+    },
+    {
+      "from": "src/foundation/collections/tuple-builder/src/lib.rs",
+      "to": "src/interface/dom/src/kernel/tuples/mod.rs"
+    },
+    {
+      "from": "src/foundation/diagnostics/browser-panic/src/lib.rs",
+      "to": "src/interface/dom/src/kernel/browser_panic/mod.rs"
+    },
+    {
+      "from": "src/foundation/interface/browser-events/src/lib.rs",
+      "to": "src/interface/dom/src/kernel/events/mod.rs"
+    },
+    {
+      "from": "src/foundation/interface/browser-timers/src/future.rs",
+      "to": "src/interface/dom/src/kernel/timers/future.rs"
+    },
+    {
+      "from": "src/foundation/interface/browser-timers/src/lib.rs",
+      "to": "src/interface/dom/src/kernel/timers/mod.rs"
+    },
+    {
+      "from": "src/foundation/interface/browser-timers/src/callback.rs",
+      "to": "src/interface/dom/src/kernel/timers/callback.rs"
+    },
+    {
+      "from": "src/foundation/interface/dom-operations/src/logging.rs",
+      "to": "src/interface/dom/src/kernel/browser_helpers/logging.rs"
+    },
+    {
+      "from": "src/foundation/interface/dom-operations/src/helpers.rs",
+      "to": "src/interface/dom/src/kernel/browser_helpers/helpers.rs"
+    },
+    {
+      "from": "src/foundation/interface/dom-operations/src/lib.rs",
+      "to": "src/interface/dom/src/kernel/browser_helpers/mod.rs"
+    },
+    {
+      "from": "src/foundation/interface/dom-operations/src/macro_helpers/tracing_property.rs",
+      "to": "src/interface/dom/src/kernel/browser_helpers/macro_helpers/tracing_property.rs"
+    },
+    {
+      "from": "src/foundation/interface/dom-operations/src/macro_helpers/mod.rs",
+      "to": "src/interface/dom/src/kernel/browser_helpers/macro_helpers/mod.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/wrappers.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/wrappers.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/nightly.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/nightly.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/graph.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/graph.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/serde.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/serde.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/effect.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/effect.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/trait_options.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/trait_options.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/signal.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/signal.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/traits.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/traits.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/diagnostics.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/diagnostics.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/owner.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/owner.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/into_reactive_value.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/into_reactive_value.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/send_wrapper_ext.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/send_wrapper_ext.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/computed.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/computed.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/lib.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/mod.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/channel.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/channel.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/callback.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/callback.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/signal/arc_rw.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/signal/arc_rw.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/signal/arc_trigger.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/signal/arc_trigger.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/signal/mapped.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/signal/mapped.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/signal/subscriber_traits.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/signal/subscriber_traits.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/signal/arc_read.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/signal/arc_read.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/signal/rw.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/signal/rw.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/signal/guards.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/signal/guards.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/signal/trigger.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/signal/trigger.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/signal/read.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/signal/read.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/signal/write.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/signal/write.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/signal/arc_write.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/signal/arc_write.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/effect/effect.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/effect/effect.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/effect/immediate.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/effect/immediate.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/effect/render_effect.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/effect/render_effect.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/effect/inner.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/effect/inner.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/effect/effect_function.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/effect/effect_function.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/computed/selector.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/computed/selector.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/computed/arc_memo.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/computed/arc_memo.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/computed/memo.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/computed/memo.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/computed/inner.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/computed/inner.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/owner/stored_value.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/owner/stored_value.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/owner/context.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/owner/context.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/owner/storage.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/owner/storage.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/owner/arena_item.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/owner/arena_item.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/owner/arena.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/owner/arena.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/owner/arc_stored_value.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/owner/arc_stored_value.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/graph/node.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/graph/node.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/graph/sets.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/graph/sets.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/graph/source.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/graph/source.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/graph/subscriber.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/graph/subscriber.rs"
+    },
+    {
+      "from": "src/foundation/interface/vector-drain/src/lib.rs",
+      "to": "src/interface/dom/src/kernel/vector_drain/mod.rs"
+    },
+    {
+      "from": "src/foundation/interface/vector-drain/src/copypasted_impl.rs",
+      "to": "src/interface/dom/src/kernel/vector_drain/copypasted_impl.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-errors/src/lib.rs",
+      "to": "src/interface/dom/src/kernel/view_errors/mod.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/oco.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/oco.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/dom.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/dom.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/hydration.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/hydration.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/lib.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/mod.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/erased.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/erased.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/reactive_graph/inner_html.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/reactive_graph/inner_html.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/reactive_graph/mod.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/reactive_graph/mod.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/reactive_graph/owned.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/reactive_graph/owned.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/reactive_graph/class.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/reactive_graph/class.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/reactive_graph/property.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/reactive_graph/property.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/reactive_graph/bind.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/reactive_graph/bind.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/reactive_graph/node_ref.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/reactive_graph/node_ref.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/reactive_graph/style.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/reactive_graph/style.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/html/directive.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/html/directive.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/html/islands.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/html/islands.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/html/event.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/html/event.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/html/mod.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/html/mod.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/html/class.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/html/class.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/html/property.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/html/property.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/html/node_ref.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/html/node_ref.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/html/style.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/html/style.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/ssr/mod.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/ssr/mod.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/view/template.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/view/template.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/view/tuples.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/view/tuples.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/view/iterators.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/view/iterators.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/view/error_boundary.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/view/error_boundary.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/view/primitives.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/view/primitives.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/view/static_types.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/view/static_types.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/view/mod.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/view/mod.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/view/fragment.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/view/fragment.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/view/add_attr.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/view/add_attr.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/view/keyed.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/view/keyed.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/view/any_view.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/view/any_view.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/view/either.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/view/either.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/view/strings.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/view/strings.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/svg/mod.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/svg/mod.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/mathml/mod.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/mathml/mod.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/renderer/mock_dom.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/renderer/mock_dom.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/renderer/sledgehammer.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/renderer/sledgehammer.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/renderer/mod.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/renderer/mod.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/renderer/dom.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/renderer/dom.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/html/element/inner_html.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/html/element/inner_html.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/html/element/custom.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/html/element/custom.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/html/element/mod.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/html/element/mod.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/html/element/element_ext.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/html/element/element_ext.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/html/element/elements.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/html/element/elements.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/html/attribute/global.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/html/attribute/global.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/html/attribute/maybe_next_attr_erasure_macros.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/html/attribute/maybe_next_attr_erasure_macros.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/html/attribute/custom.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/html/attribute/custom.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/html/attribute/value.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/html/attribute/value.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/html/attribute/mod.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/html/attribute/mod.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/html/attribute/key.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/html/attribute/key.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/html/attribute/any_attribute.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/html/attribute/any_attribute.rs"
+    },
+    {
+      "from": "src/foundation/interface/view-tree/src/html/attribute/aria.rs",
+      "to": "src/interface/dom/src/kernel/view_tree/html/attribute/aria.rs"
+    },
+    {
+      "from": "src/foundation/memory/erased-reference/src/erased_mut_ref.rs",
+      "to": "src/interface/dom/src/kernel/erased_value/erased_mut_ref.rs"
+    },
+    {
+      "from": "src/foundation/memory/erased-reference/src/erased_box.rs",
+      "to": "src/interface/dom/src/kernel/erased_value/erased_box.rs"
+    },
+    {
+      "from": "src/foundation/memory/erased-reference/src/erased_ref.rs",
+      "to": "src/interface/dom/src/kernel/erased_value/erased_ref.rs"
+    },
+    {
+      "from": "src/foundation/memory/erased-reference/src/lib.rs",
+      "to": "src/interface/dom/src/kernel/erased_value/mod.rs"
+    },
+    {
+      "from": "src/foundation/memory/shared-value/src/lib.rs",
+      "to": "src/interface/dom/src/kernel/shared_value/mod.rs"
+    },
+    {
+      "from": "src/foundation/runtime/task-dispatch/src/lib.rs",
+      "to": "src/interface/dom/src/kernel/tasks/mod.rs"
+    },
+    {
+      "from": "src/foundation/sync/owned-guard/src/lib.rs",
+      "to": "src/interface/dom/src/kernel/owned_guard/mod.rs"
+    },
+    {
+      "from": "src/foundation/sync/poison-policy/src/lib.rs",
+      "to": "src/interface/dom/src/kernel/poison/mod.rs"
+    },
+    {
+      "from": "src/foundation/sync/thread-bound-value/src/futures.rs",
+      "to": "src/interface/dom/src/kernel/thread_bound/futures.rs"
+    },
+    {
+      "from": "src/foundation/sync/thread-bound-value/src/lib.rs",
+      "to": "src/interface/dom/src/kernel/thread_bound/mod.rs"
+    },
+    {
+      "from": "src/foundation/syntax/typed-alternatives/src/lib.rs",
+      "to": "src/interface/dom/src/kernel/alternatives/mod.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/zip_eq_impl.rs",
+      "to": "src/interface/dom/src/kernel/iterators/zip_eq_impl.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/k_smallest.rs",
+      "to": "src/interface/dom/src/kernel/iterators/k_smallest.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/rciter_impl.rs",
+      "to": "src/interface/dom/src/kernel/iterators/rciter_impl.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/intersperse.rs",
+      "to": "src/interface/dom/src/kernel/iterators/intersperse.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/extrema_set.rs",
+      "to": "src/interface/dom/src/kernel/iterators/extrema_set.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/unique_impl.rs",
+      "to": "src/interface/dom/src/kernel/iterators/unique_impl.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/iter_index.rs",
+      "to": "src/interface/dom/src/kernel/iterators/iter_index.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/multipeek_impl.rs",
+      "to": "src/interface/dom/src/kernel/iterators/multipeek_impl.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/free.rs",
+      "to": "src/interface/dom/src/kernel/iterators/free.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/sources.rs",
+      "to": "src/interface/dom/src/kernel/iterators/sources.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/diff.rs",
+      "to": "src/interface/dom/src/kernel/iterators/diff.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/pad_tail.rs",
+      "to": "src/interface/dom/src/kernel/iterators/pad_tail.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/group_map.rs",
+      "to": "src/interface/dom/src/kernel/iterators/group_map.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/size_hint.rs",
+      "to": "src/interface/dom/src/kernel/iterators/size_hint.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/peek_nth.rs",
+      "to": "src/interface/dom/src/kernel/iterators/peek_nth.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/combinations.rs",
+      "to": "src/interface/dom/src/kernel/iterators/combinations.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/next_array.rs",
+      "to": "src/interface/dom/src/kernel/iterators/next_array.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/concat_impl.rs",
+      "to": "src/interface/dom/src/kernel/iterators/concat_impl.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/either_or_both.rs",
+      "to": "src/interface/dom/src/kernel/iterators/either_or_both.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/unziptuple.rs",
+      "to": "src/interface/dom/src/kernel/iterators/unziptuple.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/impl_macros.rs",
+      "to": "src/interface/dom/src/kernel/iterators/impl_macros.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/kmerge_impl.rs",
+      "to": "src/interface/dom/src/kernel/iterators/kmerge_impl.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/lazy_buffer.rs",
+      "to": "src/interface/dom/src/kernel/iterators/lazy_buffer.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/repeatn.rs",
+      "to": "src/interface/dom/src/kernel/iterators/repeatn.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/permutations.rs",
+      "to": "src/interface/dom/src/kernel/iterators/permutations.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/combinations_with_replacement.rs",
+      "to": "src/interface/dom/src/kernel/iterators/combinations_with_replacement.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/zip_longest.rs",
+      "to": "src/interface/dom/src/kernel/iterators/zip_longest.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/duplicates_impl.rs",
+      "to": "src/interface/dom/src/kernel/iterators/duplicates_impl.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/process_results_impl.rs",
+      "to": "src/interface/dom/src/kernel/iterators/process_results_impl.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/tuple_impl.rs",
+      "to": "src/interface/dom/src/kernel/iterators/tuple_impl.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/tee.rs",
+      "to": "src/interface/dom/src/kernel/iterators/tee.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/put_back_n_impl.rs",
+      "to": "src/interface/dom/src/kernel/iterators/put_back_n_impl.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/groupbylazy.rs",
+      "to": "src/interface/dom/src/kernel/iterators/groupbylazy.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/exactly_one_err.rs",
+      "to": "src/interface/dom/src/kernel/iterators/exactly_one_err.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/peeking_take_while.rs",
+      "to": "src/interface/dom/src/kernel/iterators/peeking_take_while.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/merge_join.rs",
+      "to": "src/interface/dom/src/kernel/iterators/merge_join.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/format.rs",
+      "to": "src/interface/dom/src/kernel/iterators/format.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/minmax.rs",
+      "to": "src/interface/dom/src/kernel/iterators/minmax.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/powerset.rs",
+      "to": "src/interface/dom/src/kernel/iterators/powerset.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/with_position.rs",
+      "to": "src/interface/dom/src/kernel/iterators/with_position.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/cons_tuples_impl.rs",
+      "to": "src/interface/dom/src/kernel/iterators/cons_tuples_impl.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/flatten_ok.rs",
+      "to": "src/interface/dom/src/kernel/iterators/flatten_ok.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/lib.rs",
+      "to": "src/interface/dom/src/kernel/iterators/mod.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/ziptuple.rs",
+      "to": "src/interface/dom/src/kernel/iterators/ziptuple.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/grouping_map.rs",
+      "to": "src/interface/dom/src/kernel/iterators/grouping_map.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/take_while_inclusive.rs",
+      "to": "src/interface/dom/src/kernel/iterators/take_while_inclusive.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/adaptors/map.rs",
+      "to": "src/interface/dom/src/kernel/iterators/adaptors/map.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/adaptors/multi_product.rs",
+      "to": "src/interface/dom/src/kernel/iterators/adaptors/multi_product.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/adaptors/mod.rs",
+      "to": "src/interface/dom/src/kernel/iterators/adaptors/mod.rs"
+    },
+    {
+      "from": "src/foundation/syntax/view-iterators/src/adaptors/coalesce.rs",
+      "to": "src/interface/dom/src/kernel/iterators/adaptors/coalesce.rs"
+    },
+    {
+      "from": "src/foundation/text/constant-text-join/src/lib.rs",
+      "to": "src/interface/dom/src/kernel/constant_text/mod.rs"
+    },
+    {
+      "from": "src/foundation/text/html-escaping/src/functions.rs",
+      "to": "src/interface/dom/src/kernel/html_escaping/functions.rs"
+    },
+    {
+      "from": "src/foundation/text/html-escaping/src/lib.rs",
+      "to": "src/interface/dom/src/kernel/html_escaping/mod.rs"
+    },
+    {
+      "from": "src/foundation/text/html-escaping/src/decode/mod.rs",
+      "to": "src/interface/dom/src/kernel/html_escaping/decode/mod.rs"
+    },
+    {
+      "from": "src/foundation/text/html-escaping/src/encode/mod.rs",
+      "to": "src/interface/dom/src/kernel/html_escaping/encode/mod.rs"
+    },
+    {
+      "from": "src/foundation/text/html-escaping/src/encode/html_entity/mod.rs",
+      "to": "src/interface/dom/src/kernel/html_escaping/encode/html_entity/mod.rs"
+    },
+    {
+      "from": "src/foundation/text/html-escaping/src/encode/html_entity/unquoted_attribute.rs",
+      "to": "src/interface/dom/src/kernel/html_escaping/encode/html_entity/unquoted_attribute.rs"
+    },
+    {
+      "from": "src/foundation/text/html-escaping/src/encode/element/encode_impl.rs",
+      "to": "src/interface/dom/src/kernel/html_escaping/encode/element/encode_impl.rs"
+    },
+    {
+      "from": "src/foundation/text/html-escaping/src/encode/element/script.rs",
+      "to": "src/interface/dom/src/kernel/html_escaping/encode/element/script.rs"
+    },
+    {
+      "from": "src/foundation/text/html-escaping/src/encode/element/mod.rs",
+      "to": "src/interface/dom/src/kernel/html_escaping/encode/element/mod.rs"
+    },
+    {
+      "from": "src/foundation/text/html-escaping/src/encode/element/style.rs",
+      "to": "src/interface/dom/src/kernel/html_escaping/encode/element/style.rs"
+    },
+    {
+      "from": "src/foundation/text/html-escaping/src/decode/html_entity/mod.rs",
+      "to": "src/interface/dom/src/kernel/html_escaping/decode/html_entity/mod.rs"
+    },
+    {
+      "from": "src/foundation/text/html-escaping/src/decode/html_entity/tables.rs",
+      "to": "src/interface/dom/src/kernel/html_escaping/decode/html_entity/tables.rs"
+    },
+    {
+      "from": "src/foundation/text/html-escaping/src/decode/element/decode_impl.rs",
+      "to": "src/interface/dom/src/kernel/html_escaping/decode/element/decode_impl.rs"
+    },
+    {
+      "from": "src/foundation/text/html-escaping/src/decode/element/script.rs",
+      "to": "src/interface/dom/src/kernel/html_escaping/decode/element/script.rs"
+    },
+    {
+      "from": "src/foundation/text/html-escaping/src/decode/element/mod.rs",
+      "to": "src/interface/dom/src/kernel/html_escaping/decode/element/mod.rs"
+    },
+    {
+      "from": "src/foundation/text/html-escaping/src/decode/element/style.rs",
+      "to": "src/interface/dom/src/kernel/html_escaping/decode/element/style.rs"
+    },
+    {
+      "from": "src/foundation/interface/reactivity/src/computed/async_derived/mod.rs",
+      "to": "src/interface/dom/src/kernel/reactivity/computed/scoped_future.rs",
+      "retained_section": "ScopedFuture owner/observer context only; AsyncDerived and suspense removed"
+    }
+  ],
+  "macro_exports": {
+    "blog-dom": [],
+    "blog-collections-generation-map": [
+      "__serialize_key",
+      "new_key_type"
+    ],
+    "blog-collections-tuple-builder": [],
+    "blog-diagnostics-browser-panic": [],
+    "blog-interface-browser-events": [],
+    "blog-interface-browser-timers": [],
+    "blog-interface-dom-operations": [
+      "debug_error",
+      "debug_log",
+      "debug_warn",
+      "error",
+      "log",
+      "warn"
+    ],
+    "blog-interface-reactivity": [
+      "unwrap_signal"
+    ],
+    "blog-interface-vector-drain": [],
+    "blog-interface-view-errors": [],
+    "blog-interface-view-tree": [
+      "no_attrs",
+      "ok_or_debug",
+      "or_debug"
+    ],
+    "blog-memory-erased-reference": [],
+    "blog-memory-shared-value": [],
+    "blog-runtime-task-dispatch": [],
+    "blog-sync-async-lock": [],
+    "blog-sync-notification-wait": [
+      "easy_wrapper"
+    ],
+    "blog-sync-owned-guard": [],
+    "blog-sync-poison-policy": [],
+    "blog-sync-thread-bound-value": [],
+    "blog-syntax-typed-alternatives": [
+      "Either",
+      "either"
+    ],
+    "blog-syntax-view-iterators": [],
+    "blog-text-constant-text-join": [],
+    "blog-text-html-escaping": []
+  },
+  "retire_after_consumer_validation": [
+    "blog-collections-generation-map",
+    "blog-collections-tuple-builder",
+    "blog-diagnostics-browser-panic",
+    "blog-interface-browser-events",
+    "blog-interface-browser-timers",
+    "blog-interface-dom-operations",
+    "blog-interface-reactivity",
+    "blog-interface-vector-drain",
+    "blog-interface-view-errors",
+    "blog-interface-view-tree",
+    "blog-memory-erased-reference",
+    "blog-memory-shared-value",
+    "blog-runtime-task-dispatch",
+    "blog-sync-async-lock",
+    "blog-sync-notification-wait",
+    "blog-sync-owned-guard",
+    "blog-sync-poison-policy",
+    "blog-sync-thread-bound-value",
+    "blog-syntax-typed-alternatives",
+    "blog-syntax-view-iterators",
+    "blog-text-constant-text-join",
+    "blog-text-html-escaping"
+  ],
+  "shared_futures_retained": true,
+  "unsafe_facade_retained": true,
+  "original_modules": {
+    "blog-collections-generation-map": "slots",
+    "blog-collections-tuple-builder": "tuples",
+    "blog-diagnostics-browser-panic": "browser_panic",
+    "blog-interface-browser-events": "events",
+    "blog-interface-browser-timers": "timers",
+    "blog-interface-dom-operations": "browser_helpers",
+    "blog-interface-reactivity": "reactivity",
+    "blog-interface-vector-drain": "vector_drain",
+    "blog-interface-view-errors": "view_errors",
+    "blog-interface-view-tree": "view_tree",
+    "blog-memory-erased-reference": "erased_value",
+    "blog-memory-shared-value": "shared_value",
+    "blog-runtime-task-dispatch": "tasks",
+    "blog-sync-async-lock": "async_lock",
+    "blog-sync-notification-wait": "notification_wait",
+    "blog-sync-owned-guard": "owned_guard",
+    "blog-sync-poison-policy": "poison",
+    "blog-sync-thread-bound-value": "thread_bound",
+    "blog-syntax-typed-alternatives": "alternatives",
+    "blog-syntax-view-iterators": "iterators",
+    "blog-text-constant-text-join": "constant_text",
+    "blog-text-html-escaping": "html_escaping"
+  },
+  "removed_modules": {
+    "blog-sync-async-lock": "async_lock",
+    "blog-sync-notification-wait": "notification_wait"
+  },
+  "retired_without_retained_source": [
+    "blog-sync-async-lock",
+    "blog-sync-notification-wait"
+  ],
+  "specialization": [
+    "Remove unused AsyncDerived/ArcAsyncDerived/Suspend/AsyncTransition and their locks and notification strategy",
+    "Retain ScopedFuture owner/observer context for ordinary task/effect lifecycle",
+    "Remove unused EitherFuture generation",
+    "Adapt actual CSR consumers, macro hygiene, public aliases and documentation examples",
+    "Remove unused generic Action/MultiAction; retain product-specific browser/common.rs Action",
+    "Use existing shared Futures LocalPool for explicit native example driver; browser backend unchanged",
+    "Preserve literal component Rust/Markdown docs, remove obsolete RSX doc wrapping",
+    "Constant-fold selected CSR cfg predicates, preserve original source/license archives",
+    "Resolve imported macro exports and actual namespaces; retain original root missing_docs and safe facade unsafe forbids"
+  ],
+  "post_merge_profile": "CSR only; no generic async resources/suspense",
+  "tests": {
+    "upstream_scope": "Original independent upstream development harnesses remain in original source archives. Standalone cfg(test) modules requiring retired dev tooling were not brought into the owned CSR kernel; retained direct kernel tests and maintained consumers/executable docs validate supported APIs.",
+    "owned_interface_unit_tests": 29,
+    "csr_components": 8,
+    "kernel_state": 5,
+    "macro_unit_tests": 2,
+    "browser_domain": 13,
+    "dom_rustdoc_examples": 480,
+    "original_ignored_rustdoc_examples": 4,
+    "dom_unit_tests": 2,
+    "dom_rustdoc_passed": 476,
+    "dom_rustdoc_ignored": 4
+  },
+  "observed_rust_source_sha256": {
+    "src/interface/dom/src/attribute_interceptor.rs": "ff7d4140643411035849727d67dcccb20d2402326f9baff6434828b8e2750676",
+    "src/interface/dom/src/mount.rs": "db6f6b7970e60932fc0b783faa2e30368caaf0ee9a07c9d537fb75934d00b2e1",
+    "src/interface/dom/src/text_prop.rs": "c242ff876b280d417e8868c97cf19609a5e10baecb56d8e4e800f9bc51529177",
+    "src/interface/dom/src/show_let.rs": "ba68f0ed0ee211528208973209dc41ae4f36c4830cb831ffa26d4dffe6f3805e",
+    "src/interface/dom/src/show.rs": "6a2fc248f7c653ab7f31629a6f1470d80a3284ec654a242a71edf71ef02460e9",
+    "src/interface/dom/src/into_view.rs": "6bd51f2006f13187b6623a5a59447608406bf86e8b50f386c5c1117db0523d50",
+    "src/interface/dom/src/portal.rs": "6d89a3226af3060dc99835dc17a94b6070d29ec9eb10e0efa799582182d71d01",
+    "src/interface/dom/src/children.rs": "f1e3a332ea50cd61c2198d718e54e6eedc4470eb2dcc125fbb8d762ff2d43def",
+    "src/interface/dom/src/provider.rs": "ddfd306190e64a0728a6d07238c4e10fb3616d16d01c877d4dcb6c26c8660013",
+    "src/interface/dom/src/component.rs": "4b2ca289417e0075ad8ea42486daca256505125f6d8a73455ac663fd6f84cec4",
+    "src/interface/dom/src/for_loop.rs": "d0bc7144816e044974f043011ecf185801fbd6676ae02fd897d019d532a9a865",
+    "src/interface/dom/src/lib.rs": "a04ca1f4cd7262921aa403812a26f5abc3b6c98650e77445d3eaf77104670a81",
+    "src/interface/dom/src/animated_show.rs": "c820e23454d0886cf0285e6c7a9df88b47555f129aef80e7d5a646d4061f80ea",
+    "src/interface/dom/src/kernel/alternatives/mod.rs": "ebc8249421021e67a2d1f317d1437ef14919a3bd75d2e0890eb41616cc7e3b6f",
+    "src/interface/dom/src/kernel/iterators/zip_eq_impl.rs": "91d7036b4bdab92e7ff95adc246ed1f5b6a0d5cf34d07591640d9a74bc0679c9",
+    "src/interface/dom/src/kernel/iterators/k_smallest.rs": "a6840980e4c1aedd6987f93c904d362aa09a101537e447121fff58bb2473638d",
+    "src/interface/dom/src/kernel/iterators/rciter_impl.rs": "fc962a8daecf007792ad2a6ddfe5c5050331fffff4dd89f0975a5e447c9046fb",
+    "src/interface/dom/src/kernel/iterators/intersperse.rs": "5b02cc8b3370d341097e0139a33e12087d4708acb32af056275a198beb856180",
+    "src/interface/dom/src/kernel/iterators/extrema_set.rs": "11de200d853941716e9aa9a9b520b006704827c3c43a0c5f067906b0941e51d1",
+    "src/interface/dom/src/kernel/iterators/unique_impl.rs": "fdb9a9e36c15feb2165e93a111724c8addce86a81576e05b763e0c2921b57ff5",
+    "src/interface/dom/src/kernel/iterators/iter_index.rs": "57bd693a125c0e394571f32516a7f5534cf31c4416a82f5de063a53a3dc5942c",
+    "src/interface/dom/src/kernel/iterators/multipeek_impl.rs": "8088a280464063fbb61fe9d1739ae955c5e96fd32aa2bf47f92a10bba453dcfd",
+    "src/interface/dom/src/kernel/iterators/free.rs": "673fc1142dbc1f198885195cac1c475e37e50dcf51e847e97318355bac47cffb",
+    "src/interface/dom/src/kernel/iterators/sources.rs": "639686124ee6b873dc1f4a5b5c7cfce3371bac30c06f671478d1b1a2a210b776",
+    "src/interface/dom/src/kernel/iterators/diff.rs": "cf170b74dbac6dae13f56ef12692ecaf988e7b1b357396b6c45db20b3b195169",
+    "src/interface/dom/src/kernel/iterators/pad_tail.rs": "0e9210c7d69f33af4626514325d4bf3f042af1954d203e938dcc5d0ace0551e2",
+    "src/interface/dom/src/kernel/iterators/group_map.rs": "6eb39b38880c402dc2496a33b3e9d79b5f0a2a8084ff5abb23c2dbe2a9b7957a",
+    "src/interface/dom/src/kernel/iterators/size_hint.rs": "6022c2327ddc6df7e7b939eb60a93ee66ea9aa4d3aab49b9952e663ff4bff10b",
+    "src/interface/dom/src/kernel/iterators/peek_nth.rs": "59ae0e128c898d6b873d14cfdffbc44a3786ad612738a357d228e2fcfe2ad26a",
+    "src/interface/dom/src/kernel/iterators/combinations.rs": "9a58683fd799e95dc7352bb165c99c31cf6431052042197a7db4cca97ee140b3",
+    "src/interface/dom/src/kernel/iterators/next_array.rs": "14f3b4adf2e2481bf5f608338261bef38ed48b4a9e2b58ecbce2991f23c38372",
+    "src/interface/dom/src/kernel/iterators/concat_impl.rs": "15345ade6400bf8ebad162a200413db834ecb9344214a35bdfa07e2ac4da3a67",
+    "src/interface/dom/src/kernel/iterators/either_or_both.rs": "eed48d1d6dd6a3652e9f03f1617b16203fd42cbef9900805218ba1cbb4340042",
+    "src/interface/dom/src/kernel/iterators/unziptuple.rs": "931be9d3998fd8656edbf993f805ab219b4a897754af5df94deac758165a6a8e",
+    "src/interface/dom/src/kernel/iterators/impl_macros.rs": "97fc5f39574805e0c220aa462cf1ae7dcac5c1082d6ee5500e7d71c120db5f88",
+    "src/interface/dom/src/kernel/iterators/kmerge_impl.rs": "83482687b8954b4a1646f5755ba794a758a2334231d90a08a6f9ac745827f9e6",
+    "src/interface/dom/src/kernel/iterators/lazy_buffer.rs": "47dc875c07e15bf4eb2357688e632ade78f74e3f668f7e741120450d76b1c3ce",
+    "src/interface/dom/src/kernel/iterators/repeatn.rs": "7fae1f4026ee58760e17cb37c0a8b1afab86aa666fa0e00cf7912fd721ee6179",
+    "src/interface/dom/src/kernel/iterators/permutations.rs": "57e50fa70610e52428187acd89ac1ee27c267a5d84b1b1b1e91b6dd64ad6cf91",
+    "src/interface/dom/src/kernel/iterators/combinations_with_replacement.rs": "fdce3d56fb3bfbb6ffd88ec18ac2a44d42c08f4fb60a52e328a14fff894d840b",
+    "src/interface/dom/src/kernel/iterators/zip_longest.rs": "b9f9cf7d0824258a56005859abee7701055e431c2ea000c20367de198a12c389",
+    "src/interface/dom/src/kernel/iterators/duplicates_impl.rs": "6ccc2404c74fc6feabf35beea182c256aa946c1bcbd6e34f6c6eeb728f7cc3a0",
+    "src/interface/dom/src/kernel/iterators/process_results_impl.rs": "46cdbb9938fb62e19ccb5cbe0c7fee59b2538e57451eb10e670e09553e93ff09",
+    "src/interface/dom/src/kernel/iterators/tuple_impl.rs": "7cbd31b708fdf73935080913b1c8aa64f8f6c1478076d11dc52132bf52d80757",
+    "src/interface/dom/src/kernel/iterators/tee.rs": "0fbd6f1aeb8004e19cdf07d26c5e338046f3e7879bb31ab4e13b02445a7bab3a",
+    "src/interface/dom/src/kernel/iterators/put_back_n_impl.rs": "f154f2d13b42b804d2cdc1d7b5974f5038e009e3800108902e29e46da4684cd0",
+    "src/interface/dom/src/kernel/iterators/mod.rs": "a2fa7ab695bf5ac5b8e91c757478d26eb875abb78fa6b4619f11873a9fa10f9f",
+    "src/interface/dom/src/kernel/iterators/groupbylazy.rs": "92b4339d1d93254ad4a6e3404029f14b1929247b5a291f76bf1c93ca850aebea",
+    "src/interface/dom/src/kernel/iterators/exactly_one_err.rs": "de5fb6f58394130007b1d89012fa576031cebba3b3b7d14fcf012fae069c8366",
+    "src/interface/dom/src/kernel/iterators/peeking_take_while.rs": "a6e0d598d203f3fd852468d4ff9a648f23ff61a37b3a3ff771ffd6c045f090e1",
+    "src/interface/dom/src/kernel/iterators/merge_join.rs": "749131f5660ba8977f483c63b4182717f0f1fef0864dcdfd220082adde7ab1e5",
+    "src/interface/dom/src/kernel/iterators/format.rs": "7bdee9f27eb8e126e7906bbe068d0b56beeaab87e9c5a47f210fee42e83553f2",
+    "src/interface/dom/src/kernel/iterators/minmax.rs": "9c3f6489d343fca8c351b579fe0b4d9414acf307dd176b7d4235bbb17f6e435f",
+    "src/interface/dom/src/kernel/iterators/powerset.rs": "effaae8e9ec4925b314fbe6a56395eb01ed1c9688c5c990d06c927d661464491",
+    "src/interface/dom/src/kernel/iterators/with_position.rs": "314ed2282c9fbb6d797fd5b7f15ef4dab0223071b027fbe5e6f9f80cc64dd6d2",
+    "src/interface/dom/src/kernel/iterators/cons_tuples_impl.rs": "d6c07de4a62dd4968e1753bff76cf0486d73a9715d978605176823b391c41a42",
+    "src/interface/dom/src/kernel/iterators/flatten_ok.rs": "7debe03b2eddabba349b32e4403576efd310a8d098f7358267296c4573f3db6f",
+    "src/interface/dom/src/kernel/iterators/ziptuple.rs": "22617c7be08bf66db2d0322a043b32a27ed5b3d6046d523d1e5d0d72a9393033",
+    "src/interface/dom/src/kernel/iterators/grouping_map.rs": "eac9797782753f1d83f5165a0f9a9e0e1ae73784dc5cbeb1f04531246566e418",
+    "src/interface/dom/src/kernel/iterators/take_while_inclusive.rs": "02ae98279051b6424f3652ab8ff3f012bed72a4af34e9140e52bd80fd80520f0",
+    "src/interface/dom/src/kernel/view_tree/oco.rs": "e3224da292c890663ba0fe568f227c3c4c1aa48bc7bdc90adf665660c4413e44",
+    "src/interface/dom/src/kernel/view_tree/mod.rs": "26d781344fd4ceced9e7ef0f0ddb860b487d15e2e17398d1b298a1f65816bc2e",
+    "src/interface/dom/src/kernel/view_tree/dom.rs": "581b3fc173e231c53b7d34ac47598aae0b821d05c339438b3479f5e76ff65c7b",
+    "src/interface/dom/src/kernel/view_tree/hydration.rs": "bca9d18593ff54bd615b4cd1e8aea64a837fa4e93b185b0a8caa563c84076f88",
+    "src/interface/dom/src/kernel/view_tree/erased.rs": "ad7cb1a4c6026139e305822c9013e74ef434d3578db42564a9e68f4088c8dac4",
+    "src/interface/dom/src/kernel/browser_helpers/logging.rs": "9101010a009388222f1042b4fc48210cbcd2676612e09145e07bdc28e41a19ad",
+    "src/interface/dom/src/kernel/browser_helpers/mod.rs": "3610d220c450ae2dfe524814bbe80bd97b9f14203868dc4cfd3bd6017506276f",
+    "src/interface/dom/src/kernel/browser_helpers/helpers.rs": "bf807cbdbfb6777fa969866880567a97d573ec0f7c58b50e70a2032337e78fc0",
+    "src/interface/dom/src/kernel/slots/sparse_secondary.rs": "4d8bc583bb3eccb6989e436806997a23477aed8aba742713d3b9f161be84f12c",
+    "src/interface/dom/src/kernel/slots/hop.rs": "6b80fb5056711e27a15c9ed19cf58be59b879cdc1fdfbd5ee32b7d401757d4ee",
+    "src/interface/dom/src/kernel/slots/dense.rs": "5d0f2de59fada3e8efd2a902bed29afe0da2f3887237917c10190cf203032304",
+    "src/interface/dom/src/kernel/slots/mod.rs": "3126f3eed5983c42d0b3f3f5dd4021d46814297642614b791623e895cf6ff627",
+    "src/interface/dom/src/kernel/slots/util.rs": "e21f0622fc4a94b2a6a7efc7ddaa6266914a471ec7eaedc279034bfd24c9a68a",
+    "src/interface/dom/src/kernel/slots/basic.rs": "c604e93ca062a77eb039feecccde96d848edd4cb652f877eed5f1d0f02dc1dad",
+    "src/interface/dom/src/kernel/slots/secondary.rs": "f0de6f3a2fc532876515cc3c734294522f97a43f51811d01072139eaa75ba124",
+    "src/interface/dom/src/kernel/owned_guard/mod.rs": "5ae3e1e88246d443f4c1b972e244fe6a6e0c2107c52be1e6f9f44ab06a220c73",
+    "src/interface/dom/src/kernel/constant_text/mod.rs": "7a629f0e29435b96cf66c2b6710f0c862399c97438155d56a1dd87dd58bfefe2",
+    "src/interface/dom/src/kernel/erased_value/erased_mut_ref.rs": "4d0e21e8fde06666e4740113e695abf8abd3a05bf7699fb7307926161a7c415a",
+    "src/interface/dom/src/kernel/erased_value/erased_box.rs": "2268908ebbb745ec42fca809c6e669f8dd52d374df62dde24a05a4cfac07a448",
+    "src/interface/dom/src/kernel/erased_value/erased_ref.rs": "8d01b1c19b977ac6b42613ccb833b2d25fe105c9197252c3dfee219d21265655",
+    "src/interface/dom/src/kernel/erased_value/mod.rs": "2a970c7a570c2d1c0094ee41baf57e8067d50bb72993dea4012f1e339adde0a5",
+    "src/interface/dom/src/kernel/thread_bound/mod.rs": "4e1209a0a67875af8f6533d1b4129cd3277a73fb9bbd63d093f60ab11f75d243",
+    "src/interface/dom/src/kernel/thread_bound/futures.rs": "f9857a5f8031668b8622d387fceb840e343e78d6942dbfabbc27b3e03c7d5ff6",
+    "src/interface/dom/src/kernel/vector_drain/mod.rs": "b855ae82bf14ae506bd6f7f54fe3d5508571f468da5824c5755c00a39737a057",
+    "src/interface/dom/src/kernel/vector_drain/copypasted_impl.rs": "a993a30c5c6e67fa4741571cc33cef0195152e57cbe7c4bbd4ab9282c0133b7e",
+    "src/interface/dom/src/kernel/shared_value/mod.rs": "7dada81bc241834603d39d4be19e3de22763d32129efadcf6dcc3f70b4b9c070",
+    "src/interface/dom/src/kernel/poison/mod.rs": "20838a762b23b5c3bc6a40a091aac2cb99f94cf3ddfe7b4c3574713809d2cc69",
+    "src/interface/dom/src/kernel/events/mod.rs": "2b3d58951425991a7c2b1dba98f51f1a5294c159124aeceb7e7a628e02a04e94",
+    "src/interface/dom/src/kernel/view_errors/mod.rs": "519210145aea25175f6586d12d28ab0ce2feed91aac5fa259275e4558c919b1d",
+    "src/interface/dom/src/kernel/reactivity/wrappers.rs": "4844c8af49b4f47f64fc81620ca4f8941d9869f579bb602a2ca6dbaad4875fb5",
+    "src/interface/dom/src/kernel/reactivity/nightly.rs": "dbfc678fcd5a07ba86e43202191099aa2129f990dadbbb166475c832f149b45e",
+    "src/interface/dom/src/kernel/reactivity/graph.rs": "7aa98d6f91b532db8669851cc43a2253ff0f6b34a30e49c7b924b4d39782ee5b",
+    "src/interface/dom/src/kernel/reactivity/serde.rs": "5a4b7a9f13757c6120e5ae842e0052237483bf92bb429ebeaf6b10c863f407e2",
+    "src/interface/dom/src/kernel/reactivity/effect.rs": "d7c27a4667d78a7bd46b60b90e2364ce9643154a0fd197569d6b951d7357d4df",
+    "src/interface/dom/src/kernel/reactivity/trait_options.rs": "294c14a4e996557ba12461ac0be9fa182686176ed61fcea6ca7d196f25fbad2e",
+    "src/interface/dom/src/kernel/reactivity/mod.rs": "1d77a75d237863af98c6a74d8256731041d0dddf2dc1d35d9272a10a97033106",
+    "src/interface/dom/src/kernel/reactivity/signal.rs": "e1841dca89ff6ca47b9af9df2ecf4d7f3280bb8bca3017a1923505657c73c0b1",
+    "src/interface/dom/src/kernel/reactivity/traits.rs": "e94c9ee5b474d6ebc384f228a3be47ea67134e4b7ed500fe7b136241f6c7401f",
+    "src/interface/dom/src/kernel/reactivity/diagnostics.rs": "937e634af229a2921ac2ba8ea629eb87b2e352a9fb0e45bb2a3cefcf26fac201",
+    "src/interface/dom/src/kernel/reactivity/owner.rs": "c0ef612609d2b48725bc231243853d52876c1bfd93250e76b3b2d65fe5f8a63f",
+    "src/interface/dom/src/kernel/reactivity/into_reactive_value.rs": "66b5d7000446b9182c0bcc7bfc26f97f9e709149d20448bfed3eae07c059e57f",
+    "src/interface/dom/src/kernel/reactivity/send_wrapper_ext.rs": "73de9f17fa8ef290cba7e9952fa26b83de5ac3ef9b900f85cd84290a2fdb5747",
+    "src/interface/dom/src/kernel/reactivity/computed.rs": "ecdb93c63359befb86c3ecd26febb0154da7bac49d973720128a8cf45920d6d0",
+    "src/interface/dom/src/kernel/reactivity/channel.rs": "197fdbad932c7c26d4bedb82e9e5262fc7b46ba0abfe32d6a9184fa0f08807d6",
+    "src/interface/dom/src/kernel/reactivity/callback.rs": "6d573c93fc3bf761ba69260a2951735170fb4bd14173269db7754ce7c0f0aca6",
+    "src/interface/dom/src/kernel/tasks/mod.rs": "a565c12b4bb8e7019318070807aeeca5fc638cd1089e260e70edf787bea0820e",
+    "src/interface/dom/src/kernel/html_escaping/mod.rs": "b92f88859271905e4154b70fcae4b59f46961c760d95682c05aaab93b057bef3",
+    "src/interface/dom/src/kernel/html_escaping/functions.rs": "9e34122ceebe959ae7afbccbe20a938b0d65d76893e228ee98d016f3e0694642",
+    "src/interface/dom/src/kernel/tuples/mod.rs": "ab537f54cb052e4ee1468f534b43d6844683ed5dfcf81fd2ddfb7c834ddc9e2f",
+    "src/interface/dom/src/kernel/timers/future.rs": "07a38b1d2109317393752ed4c3eac4d215ccbdcefb25308c1f9c4b001a407c5d",
+    "src/interface/dom/src/kernel/timers/mod.rs": "7594093aed9335d9bac10bcdc6e9839134c7c2fab94feba8541c12111ae65d51",
+    "src/interface/dom/src/kernel/timers/callback.rs": "b201f83550b31636a295652b8f355aa9fb8e6f99034455a03c6269247f126638",
+    "src/interface/dom/src/kernel/browser_panic/mod.rs": "2ac5fdf89e37553b200e126f5ae2aac5f70c9dc50c73489a80346f43ee1f19ee",
+    "src/interface/dom/src/kernel/html_escaping/decode/mod.rs": "35d2fed73782903dfd3fa4db2f6257c079758e6a623283c337cf301ef2671201",
+    "src/interface/dom/src/kernel/html_escaping/encode/mod.rs": "35d2fed73782903dfd3fa4db2f6257c079758e6a623283c337cf301ef2671201",
+    "src/interface/dom/src/kernel/html_escaping/encode/html_entity/mod.rs": "810d38b01cfb64f6fba9a88b419160f7ba8a3ca7e254266e128f3253cef6be84",
+    "src/interface/dom/src/kernel/html_escaping/encode/html_entity/unquoted_attribute.rs": "562eee8abdea4a45a61ef915d6c32d9b5432d3b960419589559f061a7de4aa4d",
+    "src/interface/dom/src/kernel/html_escaping/encode/element/encode_impl.rs": "4ca961defa5673fa70c494327b98d168e2b34ef55da65736d75d0a839e4ab208",
+    "src/interface/dom/src/kernel/html_escaping/encode/element/script.rs": "902a8c100b0bf9f027fd5efc4e4704d7a36180b0f5ae925b77b29e353e85f5c4",
+    "src/interface/dom/src/kernel/html_escaping/encode/element/mod.rs": "63136594c5ab065741211ec8f98f4584f71330b4769dbb69cd5c7ffad85832a8",
+    "src/interface/dom/src/kernel/html_escaping/encode/element/style.rs": "eb0d6e927b047ff4444e07723dcc46f7f1b2cca966ec5bf24ffd273e42e066fe",
+    "src/interface/dom/src/kernel/html_escaping/decode/html_entity/mod.rs": "1cfcd8e11644f65767e33b9b4335278e55236cae7e10653e4e305051b22c9362",
+    "src/interface/dom/src/kernel/html_escaping/decode/html_entity/tables.rs": "66728a10ea4ae2708ed036b60e151f3e19a3fa9e544332a49821241c7de6a5d9",
+    "src/interface/dom/src/kernel/html_escaping/decode/element/decode_impl.rs": "e82ab9097fc5d2e79c35dd82f861a93653d60849c5413e0ad8244f22634c4d37",
+    "src/interface/dom/src/kernel/html_escaping/decode/element/script.rs": "5425fda0852d8a828a1f6dc57f39b502a37d978e3ebffbe4e643ec54182394e9",
+    "src/interface/dom/src/kernel/html_escaping/decode/element/mod.rs": "75b29ebaa28e041a9ba6739bd27cadf14397f59c472072aab2c0572b30440ab6",
+    "src/interface/dom/src/kernel/html_escaping/decode/element/style.rs": "309ce7e878a137875189de36a314f320dc9307bef9e355787642b82c4ce5fb9e",
+    "src/interface/dom/src/kernel/reactivity/signal/arc_rw.rs": "f5a4a7b157b5b78cd8dd124cf4be76f88880aca85c3ab495fd0eaf718c748814",
+    "src/interface/dom/src/kernel/reactivity/signal/arc_trigger.rs": "9fc5dec4788af5de5eba7b3fff3063936b878564c23863f51bdfde6d41da3c35",
+    "src/interface/dom/src/kernel/reactivity/signal/mapped.rs": "39fb2bc182577fa09165ac2f801955267aa5d612f24953bfcfba63783f16101c",
+    "src/interface/dom/src/kernel/reactivity/signal/subscriber_traits.rs": "84919a366787a7ea919167762864bdc3f5506daff07e68b8eec833209c819b58",
+    "src/interface/dom/src/kernel/reactivity/signal/arc_read.rs": "6c21ca7814322a573cb7e5ec245a2762b23a0b6b4c2200f3f8f74340a349d9d4",
+    "src/interface/dom/src/kernel/reactivity/signal/rw.rs": "8d37afabcf2283b4808b1e0ec544f2d3bc2032d416466ca94da8cbeedfd019f1",
+    "src/interface/dom/src/kernel/reactivity/signal/guards.rs": "10a111906138464c08fa56238a6e679ffd5e89ed8e1601f2537de2c735e1c304",
+    "src/interface/dom/src/kernel/reactivity/signal/trigger.rs": "29e61e0b29d61f91614f2dbea35e99044aba3874831ffdde986819550cba2119",
+    "src/interface/dom/src/kernel/reactivity/signal/read.rs": "b32239316b71c2c5d344eaf16504cc0d032671824bb62ac8010f228135ebcfa7",
+    "src/interface/dom/src/kernel/reactivity/signal/write.rs": "0ad593599ffff90b6f36911ec0268b99967dc840f1d25b398fecb3384514a24f",
+    "src/interface/dom/src/kernel/reactivity/signal/arc_write.rs": "cf4e3b7930b633eec4b044a3cfcaee8b6091f9d384da37f0495d88c616173157",
+    "src/interface/dom/src/kernel/reactivity/effect/effect.rs": "cc965fbddff6b845ca1bf5d035301a57ae0320dc5a1663b60b323e6e96fecea4",
+    "src/interface/dom/src/kernel/reactivity/effect/immediate.rs": "982c934747479df810597c4b35d818c70a04f477ae65bbd94372e31b07b36d80",
+    "src/interface/dom/src/kernel/reactivity/effect/render_effect.rs": "7f25831d061f212a57e909453fed61cf7e99c613ae32edac8e6c14bf8bcceebc",
+    "src/interface/dom/src/kernel/reactivity/effect/inner.rs": "6eff92a573bdbc095881649ef41e9ec0aafd3b6386af6abc0490bad0c1fb0dfd",
+    "src/interface/dom/src/kernel/reactivity/effect/effect_function.rs": "301207462962dad1e241e8e45e3bbd1064654aaa348e311f922f18eddd9a8346",
+    "src/interface/dom/src/kernel/reactivity/computed/selector.rs": "7dc10c95f86cd9da3f4898fe03ffe038e5f7ebaf429428aa1965e14eb471629c",
+    "src/interface/dom/src/kernel/reactivity/computed/arc_memo.rs": "8226b7ff575d63c34354807129e9319c1e0de584df7e89a25a952e5701f71bc9",
+    "src/interface/dom/src/kernel/reactivity/computed/scoped_future.rs": "62ec1989a8f8faa23382881361a75d44434a867814e434602be5b25b2afd2c00",
+    "src/interface/dom/src/kernel/reactivity/computed/memo.rs": "fb8d4164df9c31ec7f1eaade8fef0febaec1929e66b090918ed0dff66b6182d8",
+    "src/interface/dom/src/kernel/reactivity/computed/inner.rs": "4c1159f6835d408b3eba3a309a6eef39169244fb7db6132510587754fd22c86a",
+    "src/interface/dom/src/kernel/reactivity/owner/stored_value.rs": "e5ff144ace5c36c5d877d5d53cd42766b89621bd45bcdc5dbf95d6d5dce73bfb",
+    "src/interface/dom/src/kernel/reactivity/owner/context.rs": "71ab9b9e6145a245d61f9a490c015ac00de1f09bf2bb178f02a06896d8b793d8",
+    "src/interface/dom/src/kernel/reactivity/owner/storage.rs": "91b74997914971001e7f8c7746da618f50f7f679d7352540beb2eb326ce3b465",
+    "src/interface/dom/src/kernel/reactivity/owner/arena_item.rs": "c2be1ac744c65c218edb26067f311b305a38ff3cde23cc0389fb9b61f97f2124",
+    "src/interface/dom/src/kernel/reactivity/owner/arena.rs": "a9972e420167d3a33ac4552d76bd2193c27b6612854ab2d58372c99f4cdf706e",
+    "src/interface/dom/src/kernel/reactivity/owner/arc_stored_value.rs": "7a2c1465eb32b03ccbb76c34673e04ccada9fc354077e537a8512734417887c0",
+    "src/interface/dom/src/kernel/reactivity/graph/node.rs": "a9de4be297d6fcbc2f9b5c3344132b1f85f01d9870ef5adb7ce7ca1ebe46cc6e",
+    "src/interface/dom/src/kernel/reactivity/graph/sets.rs": "b8c466fef5e198f5dea967276f0bc0de916b802d228cd76effdfc5ecf2dfcc16",
+    "src/interface/dom/src/kernel/reactivity/graph/source.rs": "468f6926e182521afe053c9db7ccd9394843bf712780a1547a7b8ed54b11124a",
+    "src/interface/dom/src/kernel/reactivity/graph/subscriber.rs": "a6c6b94343bb50f457f4c93e083fa31d0889bb01354698227a454fa6aeae35f5",
+    "src/interface/dom/src/kernel/browser_helpers/macro_helpers/tracing_property.rs": "8843403482080636091a373f4530005d5654eda33f0013846ecffcd2a6b24092",
+    "src/interface/dom/src/kernel/browser_helpers/macro_helpers/mod.rs": "4dd17770e33aa7c9f401d05599e23f5b631260fef78299ec2cf03c5ccf0f6fb8",
+    "src/interface/dom/src/kernel/view_tree/reactive_graph/inner_html.rs": "95331750073e8953175a44a01d80d938e08f542cca60f31ca33328e8c3291a02",
+    "src/interface/dom/src/kernel/view_tree/reactive_graph/mod.rs": "397eb3f99e777524ace56c4528edd7bae977bf37756373ae04da2e3c8c298bc7",
+    "src/interface/dom/src/kernel/view_tree/reactive_graph/owned.rs": "ed4017fca6e20bad1b14cd3edc7d884e8d93690972235a6369d09b3fd0e16340",
+    "src/interface/dom/src/kernel/view_tree/reactive_graph/class.rs": "2fb5d49f65165ad88a31d9dcb24d170fbd6478a35d2a5b784fad650be9669d33",
+    "src/interface/dom/src/kernel/view_tree/reactive_graph/property.rs": "ae21132647750bfcd66c227610bbbd559c4fde15bde2ffb3b5da6f8bb529c507",
+    "src/interface/dom/src/kernel/view_tree/reactive_graph/bind.rs": "9081a755b0043aba274e1d8626e96ec12de0de15ace5530417c6957737041d31",
+    "src/interface/dom/src/kernel/view_tree/reactive_graph/node_ref.rs": "e88f345982a8bd63e919d43c5cc924b2d67464acdef32a9a0775e5876714386a",
+    "src/interface/dom/src/kernel/view_tree/reactive_graph/style.rs": "443009af81b57bc73120352fe21549d2e93d6f6b0caa397d453a9f15b4f1748a",
+    "src/interface/dom/src/kernel/view_tree/html/directive.rs": "a79e0f2250ecbf39b3418e7af1ecd3eaa021a62b14717f6244cdceb8b7179fab",
+    "src/interface/dom/src/kernel/view_tree/html/islands.rs": "cf57c0f1f30d21b030fe405d6cf07dbecde706d0b98034168cace6ce098ba3b2",
+    "src/interface/dom/src/kernel/view_tree/html/event.rs": "17b49850183ee7e7e714b54725cfe6a37c4143483d9b526b6928503a1e1fc57c",
+    "src/interface/dom/src/kernel/view_tree/html/mod.rs": "42c8a7b5887f49c62d9cf4a861c4b65d1530dd537c2237d090860d7dd028b970",
+    "src/interface/dom/src/kernel/view_tree/html/class.rs": "d1f2a169a7bebb98e237c2c8b773068cb1fda9cba71a7c8c65d0aee379cde46c",
+    "src/interface/dom/src/kernel/view_tree/html/property.rs": "15f5ee750f97fc1a6277950a033c23dd1d9b5def8e70ba9202e5b9fd13c15a46",
+    "src/interface/dom/src/kernel/view_tree/html/node_ref.rs": "dc5a75296605cc6d175d5efb88a023f4e1104f9af3310e71a8a0e04cac1f1fa7",
+    "src/interface/dom/src/kernel/view_tree/html/style.rs": "3be0f4511fe4371557a3757eff5de941921554b98952f770ba24189e7132a64b",
+    "src/interface/dom/src/kernel/view_tree/ssr/mod.rs": "89b0bf7ed3bec09fc22fadfa8ba1489a52bbac252eb72221a847292614bb3cec",
+    "src/interface/dom/src/kernel/view_tree/view/template.rs": "ca9f996d0d4cf640491039423730e3f8d7d4df40c5fbf3e43b5ea233c3d22596",
+    "src/interface/dom/src/kernel/view_tree/view/tuples.rs": "e353c0d618d32597abfa277c56c10032ab0557b7f9b8ed0c3e5a2f3e0278da0f",
+    "src/interface/dom/src/kernel/view_tree/view/iterators.rs": "ae6889db4f9afcc383177a2297a5824437398ed1bff3cab7f5acbe28828f3e9c",
+    "src/interface/dom/src/kernel/view_tree/view/error_boundary.rs": "1a559a06484ad36fc5428e6b2d93a8f47be8f32e1789d69e5c8ed7b9ce2b2118",
+    "src/interface/dom/src/kernel/view_tree/view/primitives.rs": "4dc440e332e95fc5383249e5157e5c3e7f0e3d83786fa7266370f759be17a448",
+    "src/interface/dom/src/kernel/view_tree/view/static_types.rs": "c271a520273f77121c67a2a4fc34d07dc005f5fd9f20814a081d8456654c6f96",
+    "src/interface/dom/src/kernel/view_tree/view/mod.rs": "5b4b495d87978990b9bc58db86aa3e1ce8de8809d6ccdc1ec846e023b841a366",
+    "src/interface/dom/src/kernel/view_tree/view/fragment.rs": "5dba354ed056f562e8cfaaec7926d524099d9be135794ff2be4c70e74ef32db2",
+    "src/interface/dom/src/kernel/view_tree/view/add_attr.rs": "d33534bf088b1700e918d6499c651b064d21b4bb7e6ba3be90973741c6919619",
+    "src/interface/dom/src/kernel/view_tree/view/keyed.rs": "21e98e203d90dc142bfcba4a22a3cc85ff1e6a481dcd2bd4512786ae5b25d19a",
+    "src/interface/dom/src/kernel/view_tree/view/any_view.rs": "ed9f19625016dd7272cf857102e2744b6afe3806611cb1b479b69f166e4d0d5a",
+    "src/interface/dom/src/kernel/view_tree/view/either.rs": "be9391535352e3643190b5e9667f6e17c4444be7ab84eb50711dc8a2f8980c39",
+    "src/interface/dom/src/kernel/view_tree/view/strings.rs": "dcc1760f90684436a46f3986afa5b6e82f7e59df41425394f52512c52c29d83e",
+    "src/interface/dom/src/kernel/view_tree/svg/mod.rs": "368576e63755a36fd9f5c1b83a5d7523ab7a471cf4bd659bc62793edd638c1b8",
+    "src/interface/dom/src/kernel/view_tree/mathml/mod.rs": "6bbc156378d7b7a80510f47de37b7c09acceca76c5a3e56e629caa060e8d3bfb",
+    "src/interface/dom/src/kernel/view_tree/renderer/mock_dom.rs": "ab534135a4f40a1e8c0a54f2b0e654ad8b2f60a8a9db51761246b0e4285029e5",
+    "src/interface/dom/src/kernel/view_tree/renderer/sledgehammer.rs": "f22ab82944666df742045f3cf78cbc3cbfa97f69b2e1a2c11baaddd34a72dad1",
+    "src/interface/dom/src/kernel/view_tree/renderer/mod.rs": "f16b74b097a832fe1497e8d3b4a94cb4196df4642d4b7637c5d97cae33462ea0",
+    "src/interface/dom/src/kernel/view_tree/renderer/dom.rs": "59094533ff8041f5c2377e8b650befd90b7f9bdf02b29926ffb8dd983e3ebc08",
+    "src/interface/dom/src/kernel/view_tree/html/element/inner_html.rs": "1bd7b7a85033dc9921008704c1c36f8d7bdcc519923712893ccbd671daf68b1c",
+    "src/interface/dom/src/kernel/view_tree/html/element/custom.rs": "38d0a888160b92a44edbb21f7a148b913ac07ac1b80dc3796d7405df819d03fe",
+    "src/interface/dom/src/kernel/view_tree/html/element/mod.rs": "c9018c52991b3591164c5391aab0bf496997b56e2de570cc29ec262e11487d13",
+    "src/interface/dom/src/kernel/view_tree/html/element/element_ext.rs": "891d12c6ba00546fd444e963e1ca8db28a1f2be6a35c75453f77f1cfdc25c909",
+    "src/interface/dom/src/kernel/view_tree/html/element/elements.rs": "10560069b2771d48da175734eae1277378baa6f24800b0d0d59423c3ab5822ae",
+    "src/interface/dom/src/kernel/view_tree/html/attribute/global.rs": "a30f4267f00b28defb290106cc86b1b64d960c2da35823308906e197c16784b6",
+    "src/interface/dom/src/kernel/view_tree/html/attribute/maybe_next_attr_erasure_macros.rs": "4fac9b6fc365474ae1be8beffed95d3de764adadcbe6b1b3d156dc771035f1ab",
+    "src/interface/dom/src/kernel/view_tree/html/attribute/custom.rs": "da199f8f27fef5e3e4de1865b45e2cbd1a6f211a6fc6bb8869810715b236044b",
+    "src/interface/dom/src/kernel/view_tree/html/attribute/value.rs": "ffff1fb8c58210ba4208f01868f80232c079fa2d794e5456b91c365e0733fdea",
+    "src/interface/dom/src/kernel/view_tree/html/attribute/mod.rs": "dc357440219cfb38658b474f47548a52b4128bf60969bcdcd8b217fa865c78ee",
+    "src/interface/dom/src/kernel/view_tree/html/attribute/key.rs": "54a2675154c997b361d25dddb22bb43e1e8c2e7bad2af07500668de77cd2223a",
+    "src/interface/dom/src/kernel/view_tree/html/attribute/any_attribute.rs": "0f83f7b2f785f8de49054e904319e6ef3046f513ac9206b85b75cafb92afd438",
+    "src/interface/dom/src/kernel/view_tree/html/attribute/aria.rs": "0b7532a9ad5dddc5b24c6240c9154d7bd8671592ec87e6d3cc228ef4981254d8",
+    "src/interface/dom/src/kernel/iterators/adaptors/map.rs": "a46333da8acd00feeffae619dc0666995f7421043111abaa95f940f0f6939d78",
+    "src/interface/dom/src/kernel/iterators/adaptors/multi_product.rs": "7d5a61d9be85b2d9dcdd92f02fbe4658257b9baf6fd08d706ce1d6719fce268a",
+    "src/interface/dom/src/kernel/iterators/adaptors/mod.rs": "fd41187c7bc54b48433998523ffab57eeee6e447424b373de9639d30378563d7",
+    "src/interface/dom/src/kernel/iterators/adaptors/coalesce.rs": "d7fd5ac00c7b6787ac75c772b84f6e23582268b1b907338a5a9a01aa94536e7f"
+  },
+  "validation": {
+    "wasm_app_check": "passed: /tmp/blog-shrink-phase2-wasm-final.log",
+    "strict_dom_wasm_clippy": "passed: /tmp/blog-shrink-phase2-clippy.log",
+    "owned_consumer_tests": "57 passed: /tmp/blog-shrink-phase2-tests-final.log",
+    "dom_unit_tests": "2 passed: /tmp/blog-shrink-phase2-dom-unit-final.log",
+    "dom_doctests": "476 passed, 4 original ignored, 0 failed: /tmp/blog-shrink-phase2-doctests-final.log"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "format": 1,
+  "ownership": "repository-maintained",
+  "package": "blog-interface",
+  "upstream": {
+    "package": "xcss-web",
+    "version": "1.0.0",
+    "origin": "https://github.com/isarmg/xcss",
+    "base_revision": "a055fdf5ce4bdf6cb943284813e42ba864c74b9d",
+    "source_directory": "web/xcss-web",
+    "receipt": "compliance/web-origins/xcss-web.SOURCE.json",
+    "receipt_sha256": "b1cd992d874681df0ac1a5692e3dbe73c6c2ae795c5fc96b982ebf5127c63e6e",
+    "archive": "compliance/web-origins/xcss-web.snapshot.tar.gz",
+    "archive_sha256": "8887acadd84f61d4d00a047d6d1c00a483a6e2960c9a0f05660871ed80de3ea4"
+  },
+  "changes": [
+    {
+      "date": "2026-10-22",
+      "description": "Move the facade into web/ui as repository-maintained blog-ui. Rename DOM/CSS/runtime identifiers and actual local core/macro package/library/generated paths to blog-ui; retain original source receipts and license/copyright notices."
+    }
+  ]
+}

@@ -1,26 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
 source_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
-product="xocs"
+product="blog"
 output=""
 while (($#)); do
   case "$1" in
     --output-dir) output="${2:?missing output directory}"; shift 2 ;;
     /*) [[ -z "$output" ]] || { echo 'Duplicate output directory' >&2; exit 2; }; output="$1"; shift ;;
-    *) echo 'Usage: package-release.sh --output-dir ABSOLUTE' >&2; exit 2 ;;
+    *) echo 'Usage: package-linux-x86_64.sh --output-dir ABSOLUTE' >&2; exit 2 ;;
   esac
 done
 [[ "$output" = /* && -d "$output" ]] || { echo 'Existing absolute output directory is required.' >&2; exit 2; }
 [[ -z "$(git -C "$source_root" status --porcelain=v1 --untracked-files=all)" ]] || { echo 'Release source must be clean.' >&2; exit 1; }
 source_revision="$(git -C "$source_root" rev-parse --verify HEAD)"
-version="$(python3 - "$source_root/Cargo.toml" <<'VERSION'
+version="$(python3 - "$source_root/src/server/Cargo.toml" <<'VERSION'
 import sys, tomllib
 with open(sys.argv[1], 'rb') as stream: print(tomllib.load(stream)['package']['version'])
 VERSION
 )"
 [[ "$(git -C "$source_root" cat-file -t "refs/tags/v$version")" = tag && "$(git -C "$source_root" rev-parse "refs/tags/v$version^{commit}")" = "$source_revision" ]] || { echo 'A source-bound annotated release tag is required.' >&2; exit 1; }
-xssi_revision="$(sed -n 's/^git_rev=//p' "$source_root/config/xssi.lock")"
-[[ "$xssi_revision" =~ ^[0-9a-f]{40}$ && "$xssi_revision" != 0000000000000000000000000000000000000000 ]] || { echo 'Pin the reviewed xssi commit before building a release.' >&2; exit 1; }
 archive="$product-$version-linux-x86_64.tar.gz"
 [[ ! -e "$output/$archive" && ! -L "$output/$archive" && ! -e "$output/SHA256SUMS" && ! -L "$output/SHA256SUMS" ]] || { echo 'Refusing to overwrite release assets.' >&2; exit 1; }
 work="$(mktemp -d "$output/.$product-package.XXXXXXXX")"
@@ -64,63 +62,19 @@ git -C "$source_root" fetch --quiet --no-tags "$original_source" "$source_revisi
 git -C "$source_root" reset --quiet --soft FETCH_HEAD
 git -C "$source_root" read-tree HEAD
 [[ "$(git -C "$source_root" rev-parse HEAD)" = "$source_revision" && -z "$(git -C "$source_root" status --porcelain=v1 --untracked-files=all)" ]]
-mkdir -p "$work/stage/bin" "$work/stage/share/systemd" "$work/stage/config" "$work/metadata"
-git init --quiet "$work/xssi"
-git -C "$work/xssi" remote add origin https://github.com/isarmg/xssi.git
-python3 - "$work/xssi" "$xssi_revision" <<'FETCH'
-import os,subprocess,sys
-root,revision=sys.argv[1:]
-environment={key:value for key,value in os.environ.items()
-             if not any(part in key.upper() for part in ('TOKEN','PASSWORD','SECRET','SIGNING','PRIVATE_KEY'))}
-environment['GIT_TRACE_REDACT']='1'
-environment['GIT_TERMINAL_PROMPT']='0'
-subprocess.run(['git','-C',root,'fetch','--quiet','--depth=1','origin',revision],env=environment,check=True)
-FETCH
-export XSSI_BUILD_TOOLS_DIR="$work/xssi"
-export XSSI_FRONTEND_METADATA_FILE="$work/metadata/frontend.json"
-git -C "$work/xssi" checkout --quiet --detach FETCH_HEAD
-[[ "$(git -C "$work/xssi" rev-parse HEAD)" = "$xssi_revision" ]]
-rustup toolchain install 1.99.0 --profile minimal --component rustfmt,clippy --target wasm32-unknown-unknown
-cargo +1.99.0 install wasm-bindgen-cli --version 0.2.129 --locked
-builder=(cargo +1.99.0 run --quiet --locked --manifest-path "$source_root/tools/web-build/Cargo.toml" -- server --product-root "$source_root")
-export XOCS_SOURCE_REVISION="$source_revision"
-export XCSS_WEB_DIST="$source_root/web/dist"
-export XSSI_BUILD_METADATA_DIR="$work/metadata"
-"${builder[@]}" --config xcss-web-build.json --mode release --source-revision "$source_revision" > "$work/build.log"
+mkdir -m 0700 "$work/metadata"
+export BLOG_SOURCE_REVISION="$source_revision"
+export BLOG_WEB_DIST="$source_root/web/dist"
+export BLOG_BUILD_METADATA_DIR="$work/metadata"
+export BLOG_FRONTEND_METADATA_FILE="$work/metadata/frontend.json"
+builder=(cargo +1.99.0 run --quiet --locked --offline --manifest-path "$source_root/Cargo.toml" -p blog-assets -- server --product-root "$source_root" --offline)
+"${builder[@]}" --config blog-assets.json --mode release --source-revision "$source_revision" > "$work/build.log"
 server_binary="$(tail -n 1 "$work/build.log")"
 [[ "$server_binary" = /* && -f "$server_binary" && ! -L "$server_binary" && -x "$server_binary" ]] || { echo 'Builder did not return a physical executable.' >&2; exit 1; }
-python3 -I -B "$source_root/scripts/package-release.py" "$server_binary" "$work/stage" "$source_revision" "$source_root"
-install -m 0644 "$work/metadata/$product-state-contract.json" "$work/stage/share/state-contract.json"
-install -d -m 0755 "$work/stage/share/contracts"
-cp -a -- "$work/metadata/contracts/." "$work/stage/share/contracts/"
-install -m 0644 "$work/metadata/$product-web-assets.json" "$work/stage/share/web-assets.json"
-install -m 0644 "$source_root/deploy/linux-x86_64/config.json.example" "$work/stage/config/config.json.example"
-export XSSI_SOURCE_REVISION="$source_revision"
-export XSSI_IDENTITY_FILE="$work/metadata/$product-identity.json"
-export XSSI_SCHEMA_FILE="$work/metadata/$product-schema.json"
-bash "$work/xssi/scripts/build-package.sh" "$product" "$source_root" "$work/stage"
+python3 -I -B "$source_root/scripts/stage-package.py" "$server_binary" "$work/metadata" "$work/packed" --kind release
 [[ "$(git -C "$source_root" rev-parse HEAD)" = "$source_revision" && -z "$(git -C "$source_root" status --porcelain=v1 --untracked-files=all)" ]] || { echo 'Private source snapshot changed during build.' >&2; exit 1; }
 [[ "$(git -C "$original_source" rev-parse HEAD)" = "$source_revision" && "$(git -C "$original_source" rev-parse "refs/tags/v$version^{commit}")" = "$source_revision" ]] || { echo 'Release identity changed during build.' >&2; exit 1; }
 [[ -z "$(git -C "$original_source" status --porcelain=v1 --untracked-files=all)" ]] || { echo 'Source changed during build.' >&2; exit 1; }
-epoch="$(git -C "$original_source" show -s --format=%ct "$source_revision")"
-# Keep the current package envelope identical to the upgrade reader's contract.
-payload="$product-$version-linux-x86_64"
-mv -- "$work/stage" "$work/$payload"
-tar --sort=name --mtime="@$epoch" --owner=0 --group=0 --numeric-owner -C "$work" -czf "$work/$archive" "$payload"
-python3 -B - "$work/xssi/scripts" "$work/$archive" "$work/verified-archive" "$product" "$version" "$source_revision" <<'ARCHIVE'
-import pathlib,sys
-sys.path.insert(0,sys.argv[1])
-import package,upgrade
-archive,destination,product,version,revision=sys.argv[2:]
-destination=pathlib.Path(destination)
-destination.mkdir(mode=0o700)
-payload=upgrade.extract(pathlib.Path(archive),destination)
-manifest=package.verify(payload)
-identity=manifest['identity']
-if identity['product']!=product or identity['version']!=version or identity['source_revision']!=revision:
-    raise SystemExit('Extracted archive differs from the reviewed release identity')
-ARCHIVE
-(cd "$work" && sha256sum "$archive" > SHA256SUMS)
-# Publish without replacing any existing release asset, even if another build races.
-ln "$work/SHA256SUMS" "$output/SHA256SUMS"
-ln "$work/$archive" "$output/$archive"
+# Publish without replacing an existing asset if another producer races us.
+ln "$work/packed/SHA256SUMS" "$output/SHA256SUMS"
+ln "$work/packed/$archive" "$output/$archive"

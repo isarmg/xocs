@@ -1,3 +1,5 @@
+> 历史记录：本文描述改名前 xocs 的迁移与验证。当前 blog 的目录、独立维护方式与新验证边界见 [独立实现说明](independence.md) 和 [开发说明](development.md)。历史数据不代表改名后的发行或验收结果。
+
 # Web 前端迁移记录
 
 当前入口为 `web/xcss-web`，仅通过 `xcss-web` 路径 crate 接入；主分支使用 Rust 生产构建。构建与验收命令见 [Rust 原生 Web 构建与测试](rust-native-web.md)。本文保留首次迁移时的流程和测量记录，旧 Node/Vite 命令与体积数字不代表本次改名后的验证结果。
@@ -23,17 +25,19 @@ Web 业务界面位于 `web/xcss-web/src` 的 Rust / xcss-web CSR，服务端仍
 
 公共快照由 `SOURCE.json` 标记来源和逐文件哈希。不要直接修改 vendored 公共代码；修改公共来源后重新同步快照。构建器还校验编译前后输入一致，防止产物与源码错配。
 
-## 本地构建
+## 当时的构建配置（历史记录）
+
+以下安装命令与独立锁文件是首次迁移时的环境记录，不是当前 blog 的准备条件。当前单工作区离线构建自动编译本地绑定工具，见[当前构建命令](rust-native-web.md)。
 
 生产构建需要 Rust 1.99.0、`wasm32-unknown-unknown` 和 wasm-bindgen-cli 0.2.129。浏览器验证另需 Node.js 26.7 和锁定 npm 依赖。
 
 ```sh
 rustup toolchain install 1.99.0 --profile minimal --component rustfmt,clippy --target wasm32-unknown-unknown
 cargo +1.99.0 install wasm-bindgen-cli --version 0.2.129 --locked
-cargo +1.99.0 run --quiet --locked --manifest-path tools/web-build/Cargo.toml -- build --product-root .
+cargo +1.99.0 run --quiet --locked --manifest-path tools/assets/Cargo.toml -- build --product-root .
 ```
 
-`web/pkg` 是生成目录，不提交。独立前端 Cargo 工作区及 Cargo.lock 位于 `web/xcss-web`。当前 Rust CLI 的 `cargo +1.99.0 run --locked --manifest-path tools/web-build/Cargo.toml -- check --product-root .` 检查 WASM 目标；将 `check` 改为 `test` 执行原生 Rust 合同与时间边界单测。退役的 Python 构建器及其专属测试已移除。可显式设置 `CARGO_TARGET_DIR` 共享编译缓存。
+`web/pkg` 是生成目录，不提交。独立前端 Cargo 工作区及 Cargo.lock 位于 `web/xcss-web`。当前 Rust CLI 的 `cargo +1.99.0 run --locked --manifest-path tools/assets/Cargo.toml -- check --product-root .` 检查 WASM 目标；将 `check` 改为 `test` 执行原生 Rust 合同与时间边界单测。退役的 Python 构建器及其专属测试已移除。可显式设置 `CARGO_TARGET_DIR` 共享编译缓存。
 
 ## 验收规则
 

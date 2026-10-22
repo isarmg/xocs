@@ -1,23 +1,37 @@
 import assert from 'node:assert/strict';
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 
 const web = new URL('../', import.meta.url);
 function fixture(run) {
-  const root = mkdtempSync(join(tmpdir(), 'web-toolchain-'));
-  const directory = join(root, 'web');
+  const root = mkdtempSync(join(tmpdir(), 'blog-toolchain-')), directory = join(root, 'web');
   try {
-    for (const file of ['package.json', 'package-lock.json', 'index.html', 'rust-web.toml', 'scripts/check-xcss-toolchain.mjs']) {
-      cpSync(new URL(file, web), join(directory, file), { recursive: true });
+    const sourceRoot = new URL('../', web);
+    const copy = relative => {
+      const destination = join(root, relative);
+      mkdirSync(dirname(destination), { recursive: true });
+      // Fixtures own regular copies, including when the test checkout itself
+      // is reached through symlinks. Mutation tests never write through links.
+      cpSync(new URL(relative, sourceRoot), destination, { recursive: true, dereference: true });
+    };
+    for (const file of ['.node-version', 'web/package.json', 'web/package-lock.json', 'web/index.html',
+      'web/rust-web.toml', 'web/scripts/check-toolchain.mjs', 'src/browser/Cargo.toml',
+      'web/runtime/startup.js', 'web/runtime/startup.css', 'web/styles/admin-ui/styles.css',
+      'web/licenses/LICENSE-blog-dom-MIT.txt', 'web/licenses/LICENSE-blog-component-macros-MIT.txt']) copy(file);
+    for (const component of ['web/styles', 'src/interface', 'src/interface/dom', 'src/interface/macros', 'tools/assets']) {
+      copy(`${component}/ORIGIN.json`); copy(`${component}/LICENSE`);
+      if (component.startsWith('src/interface')) copy(`${component}/Cargo.toml`);
+      const origin = JSON.parse(readFileSync(join(root, component, 'ORIGIN.json'), 'utf8'));
+      copy(origin.upstream.receipt); copy(origin.upstream.archive);
     }
-    cpSync(new URL('../../.node-version', import.meta.url), join(root, '.node-version'));
-    // Read-only production snapshots: never modify the linked paths in tests.
-    for (const path of ['vendor', 'xcss-web', 'src']) symlinkSync(new URL(path, web).pathname, join(directory, path), 'dir');
-    cpSync(new URL('tests/startup-failure.mjs', web), join(directory, 'tests/fixture.mjs'), { recursive: true });
-    const check = () => spawnSync(process.execPath, [join(directory, 'scripts/check-xcss-toolchain.mjs')], { encoding: 'utf8' });
+    const entry = readFileSync(join(directory, 'rust-web.toml'), 'utf8').match(/^entry = "([^"]+)"/m)?.[1];
+    assert.ok(entry && !entry.startsWith('/') && !entry.split('/').includes('..'));
+    copy(`web/${entry}`);
+    mkdirSync(join(directory, 'tests'), { recursive: true });
+    const check = () => spawnSync(process.execPath, [join(directory, 'scripts/check-toolchain.mjs')], { encoding: 'utf8' });
     const json = (file, change) => {
       const path = join(directory, file), value = JSON.parse(readFileSync(path, 'utf8'));
       change(value); writeFileSync(path, JSON.stringify(value));
@@ -25,8 +39,7 @@ function fixture(run) {
     run({ directory, check, json });
   } finally { rmSync(root, { recursive: true, force: true }); }
 }
-
-test('current production snapshots pass without node_modules', () => fixture(({ check }) => {
+test('local implementation and original archives pass without node_modules', () => fixture(({ check }) => {
   const result = check(); assert.equal(result.status, 0, result.stderr);
 }));
 test('retired npm package is rejected even with a consistent lockfile', () => fixture(({ check, json }) => {
@@ -36,19 +49,50 @@ test('retired npm package is rejected even with a consistent lockfile', () => fi
 }));
 test('old npm font preload paths fail the production contract', () => fixture(({ directory, check }) => {
   const path = join(directory, 'index.html');
-  writeFileSync(path, readFileSync(path, 'utf8').replace('/vendor/xcss/', '/node_modules/@xcss/web/dist/'));
+  writeFileSync(path, readFileSync(path, 'utf8').replace('/styles/', '/node_modules/@xcss/web/dist/'));
   const result = check(); assert.notEqual(result.status, 0); assert.match(result.stderr, /font preloads/);
 }));
 test('browser tests cannot silently import a second npm asset version', () => fixture(({ directory, check }) => {
   writeFileSync(join(directory, 'tests/stale.mjs'), "import { geometry } from '@xcss/web/admin-ui/server-corners';");
-  const result = check(); assert.notEqual(result.status, 0); assert.match(result.stderr, /test shipped vendor assets/);
+  const result = check(); assert.notEqual(result.status, 0); assert.match(result.stderr, /test local maintained assets/);
+}));
+test('maintained source can evolve while historical evidence stays unchanged', () => fixture(({ directory, check }) => {
+  writeFileSync(join(directory, 'styles/local-change.css'), '/* maintained locally */');
+  const result = check(); assert.equal(result.status, 0, result.stderr);
+}));
+test('historical source receipt tampering is rejected', () => fixture(({ directory, check, json }) => {
+  json('styles/ORIGIN.json', origin => { origin.upstream.receipt_sha256 = '0'.repeat(64); });
+  const result = check(); assert.notEqual(result.status, 0); assert.match(result.stderr, /original receipt digest/);
 }));
 
-test('changed vendor bytes fail the source digest contract', () => fixture(({ directory, check }) => {
-  rmSync(join(directory, 'vendor'));
-  const vendor = join(directory, 'vendor/xcss');
-  mkdirSync(vendor, { recursive: true });
-  writeFileSync(join(vendor, 'SOURCE.json'), JSON.stringify({ format: 1, files: { 'asset.css': '0'.repeat(64) } }));
-  writeFileSync(join(vendor, 'asset.css'), 'changed bytes');
-  const result = check(); assert.notEqual(result.status, 0); assert.match(result.stderr, /resync from the recorded public source/);
+function changeAppDeclaration(directory, declaration) {
+  const app = join(directory, '../src/browser');
+  const manifest = readFileSync(join(app, 'Cargo.toml'), 'utf8');
+  writeFileSync(join(app, 'Cargo.toml'), manifest.replace(/^blog-interface\s*=.*$/m, declaration));
+}
+test('local UI declaration accepts reordered fields', () => fixture(({ directory, check }) => {
+  for (const declaration of [
+    'blog-interface = { features = ["csr"], path = "../interface", default-features = false }',
+    'blog-interface = { path = "../interface", default-features = false, features = ["csr",] }',
+  ]) {
+    changeAppDeclaration(directory, declaration);
+    const result = check(); assert.equal(result.status, 0, result.stderr);
+  }
+}));
+for (const [name, declaration, expected] of [
+  ['external UI path', 'blog-interface = { features = ["csr"], path = "../other-ui", default-features = false }', /Local blog-interface dependency path/],
+  ['server UI feature', 'blog-interface = { path = "../interface", default-features = false, features = ["csr", "ssr"] }', /supported blog-interface CSR feature/],
+  ['default UI features', 'blog-interface = { path = "../interface", default-features = true, features = ["csr"] }', /Disable default blog-interface features/],
+  ['registry UI declaration', 'blog-interface = { version = "1", default-features = false, features = ["csr"] }', /one path field/],
+  ['duplicate UI path', 'blog-interface = { path = "../interface", default-features = false, features = ["csr"], path = "../other-ui" }', /one path field/],
+]) {
+  test(`${name} fails the local CSR contract`, () => fixture(({ directory, check }) => {
+    changeAppDeclaration(directory, declaration);
+    const result = check(); assert.notEqual(result.status, 0); assert.match(result.stderr, expected);
+  }));
+}
+
+test('standalone license copies preserve original copyright bytes', () => fixture(({ directory, check }) => {
+  writeFileSync(join(directory, 'licenses/LICENSE-blog-dom-MIT.txt'), 'Changed copyright');
+  const result = check(); assert.notEqual(result.status, 0); assert.match(result.stderr, /standalone assets preserve the original license/);
 }));

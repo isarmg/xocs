@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {chromium,firefox,expect} from '@playwright/test';
-import {preview} from '../../tools/web-build/test-preview.mjs';
+import {preview} from '../../tools/assets/test-preview.mjs';
 import {mockApi,article} from './browser-fixtures.mjs';
 const server=await preview({preview:{host:'127.0.0.1',port:0,strictPort:true}});
 const base=`http://127.0.0.1:${server.httpServer.address().port}`;
@@ -21,7 +21,7 @@ try{for(const engine of [chromium,firefox]){
    await expect(page.getByText(`${kind}-1`,{exact:true}).first()).toBeVisible();await expect(pager.getByRole('button',{name:'Next page',exact:true})).toBeDisabled();await pager.getByRole('button',{name:'Previous page',exact:true}).click();await expect(page.getByText(`${kind}-33`,{exact:true}).first()).toBeVisible();
   }
   assert.equal(calls.filter(row=>row.page===9).length,3);assert.ok(calls.every(row=>row.size===24));
-  await page.goto(base+'/jotting?lang=en');await expect(page.getByRole('heading',{name:'xocs',exact:true})).toBeVisible();await expect(page.getByRole('navigation',{name:'Main navigation',exact:true}).getByRole('link',{name:/About/})).toHaveCount(0);await expect(page.getByRole('navigation',{name:'Main navigation',exact:true}).getByRole('link',{name:/Journal/})).toBeVisible();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth), 'Expanded current navigation fits desktop width');
+  await page.goto(base+'/jotting?lang=en');await expect(page.getByRole('heading',{name:'blog',exact:true})).toBeVisible();await expect(page.getByRole('navigation',{name:'Main navigation',exact:true}).getByRole('link',{name:/About/})).toHaveCount(0);await expect(page.getByRole('navigation',{name:'Main navigation',exact:true}).getByRole('link',{name:/Journal/})).toBeVisible();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth), 'Expanded current navigation fits desktop width');
   await page.route('**/api/v1/articles/1',route=>route.fulfill({json:{...article,update_time:'2026-10-12 04:05:06'}}));await page.goto(base+'/article/1?lang=en');await expect(page.locator('.article-end-info')).toContainText('2026-10-12 04:05:06 UTC');
   await page.route('**/api/v1/content/labels',route=>route.fulfill({json:[{id:1,sort_id:1,label_name:'Tag',label_description:null}]}));
   await page.route('**/api/v1/content/articles',route=>{if(route.request().method()!=='POST')return route.fallback();const input=route.request().postDataJSON();saved.push(input);return route.fulfill({json:{...article,id:42,...input,view_status:0,recommend_status:0,comment_status:1,password_required:1}});});

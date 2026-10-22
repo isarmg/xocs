@@ -1,0 +1,79 @@
+@import "./content-blocks.css";
+@import "./date-range.css";
+@import "./account-settings.css";
+@import "./select.css";
+
+:where(button,input,select,textarea) { font: inherit; }
+:where(button,[href],input,select,textarea,[tabindex]):focus-visible { outline: 3px solid var(--blog-focus,#2563eb); outline-offset: 3px; }
+:root :is(input,select,textarea,[role=combobox]):focus { outline: 0; }
+.blog-button,.blog-input { min-height: 44px; border: 1px solid currentColor; border-radius: 0; padding: .5rem .8rem; color: inherit; background: var(--blog-bg-panel,#fff); }
+.blog-button { cursor: pointer; touch-action: manipulation; }
+.blog-button:disabled { opacity: .6; cursor: not-allowed; }
+.blog-danger,.blog-error { color: var(--blog-text-danger,#b91c1c); }
+.blog-input { width: 100%; box-sizing: border-box; }
+.blog-form-field { display: grid; gap: .4rem; margin-block: 1rem; }
+.blog-dialog { width: min(36rem,calc(100% - 3rem)); max-height: calc(100dvh - 3rem); overflow: auto; padding: 1.5rem; border: 1px solid currentColor; border-radius: 0; color: var(--blog-text-primary,#18181b); background: var(--blog-bg-panel,#fff); }
+.blog-dialog::backdrop { background: rgb(0 0 0 / .6); }
+.blog-dialog-heading,.blog-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; }
+.blog-dialog-heading h2 { margin: 0; }
+.blog-actions { justify-content: flex-end; margin-top: 1.5rem; }
+.blog-table-scroll { max-width: 100%; overflow: auto; }
+.blog-table { width: 100%; border-collapse: collapse; }
+.blog-table :is(th,td) { padding: .7rem; text-align: left; border-bottom: 1px solid currentColor; }
+.blog-table .blog-actions { justify-content: flex-start; margin-top: 0; }
+.blog-table .blog-actions > .blog-button { display: inline-flex; align-items: center; justify-content: flex-start; min-width: 44px; padding-inline: 0; text-align: left; }
+.blog-instance-link, .blog-instance-link:visited { color: inherit; text-decoration: none; }
+.blog-instance-link:hover, .blog-instance-link:focus-visible { text-decoration: underline; }
+.blog-status { display: inline-block; padding: .15rem .5rem; border: 1px solid currentColor; border-radius: 1rem; }
+.blog-error,.blog-empty,.blog-loading { padding: 1rem; overflow-wrap: anywhere; }
+.blog-error { border: 1px solid currentColor; border-radius: 0; }
+.blog-request-id { font-size: .85rem; overflow-wrap: anywhere; }
+.blog-request-id code { font-family: var(--blog-font-mono,monospace); user-select: all; }
+.blog-toast-stack { margin: 1rem; display: grid; gap: .5rem; min-width: 0; }
+.blog-toast { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; border: 1px solid currentColor; border-radius: 0; background: var(--blog-bg-panel,#fff); overflow-wrap: anywhere; }
+.blog-admin-shell,.blog-auth-shell { min-height: 100dvh; color: var(--blog-text-primary,#18181b); background: var(--blog-bg-page,#fafafa); font-family: var(--blog-font-ui,monospace); line-height: var(--blog-line-height-body,1.5); }
+.blog-application-boot { display: grid; place-items: center; min-height: 100dvh; color: var(--blog-text-primary,#18181b); background: var(--blog-bg-page,#fafafa); }
+.blog-application-boot::after { content: ""; width: 1.25rem; height: 1.25rem; border: .15rem solid currentColor; border-inline-end-color: transparent; border-radius: 50%; animation: blog-application-boot-spin .8s linear infinite; }
+@keyframes blog-application-boot-spin { to { transform: rotate(360deg); } }
+.blog-auth-shell { display: grid; place-items: center; padding: 1rem; box-sizing: border-box; }
+.blog-auth-card { width: min(28rem,100%); padding: 1.5rem; box-sizing: border-box; background: var(--blog-bg-panel,#fff); border: 1px solid currentColor; border-radius: 0; }
+.blog-page-header { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; padding: 1rem; border-bottom: 1px solid currentColor; background: var(--blog-bg-panel,#fff); }
+.blog-product-identity { display: grid; margin-inline-end: auto; }
+.blog-shell-layout { display: grid; grid-template-columns: 15rem minmax(0,1fr); }
+.blog-shell-layout--full { grid-template-columns: minmax(0,1fr); }
+.blog-navigation { padding: 1rem; border-inline-end: 1px solid currentColor; }
+.blog-navigation a { display: block; padding: .75rem; color: inherit; border-radius: 0; overflow-wrap: anywhere; }
+.blog-navigation a[aria-current="page"] { font-weight: bold; text-decoration-thickness: .2em; }
+.blog-shell-main { padding: var(--blog-content-spacing,var(--blog-space-4,16px)); min-width: 0; }
+.blog-content-stack { display: grid; align-content: start; gap: var(--blog-content-spacing,var(--blog-space-4,16px)); min-width: 0; }
+.blog-content-stack > * { margin-block: 0; }
+.blog-skip-link { position: absolute; top: -10rem; inset-inline-start: 1rem; z-index: 30; padding: 1rem; background: var(--blog-bg-panel,#fff); color: inherit; }
+.blog-skip-link:focus { top: .5rem; }
+.blog-theme-select { display: flex; align-items: center; gap: .5rem; }
+.blog-theme-select select { width: auto; }
+@media(max-width: 48rem) { .blog-shell-layout { grid-template-columns: minmax(0,1fr); } .blog-navigation { display: flex; flex-wrap: wrap; border-inline-end: 0; border-bottom: 1px solid currentColor; gap: .25rem; } }
+@media(forced-colors:active) { :where(button,[href],input,select,textarea,[tabindex]):focus-visible { outline-color: Highlight; } .blog-button:disabled { color: GrayText; opacity: 1; } }
+@media(prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important;transition-duration:.001ms!important;animation-duration:.001ms!important; } }
+
+.blog-auth-content { display: grid; justify-items: center; gap: 1rem; width: min(28rem,100%); }
+
+/* Explicit server Mac mini opt-in using the local degree-seven contour fit.
+ * These are corner bounding extents, not circular radii or Apple API values.
+ * The runtime clamps them to half the short side. Only current stable browsers
+ * are supported; these surfaces have no circular-radius compatibility layer. */
+@property --blog-server-corner-extent { syntax: "<length-percentage>"; inherits: false; initial-value: 0px; }
+@property --blog-server-corner-mode { syntax: "*"; inherits: false; initial-value: paint; }
+:root {
+  --blog-server-corner-control: 27px;
+  --blog-server-corner-panel: 42px;
+  --blog-server-corner-notification: 48px;
+  --blog-server-corner-dialog: 54px;
+  --blog-server-corner-photo: 31.0568993271%;
+  /* A 216x144 six-row card has its first text box ~2.4px below the edge.
+   * Keep its existing safe horizontal inset while changing only the contour,
+   * without changing the card's size or its row positions. */
+  --blog-server-corner-text-inset: 26px;
+}
+.blog-button, .blog-input, .blog-navigation a { --blog-server-corner-extent: var(--blog-server-corner-control); }
+.blog-error, .blog-toast, .blog-auth-card { --blog-server-corner-extent: var(--blog-server-corner-notification); }
+.blog-dialog { --blog-server-corner-extent: var(--blog-server-corner-dialog); }

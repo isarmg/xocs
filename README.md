@@ -1,20 +1,22 @@
-# xocs
+# blog
 
-Rust 博客与内容服务，含文章、随笔、匿名评论、媒体和管理后台，支持 Linux x86_64 GNU。Web 使用 Rust / xcss-web，资源与 WebAssembly 内嵌 Axum 运行二进制。构建与验收见 [Web 迁移记录](docs/xcss-web-migration.md)。
+Rust 博客与内容服务，包含文章、随笔、匿名评论、媒体与管理后台，支持 Linux x86_64 GNU。服务端、Rust/WASM 界面、样式字体和构建器都在本仓库维护；构建与运行不需要 xcss、xssi 或相邻项目检出。上游代码保留原许可证和来源记录，见[源码管理说明](docs/rust-sources.md)和[独立实现说明](docs/independence.md)。
 
-安装使用独立 [xssi](https://github.com/isarmg/xssi) 仓库提供的当前发行包及 `install.sh`。Server 仅接受 `xocs --root /opt/isarmg/xocs` 运行；初始化、只读检查和离线密码重置由 `libexec/setup` 执行。升级由 `upgrade.sh` 调用独立 xssc，下载校验后自动停服、备份、按目标当前结构只读检查、切换并启动验收。
-
-程序、配置、数据库、管理员凭据、媒体、日志和维护记录默认位于同一 ROOT。数据库或媒体可明确指定外置目录，日志和临时文件留在 ROOT。唯一管理员及会话持久化于 `state/site.sqlite` 的公共管理表，密码保存 Argon2id 哈希。
-
-服务不识别代理或访问者 IP，不读取转发头用于限流。认证、CSRF、内容权限与幂等仍保留；匿名写入最多 4 个同时执行和 32 个等待，文章密码计算最多 2 个任务，超出容量返回 503。
-
-当前配置和数据库合同不接受旧 CLI、旧路径、旧字段或历史结构，也不自动转换旧数据。详见[部署与维护](deploy/linux-x86_64/README.md)、[配置](docs/configuration.md)和[当前行为](docs/current-guide.md)。
-
-
-生产前端构建使用仓库内 Rust 工具，无需安装 npm 依赖。准备 Rust 1.99.0、wasm32-unknown-unknown target 和 wasm-bindgen-cli 0.2.129 后，在产品根目录执行：
+主服务端位于 `src/server`，应用基础在 `src/application`，浏览器界面在 `src/browser`，组件、DOM 和宏在 `src/interface`。整个 Rust 项目使用根 Cargo workspace 和唯一的根 Cargo.lock，基础源码按职责纳入 `src/foundation/<layer>/<purpose>`，依赖全部指向本仓库路径。准备 Rust 1.99.0、`wasm32-unknown-unknown` target、Linux 编译工具和所需原生库后，在仓库根目录执行：
 
 ```sh
-cargo +1.99.0 run --quiet --locked --manifest-path tools/web-build/Cargo.toml -- build --product-root .
+python3 tools/rust-sources/manage.py verify --metadata
+cargo +1.99.0 run --locked --offline -p blog-assets -- build --product-root . --offline
+cargo +1.99.0 build --locked --offline --bin blog
+cargo +1.99.0 build --locked --offline -p blog-setup
 ```
 
-开发监听、Axum 集成和测试边界见 [Rust 原生 Web 构建与测试](docs/rust-native-web.md)。Node/Playwright 仅用于浏览器验收；已退役的 TypeScript/React 对照实现与 Vite 转换依赖可通过 Git 历史查阅。
+`tools/assets` 的 `blog-assets` 同时负责前端构建和浏览器 WASM 绑定生成；绑定实现已整合为同一工具中的模块，无需另建或安装 wasm-bindgen CLI，也不依赖 npm 生产构建或 Rust 注册表源码缓存。Rust 工具链、目标标准库、系统 SDK 和非 Rust 原生库仍由构建环境提供。
+
+当前受管源码包含 243 个包：234 个用途基础包和 9 个项目包；根 Cargo.lock 完整图为 242 包。250 仅是优化规模的参考，不设包数硬上限；以正确性、实际资源开销、职责边界与维护复杂度决定合并或拆分。内部维护包不沿用上游版本约束；省略 manifest 版本时，Cargo 将其记为 0.0.0。主产品 `blog` 和维护工具 `blog-setup` 的发行版本单独管理，当前为 1.0.1。原始发布身份、归档与许可证保存在 `compliance/` 和来源文档中。目录、迁移规则与已做优化见[用途架构与定制](docs/maintained-design.md)，逐职责合并分析见[依赖分析与深度定制](docs/dependency-customization.md)。
+
+初始化使用仓库内的 `blog-setup`，密码从标准输入读取；服务运行命令为 `blog --root ROOT`。完整本地启动步骤见[开发说明](docs/development.md)，独立包安装见[部署说明](deploy/linux-x86_64/README.md)。生产保持 HTTPS、Secure Cookie 与同源检查，本地开发仅允许回环 HTTP。
+
+配置、SQLite、媒体、日志和临时快照位于明确的 ROOT。管理员密码使用 Argon2id；会话、CSRF、文章权限、匿名提交幂等与容量限制保留。当前数据库身份是 `blog-db-v1`，不会自动将旧 xocs 数据标记成新结构；升级前应备份并验证明确的数据迁移方案。
+
+Node 26.7.0、锁定 npm 包和 Chromium/Firefox 仅用于浏览器测试，独立于 Rust 源码闭包管理。构建成功、浏览器验收、独立包安装和正式发行分别提供证据；本地改造不代表正式发布或线上部署。历史发行记录保留原始 xocs 身份。

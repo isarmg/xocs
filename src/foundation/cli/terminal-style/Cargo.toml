@@ -1,0 +1,41 @@
+[package]
+name = "blog-cli-terminal-style"
+edition = "2021"
+rust-version = "1.99"
+publish = false
+license = "MIT OR Apache-2.0"
+description = "终端样式、颜色策略、ANSI解析与流输出"
+autolib = false
+autobins = false
+autotests = false
+autobenches = false
+autoexamples = false
+build = false
+
+[lib]
+name = "blog_cli_terminal_style"
+path = "src/lib.rs"
+doctest = false
+
+[features]
+default = []
+std = []
+parser = []
+parser-core = ["parser", "dep:arrayvec"]
+parser-utf8 = ["parser", "dep:utf8parse"]
+output = ["std", "parser-utf8"]
+
+[dependencies.arrayvec]
+path = "../../collections/inline-vector"
+package = "blog-collections-inline-vector"
+optional = true
+default-features = false
+
+[dependencies.utf8parse]
+path = "../../encoding/unicode-decoder"
+package = "blog-encoding-unicode-decoder"
+optional = true
+
+[[test]]
+name = "capabilities"
+path = "retained/test/ci/fixtures/terminal-style-capabilities.rs"

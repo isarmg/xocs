@@ -1,0 +1,83 @@
+[package]
+name = "blog-text-pattern-search"
+edition = "2021"
+rust-version = "1.99"
+publish = false
+license = "(MIT OR Apache-2.0) AND (Unlicense OR MIT)"
+description = "正则语法、自动机、文字多模式与Unicode匹配"
+autolib = false
+autobins = false
+autotests = false
+autobenches = false
+autoexamples = false
+build = false
+
+[lib]
+name = "blog_text_pattern_search"
+path = "src/lib.rs"
+
+[features]
+alloc = []
+automata = []
+automata-full = ["std", "syntax", "engine-perf", "unicode", "meta", "nfa", "dfa", "hybrid"]
+default = ["matcher", "std", "perf", "unicode"]
+engine-perf = ["perf-inline", "perf-literal"]
+dfa = ["dfa-build", "dfa-search", "dfa-onepass"]
+dfa-build = ["nfa-thompson", "dfa-search"]
+dfa-onepass = ["automata", "nfa-thompson"]
+dfa-search = ["automata"]
+hybrid = ["alloc", "automata", "nfa-thompson"]
+internal-instrument = ["internal-instrument-pikevm"]
+internal-instrument-pikevm = ["logging", "std"]
+literal = ["alloc"]
+literal-perf = ["literal", "dep:memchr"]
+logging = ["dep:log"]
+matcher = ["syntax", "meta", "nfa-pikevm"]
+meta = ["automata", "nfa-pikevm", "syntax"]
+nfa = ["nfa-thompson", "nfa-pikevm", "nfa-backtrack"]
+nfa-backtrack = ["nfa-thompson"]
+nfa-pikevm = ["nfa-thompson"]
+nfa-thompson = ["alloc", "automata"]
+perf = ["perf-cache", "perf-backtrack", "perf-dfa", "perf-inline", "perf-literal", "perf-onepass"]
+# The original regex perf-cache switch was empty; retain that declared request.
+perf-cache = []
+perf-backtrack = ["nfa-backtrack"]
+perf-dfa = ["hybrid"]
+perf-dfa-full = ["dfa-build", "dfa-search"]
+perf-inline = []
+perf-literal = ["dep:memchr", "literal", "perf-literal-multisubstring", "perf-literal-substring"]
+perf-literal-multisubstring = ["literal"]
+perf-literal-substring = ["dep:memchr", "literal-perf"]
+perf-onepass = ["dfa-onepass"]
+std = ["alloc", "memchr?/std"]
+syntax = ["alloc"]
+unicode = ["unicode-age", "unicode-bool", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script", "unicode-segment", "unicode-word-boundary"]
+unicode-age = []
+unicode-bool = []
+unicode-case = []
+unicode-gencat = []
+unicode-perl = ["unicode-word-boundary"]
+unicode-script = []
+unicode-segment = []
+unicode-word-boundary = []
+
+[dependencies.log]
+path = "../../diagnostics/event-facade"
+package = "blog-diagnostics-event-facade"
+optional = true
+
+[dependencies.memchr]
+path = "../../encoding/byte-search"
+package = "blog-encoding-byte-search"
+optional = true
+default-features = false
+
+[lints.rust.unexpected_cfgs]
+level = "allow"
+priority = 0
+check-cfg = ["cfg(docsrs_regex)"]
+
+[[test]]
+name = "retained-regressions"
+path = "retained/test/regex-family/retained_regressions.rs"
+required-features = ["matcher", "std", "unicode"]

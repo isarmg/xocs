@@ -1,0 +1,769 @@
+{
+  "schema": 1,
+  "changes": [
+    {
+      "directory": "src/foundation/allocator-api2-0.2.21",
+      "file": "src/stable/vec/mod.rs",
+      "reason": "Rust 1.99 denies implicit autoref of raw slice pointer; read slice length metadata via the raw pointer method, matching the reviewed ZXS fix.",
+      "before": "let count = unsafe { (*other).len() };",
+      "after": "let count = other.len();"
+    },
+    {
+      "directory": "src/foundation/mime-0.3.17",
+      "file": "src/lib.rs",
+      "reason": "Make the existing elided return lifetimes explicit on type_, subtype and suffix so Rust 1.99 accepts upstream deny(warnings); matches the reviewed ZXS fix.",
+      "behavior_change": false
+    },
+    {
+      "directory": "src/foundation/try-lock-0.2.5",
+      "file": "src/lib.rs",
+      "reason": "Make existing elided lock-guard return lifetimes explicit for Rust 1.99 deny(warnings), preserving the original APIs and lock ordering.",
+      "behavior_change": false
+    },
+    {
+      "directory": "src/foundation/serde_core-1.0.229",
+      "file": "src/crate_root.rs",
+      "reason": "Restrict internal std OS-string reexports to Unix/Windows, matching the cfg of their serialization implementations; avoids unused_imports denied on browser WASM.",
+      "behavior_change": false
+    },
+    {
+      "directory": "src/foundation/serde-1.0.229",
+      "file": "src/core/crate_root.rs",
+      "reason": "Restrict internal std OS-string reexports to Unix/Windows, matching the cfg of their serialization implementations; avoids unused_imports denied on browser WASM.",
+      "behavior_change": false
+    },
+    {
+      "directory": "crates/blog-core",
+      "files": [
+        "src/admin_core/mod.rs",
+        "src/admin_axum/mod.rs",
+        "src/admin_sqlite/management.rs",
+        "src/installation_material/tests.rs",
+        "src/server_runtime/mod.rs"
+      ],
+      "reason": "Isolate unrelated parallel test fixtures from the production process-global Argon2 budget while preserving its 2-slot capacity, 2-second deadline and shared-budget regression test; add exhaustion coverage.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "tools/web-bindings",
+      "file": "src/main.rs",
+      "reason": "Select Web mode explicitly when using the original wasm-bindgen-cli-support; the ZXS source variant hardwires Web mode. Add a real empty-WASM output regression for browser initialization and JavaScript-only output."
+    },
+    {
+      "directory": "web/ui/vendor/blog-ui-core",
+      "files": [
+        "src/lib.rs",
+        "src/show_let.rs",
+        "src/text_prop.rs"
+      ],
+      "reason": "Make the existing stable closure implementations unconditional and remove unreachable nightly crate attributes after dropping unsupported nightly Cargo features. Preserve line positions and all stable CSR behavior.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/storage/record-derive",
+      "reason": "Inline the used SQLite record derive as a pure syntax compiler; eliminate host database/runtime/query/migration dependencies. See sqlite-record-integration.json."
+    },
+    {
+      "directory": "src/foundation/storage/sqlite-access",
+      "file": "src/lib.rs",
+      "reason": "Specialize database facade to SQLite and the real record derives; remove unconsumed database drivers and dynamic compile-time SQL APIs."
+    },
+    {
+      "directory": "src/foundation/wasm/browser-bridge-schema",
+      "file": "src/lib.rs",
+      "reason": "Assign repository browser bridge schema blog-browser-bridge/1, shared by the in-process module generator and browser macro implementation; original release version remains in immutable provenance."
+    },
+    {
+      "directory": "src/foundation/assets/style-parser",
+      "file": "src/lib.rs",
+      "reason": "Align the compiled crate identity with its maintained responsibility name; original upstream crate identity remains in provenance."
+    },
+    {
+      "directory": "src/foundation/syntax/style-iterators",
+      "file": "src/lib.rs",
+      "reason": "Align the compiled crate identity with its maintained responsibility name; original upstream crate identity remains in provenance."
+    },
+    {
+      "directory": "src/foundation/syntax/view-iterators",
+      "file": "src/lib.rs",
+      "reason": "Align the compiled crate identity with its maintained responsibility name; original upstream crate identity remains in provenance."
+    },
+    {
+      "directory": "src/foundation/syntax/compiler-iterators",
+      "file": "src/lib.rs",
+      "reason": "Align the compiled crate identity with its maintained responsibility name; original upstream crate identity remains in provenance."
+    },
+    {
+      "directory": "src/foundation/platform/system-abi",
+      "file": "src/lib.rs",
+      "reason": "Align the compiled crate identity with its maintained responsibility name; original upstream crate identity remains in provenance."
+    },
+    {
+      "directory": "src/foundation/cli/terminal-format",
+      "file": "src/lib.rs",
+      "reason": "Align the compiled crate identity with its maintained responsibility name; original upstream crate identity remains in provenance."
+    },
+    {
+      "directory": "src/foundation/collections/generation-map",
+      "file": "src/lib.rs",
+      "reason": "Align the compiled crate identity with its maintained responsibility name; original upstream crate identity remains in provenance."
+    },
+    {
+      "directory": "src/foundation/crypto/algorithm-traits",
+      "files": [
+        "Cargo.toml",
+        "src/generate.rs",
+        "src/lib.rs"
+      ],
+      "reason": "Retire only unselected optional adapters and their disabled cfg items after native/WASM metadata confirms the eight target packages absent; preserve every enabled feature definition and production branch."
+    },
+    {
+      "directory": "src/foundation/crypto/digest-traits",
+      "files": [
+        "Cargo.toml",
+        "src/lib.rs"
+      ],
+      "reason": "Retire only unselected optional adapters and their disabled cfg items after native/WASM metadata confirms the eight target packages absent; preserve every enabled feature definition and production branch."
+    },
+    {
+      "directory": "src/foundation/filesystem/relative-path",
+      "files": [
+        "Cargo.toml",
+        "src/lib.rs"
+      ],
+      "reason": "Retire only unselected optional adapters and their disabled cfg items after native/WASM metadata confirms the eight target packages absent; preserve every enabled feature definition and production branch."
+    },
+    {
+      "directory": "src/foundation/format/binary-record",
+      "files": [
+        "Cargo.toml",
+        "src/de/flavors.rs",
+        "src/de/mod.rs",
+        "src/lib.rs",
+        "src/ser/flavors.rs",
+        "src/ser/mod.rs"
+      ],
+      "reason": "Retire only unselected optional adapters and their disabled cfg items after native/WASM metadata confirms the eight target packages absent; preserve every enabled feature definition and production branch."
+    },
+    {
+      "directory": "src/foundation/math/large-integer",
+      "files": [
+        "Cargo.toml",
+        "src/bigrand.rs",
+        "src/lib.rs"
+      ],
+      "reason": "Retire only unselected optional adapters and their disabled cfg items after native/WASM metadata confirms the eight target packages absent; preserve every enabled feature definition and production branch."
+    },
+    {
+      "directory": "src/foundation/platform/system-entropy",
+      "files": [
+        "Cargo.toml",
+        "src/lib.rs"
+      ],
+      "reason": "Retire only unselected optional adapters and their disabled cfg items after native/WASM metadata confirms the eight target packages absent; preserve every enabled feature definition and production branch."
+    },
+    {
+      "directory": "src/foundation/storage/database-core",
+      "files": [
+        "Cargo.toml",
+        "src/any/connection/backend.rs",
+        "src/any/connection/mod.rs",
+        "src/any/driver.rs",
+        "src/any/mod.rs",
+        "src/config/migrate.rs",
+        "src/error.rs",
+        "src/lib.rs"
+      ],
+      "reason": "Retire only unselected optional adapters and their disabled cfg items after native/WASM metadata confirms the eight target packages absent; preserve every enabled feature definition and production branch."
+    },
+    {
+      "directory": "src/foundation/storage/sqlite-driver",
+      "files": [
+        "Cargo.toml",
+        "src/any.rs",
+        "src/lib.rs"
+      ],
+      "reason": "Retire only unselected optional adapters and their disabled cfg items after native/WASM metadata confirms the eight target packages absent; preserve every enabled feature definition and production branch."
+    },
+    {
+      "directory": "src/foundation/unicode/character-properties",
+      "files": [
+        "Cargo.toml",
+        "src/bidi.rs"
+      ],
+      "reason": "Retire only unselected optional adapters and their disabled cfg items after native/WASM metadata confirms the eight target packages absent; preserve every enabled feature definition and production branch."
+    },
+    {
+      "directory": "src/foundation/cli/arguments",
+      "files": [
+        "Cargo.toml"
+      ],
+      "reason": "Integrate the command-line maintained implementations as one Blog purpose package; adapt local module paths, macro crate paths and feature requests while retaining selected consumer behavior. The catalogue binds the complete final current source inventory.",
+      "integration": "compliance/provenance/integrations/purpose-modules/integration.json",
+      "consumed_directories": [
+        "src/foundation/cli/arguments",
+        "src/foundation/cli/argument-model",
+        "src/foundation/cli/argument-tokens"
+      ],
+      "original_identities": [
+        "clap@4.6.7",
+        "clap_builder@4.6.7",
+        "clap_lex@1.1.1"
+      ],
+      "method": "zxs-modules"
+    },
+    {
+      "directory": "src/foundation/crypto/digest-traits",
+      "files": [
+        "Cargo.toml"
+      ],
+      "reason": "Integrate the cryptographic-core maintained implementations as one Blog purpose package; adapt local module paths, macro crate paths and feature requests while retaining selected consumer behavior. The catalogue binds the complete final current source inventory.",
+      "integration": "compliance/provenance/integrations/purpose-modules/integration.json",
+      "consumed_directories": [
+        "src/foundation/crypto/digest-traits",
+        "src/foundation/crypto/hash-blocks",
+        "src/foundation/crypto/algorithm-traits"
+      ],
+      "original_identities": [
+        "block-buffer@0.12.1",
+        "crypto-common@0.2.2",
+        "digest@0.11.3"
+      ],
+      "method": "zxs-modules"
+    },
+    {
+      "directory": "src/foundation/format/data-model",
+      "files": [
+        "Cargo.toml"
+      ],
+      "reason": "Integrate the data-serialization maintained implementations as one Blog purpose package; adapt local module paths, macro crate paths and feature requests while retaining selected consumer behavior. The catalogue binds the complete final current source inventory.",
+      "integration": "compliance/provenance/integrations/purpose-modules/integration.json",
+      "consumed_directories": [
+        "src/foundation/format/data-model",
+        "src/foundation/format/data-model-core",
+        "src/foundation/format/data-error-path"
+      ],
+      "original_identities": [
+        "serde@1.0.229",
+        "serde_core@1.0.229",
+        "serde_path_to_error@0.1.20"
+      ],
+      "method": "zxs-modules"
+    },
+    {
+      "directory": "src/foundation/sync/mutex",
+      "files": [
+        "Cargo.toml"
+      ],
+      "reason": "Integrate the synchronization maintained implementations as one Blog purpose package; adapt local module paths, macro crate paths and feature requests while retaining selected consumer behavior. The catalogue binds the complete final current source inventory.",
+      "integration": "compliance/provenance/integrations/purpose-modules/integration.json",
+      "consumed_directories": [
+        "src/foundation/sync/mutex-parking",
+        "src/foundation/sync/lock-traits",
+        "src/foundation/sync/mutex"
+      ],
+      "original_identities": [
+        "lock_api@0.4.14",
+        "parking_lot@0.12.5",
+        "parking_lot_core@0.9.12"
+      ],
+      "method": "zxs-modules"
+    },
+    {
+      "directory": "src/foundation/unicode/character-properties",
+      "files": [
+        "Cargo.toml"
+      ],
+      "reason": "Integrate the unicode-properties maintained implementations as one Blog purpose package; adapt local module paths, macro crate paths and feature requests while retaining selected consumer behavior. The catalogue binds the complete final current source inventory.",
+      "integration": "compliance/provenance/integrations/purpose-modules/integration.json",
+      "consumed_directories": [
+        "src/foundation/unicode/character-properties",
+        "src/foundation/unicode/character-data"
+      ],
+      "original_identities": [
+        "icu_properties@2.3.0",
+        "icu_properties_data@2.3.0"
+      ],
+      "method": "zxs-modules"
+    },
+    {
+      "directory": "src/foundation/unicode/text-normalizer",
+      "files": [
+        "Cargo.toml"
+      ],
+      "reason": "Integrate the unicode-normalizer maintained implementations as one Blog purpose package; adapt local module paths, macro crate paths and feature requests while retaining selected consumer behavior. The catalogue binds the complete final current source inventory.",
+      "integration": "compliance/provenance/integrations/purpose-modules/integration.json",
+      "consumed_directories": [
+        "src/foundation/unicode/text-normalizer",
+        "src/foundation/unicode/normalizer-data"
+      ],
+      "original_identities": [
+        "icu_normalizer@2.3.0",
+        "icu_normalizer_data@2.3.0"
+      ],
+      "method": "zxs-modules"
+    },
+    {
+      "directory": "src/foundation/wasm/browser-bridge-entry",
+      "files": [
+        "Cargo.toml"
+      ],
+      "reason": "Integrate the wasm-binding-macros maintained implementations as one Blog purpose package; adapt local module paths, macro crate paths and feature requests while retaining selected consumer behavior. The catalogue binds the complete final current source inventory.",
+      "integration": "compliance/provenance/integrations/purpose-modules/integration.json",
+      "consumed_directories": [
+        "src/foundation/wasm/browser-bridge-entry",
+        "src/foundation/wasm/browser-bridge-derive"
+      ],
+      "original_identities": [
+        "wasm-bindgen-macro-support@0.2.129",
+        "wasm-bindgen-macro@0.2.129"
+      ],
+      "method": "zxs-modules"
+    },
+    {
+      "directory": "src/foundation/storage/sqlite-access",
+      "files": [
+        "Cargo.toml"
+      ],
+      "reason": "Integrate the sqlite-access maintained implementations as one Blog purpose package; adapt local module paths, macro crate paths and feature requests while retaining selected consumer behavior. The catalogue binds the complete final current source inventory.",
+      "integration": "compliance/provenance/integrations/purpose-modules/integration.json",
+      "consumed_directories": [
+        "src/foundation/storage/sqlite-access",
+        "src/foundation/storage/database-core",
+        "src/foundation/storage/sqlite-driver"
+      ],
+      "original_identities": [
+        "sqlx-core@0.9.0",
+        "sqlx-sqlite@0.9.0",
+        "sqlx@0.9.0"
+      ],
+      "method": "blog-ownfold"
+    },
+    {
+      "directory": "src/foundation/runtime/async-toolkit",
+      "files": [
+        "Cargo.toml"
+      ],
+      "reason": "Integrate the futures maintained implementations as one Blog purpose package; adapt local module paths, macro crate paths and feature requests while retaining selected consumer behavior. The catalogue binds the complete final current source inventory.",
+      "integration": "compliance/provenance/integrations/purpose-modules/integration.json",
+      "consumed_directories": [
+        "src/foundation/runtime/async-toolkit",
+        "src/foundation/runtime/future-traits",
+        "src/foundation/runtime/async-channels",
+        "src/foundation/runtime/future-executor",
+        "src/foundation/runtime/async-io",
+        "src/foundation/runtime/async-sink",
+        "src/foundation/runtime/task-context",
+        "src/foundation/runtime/future-utilities"
+      ],
+      "original_identities": [
+        "futures-channel@0.3.34",
+        "futures-core@0.3.34",
+        "futures-executor@0.3.34",
+        "futures-io@0.3.34",
+        "futures-sink@0.3.34",
+        "futures-task@0.3.34",
+        "futures-util@0.3.34",
+        "futures@0.3.34"
+      ],
+      "method": "zxs-modules"
+    },
+    {
+      "directory": "src/foundation/network/body-stream",
+      "files": [
+        "Cargo.toml"
+      ],
+      "reason": "Integrate the http-body maintained implementations as one Blog purpose package; adapt local module paths, macro crate paths and feature requests while retaining selected consumer behavior. The catalogue binds the complete final current source inventory.",
+      "integration": "compliance/provenance/integrations/purpose-modules/integration.json",
+      "consumed_directories": [
+        "src/foundation/network/body-stream",
+        "src/foundation/network/body-adapters"
+      ],
+      "original_identities": [
+        "http-body-util@0.1.5",
+        "http-body@1.1.0"
+      ],
+      "method": "zxs-modules"
+    },
+    {
+      "directory": "src/foundation/network/request-router",
+      "files": [
+        "Cargo.toml"
+      ],
+      "reason": "Integrate the http-routing maintained implementations as one Blog purpose package; adapt local module paths, macro crate paths and feature requests while retaining selected consumer behavior. The catalogue binds the complete final current source inventory.",
+      "integration": "compliance/provenance/integrations/purpose-modules/integration.json",
+      "consumed_directories": [
+        "src/foundation/network/request-router",
+        "src/foundation/network/request-traits"
+      ],
+      "original_identities": [
+        "axum-core@0.5.6",
+        "axum@0.8.9"
+      ],
+      "method": "zxs-modules"
+    },
+    {
+      "directory": "src/foundation/network/http-transport",
+      "files": [
+        "Cargo.toml"
+      ],
+      "reason": "Integrate the http-transport maintained implementations as one Blog purpose package; adapt local module paths, macro crate paths and feature requests while retaining selected consumer behavior. The catalogue binds the complete final current source inventory.",
+      "integration": "compliance/provenance/integrations/purpose-modules/integration.json",
+      "consumed_directories": [
+        "src/foundation/network/http-transport",
+        "src/foundation/network/http-runtime"
+      ],
+      "original_identities": [
+        "hyper-util@0.1.21",
+        "hyper@1.12.0"
+      ],
+      "method": "zxs-modules"
+    },
+    {
+      "directory": "src/foundation/network/request-pipeline",
+      "files": [
+        "Cargo.toml"
+      ],
+      "reason": "Integrate the service-stack maintained implementations as one Blog purpose package; adapt local module paths, macro crate paths and feature requests while retaining selected consumer behavior. The catalogue binds the complete final current source inventory.",
+      "integration": "compliance/provenance/integrations/purpose-modules/integration.json",
+      "consumed_directories": [
+        "src/foundation/network/request-pipeline",
+        "src/foundation/network/pipeline-layer",
+        "src/foundation/network/service-trait"
+      ],
+      "original_identities": [
+        "tower-layer@0.3.3",
+        "tower-service@0.3.3",
+        "tower@0.5.3"
+      ],
+      "method": "zxs-modules"
+    },
+    {
+      "directory": "src/foundation/diagnostics/structured-events",
+      "files": [
+        "Cargo.toml"
+      ],
+      "reason": "Integrate the tracing maintained implementations as one Blog purpose package; adapt local module paths, macro crate paths and feature requests while retaining selected consumer behavior. The catalogue binds the complete final current source inventory.",
+      "integration": "compliance/provenance/integrations/purpose-modules/integration.json",
+      "consumed_directories": [
+        "src/foundation/diagnostics/structured-events",
+        "src/foundation/diagnostics/event-core",
+        "src/foundation/diagnostics/event-output",
+        "src/foundation/diagnostics/log-bridge"
+      ],
+      "original_identities": [
+        "tracing-core@0.1.36",
+        "tracing-log@0.2.0",
+        "tracing-subscriber@0.3.23",
+        "tracing@0.1.44"
+      ],
+      "method": "zxs-modules"
+    },
+    {
+      "directory": "src/foundation/network/web-address",
+      "files": [
+        "Cargo.toml"
+      ],
+      "reason": "Integrate the url-encoding maintained implementations as one Blog purpose package; adapt local module paths, macro crate paths and feature requests while retaining selected consumer behavior. The catalogue binds the complete final current source inventory.",
+      "integration": "compliance/provenance/integrations/purpose-modules/integration.json",
+      "consumed_directories": [
+        "src/foundation/network/web-address",
+        "src/foundation/text/international-domain",
+        "src/foundation/text/domain-normalization",
+        "src/foundation/network/url-escaping",
+        "src/foundation/network/form-codec"
+      ],
+      "original_identities": [
+        "form_urlencoded@1.2.2",
+        "idna@1.1.0",
+        "idna_adapter@1.2.2",
+        "percent-encoding@2.3.2",
+        "url@2.5.8"
+      ],
+      "method": "zxs-modules"
+    },
+    {
+      "directory": "src/foundation/encoding/compression",
+      "files": [
+        "Cargo.toml"
+      ],
+      "reason": "Integrate the compression maintained implementations as one Blog purpose package; adapt local module paths, macro crate paths and feature requests while retaining selected consumer behavior. The catalogue binds the complete final current source inventory.",
+      "integration": "compliance/provenance/integrations/purpose-modules/integration.json",
+      "consumed_directories": [
+        "src/foundation/checksum/adler",
+        "src/foundation/checksum/vector-adler",
+        "src/foundation/encoding/compressed-stream",
+        "src/foundation/encoding/deflate-engine"
+      ],
+      "original_identities": [
+        "adler2@2.0.1",
+        "flate2@1.1.10",
+        "miniz_oxide@0.9.1",
+        "simd-adler32@0.3.10"
+      ],
+      "method": "zxs-modules"
+    },
+    {
+      "directory": "src/foundation/sync/concurrent-collections",
+      "files": [
+        "Cargo.toml"
+      ],
+      "reason": "Integrate the concurrent-collections maintained implementations as one Blog purpose package; adapt local module paths, macro crate paths and feature requests while retaining selected consumer behavior. The catalogue binds the complete final current source inventory.",
+      "integration": "compliance/provenance/integrations/purpose-modules/integration.json",
+      "consumed_directories": [
+        "src/foundation/sync/concurrency-primitives",
+        "src/foundation/sync/concurrent-queue",
+        "src/foundation/sync/epoch-reclamation",
+        "src/foundation/sync/work-stealing"
+      ],
+      "original_identities": [
+        "crossbeam-deque@0.8.8",
+        "crossbeam-epoch@0.9.21",
+        "crossbeam-queue@0.3.14",
+        "crossbeam-utils@0.8.23"
+      ],
+      "method": "zxs-modules"
+    },
+    {
+      "directory": "src/foundation/text/pattern-search",
+      "files": [
+        "Cargo.toml"
+      ],
+      "reason": "Integrate the regex maintained implementations as one Blog purpose package; adapt local module paths, macro crate paths and feature requests while retaining selected consumer behavior. The catalogue binds the complete final current source inventory.",
+      "integration": "compliance/provenance/integrations/purpose-modules/integration.json",
+      "consumed_directories": [
+        "src/foundation/text/multi-pattern-search",
+        "src/foundation/text/pattern-automata",
+        "src/foundation/text/pattern-search",
+        "src/foundation/text/pattern-syntax"
+      ],
+      "original_identities": [
+        "aho-corasick@1.1.5",
+        "regex-automata@0.4.18",
+        "regex-syntax@0.8.11",
+        "regex@1.13.1"
+      ],
+      "method": "zxs-modules"
+    },
+    {
+      "directory": "src/foundation/cli/terminal-style",
+      "files": [
+        "Cargo.toml"
+      ],
+      "reason": "Integrate the terminal-style maintained implementations as one Blog purpose package; adapt local module paths, macro crate paths and feature requests while retaining selected consumer behavior. The catalogue binds the complete final current source inventory.",
+      "integration": "compliance/provenance/integrations/purpose-modules/integration.json",
+      "consumed_directories": [
+        "src/foundation/cli/color-policy",
+        "src/foundation/cli/terminal-capabilities",
+        "src/foundation/cli/terminal-parser",
+        "src/foundation/cli/terminal-stream",
+        "src/foundation/cli/terminal-style"
+      ],
+      "original_identities": [
+        "anstream@1.0.0",
+        "anstyle-parse@1.0.0",
+        "anstyle-query@1.1.5",
+        "anstyle@1.0.14",
+        "colorchoice@1.0.5"
+      ],
+      "method": "zxs-modules"
+    },
+    {
+      "directory": "src/foundation/format/configuration",
+      "files": [
+        "Cargo.toml"
+      ],
+      "reason": "Integrate the toml maintained implementations as one Blog purpose package; adapt local module paths, macro crate paths and feature requests while retaining selected consumer behavior. The catalogue binds the complete final current source inventory.",
+      "integration": "compliance/provenance/integrations/purpose-modules/integration.json",
+      "consumed_directories": [
+        "src/foundation/format/configuration",
+        "src/foundation/format/configuration-date",
+        "src/foundation/format/configuration-tree",
+        "src/foundation/format/configuration-writer",
+        "src/foundation/format/source-spans"
+      ],
+      "original_identities": [
+        "serde_spanned@0.6.9",
+        "toml@0.8.23",
+        "toml_datetime@0.6.11",
+        "toml_edit@0.22.27",
+        "toml_write@0.1.2"
+      ],
+      "method": "zxs-modules"
+    },
+    {
+      "directory": "src/foundation/assets/compiler",
+      "files": [
+        "Cargo.toml"
+      ],
+      "reason": "Integrate the asset-compiler maintained implementations as one Blog purpose package; adapt local module paths, macro crate paths and feature requests while retaining selected consumer behavior. The catalogue binds the complete final current source inventory.",
+      "integration": "compliance/provenance/integrations/purpose-modules/integration.json",
+      "consumed_directories": [
+        "src/foundation/assets/style-color",
+        "src/foundation/assets/style-optimizer",
+        "src/foundation/assets/style-parser",
+        "src/foundation/assets/style-selectors",
+        "src/foundation/javascript/browser-compatibility",
+        "src/foundation/javascript/browser-targets",
+        "src/foundation/javascript/code-generator",
+        "src/foundation/javascript/compiler-collections",
+        "src/foundation/javascript/compiler-errors",
+        "src/foundation/javascript/compiler-strings",
+        "src/foundation/javascript/language-semantics",
+        "src/foundation/javascript/name-compaction",
+        "src/foundation/javascript/optimizer",
+        "src/foundation/javascript/parser",
+        "src/foundation/javascript/regular-expression",
+        "src/foundation/javascript/scope-analysis",
+        "src/foundation/javascript/source-location",
+        "src/foundation/javascript/source-map",
+        "src/foundation/javascript/syntax-arena",
+        "src/foundation/javascript/syntax-serialization",
+        "src/foundation/javascript/syntax-tree",
+        "src/foundation/javascript/syntax-types",
+        "src/foundation/javascript/syntax-visitor",
+        "src/foundation/javascript/toolkit",
+        "src/foundation/javascript/tree-traversal",
+        "src/foundation/javascript/typed-index",
+        "src/foundation/collections/cached-hash",
+        "src/foundation/encoding/byte-count",
+        "src/foundation/encoding/float-format",
+        "src/foundation/encoding/json-escaping",
+        "src/foundation/encoding/short-float-format",
+        "src/foundation/filesystem/relative-path",
+        "src/foundation/memory/bounded-index",
+        "src/foundation/text/borrowed-text",
+        "src/foundation/text/script-identifiers"
+      ],
+      "original_identities": [
+        "bytecount@0.6.9",
+        "cow-utils@0.1.3",
+        "cssparser-color@0.1.0",
+        "cssparser@0.33.0",
+        "dtoa-short@0.3.5",
+        "dtoa@1.0.11",
+        "json-escape-simd@3.1.2",
+        "lightningcss@1.0.0-alpha.71",
+        "nonmax@0.5.5",
+        "oxc-browserslist@5.0.1",
+        "oxc@0.153.0",
+        "oxc_allocator@0.153.0",
+        "oxc_ast@0.153.0",
+        "oxc_ast_visit@0.153.0",
+        "oxc_codegen@0.153.0",
+        "oxc_compat@0.153.0",
+        "oxc_data_structures@0.153.0",
+        "oxc_diagnostics@0.153.0",
+        "oxc_ecmascript@0.153.0",
+        "oxc_estree@0.153.0",
+        "oxc_index@5.0.0",
+        "oxc_mangler@0.153.0",
+        "oxc_minifier@0.153.0",
+        "oxc_parser@0.153.0",
+        "oxc_regular_expression@0.153.0",
+        "oxc_semantic@0.153.0",
+        "oxc_sourcemap@9.0.0",
+        "oxc_span@0.153.0",
+        "oxc_str@0.153.0",
+        "oxc_syntax@0.153.0",
+        "oxc_traverse@0.153.0",
+        "parcel_selectors@0.28.2",
+        "pathdiff@0.2.3",
+        "precomputed-hash@0.1.1",
+        "unicode-id-start@1.5.0"
+      ],
+      "method": "blog-ownfold"
+    },
+    {
+      "directory": "src/foundation/assets/markdown-parser",
+      "files": [
+        "Cargo.toml",
+        "INTEGRATED-SOURCES.json"
+      ],
+      "reason": "Integrate the retained browser CSR or Markdown implementation into a single purpose owner, adapt internal module and generated macro paths, and preserve selected product behavior. The current catalogue binds all maintained source bytes.",
+      "integration": "compliance/provenance/integrations/browser-csr/integration.json",
+      "original_identities": [
+        "linkify@0.11.0",
+        "pulldown-cmark-escape@0.11.0",
+        "pulldown-cmark@0.13.4"
+      ]
+    },
+    {
+      "directory": "src/interface/dom",
+      "files": [
+        "Cargo.toml",
+        "INTEGRATED-SOURCES.json"
+      ],
+      "reason": "Integrate the retained browser CSR or Markdown implementation into a single purpose owner, adapt internal module and generated macro paths, and preserve selected product behavior. The current catalogue binds all maintained source bytes.",
+      "integration": "compliance/provenance/integrations/browser-csr/integration.json",
+      "original_identities": [
+        "any_spawner@0.3.0",
+        "console_error_panic_hook@0.1.7",
+        "const_str_slice_concat@0.1.0",
+        "drain_filter_polyfill@0.1.3",
+        "either_of@0.1.9",
+        "erased@0.1.2",
+        "gloo-events@0.2.0",
+        "gloo-timers@0.3.0",
+        "guardian@1.3.0",
+        "html-escape@0.2.15",
+        "itertools@0.14.0",
+        "leptos_dom@0.8.8",
+        "next_tuple@0.1.0",
+        "oco_ref@0.2.1",
+        "or_poisoned@0.1.0",
+        "reactive_graph@0.2.16",
+        "send_wrapper@0.6.0",
+        "slotmap@1.1.1",
+        "tachys@0.2.19",
+        "throw_error@0.3.1",
+        "typed-builder@0.23.2"
+      ]
+    },
+    {
+      "directory": "src/interface/macros",
+      "files": [
+        "Cargo.toml",
+        "INTEGRATED-SOURCES.json"
+      ],
+      "reason": "Integrate the retained browser CSR or Markdown implementation into a single purpose owner, adapt internal module and generated macro paths, and preserve selected product behavior. The current catalogue binds all maintained source bytes.",
+      "integration": "compliance/provenance/integrations/browser-csr/integration.json",
+      "original_identities": [
+        "leptos_hot_reload@0.8.7",
+        "paste@1.0.15",
+        "typed-builder-macro@0.23.2"
+      ]
+    },
+    {
+      "directory": "src/foundation/encoding/deflate-codec",
+      "reason": "Retire this source tree after exhaustive normal/dev/build/target manifest traversal proves no incoming declaration; preserve the exact original archive and a recoverable maintained-source snapshot."
+    },
+    {
+      "directory": "src/foundation/lookup/table-codegen",
+      "reason": "Retire this source tree after exhaustive normal/dev/build/target manifest traversal proves no incoming declaration; preserve the exact original archive and a recoverable maintained-source snapshot."
+    },
+    {
+      "directory": "src/interface/dom",
+      "files": [
+        "src/kernel/constant_text/mod.rs",
+        "src/kernel/tasks/mod.rs"
+      ],
+      "reason": "Correct template separator writes and capacity handling; isolate native custom executor overrides per thread while retaining the direct WASM dispatch path. Verified behavior rather than package count motivates these changes."
+    },
+    {
+      "directory": "src/interface/macros",
+      "files": [
+        "src/component.rs"
+      ],
+      "reason": "Reject invalid or trivia-suffixed property names through located syntax errors instead of proc-macro panic, preserving valid Unicode and raw identifiers."
+    },
+    {
+      "directory": "src/interface",
+      "files": [
+        "tests/executor_overrides.rs",
+        "tests/kernel_state.rs"
+      ],
+      "reason": "Add actual tuple class/style consumers and isolated native executor consumers covering thread-local scope, global fallback, repeated installation and reentrant dispatch."
+    }
+  ]
+}

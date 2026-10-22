@@ -5,7 +5,7 @@ body {margin:0;}
 .badge {display:inline-block;border-radius:100px;padding:.25rem .65rem;background:#e9edf4;color:#566278;font-size:.76rem;font-weight:700;}
 .badge.success {background:#dcf4e8;color:#196d4c;}
 .public-tools > button{display:inline-flex;align-items:center;justify-content:center;min-width:37px;min-height:37px;}
-.public-tools > button {border:0;background:var(--xcss-bg-panel,#fff);color:inherit;border-radius:50%;}
+.public-tools > button {border:0;background:var(--blog-bg-panel,#fff);color:inherit;border-radius:50%;}
 .public-tools > button svg {width:22px;height:22px;}
 .original-public.theme-dark .public-tools > button {background:#23313c;color:#e8edf0;}
 .original-public .public-header nav {min-width:0;}
@@ -13,7 +13,7 @@ body {margin:0;}
 .editor-form, .form-grid, .form-grid > * {min-width:0;}
 .editor-form input[type=file] {width:100%;max-width:100%;}
 html:lang(en) .original-public .public-header nav {gap:.55rem;font-size:.8rem;}
-.pager,.xcss-actions {display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;}
+.pager,.blog-actions {display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;}
 .pager {justify-content:flex-end;padding:1rem 0;color:#66758f;}
 .editor-form {display:grid;gap:1.1rem;max-width:950px;padding:1.4rem;border:1px solid #dde4ef;background:#fff;box-shadow:0 12px 38px #2b4d7810;}
 .editor-textarea {min-height:360px;width:100%;resize:vertical;box-sizing:border-box;font:14px/1.7 ui-monospace,monospace;}
@@ -51,33 +51,33 @@ html:lang(en) .original-public .public-header nav {gap:.55rem;font-size:.8rem;}
 @media(prefers-reduced-motion:reduce){.reading-progress span{transition:none}}
 
 /* Explicit Mac mini surfaces on supported modern browsers. */
-.editor-form { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
-.article-card,.reading-card:not(.reading-article) { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
-.article-markdown pre { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
-.article-markdown code { --xcss-server-corner-extent: 8px; }
-.password-form input { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
-.password-form button { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
-.comment-form textarea { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
-.comment-form>button[type=submit] { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
-.wall-card,.link-card { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
-.search-form input { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
-.search-form button,.pager button { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
-.article-video { --xcss-server-corner-extent: 36px; --xcss-server-corner-mode: clip; }
-.music-cover { --xcss-server-corner-extent: 36px; --xcss-server-corner-mode: clip; }
-.editor-markdown-preview { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
-.editor-markdown-preview pre { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
-.featured-article { --xcss-server-corner-extent: var(--xcss-server-corner-notification, 48px); }
-.link-card mark { --xcss-server-corner-extent: 2.25px; }
-.reading-toc nav { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
-.reading-toc a { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
-.wall-photo-button img { --xcss-server-corner-extent: 36px; --xcss-server-corner-mode: clip; }
-.image-lightbox-close { --xcss-server-corner-extent: var(--xcss-server-corner-control, 27px); }
-.moderation-photo img { --xcss-server-corner-extent: var(--xcss-server-corner-photo, 31.0568993271%); --xcss-server-corner-mode: clip; }
+.editor-form { --blog-server-corner-extent: var(--blog-server-corner-panel, 42px); }
+.article-card,.reading-card:not(.reading-article) { --blog-server-corner-extent: var(--blog-server-corner-notification, 48px); }
+.article-markdown pre { --blog-server-corner-extent: var(--blog-server-corner-panel, 42px); }
+.article-markdown code { --blog-server-corner-extent: 8px; }
+.password-form input { --blog-server-corner-extent: var(--blog-server-corner-control, 27px); }
+.password-form button { --blog-server-corner-extent: var(--blog-server-corner-control, 27px); }
+.comment-form textarea { --blog-server-corner-extent: var(--blog-server-corner-control, 27px); }
+.comment-form>button[type=submit] { --blog-server-corner-extent: var(--blog-server-corner-control, 27px); }
+.wall-card,.link-card { --blog-server-corner-extent: var(--blog-server-corner-notification, 48px); }
+.search-form input { --blog-server-corner-extent: var(--blog-server-corner-control, 27px); }
+.search-form button,.pager button { --blog-server-corner-extent: var(--blog-server-corner-control, 27px); }
+.article-video { --blog-server-corner-extent: 36px; --blog-server-corner-mode: clip; }
+.music-cover { --blog-server-corner-extent: 36px; --blog-server-corner-mode: clip; }
+.editor-markdown-preview { --blog-server-corner-extent: var(--blog-server-corner-panel, 42px); }
+.editor-markdown-preview pre { --blog-server-corner-extent: var(--blog-server-corner-panel, 42px); }
+.featured-article { --blog-server-corner-extent: var(--blog-server-corner-notification, 48px); }
+.link-card mark { --blog-server-corner-extent: 2.25px; }
+.reading-toc nav { --blog-server-corner-extent: var(--blog-server-corner-panel, 42px); }
+.reading-toc a { --blog-server-corner-extent: var(--blog-server-corner-control, 27px); }
+.wall-photo-button img { --blog-server-corner-extent: 36px; --blog-server-corner-mode: clip; }
+.image-lightbox-close { --blog-server-corner-extent: var(--blog-server-corner-control, 27px); }
+.moderation-photo img { --blog-server-corner-extent: var(--blog-server-corner-photo, 31.0568993271%); --blog-server-corner-mode: clip; }
 @media (max-width:900px) {
-  .reading-toc details { --xcss-server-corner-extent: var(--xcss-server-corner-panel, 42px); }
+  .reading-toc details { --blog-server-corner-extent: var(--blog-server-corner-panel, 42px); }
 }
 
-.reading-card.reading-article,.public-tools > button { --xcss-server-corner-extent: 0px; }
+.reading-card.reading-article,.public-tools > button { --blog-server-corner-extent: 0px; }
 
 /* A highlighted token has one box, so the Mac mini contour never reverts to
    circular corners when a long token wraps. Preformatted code uses its parent. */
@@ -90,5 +90,5 @@ html:lang(en) .original-public .public-header nav {gap:.55rem;font-size:.8rem;}
   display: inline;
   max-width: none;
   background: transparent;
-  --xcss-server-corner-extent: 0px;
+  --blog-server-corner-extent: 0px;
 }

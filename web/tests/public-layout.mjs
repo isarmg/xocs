@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import { chromium, firefox, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { preview } from '../../tools/web-build/test-preview.mjs';
+import { preview } from '../../tools/assets/test-preview.mjs';
 import { article, mockApi, pageOf, summary, waitForApplication } from './browser-fixtures.mjs';
 
 const families = [
   { id: 1, man_name: 'Lin', woman_name: 'Yu', timing: '2026-10-01', bg_cover: null, man_cover: null, woman_cover: null, family_info: 'We keep the little moments.\nOne photo and one story at a time.', countdown_title: 'A special day', countdown_time: '2026-10-08' },
 ];
-const photos = Array.from({ length: 14 }, (_, index) => ({ id: index + 1, title: `Memory ${index + 1}`, classify: index === 13 ? 'City' : 'Beach', cover: '/live/xocs-current-hero.jpg', create_time: '2026-10-08', introduction: null, url: null, link_type: 'lovePhoto' }));
+const photos = Array.from({ length: 14 }, (_, index) => ({ id: index + 1, title: `Memory ${index + 1}`, classify: index === 13 ? 'City' : 'Beach', cover: '/live/blog-current-hero.jpg', create_time: '2026-10-08', introduction: null, url: null, link_type: 'lovePhoto' }));
 const notes = Array.from({ length: 11 }, (_, index) => ({ id: index + 1, username: 'Lin', content: `Moment ${index + 1}: an ordinary day worth keeping.`, image_path: index === 0 ? '/legacy/avatar.jpg' : null, create_time: '2026-10-08', user_id: 1, is_public: 1, like_count: 0 }));
 
 async function fixtures(page, state) {
@@ -25,7 +25,7 @@ async function fixtures(page, state) {
   });
   await page.route('**/api/v1/articles?*', route => {
     const url = new URL(route.request().url()), size = Number(url.searchParams.get('size') || 12);
-    const items = Array.from({ length: size === 20 ? 15 : 6 }, (_, index) => ({ ...summary, id: index + 1, article_title: index === 0 ? 'A very long title, with all of its words visible as it slides across the card instead of wrapping onto a second line' : `A day worth keeping ${index + 1}`, article_cover: '/live/xocs-current-hero.jpg' }));
+    const items = Array.from({ length: size === 20 ? 15 : 6 }, (_, index) => ({ ...summary, id: index + 1, article_title: index === 0 ? 'A very long title, with all of its words visible as it slides across the card instead of wrapping onto a second line' : `A day worth keeping ${index + 1}`, article_cover: '/live/blog-current-hero.jpg' }));
     return route.fulfill({ json: pageOf(items, url) });
   });
 }

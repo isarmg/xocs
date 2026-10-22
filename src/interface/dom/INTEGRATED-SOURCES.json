@@ -1,0 +1,302 @@
+{
+  "schema": 1,
+  "ownership": "repository-maintained",
+  "package": "blog-dom",
+  "originals": [
+    {
+      "id": "any_spawner@0.3.0",
+      "package": "any_spawner",
+      "version": "0.3.0",
+      "archive": "compliance/provenance/archives/any_spawner-0.3.0.crate",
+      "archive_sha256": "1384d3fe1eecb464229fcf6eebb72306591c56bf27b373561489458a7c73027d",
+      "license": "MIT",
+      "license_materials": [],
+      "historical_input_directories": [
+        "src/foundation/runtime/task-dispatch"
+      ],
+      "integration": "compliance/provenance/integrations/browser-csr/integration.json"
+    },
+    {
+      "id": "console_error_panic_hook@0.1.7",
+      "package": "console_error_panic_hook",
+      "version": "0.1.7",
+      "archive": "compliance/provenance/archives/console_error_panic_hook-0.1.7.crate",
+      "archive_sha256": "a06aeb73f470f66dcdbf7223caeebb85984942f22f1adb2a088cf9668146bbbc",
+      "license": "Apache-2.0/MIT",
+      "license_materials": [
+        "compliance/licenses/upstream/console_error_panic_hook-0.1.7/LICENSE-APACHE",
+        "compliance/licenses/upstream/console_error_panic_hook-0.1.7/LICENSE-MIT"
+      ],
+      "historical_input_directories": [
+        "src/foundation/diagnostics/browser-panic"
+      ],
+      "integration": "compliance/provenance/integrations/browser-csr/integration.json"
+    },
+    {
+      "id": "const_str_slice_concat@0.1.0",
+      "package": "const_str_slice_concat",
+      "version": "0.1.0",
+      "archive": "compliance/provenance/archives/const_str_slice_concat-0.1.0.crate",
+      "archive_sha256": "f67855af358fcb20fac58f9d714c94e2b228fe5694c1c9b4ead4a366343eda1b",
+      "license": "MIT",
+      "license_materials": [],
+      "historical_input_directories": [
+        "src/foundation/text/constant-text-join"
+      ],
+      "integration": "compliance/provenance/integrations/browser-csr/integration.json"
+    },
+    {
+      "id": "drain_filter_polyfill@0.1.3",
+      "package": "drain_filter_polyfill",
+      "version": "0.1.3",
+      "archive": "compliance/provenance/archives/drain_filter_polyfill-0.1.3.crate",
+      "archive_sha256": "669a445ee724c5c69b1b06fe0b63e70a1c84bc9bb7d9696cd4f4e3ec45050408",
+      "license": "MIT OR Apache-2.0",
+      "license_materials": [],
+      "historical_input_directories": [
+        "src/foundation/interface/vector-drain"
+      ],
+      "integration": "compliance/provenance/integrations/browser-csr/integration.json"
+    },
+    {
+      "id": "either_of@0.1.9",
+      "package": "either_of",
+      "version": "0.1.9",
+      "archive": "compliance/provenance/archives/either_of-0.1.9.crate",
+      "archive_sha256": "5060e0a4cbf26a87550792688ade88e6b8aec9208613631a7a363bda7bc2d4cd",
+      "license": "MIT",
+      "license_materials": [],
+      "historical_input_directories": [
+        "src/foundation/syntax/typed-alternatives"
+      ],
+      "integration": "compliance/provenance/integrations/browser-csr/integration.json"
+    },
+    {
+      "id": "erased@0.1.2",
+      "package": "erased",
+      "version": "0.1.2",
+      "archive": "compliance/provenance/archives/erased-0.1.2.crate",
+      "archive_sha256": "a1731451909bde27714eacba19c2566362a7f35224f52b153d3f42cf60f72472",
+      "license": "MIT",
+      "license_materials": [],
+      "historical_input_directories": [
+        "src/foundation/memory/erased-reference"
+      ],
+      "integration": "compliance/provenance/integrations/browser-csr/integration.json"
+    },
+    {
+      "id": "gloo-events@0.2.0",
+      "package": "gloo-events",
+      "version": "0.2.0",
+      "archive": "compliance/provenance/archives/gloo-events-0.2.0.crate",
+      "archive_sha256": "27c26fb45f7c385ba980f5fa87ac677e363949e065a083722697ef1b2cc91e41",
+      "license": "MIT OR Apache-2.0",
+      "license_materials": [],
+      "historical_input_directories": [
+        "src/foundation/interface/browser-events"
+      ],
+      "integration": "compliance/provenance/integrations/browser-csr/integration.json"
+    },
+    {
+      "id": "gloo-timers@0.3.0",
+      "package": "gloo-timers",
+      "version": "0.3.0",
+      "archive": "compliance/provenance/archives/gloo-timers-0.3.0.crate",
+      "archive_sha256": "bbb143cf96099802033e0d4f4963b19fd2e0b728bcf076cd9cf7f6634f092994",
+      "license": "MIT OR Apache-2.0",
+      "license_materials": [],
+      "historical_input_directories": [
+        "src/foundation/interface/browser-timers"
+      ],
+      "integration": "compliance/provenance/integrations/browser-csr/integration.json"
+    },
+    {
+      "id": "guardian@1.3.0",
+      "package": "guardian",
+      "version": "1.3.0",
+      "archive": "compliance/provenance/archives/guardian-1.3.0.crate",
+      "archive_sha256": "17e2ac29387b1aa07a1e448f7bb4f35b500787971e965b02842b900afa5c8f6f",
+      "license": "MIT OR Apache-2.0",
+      "license_materials": [
+        "compliance/licenses/upstream/guardian-1.3.0/LICENSE-APACHE",
+        "compliance/licenses/upstream/guardian-1.3.0/LICENSE-MIT"
+      ],
+      "historical_input_directories": [
+        "src/foundation/sync/owned-guard"
+      ],
+      "integration": "compliance/provenance/integrations/browser-csr/integration.json"
+    },
+    {
+      "id": "html-escape@0.2.15",
+      "package": "html-escape",
+      "version": "0.2.15",
+      "archive": "compliance/provenance/archives/html-escape-0.2.15.crate",
+      "archive_sha256": "c9356095b4b41197bba32173600e1582792cda618f65d12f68e2e77d273413c5",
+      "license": "MIT",
+      "license_materials": [
+        "compliance/licenses/upstream/html-escape-0.2.15/LICENSE"
+      ],
+      "historical_input_directories": [
+        "src/foundation/text/html-escaping"
+      ],
+      "integration": "compliance/provenance/integrations/browser-csr/integration.json"
+    },
+    {
+      "id": "itertools@0.14.0",
+      "package": "itertools",
+      "version": "0.14.0",
+      "archive": "compliance/provenance/archives/itertools-0.14.0.crate",
+      "archive_sha256": "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285",
+      "license": "MIT OR Apache-2.0",
+      "license_materials": [
+        "compliance/licenses/upstream/itertools-0.14.0/LICENSE-APACHE",
+        "compliance/licenses/upstream/itertools-0.14.0/LICENSE-MIT"
+      ],
+      "historical_input_directories": [
+        "src/foundation/syntax/view-iterators"
+      ],
+      "integration": "compliance/provenance/integrations/browser-csr/integration.json"
+    },
+    {
+      "id": "leptos_dom@0.8.8",
+      "package": "leptos_dom",
+      "version": "0.8.8",
+      "archive": "compliance/provenance/archives/leptos_dom-0.8.8.crate",
+      "archive_sha256": "35742e9ed8f8aaf9e549b454c68a7ac0992536e06856365639b111f72ab07884",
+      "license": "MIT",
+      "license_materials": [],
+      "historical_input_directories": [
+        "src/foundation/interface/dom-operations"
+      ],
+      "integration": "compliance/provenance/integrations/browser-csr/integration.json"
+    },
+    {
+      "id": "next_tuple@0.1.0",
+      "package": "next_tuple",
+      "version": "0.1.0",
+      "archive": "compliance/provenance/archives/next_tuple-0.1.0.crate",
+      "archive_sha256": "60993920e071b0c9b66f14e2b32740a4e27ffc82854dcd72035887f336a09a28",
+      "license": "MIT",
+      "license_materials": [],
+      "historical_input_directories": [
+        "src/foundation/collections/tuple-builder"
+      ],
+      "integration": "compliance/provenance/integrations/browser-csr/integration.json"
+    },
+    {
+      "id": "oco_ref@0.2.1",
+      "package": "oco_ref",
+      "version": "0.2.1",
+      "archive": "compliance/provenance/archives/oco_ref-0.2.1.crate",
+      "archive_sha256": "ed0423ff9973dea4d6bd075934fdda86ebb8c05bdf9d6b0507067d4a1226371d",
+      "license": "MIT",
+      "license_materials": [],
+      "historical_input_directories": [
+        "src/foundation/memory/shared-value"
+      ],
+      "integration": "compliance/provenance/integrations/browser-csr/integration.json"
+    },
+    {
+      "id": "or_poisoned@0.1.0",
+      "package": "or_poisoned",
+      "version": "0.1.0",
+      "archive": "compliance/provenance/archives/or_poisoned-0.1.0.crate",
+      "archive_sha256": "8c04f5d74368e4d0dfe06c45c8627c81bd7c317d52762d118fb9b3076f6420fd",
+      "license": "MIT",
+      "license_materials": [],
+      "historical_input_directories": [
+        "src/foundation/sync/poison-policy"
+      ],
+      "integration": "compliance/provenance/integrations/browser-csr/integration.json"
+    },
+    {
+      "id": "reactive_graph@0.2.16",
+      "package": "reactive_graph",
+      "version": "0.2.16",
+      "archive": "compliance/provenance/archives/reactive_graph-0.2.16.crate",
+      "archive_sha256": "3bcec36a2d1b9a53a4129b3270b19e3df6f6b88c2e7c97ed9404dc9307f137d7",
+      "license": "MIT",
+      "license_materials": [],
+      "historical_input_directories": [
+        "src/foundation/interface/reactivity"
+      ],
+      "integration": "compliance/provenance/integrations/browser-csr/integration.json"
+    },
+    {
+      "id": "send_wrapper@0.6.0",
+      "package": "send_wrapper",
+      "version": "0.6.0",
+      "archive": "compliance/provenance/archives/send_wrapper-0.6.0.crate",
+      "archive_sha256": "cd0b0ec5f1c1ca621c432a25813d8d60c88abe6d3e08a3eb9cf37d97a0fe3d73",
+      "license": "MIT/Apache-2.0",
+      "license_materials": [
+        "compliance/licenses/upstream/send_wrapper-0.6.0/LICENSE-APACHE.txt",
+        "compliance/licenses/upstream/send_wrapper-0.6.0/LICENSE-MIT.txt"
+      ],
+      "historical_input_directories": [
+        "src/foundation/sync/thread-bound-value"
+      ],
+      "integration": "compliance/provenance/integrations/browser-csr/integration.json"
+    },
+    {
+      "id": "slotmap@1.1.1",
+      "package": "slotmap",
+      "version": "1.1.1",
+      "archive": "compliance/provenance/archives/slotmap-1.1.1.crate",
+      "archive_sha256": "bdd58c3c93c3d278ca835519292445cb4b0d4dc59ccfdf7ceadaab3f8aeb4038",
+      "license": "Zlib",
+      "license_materials": [
+        "compliance/licenses/upstream/slotmap-1.1.1/LICENSE"
+      ],
+      "historical_input_directories": [
+        "src/foundation/collections/generation-map"
+      ],
+      "integration": "compliance/provenance/integrations/browser-csr/integration.json"
+    },
+    {
+      "id": "tachys@0.2.19",
+      "package": "tachys",
+      "version": "0.2.19",
+      "archive": "compliance/provenance/archives/tachys-0.2.19.crate",
+      "archive_sha256": "e47e2220bb9d2a3be976a22a0fb7685a0b84499bb11ea5cb3bbc82907675ac68",
+      "license": "MIT",
+      "license_materials": [],
+      "historical_input_directories": [
+        "src/foundation/interface/view-tree"
+      ],
+      "integration": "compliance/provenance/integrations/browser-csr/integration.json"
+    },
+    {
+      "id": "throw_error@0.3.1",
+      "package": "throw_error",
+      "version": "0.3.1",
+      "archive": "compliance/provenance/archives/throw_error-0.3.1.crate",
+      "archive_sha256": "dc0ed6038fcbc0795aca7c92963ddda636573b956679204e044492d2b13c8f64",
+      "license": "MIT",
+      "license_materials": [],
+      "historical_input_directories": [
+        "src/foundation/interface/view-errors"
+      ],
+      "integration": "compliance/provenance/integrations/browser-csr/integration.json"
+    },
+    {
+      "id": "typed-builder@0.23.2",
+      "package": "typed-builder",
+      "version": "0.23.2",
+      "archive": "compliance/provenance/archives/typed-builder-0.23.2.crate",
+      "archive_sha256": "31aa81521b70f94402501d848ccc0ecaa8f93c8eb6999eb9747e72287757ffda",
+      "license": "MIT OR Apache-2.0",
+      "license_materials": [
+        "compliance/licenses/upstream/typed-builder-0.23.2/LICENSE-APACHE",
+        "compliance/licenses/upstream/typed-builder-0.23.2/LICENSE-MIT"
+      ],
+      "historical_input_directories": [
+        "src/foundation/syntax/typed-builder"
+      ],
+      "integration": "compliance/provenance/integrations/browser-csr/integration.json"
+    }
+  ],
+  "snapshot_receipt": "compliance/provenance/integrations/browser-csr/integration.json",
+  "current_files_receipt": "compliance/rust-sources.json",
+  "changes": "Integrate the actually retained implementations into purpose-owned modules; original registry archive bytes, original file hashes and licenses remain separate from current source hashes."
+}

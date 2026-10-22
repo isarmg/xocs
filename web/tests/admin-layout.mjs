@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { chromium, firefox, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { preview } from '../../tools/web-build/test-preview.mjs';
+import { preview } from '../../tools/assets/test-preview.mjs';
 import { adminSite, mockApi } from './browser-fixtures.mjs';
 import { paintedSurfaceColor } from './painted-surface.mjs';
 
@@ -16,13 +16,13 @@ const groups = [
 async function layout(page) {
   await page.evaluate(() => document.fonts.ready);
   const sizes = await page.evaluate(() => ({ width: innerWidth, scroll: document.documentElement.scrollWidth,
-    headerHeight: document.querySelector('.xcss-admin-shell > .xcss-page-header').getBoundingClientRect().height }));
+    headerHeight: document.querySelector('.blog-admin-shell > .blog-page-header').getBoundingClientRect().height }));
   assert.ok(sizes.scroll <= sizes.width, `${page.url()}: body overflows: ${JSON.stringify(sizes)}`);
   if (sizes.width === 390) assert.ok(sizes.headerHeight < 220, `Mobile header is too tall: ${sizes.headerHeight}`);
 }
 
 async function accessible(page) {
-  const { violations } = await new AxeBuilder({ page }).include('.xcss-admin-shell')
+  const { violations } = await new AxeBuilder({ page }).include('.blog-admin-shell')
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
   assert.deepEqual(violations.map(item => ({ id: item.id, nodes: item.nodes.map(node => node.target) })), [], page.url());
 }
@@ -31,7 +31,7 @@ async function surfaces(page, selector) {
   await page.locator(selector).first().waitFor({ state: 'visible' });
   const expected = await page.evaluate(() => {
     const probe = document.createElement('span');
-    probe.style.backgroundColor = 'var(--xcss-bg-panel)';
+    probe.style.backgroundColor = 'var(--blog-bg-panel)';
     document.body.append(probe);
     const expected = getComputedStyle(probe).backgroundColor;
     probe.remove();
@@ -56,8 +56,8 @@ try {
         page.on('pageerror', error => errors.push(error.message));
         await mockApi(page, { authenticated: true });
         await page.goto(`${base}/admin?lang=${language}#categories`);
-        const primary = page.locator('.xcss-header-navigation');
-        const secondary = page.locator('.xcss-secondary-navigation');
+        const primary = page.locator('.blog-header-navigation');
+        const secondary = page.locator('.blog-secondary-navigation');
         await expect(primary.getByRole('button')).toHaveCount(5);
         await expect(secondary.getByRole('button', { pressed: true })).toHaveText(english ? 'Categories' : '分类管理');
         for (const group of groups) {
@@ -89,19 +89,19 @@ try {
         await layout(page);
         await primary.getByRole('button', { name: english ? 'Overview' : '总览', exact: true }).click();
         await expect(page.getByRole('table', { name: english ? 'Site statistics' : '网站统计', exact: true })).toBeVisible();
-        await surfaces(page, '.xcss-table-scroll, .xocs-dashboard-sections > section');
+        await surfaces(page, '.blog-table-scroll, .blog-dashboard-sections > section');
         if (english) await accessible(page);
         await page.getByRole('button', { name: english ? 'Switch to dark mode' : '切换到深色模式', exact: true }).click();
         await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-        await surfaces(page, '.xcss-table-scroll, .xocs-dashboard-sections > section');
+        await surfaces(page, '.blog-table-scroll, .blog-dashboard-sections > section');
         if (english) await accessible(page);
         await primary.getByRole('button', { name: english ? 'Content' : '内容', exact: true }).click();
         await secondary.getByRole('button', { name: english ? 'Categories' : '分类管理', exact: true }).click();
         await surfaces(page, '.inline-form');
         if (english) await accessible(page);
         await primary.getByRole('button', { name: english ? 'Settings' : '设置', exact: true }).click();
-        await expect(page.getByLabel(english ? 'Site name' : '网站名称', { exact: true })).toHaveValue('XOCS');
-        await surfaces(page, '.xocs-settings-form .xcss-content-panel');
+        await expect(page.getByLabel(english ? 'Site name' : '网站名称', { exact: true })).toHaveValue('BLOG');
+        await surfaces(page, '.blog-settings-form .blog-content-panel');
         if (english) await accessible(page);
         await layout(page);
         await page.getByRole('button', { name: english ? 'Switch to Chinese' : '切换为英文', exact: true }).click();
@@ -120,7 +120,7 @@ try {
         : route.fulfill({ json: { articles: 1, comments: 0, members: 0, categories: 1 } }));
       await page.goto(`${base}/admin?lang=en#dashboard`);
       await expect(page.getByRole('alert')).toContainText('Unable to load statistics');
-      await expect(page.locator('.xcss-loading')).toHaveCount(0);
+      await expect(page.locator('.blog-loading')).toHaveCount(0);
       failStatistics = false;
       await page.getByRole('button', { name: 'Try again', exact: true }).click();
       await expect(page.getByRole('table', { name: 'Site statistics', exact: true })).toBeVisible();

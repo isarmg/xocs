@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import {chromium, firefox, expect} from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import {preview} from '../../tools/web-build/test-preview.mjs';
+import {preview} from '../../tools/assets/test-preview.mjs';
 import {mockApi, session} from './browser-fixtures.mjs';
 import {paintedSurfaceColor} from './painted-surface.mjs';
 
-const server = await preview({build: {outDir: process.env.XOCS_WEB_DIST || 'dist'}, preview: {host: '127.0.0.1', port: 0, strictPort: true}});
+const server = await preview({build: {outDir: process.env.BLOG_WEB_DIST || 'dist'}, preview: {host: '127.0.0.1', port: 0, strictPort: true}});
 const base = `http://127.0.0.1:${server.httpServer.address().port}`;
 const appearance = element => {
   const style = getComputedStyle(element), form = getComputedStyle(element.querySelector('form'));
@@ -29,15 +29,15 @@ try {
             assert.equal(request.method(), 'POST');
             assert.equal(request.headers()['x-csrf-token'], session.csrf_token);
             assert.equal(input.username, 'renamed');
-            if (input.current_password !== 'correct-password') return route.fulfill({status: 403, headers: {'x-request-id':'private-xocs-id'}, json: {code: 'admin.current_password_invalid', message: 'SECRET internal details', retryable: false, request_id: 'private-xocs-id'}});
+            if (input.current_password !== 'correct-password') return route.fulfill({status: 403, headers: {'x-request-id':'private-blog-id'}, json: {code: 'admin.current_password_invalid', message: 'SECRET internal details', retryable: false, request_id: 'private-blog-id'}});
             assert.equal(input.new_password, 'updated-password');
             state.authenticated = false;
             return route.fulfill({status: 204});
           });
           await page.goto(`${base}/admin?lang=${language}`);
-          const login = page.locator('.xcss-auth-card');
+          const login = page.locator('.blog-auth-card');
           await expect(login).toBeVisible();
-          await expect(page.locator('html')).toHaveAttribute('data-xcss-fonts', 'ready');
+          await expect(page.locator('html')).toHaveAttribute('data-blog-fonts', 'ready');
           await page.evaluate(() => document.fonts.ready);
           const loginStyle = await login.evaluate(appearance);
           loginStyle.background = await paintedSurfaceColor(login);
@@ -47,17 +47,17 @@ try {
           const icon = await trigger.evaluate(node => ({image:node.querySelector('svg').innerHTML,decoration:getComputedStyle(node).textDecorationLine}));
           await trigger.click();
           assert.deepEqual(await trigger.evaluate(node => ({image:node.querySelector('svg').innerHTML,decoration:getComputedStyle(node).textDecorationLine})),icon);
-          await expect(page.locator('.xcss-header-navigation [aria-pressed="true"]')).toHaveCount(0);
-          await expect(page.locator('.xcss-secondary-navigation')).toHaveCount(0);
+          await expect(page.locator('.blog-header-navigation [aria-pressed="true"]')).toHaveCount(0);
+          await expect(page.locator('.blog-secondary-navigation')).toHaveCount(0);
           const dialog = page.getByRole('region', {name: english ? 'Account settings' : '账号设置', exact: true});
           await page.evaluate(() => document.fonts.ready);
           await expect(page.getByRole('dialog')).toHaveCount(0);
           await expect(page).toHaveURL(/#account$/);
-          const panel = dialog.locator('.xcss-content-panel');
+          const panel = dialog.locator('.blog-content-panel');
           const panelStyle = await panel.evaluate(element => ({background:getComputedStyle(element).backgroundColor,font:getComputedStyle(element).fontFamily}));
           await expect.poll(() => paintedSurfaceColor(panel)).toBe(loginStyle.background);
           assert.equal(panelStyle.font, loginStyle.font);
-          const fields = dialog.locator('.xcss-form-field');
+          const fields = dialog.locator('.blog-form-field');
           const labels = english ? ['Username', 'Current password', 'New password', 'Confirm new password'] : ['用户名', '当前密码', '新密码', '确认新密码'];
           for (const label of labels) await expect(dialog.getByLabel(label, {exact: true})).toBeVisible();
           await expect(fields).toHaveCount(4);
@@ -80,7 +80,7 @@ try {
           await expect(dialog.getByRole('alert')).toContainText(english ? 'password is incorrect' : '密码不正确');
           for (const label of labels.slice(1)) await expect(dialog.getByLabel(label, {exact: true})).toHaveValue('');
           await expect(page.locator('body')).not.toContainText('SECRET');
-          await expect(dialog).not.toContainText('private-xocs-id');
+          await expect(dialog).not.toContainText('private-blog-id');
           await dialog.getByLabel(labels[1], {exact: true}).fill('correct-password');
           for (const label of labels.slice(2)) await dialog.getByLabel(label, {exact: true}).fill('updated-password');
           await save.click();

@@ -1,0 +1,60 @@
+# Project-owned consolidation; immutable upstream origins remain in compliance.
+[package]
+edition = "2018"
+rust-version = "1.61"
+build = false
+autolib = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+license = "MIT"
+name = "blog-network-body-stream"
+publish = false
+description = "body stream"
+
+[lib]
+name = "http_body"
+path = "src/lib.rs"
+doctest = false
+
+[dependencies.bytes]
+path = "../../encoding/byte-buffer"
+package = "blog-encoding-byte-buffer"
+
+[dependencies.http]
+path = "../http-message"
+package = "blog-network-http-message"
+
+[dependencies.futures]
+path = "../../runtime/async-toolkit"
+default-features = false
+optional = true
+package = "blog-runtime-async-toolkit"
+
+[dependencies.pin-project-lite]
+optional = true
+path = "../../sync/pinned-projection"
+package = "blog-sync-pinned-projection"
+
+[dependencies.tokio]
+features = [
+    "sync",
+]
+optional = true
+path = "../../runtime/task-scheduler"
+package = "blog-runtime-task-scheduler"
+
+[features]
+default = []
+utilities = [
+    "dep:futures",
+    "dep:pin-project-lite",
+]
+channel = [
+    "utilities",
+    "dep:tokio",
+]
+full = [
+    "channel",
+]

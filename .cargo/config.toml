@@ -1,0 +1,11 @@
+[build]
+jobs = 4
+
+[net]
+offline = true
+
+[source.crates-io]
+replace-with = "unavailable-registry"
+
+[source.unavailable-registry]
+directory = "compliance/empty-registry"

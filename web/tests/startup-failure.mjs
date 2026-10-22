@@ -1,6 +1,6 @@
 import { chromium, firefox } from "@playwright/test";
-import { preview } from "../../tools/web-build/test-preview.mjs";
-import { verifyStartupFailures, verifyStartupTimeout } from "../xcss-web/vendor/xcss-web/tests/startup-failures.mjs";
+import { preview } from "../../tools/assets/test-preview.mjs";
+import { verifyStartupFailures, verifyStartupTimeout } from "./startup-failures.mjs";
 
 const server = await preview({ preview: { host: "127.0.0.1", port: 0, strictPort: true } });
 try {
