@@ -3,8 +3,8 @@
 .DS_Store
 
 /target/
-xocs/*.sqlite*
-xocs/media/
+blog/*.sqlite*
+blog/media/
 /web/node_modules/
 /web/dist/
 /web/*.tsbuildinfo
@@ -17,8 +17,14 @@ xocs/media/
 /export/
 __pycache__/
 
-# Generated xcss-web browser assets
+# Generated Blog browser assets
 /web/pkg/
-/web/xcss-web/target/
+/src/browser/target/
 
-/tools/web-build/target/
+/tools/assets/target/
+
+# Legacy package-local Cargo output.
+/test/browser-domain/target/
+
+# Atomic frontend staging directories.
+/web/.rust-web-stage-*/

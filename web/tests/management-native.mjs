@@ -5,9 +5,9 @@ import { chromium, firefox, expect } from '@playwright/test';
 
 // This script intentionally has no mock, preview server or production fallback.
 // scripts/smoke.sh owns this exact listener and its disposable database/media.
-const base = process.env.XOCS_SMOKE_URL;
+const base = process.env.BLOG_SMOKE_URL;
 if (typeof base !== 'string' || !/^http:\/\/127\.0\.0\.1:[1-9][0-9]{0,4}$/.test(base) || Number(new URL(base).port) > 65535) {
-  throw new Error('management-native requires an explicit loopback XOCS_SMOKE_URL and the smoke fixture');
+  throw new Error('management-native requires an explicit loopback BLOG_SMOKE_URL and the smoke fixture');
 }
 
 function png(marker) {
@@ -31,20 +31,20 @@ function png(marker) {
   ]);
 }
 
-const requestedEngines=process.env.XOCS_SMOKE_ENGINES?.split(',')??['chromium','firefox'];
-if(!requestedEngines.length||requestedEngines.some(name=>!['chromium','firefox'].includes(name))||new Set(requestedEngines).size!==requestedEngines.length)throw new Error('XOCS_SMOKE_ENGINES must list chromium and/or firefox once');
+const requestedEngines=process.env.BLOG_SMOKE_ENGINES?.split(',')??['chromium','firefox'];
+if(!requestedEngines.length||requestedEngines.some(name=>!['chromium','firefox'].includes(name))||new Set(requestedEngines).size!==requestedEngines.length)throw new Error('BLOG_SMOKE_ENGINES must list chromium and/or firefox once');
 for (const engine of [chromium, firefox].filter(engine=>requestedEngines.includes(engine.name()))) {
   const browser = await engine.launch({ headless: true });
   const context = await browser.newContext({ locale: 'en-US', reducedMotion: 'reduce', viewport: { width: 1280, height: 900 } });
   const publicContext = await browser.newContext({ locale: 'en-US', reducedMotion: 'reduce' });
   const page = await context.newPage(), publicPage = await publicContext.newPage();
   await page.addInitScript(()=>{
-    window.__xocsSelectEvents=[];
+    window.__blogSelectEvents=[];
     for(const type of ['pointermove','pointerdown','mousedown','pointerup','mouseup','click','focusin'])document.addEventListener(type,event=>{
-      const target=event.target instanceof Element?event.target:null,option=target?.closest('[role=option]'),select=target?.closest('.xcss-select');
+      const target=event.target instanceof Element?event.target:null,option=target?.closest('[role=option]'),select=target?.closest('.blog-select');
       if(!select&&!['pointerdown','pointerup','click'].includes(type))return;
       const record={type,tag:target?.tagName,role:target?.getAttribute('role'),id:target?.id,option:option?.getAttribute('data-option-index'),expanded:select?.querySelector('[role=combobox]')?.getAttribute('aria-expanded'),x:event.clientX,y:event.clientY,scrollY,panelScroll:select?.querySelector('[role=listbox]')?.scrollTop,rect:option?.getBoundingClientRect().toJSON(),panel:select?.querySelector('[role=listbox]')?.getBoundingClientRect().toJSON()};
-      window.__xocsSelectEvents.push(record);if(window.__xocsSelectEvents.length>80)window.__xocsSelectEvents.shift();
+      window.__blogSelectEvents.push(record);if(window.__blogSelectEvents.length>80)window.__blogSelectEvents.shift();
       queueMicrotask(()=>{record.prevented=event.defaultPrevented;record.afterExpanded=select?.querySelector('[role=combobox]')?.getAttribute('aria-expanded');record.native=select?.querySelector('select')?.value;});
     },true);
   });
@@ -95,11 +95,11 @@ for (const engine of [chromium, firefox].filter(engine=>requestedEngines.include
   }
   async function chooseOption(label, value) {
     const trigger = page.getByRole('combobox', { name: label, exact: true });
-    await page.evaluate(()=>window.__xocsSelectEvents=[]);
+    await page.evaluate(()=>window.__blogSelectEvents=[]);
     await trigger.click();
     await page.getByRole('option', { name: value, exact: true }).click();
     try{await expect(trigger).toContainText(value);}catch(error){
-      const diagnostic=await page.evaluate(()=>({events:window.__xocsSelectEvents,controls:[...document.querySelectorAll('.xcss-select')].map(select=>({label:select.querySelector('[role=combobox]')?.getAttribute('aria-label'),expanded:select.querySelector('[role=combobox]')?.getAttribute('aria-expanded'),value:select.querySelector('select')?.value,options:[...select.querySelectorAll('[role=option]')].map(option=>({label:option.textContent,rect:option.getBoundingClientRect().toJSON()})),panel:select.querySelector('[role=listbox]')?.getBoundingClientRect().toJSON()}))}));
+      const diagnostic=await page.evaluate(()=>({events:window.__blogSelectEvents,controls:[...document.querySelectorAll('.blog-select')].map(select=>({label:select.querySelector('[role=combobox]')?.getAttribute('aria-label'),expanded:select.querySelector('[role=combobox]')?.getAttribute('aria-expanded'),value:select.querySelector('select')?.value,options:[...select.querySelectorAll('[role=option]')].map(option=>({label:option.textContent,rect:option.getBoundingClientRect().toJSON()})),panel:select.querySelector('[role=listbox]')?.getBoundingClientRect().toJSON()}))}));
       throw new Error(`${error.message}\nSelect event diagnostic: ${JSON.stringify(diagnostic)}`,{cause:error});
     }
   }
@@ -115,7 +115,7 @@ for (const engine of [chromium, firefox].filter(engine=>requestedEngines.include
 
   let failure;
   try {
-    assert.equal((await read('/api/v1/health')).application, 'xocs');
+    assert.equal((await read('/api/v1/health')).application, 'blog');
     // Refuse an unrelated listener even on a loopback port. Never edit the
     // existing fixture articles 1–3, news 1 or note 2.
     assert.equal((await read('/api/v1/articles/1')).article_title, 'Smoke');
@@ -169,7 +169,7 @@ for (const engine of [chromium, firefox].filter(engine=>requestedEngines.include
     phase = 'Files native picker upload';
     await admin('resources', 'Files');
     await chooseFile(page.getByRole('button', { name: /^Choose file:/ }), file);
-    await expect(page.locator('.xocs-file-picker-name')).toHaveText(file.name);
+    await expect(page.locator('.blog-file-picker-name')).toHaveText(file.name);
     own.media = await click('POST', '/api/v1/content/upload', page.getByRole('button', { name: 'Upload', exact: true }));
     assert.equal(own.media.path, `/media/${createHash('sha256').update(file.buffer).digest('hex')}.png`);
     await expect(page.getByRole('table', { name: 'File list' }).getByRole('row').filter({ hasText: file.name })).toBeVisible();

@@ -1,0 +1,78 @@
+# Project-owned consolidation; immutable upstream origins remain in compliance.
+[package]
+edition = "2024"
+rust-version = "1.86"
+license = "MIT OR Apache-2.0"
+autotests = false
+autobenches = false
+name = "blog-network-web-address"
+publish = false
+description = "web address"
+
+[lib]
+name = "url_encoding"
+path = "src/lib.rs"
+doctest = false
+
+[features]
+default = [
+    "std",
+]
+alloc = []
+std = [
+    "alloc",
+    "serde?/std",
+]
+form = [
+    "alloc",
+]
+domain = [
+    "alloc",
+    "unicode-normalizer/compiled_data",
+    "unicode-properties/compiled_data",
+    "dep:smallvec",
+    "dep:utf8_iter",
+]
+parser = [
+    "domain",
+    "form",
+]
+expose_internals = [
+    "parser",
+]
+serde = [
+    "parser",
+    "dep:serde",
+    "serde/derive",
+]
+
+[dependencies.unicode-normalizer]
+path = "../../unicode/text-normalizer"
+default-features = false
+optional = true
+package = "blog-unicode-text-normalizer"
+
+[dependencies.unicode-properties]
+path = "../../unicode/character-properties"
+default-features = false
+optional = true
+package = "blog-unicode-character-properties"
+
+[dependencies.smallvec]
+path = "../../collections/inline-vector"
+features = [
+    "const_generics",
+]
+optional = true
+package = "blog-collections-inline-vector"
+
+[dependencies.utf8_iter]
+path = "../../encoding/unicode-iterator"
+optional = true
+package = "blog-encoding-unicode-iterator"
+
+[dependencies.serde]
+path = "../../format/data-model"
+default-features = false
+optional = true
+package = "blog-format-data-model"

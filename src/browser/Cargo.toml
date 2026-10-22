@@ -1,0 +1,45 @@
+[package]
+name = "blog-browser"
+edition = "2024"
+publish = false
+description = "浏览器 CSR 博客界面"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+name = "blog_browser"
+
+[dependencies]
+blog-interface = {  default-features = false, features = ["csr"], path = "../interface"}
+wasm-bindgen = { path = "../foundation/wasm/browser-bridge",package = "blog-wasm-browser-bridge"}
+wasm-bindgen-futures = { path = "../foundation/wasm/browser-futures",package = "blog-wasm-browser-futures"}
+js-sys = { path = "../foundation/interface/javascript-api",package = "blog-interface-javascript-api"}
+serde = {  features = ["derive"], path = "../foundation/format/data-model",package = "blog-format-data-model"}
+serde_json = { path = "../foundation/format/json",package = "blog-format-json"}
+pulldown-cmark = {  default-features = false, features = ["html"], path = "../foundation/assets/markdown-parser",package = "blog-assets-markdown-parser"}
+web-sys = {  features = ["Window", "Document", "Location", "History", "Event", "EventTarget", "SubmitEvent", "HtmlInputElement", "HtmlFormElement", "HtmlSelectElement", "FormData", "AbortController", "AbortSignal", "Crypto", "Storage", "HtmlDialogElement", "HtmlTextAreaElement", "HtmlImageElement", "HtmlMediaElement", "HtmlVideoElement", "HtmlAudioElement", "File", "FileList", "Blob", "Url", "UrlSearchParams", "ScrollToOptions", "ScrollBehavior", "Clipboard", "Navigator", "DomRect", "KeyboardEvent", "NodeList", "Element", "HtmlElement", "MutationObserver", "MutationObserverInit", "ValidityState", "ResizeObserver", "FontFaceSet", "HtmlAnchorElement", "DomTokenList"], path = "../foundation/interface/browser-api",package = "blog-interface-browser-api"}
+
+[dependencies.chrono]
+default-features = false
+features = ["std"]
+path = "../foundation/format/date-time"
+package = "blog-format-date-time"
+
+[dependencies.regex]
+default-features = false
+features = ["matcher", "perf", "std", "unicode-case"]
+path = "../foundation/text/pattern-search"
+package = "blog-text-pattern-search"
+
+
+
+[target."cfg(not(target_arch = \"wasm32\"))".dependencies]
+
+[target."cfg(not(target_arch = \"wasm32\"))".dependencies.url-encoding]
+path = "../foundation/network/web-address"
+package = "blog-network-web-address"
+default-features = true
+features = [
+    "parser",
+    "std",
+]
+

@@ -1,3 +1,5 @@
+> 历史记录：本文描述改名前 xocs 的迁移与验证。当前 blog 的目录、独立维护方式与新验证边界见 [独立实现说明](independence.md) 和 [开发说明](development.md)。历史数据不代表改名后的发行或验收结果。
+
 # xocs 前端业务 Rust 化与交互优化
 
 本轮保持 Axum、API 路径、字段和鉴权/幂等约定，前端仍使用 xcss-web CSR。生产资源构建的变更见工作区总说明；本文只记录 xocs 的业务状态、Markdown 与交互迁移。

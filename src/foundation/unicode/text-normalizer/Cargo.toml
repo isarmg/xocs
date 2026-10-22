@@ -1,0 +1,122 @@
+# Internal source component. Original manifest and origin: compliance/provenance.
+
+[package]
+edition = "2024"
+rust-version = "1.88"
+name = "blog-unicode-text-normalizer"
+build = "build.rs"
+autolib = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+description = "text normalizer"
+license = "Unicode-3.0"
+resolver = "2"
+publish = false
+
+[features]
+compiled_data = ["icu_properties?/compiled_data", "icu_provider/baked"]
+default = ["compiled_data", "utf8_iter"]
+icu_properties = ["dep:icu_properties"]
+serde = ["dep:serde", "icu_collections/serde", "zerovec/serde", "icu_properties?/serde", "icu_provider/serde"]
+utf8_iter = ["dep:utf8_iter"]
+
+[lib]
+name = "blog_unicode_text_normalizer"
+path = "src/lib.rs"
+
+[dependencies.icu_collections]
+default-features = false
+path = "../data-collections"
+package = "blog-unicode-data-collections"
+
+[dependencies.icu_properties]
+optional = true
+default-features = false
+path = "../character-properties"
+package = "blog-unicode-character-properties"
+
+[dependencies.icu_provider]
+default-features = false
+path = "../data-provider"
+package = "blog-unicode-data-provider"
+
+[dependencies.serde]
+features = ["derive", "alloc"]
+optional = true
+default-features = false
+path = "../../format/data-model"
+package = "blog-format-data-model"
+
+[dependencies.smallvec]
+default-features = false
+path = "../../collections/inline-vector"
+package = "blog-collections-inline-vector"
+
+[dependencies.utf8_iter]
+optional = true
+default-features = false
+path = "../../encoding/unicode-iterator"
+package = "blog-encoding-unicode-iterator"
+
+[dependencies.zerovec]
+default-features = false
+path = "../borrowed-vector"
+package = "blog-unicode-borrowed-vector"
+
+
+[lints.clippy]
+alloc_instead_of_core = "warn"
+bool_assert_comparison = "allow"
+branches_sharing_code = "warn"
+collection_is_never_read = "warn"
+crosspointer_transmute = "warn"
+dbg_macro = "warn"
+debug_assert_with_mut_call = "warn"
+doc_markdown = "warn"
+exhaustive_enums = "deny"
+exhaustive_structs = "deny"
+fn_to_numeric_cast_any = "warn"
+infinite_loop = "warn"
+large_stack_arrays = "warn"
+mismatching_type_param_order = "warn"
+missing_fields_in_debug = "warn"
+missing_transmute_annotations = "warn"
+negative_feature_names = "warn"
+or_fun_call = "warn"
+same_functions_in_if_condition = "warn"
+todo = "warn"
+transmute_bytes_to_str = "warn"
+transmute_int_to_bool = "warn"
+transmute_int_to_non_zero = "warn"
+transmute_ptr_to_ptr = "warn"
+transmute_ptr_to_ref = "warn"
+transmute_undefined_repr = "warn"
+transmutes_expressible_as_ptr_casts = "warn"
+trivially_copy_pass_by_ref = "deny"
+unnecessary_wraps = "warn"
+useless_transmute = "warn"
+wildcard_dependencies = "warn"
+
+[lints.rust]
+missing_debug_implementations = "deny"
+trivial_numeric_casts = "deny"
+unused_lifetimes = "warn"
+unused_macro_rules = "warn"
+unused_qualifications = "warn"
+
+[lints.rust.unexpected_cfgs]
+level = "warn"
+priority = 0
+# Historical implementation branches are retained, not selectable Cargo features.
+# These names only suppress cfg diagnostics; they never enable dormant code.
+check-cfg = [
+    "cfg(feature, values(\"utf16_iter\", \"write16\", \"harfbuzz_traits\", \"datagen\"))",
+    "cfg(icu4x_custom_data)",
+    "cfg(icu4c_enable_renaming)",
+    "cfg(needs_alloc_error_handler)",
+    "cfg(icu4x_nightly_tests)",
+    "cfg(icu4x_run_size_tests)",
+    "cfg(icu4x_unstable_fast_trie_only)",
+]

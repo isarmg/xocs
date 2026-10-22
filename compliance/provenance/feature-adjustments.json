@@ -1,0 +1,826 @@
+{
+  "src/foundation/axum-0.8.9/Cargo.toml": [
+    {
+      "feature": "http2",
+      "invalid": [
+        "hyper?/http2",
+        "hyper-util?/http2"
+      ]
+    },
+    {
+      "dependency": "tower-http",
+      "removed_missing_features": [
+        "auth",
+        "compression-br",
+        "compression-deflate",
+        "compression-gzip",
+        "decompression-br",
+        "decompression-deflate",
+        "decompression-gzip",
+        "request-id"
+      ]
+    }
+  ],
+  "src/foundation/clap-4.6.7/Cargo.toml": [
+    {
+      "feature": "debug",
+      "invalid": [
+        "clap_builder/debug"
+      ]
+    },
+    {
+      "feature": "unicode",
+      "invalid": [
+        "clap_builder/unicode"
+      ]
+    },
+    {
+      "feature": "unstable-doc",
+      "invalid": [
+        "clap_builder/unstable-doc"
+      ]
+    },
+    {
+      "feature": "unstable-markdown",
+      "invalid": [
+        "clap_derive/unstable-markdown"
+      ]
+    },
+    {
+      "feature": "wrap_help",
+      "invalid": [
+        "clap_builder/wrap_help"
+      ]
+    }
+  ],
+  "src/foundation/const-str-0.3.2/Cargo.toml": [
+    {
+      "feature": "case",
+      "invalid": [
+        "const-str-proc-macro/heck"
+      ]
+    },
+    {
+      "feature": "verify-http",
+      "invalid": [
+        "const-str-proc-macro/http"
+      ]
+    },
+    {
+      "feature": "all",
+      "invalid": [
+        "verify-http",
+        "case"
+      ]
+    }
+  ],
+  "src/foundation/crypto-common-0.2.2/Cargo.toml": [
+    {
+      "feature": "zeroize",
+      "invalid": [
+        "hybrid-array/zeroize"
+      ]
+    }
+  ],
+  "src/foundation/event-listener-strategy-0.5.4/Cargo.toml": [
+    {
+      "feature": "loom",
+      "invalid": [
+        "event-listener/loom"
+      ]
+    },
+    {
+      "feature": "portable-atomic",
+      "invalid": [
+        "event-listener/portable-atomic"
+      ]
+    }
+  ],
+  "src/foundation/flume-0.12.0/Cargo.toml": [
+    {
+      "dependency": "fastrand",
+      "removed_missing_features": [
+        "js"
+      ]
+    }
+  ],
+  "src/foundation/futures-0.3.34/Cargo.toml": [
+    {
+      "feature": "compat",
+      "invalid": [
+        "futures-util/compat"
+      ]
+    },
+    {
+      "feature": "io-compat",
+      "invalid": [
+        "compat",
+        "futures-util/io-compat"
+      ]
+    },
+    {
+      "feature": "spin",
+      "invalid": [
+        "futures-util/spin"
+      ]
+    }
+  ],
+  "src/foundation/hmac-0.13.0/Cargo.toml": [
+    {
+      "feature": "zeroize",
+      "invalid": [
+        "digest/zeroize"
+      ]
+    }
+  ],
+  "src/foundation/hybrid-array-0.4.15/Cargo.toml": [
+    {
+      "dependency": "zerocopy",
+      "removed_missing_features": [
+        "derive"
+      ]
+    }
+  ],
+  "src/foundation/hyper-util-0.1.21/Cargo.toml": [
+    {
+      "feature": "http2",
+      "invalid": [
+        "hyper/http2"
+      ]
+    },
+    {
+      "feature": "server-auto",
+      "invalid": [
+        "http2"
+      ]
+    }
+  ],
+  "src/foundation/leptos_dom-0.8.8/Cargo.toml": [
+    {
+      "feature": "hydration",
+      "invalid": [
+        "reactive_graph/hydration"
+      ]
+    }
+  ],
+  "src/foundation/md-5-0.11.0/Cargo.toml": [
+    {
+      "feature": "zeroize",
+      "invalid": [
+        "digest/zeroize"
+      ]
+    }
+  ],
+  "src/foundation/oxc-0.153.0/Cargo.toml": [
+    {
+      "feature": "serialize",
+      "invalid": [
+        "oxc_ast/serialize",
+        "oxc_ast_visit/serialize",
+        "oxc_semantic?/serialize",
+        "oxc_span/serialize",
+        "oxc_syntax/serialize"
+      ]
+    }
+  ],
+  "src/foundation/oxc_ast-0.153.0/Cargo.toml": [
+    {
+      "feature": "serialize",
+      "invalid": [
+        "oxc_allocator/serialize",
+        "oxc_span/serialize",
+        "oxc_syntax/serialize",
+        "oxc_estree/serialize"
+      ]
+    }
+  ],
+  "src/foundation/oxc_ast_visit-0.153.0/Cargo.toml": [
+    {
+      "feature": "serialize",
+      "invalid": [
+        "oxc_allocator/serialize",
+        "oxc_span/serialize",
+        "oxc_syntax/serialize"
+      ]
+    }
+  ],
+  "src/foundation/oxc_semantic-0.153.0/Cargo.toml": [
+    {
+      "feature": "serialize",
+      "invalid": [
+        "oxc_span/serialize",
+        "oxc_syntax/serialize"
+      ]
+    }
+  ],
+  "src/foundation/parking_lot-0.12.5/Cargo.toml": [
+    {
+      "feature": "deadlock_detection",
+      "invalid": [
+        "parking_lot_core/deadlock_detection"
+      ]
+    },
+    {
+      "feature": "owning_ref",
+      "invalid": [
+        "lock_api/owning_ref"
+      ]
+    }
+  ],
+  "src/foundation/phf-0.11.3/Cargo.toml": [
+    {
+      "feature": "uncased",
+      "invalid": [
+        "phf_shared/uncased"
+      ]
+    },
+    {
+      "feature": "unicase",
+      "invalid": [
+        "phf_macros?/unicase"
+      ]
+    }
+  ],
+  "src/foundation/phf-0.14.0/Cargo.toml": [
+    {
+      "feature": "uncased",
+      "invalid": [
+        "phf_macros?/uncased",
+        "phf_shared/uncased"
+      ]
+    },
+    {
+      "feature": "unicase",
+      "invalid": [
+        "phf_macros?/unicase"
+      ]
+    }
+  ],
+  "src/foundation/regex-1.13.1/Cargo.toml": [
+    {
+      "feature": "logging",
+      "invalid": [
+        "aho-corasick?/logging",
+        "memchr?/logging",
+        "regex-automata/logging"
+      ]
+    }
+  ],
+  "src/foundation/reqwest-0.13.5/Cargo.toml": [
+    {
+      "feature": "brotli",
+      "invalid": [
+        "tower-http/decompression-br"
+      ]
+    },
+    {
+      "feature": "deflate",
+      "invalid": [
+        "tower-http/decompression-deflate"
+      ]
+    },
+    {
+      "feature": "gzip",
+      "invalid": [
+        "tower-http/decompression-gzip"
+      ]
+    },
+    {
+      "feature": "system-proxy",
+      "invalid": [
+        "hyper-util/client-proxy-system"
+      ]
+    },
+    {
+      "feature": "zstd",
+      "invalid": [
+        "tower-http/decompression-zstd"
+      ]
+    },
+    {
+      "feature": "default",
+      "invalid": [
+        "system-proxy"
+      ]
+    }
+  ],
+  "src/foundation/rustix-1.1.5/Cargo.toml": [
+    {
+      "feature": "use-libc",
+      "invalid": [
+        "libc_errno",
+        "libc"
+      ]
+    }
+  ],
+  "src/foundation/schemars-1.2.3/Cargo.toml": [
+    {
+      "feature": "preserve_order",
+      "invalid": [
+        "serde_json/preserve_order"
+      ]
+    }
+  ],
+  "src/foundation/sha1-0.11.0/Cargo.toml": [
+    {
+      "feature": "zeroize",
+      "invalid": [
+        "digest/zeroize"
+      ]
+    }
+  ],
+  "src/foundation/sha2-0.10.9/Cargo.toml": [
+    {
+      "feature": "oid",
+      "invalid": [
+        "digest/oid"
+      ]
+    }
+  ],
+  "src/foundation/sha2-0.11.0/Cargo.toml": [
+    {
+      "feature": "zeroize",
+      "invalid": [
+        "digest/zeroize"
+      ]
+    }
+  ],
+  "src/foundation/sqlx-0.9.0/Cargo.toml": [
+    {
+      "feature": "_unstable-docs",
+      "invalid": [
+        "sqlx-sqlite/_unstable-docs"
+      ]
+    },
+    {
+      "feature": "bigdecimal",
+      "invalid": [
+        "sqlx-core/bigdecimal",
+        "sqlx-macros?/bigdecimal",
+        "sqlx-mysql?/bigdecimal",
+        "sqlx-postgres?/bigdecimal"
+      ]
+    },
+    {
+      "feature": "bit-vec",
+      "invalid": [
+        "sqlx-core/bit-vec",
+        "sqlx-macros?/bit-vec",
+        "sqlx-postgres?/bit-vec"
+      ]
+    },
+    {
+      "feature": "bstr",
+      "invalid": [
+        "sqlx-core/bstr"
+      ]
+    },
+    {
+      "feature": "ipnetwork",
+      "invalid": [
+        "sqlx-core/ipnetwork",
+        "sqlx-macros?/ipnetwork",
+        "sqlx-postgres?/ipnetwork"
+      ]
+    },
+    {
+      "feature": "mac_address",
+      "invalid": [
+        "sqlx-core/mac_address",
+        "sqlx-macros?/mac_address",
+        "sqlx-postgres?/mac_address"
+      ]
+    },
+    {
+      "feature": "macros",
+      "invalid": [
+        "sqlx-macros/macros"
+      ]
+    },
+    {
+      "feature": "mysql-rsa",
+      "invalid": [
+        "sqlx-mysql/rsa",
+        "sqlx-macros?/mysql-rsa"
+      ]
+    },
+    {
+      "feature": "regexp",
+      "invalid": [
+        "sqlx-sqlite?/regexp"
+      ]
+    },
+    {
+      "feature": "runtime-async-global-executor",
+      "invalid": [
+        "sqlx-core/_rt-async-global-executor",
+        "sqlx-macros?/_rt-async-global-executor"
+      ]
+    },
+    {
+      "feature": "runtime-async-std",
+      "invalid": [
+        "sqlx-core/_rt-async-std",
+        "sqlx-macros?/_rt-async-std"
+      ]
+    },
+    {
+      "feature": "runtime-smol",
+      "invalid": [
+        "sqlx-core/_rt-smol",
+        "sqlx-macros?/_rt-smol"
+      ]
+    },
+    {
+      "feature": "rust_decimal",
+      "invalid": [
+        "sqlx-core/rust_decimal",
+        "sqlx-macros?/rust_decimal",
+        "sqlx-mysql?/rust_decimal",
+        "sqlx-postgres?/rust_decimal"
+      ]
+    },
+    {
+      "feature": "sqlite-preupdate-hook",
+      "invalid": [
+        "sqlx-sqlite/preupdate-hook"
+      ]
+    },
+    {
+      "feature": "sqlite-unbundled",
+      "invalid": [
+        "sqlx-sqlite/unbundled",
+        "sqlx-macros?/sqlite-unbundled"
+      ]
+    },
+    {
+      "feature": "sqlx-toml",
+      "invalid": [
+        "sqlx-core/sqlx-toml",
+        "sqlx-macros?/sqlx-toml",
+        "sqlx-sqlite?/sqlx-toml"
+      ]
+    },
+    {
+      "feature": "time",
+      "invalid": [
+        "sqlx-core/time",
+        "sqlx-macros?/time",
+        "sqlx-mysql?/time",
+        "sqlx-postgres?/time",
+        "sqlx-sqlite?/time"
+      ]
+    },
+    {
+      "feature": "tls-native-tls",
+      "invalid": [
+        "sqlx-core/_tls-native-tls",
+        "sqlx-macros?/_tls-native-tls"
+      ]
+    },
+    {
+      "feature": "tls-rustls-aws-lc-rs",
+      "invalid": [
+        "sqlx-core/_tls-rustls-aws-lc-rs",
+        "sqlx-macros?/_tls-rustls-aws-lc-rs"
+      ]
+    },
+    {
+      "feature": "tls-rustls-ring-native-roots",
+      "invalid": [
+        "sqlx-core/_tls-rustls-ring-native-roots",
+        "sqlx-macros?/_tls-rustls-ring-native-roots"
+      ]
+    },
+    {
+      "feature": "tls-rustls-ring-webpki",
+      "invalid": [
+        "sqlx-core/_tls-rustls-ring-webpki",
+        "sqlx-macros?/_tls-rustls-ring-webpki"
+      ]
+    },
+    {
+      "feature": "uuid",
+      "invalid": [
+        "sqlx-core/uuid",
+        "sqlx-macros?/uuid",
+        "sqlx-mysql?/uuid",
+        "sqlx-postgres?/uuid",
+        "sqlx-sqlite?/uuid"
+      ]
+    },
+    {
+      "feature": "_unstable-all-types",
+      "invalid": [
+        "bigdecimal",
+        "rust_decimal",
+        "time",
+        "ipnetwork",
+        "mac_address",
+        "uuid",
+        "bit-vec",
+        "bstr"
+      ]
+    },
+    {
+      "feature": "default",
+      "invalid": [
+        "macros"
+      ]
+    },
+    {
+      "feature": "tls-rustls-ring",
+      "invalid": [
+        "tls-rustls-ring-webpki"
+      ]
+    },
+    {
+      "feature": "tls-rustls",
+      "invalid": [
+        "tls-rustls-ring"
+      ]
+    }
+  ],
+  "src/foundation/sqlx-macros-0.9.0/Cargo.toml": [
+    {
+      "feature": "_rt-async-global-executor",
+      "invalid": [
+        "sqlx-macros-core/_rt-async-global-executor"
+      ]
+    },
+    {
+      "feature": "_rt-async-std",
+      "invalid": [
+        "sqlx-macros-core/_rt-async-std"
+      ]
+    },
+    {
+      "feature": "_rt-smol",
+      "invalid": [
+        "sqlx-macros-core/_rt-smol"
+      ]
+    },
+    {
+      "feature": "_tls-native-tls",
+      "invalid": [
+        "sqlx-macros-core/_tls-native-tls"
+      ]
+    },
+    {
+      "feature": "_tls-rustls-aws-lc-rs",
+      "invalid": [
+        "sqlx-macros-core/_tls-rustls-aws-lc-rs"
+      ]
+    },
+    {
+      "feature": "_tls-rustls-ring-native-roots",
+      "invalid": [
+        "sqlx-macros-core/_tls-rustls-ring-native-roots"
+      ]
+    },
+    {
+      "feature": "_tls-rustls-ring-webpki",
+      "invalid": [
+        "sqlx-macros-core/_tls-rustls-ring-webpki"
+      ]
+    },
+    {
+      "feature": "bigdecimal",
+      "invalid": [
+        "sqlx-macros-core/bigdecimal"
+      ]
+    },
+    {
+      "feature": "bit-vec",
+      "invalid": [
+        "sqlx-macros-core/bit-vec"
+      ]
+    },
+    {
+      "feature": "ipnetwork",
+      "invalid": [
+        "sqlx-macros-core/ipnetwork"
+      ]
+    },
+    {
+      "feature": "mac_address",
+      "invalid": [
+        "sqlx-macros-core/mac_address"
+      ]
+    },
+    {
+      "feature": "macros",
+      "invalid": [
+        "sqlx-macros-core/macros"
+      ]
+    },
+    {
+      "feature": "mysql-rsa",
+      "invalid": [
+        "sqlx-macros-core/mysql-rsa"
+      ]
+    },
+    {
+      "feature": "rust_decimal",
+      "invalid": [
+        "sqlx-macros-core/rust_decimal"
+      ]
+    },
+    {
+      "feature": "sqlite-unbundled",
+      "invalid": [
+        "sqlx-macros-core/sqlite-unbundled"
+      ]
+    },
+    {
+      "feature": "sqlx-toml",
+      "invalid": [
+        "sqlx-macros-core/sqlx-toml"
+      ]
+    },
+    {
+      "feature": "time",
+      "invalid": [
+        "sqlx-macros-core/time"
+      ]
+    },
+    {
+      "feature": "uuid",
+      "invalid": [
+        "sqlx-macros-core/uuid"
+      ]
+    }
+  ],
+  "src/foundation/sqlx-macros-core-0.9.0/Cargo.toml": [
+    {
+      "feature": "_tls-native-tls",
+      "invalid": [
+        "sqlx-core/_tls-native-tls"
+      ]
+    },
+    {
+      "feature": "_tls-rustls-aws-lc-rs",
+      "invalid": [
+        "sqlx-core/_tls-rustls-aws-lc-rs"
+      ]
+    },
+    {
+      "feature": "_tls-rustls-ring-native-roots",
+      "invalid": [
+        "sqlx-core/_tls-rustls-ring-native-roots"
+      ]
+    },
+    {
+      "feature": "_tls-rustls-ring-webpki",
+      "invalid": [
+        "sqlx-core/_tls-rustls-ring-webpki"
+      ]
+    },
+    {
+      "feature": "bigdecimal",
+      "invalid": [
+        "sqlx-core/bigdecimal",
+        "sqlx-mysql?/bigdecimal",
+        "sqlx-postgres?/bigdecimal"
+      ]
+    },
+    {
+      "feature": "bit-vec",
+      "invalid": [
+        "sqlx-core/bit-vec",
+        "sqlx-postgres?/bit-vec"
+      ]
+    },
+    {
+      "feature": "ipnetwork",
+      "invalid": [
+        "sqlx-core/ipnetwork",
+        "sqlx-postgres?/ipnetwork"
+      ]
+    },
+    {
+      "feature": "mac_address",
+      "invalid": [
+        "sqlx-core/mac_address",
+        "sqlx-postgres?/mac_address"
+      ]
+    },
+    {
+      "feature": "mysql-rsa",
+      "invalid": [
+        "sqlx-mysql/rsa"
+      ]
+    },
+    {
+      "feature": "rust_decimal",
+      "invalid": [
+        "sqlx-core/rust_decimal",
+        "sqlx-mysql?/rust_decimal",
+        "sqlx-postgres?/rust_decimal"
+      ]
+    },
+    {
+      "feature": "sqlite-unbundled",
+      "invalid": [
+        "sqlx-sqlite/unbundled"
+      ]
+    },
+    {
+      "feature": "sqlx-toml",
+      "invalid": [
+        "sqlx-core/sqlx-toml",
+        "sqlx-sqlite?/sqlx-toml"
+      ]
+    },
+    {
+      "feature": "time",
+      "invalid": [
+        "sqlx-core/time",
+        "sqlx-mysql?/time",
+        "sqlx-postgres?/time",
+        "sqlx-sqlite?/time"
+      ]
+    },
+    {
+      "feature": "uuid",
+      "invalid": [
+        "sqlx-core/uuid",
+        "sqlx-mysql?/uuid",
+        "sqlx-postgres?/uuid",
+        "sqlx-sqlite?/uuid"
+      ]
+    }
+  ],
+  "src/foundation/sqlx-sqlite-0.9.0/Cargo.toml": [
+    {
+      "feature": "preupdate-hook",
+      "invalid": [
+        "libsqlite3-sys/preupdate_hook"
+      ]
+    },
+    {
+      "feature": "sqlx-toml",
+      "invalid": [
+        "sqlx-core/sqlx-toml"
+      ]
+    },
+    {
+      "feature": "unbundled",
+      "invalid": [
+        "libsqlite3-sys/buildtime_bindgen"
+      ]
+    },
+    {
+      "feature": "_unstable-all-sqlite-features",
+      "invalid": [
+        "preupdate-hook"
+      ]
+    }
+  ],
+  "src/foundation/textwrap-0.16.4/Cargo.toml": [
+    {
+      "feature": "unicode-linebreak-complex",
+      "invalid": [
+        "icu_segmenter/auto"
+      ]
+    }
+  ],
+  "src/foundation/toml_edit-0.22.27/Cargo.toml": [
+    {
+      "feature": "unstable-debug",
+      "invalid": [
+        "winnow?/debug"
+      ]
+    }
+  ],
+  "src/foundation/tracing-0.1.44/Cargo.toml": [
+    {
+      "feature": "valuable",
+      "invalid": [
+        "tracing-core/valuable"
+      ]
+    }
+  ],
+  "src/foundation/wasm-bindgen-futures-0.4.79/Cargo.toml": [
+    {
+      "feature": "futures-core-03-stream",
+      "invalid": [
+        "js-sys/futures-core-03-stream"
+      ]
+    }
+  ],
+  "web/ui/vendor/blog-ui-core/Cargo.toml": [
+    {
+      "feature": "nightly",
+      "invalid": [
+        "blog_ui_macro/nightly"
+      ]
+    },
+    {
+      "feature": "trace-component-props",
+      "invalid": [
+        "leptos_dom/trace-component-props"
+      ]
+    }
+  ]
+}

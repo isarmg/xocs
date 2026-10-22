@@ -1,0 +1,18 @@
+:root[data-theme="dark"] {
+  --blog-bg-page: #09090b;
+  --blog-bg-panel: #18181b;
+  --blog-text-primary: #fafafa;
+  --blog-text-danger: #f87171;
+  --blog-text-link: #60a5fa;
+}
+
+/* Native documents follow the system preference unless the application has selected a theme. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --blog-bg-page: #09090b;
+    --blog-bg-panel: #18181b;
+    --blog-text-primary: #fafafa;
+    --blog-text-danger: #f87171;
+    --blog-text-link: #60a5fa;
+  }
+}

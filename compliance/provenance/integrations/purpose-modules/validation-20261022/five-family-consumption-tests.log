@@ -1,0 +1,215 @@
+warning: unexpected `cfg` condition value: `borsh`
+   --> /mnt/sarmg.org/blog/src/foundation/collections/ordered-map/src/lib.rs:112:7
+    |
+112 | #[cfg(feature = "borsh")]
+    |       ^^^^^^^^^^^^^^^^^
+    |
+    = note: expected values for `feature` are: `default`, `rayon`, `serde`, `std`, and `test_debug`
+    = help: consider adding `borsh` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: requested on the command line with `-W unexpected-cfgs`
+
+warning: unexpected `cfg` condition value: `sval`
+   --> /mnt/sarmg.org/blog/src/foundation/collections/ordered-map/src/lib.rs:116:7
+    |
+116 | #[cfg(feature = "sval")]
+    |       ^^^^^^^^^^^^^^^^
+    |
+    = note: expected values for `feature` are: `default`, `rayon`, `serde`, `std`, and `test_debug`
+    = help: consider adding `sval` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `arbitrary`
+ --> /mnt/sarmg.org/blog/src/foundation/collections/ordered-map/src/arbitrary.rs:1:7
+  |
+1 | #[cfg(feature = "arbitrary")]
+  |       ^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: expected values for `feature` are: `default`, `rayon`, `serde`, `std`, and `test_debug`
+  = help: consider adding `arbitrary` as a feature in `Cargo.toml`
+  = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `quickcheck`
+  --> /mnt/sarmg.org/blog/src/foundation/collections/ordered-map/src/arbitrary.rs:38:7
+   |
+38 | #[cfg(feature = "quickcheck")]
+   |       ^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: expected values for `feature` are: `default`, `rayon`, `serde`, `std`, and `test_debug`
+   = help: consider adding `quickcheck` as a feature in `Cargo.toml`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: `blog-collections-ordered-map` (lib) generated 4 warnings
+warning: use of deprecated constant `core::u8::MAX`: replaced by the `MAX` associated constant on this type
+   --> /mnt/sarmg.org/blog/src/foundation/encoding/byte-search/src/arch/all/packedpair/mod.rs:179:41
+    |
+179 |         let max = usize::from(core::u8::MAX);
+    |                                         ^^^
+    |
+    = note: `#[warn(deprecated)]` on by default
+
+warning: use of deprecated constant `core::u32::MAX`: replaced by the `MAX` associated constant on this type
+   --> /mnt/sarmg.org/blog/src/foundation/encoding/byte-search/src/memmem/searcher.rs:916:34
+    |
+916 |             Err(_) => core::u32::MAX,
+    |                                  ^^^
+
+warning: `blog-encoding-byte-search` (lib) generated 2 warnings
+   Compiling blog-text-pattern-search v0.0.0 (/mnt/sarmg.org/blog/src/foundation/text/pattern-search)
+   Compiling blog-encoding-compression v0.0.0 (/mnt/sarmg.org/blog/src/foundation/encoding/compression)
+   Compiling blog-sync-concurrent-collections v0.0.0 (/mnt/sarmg.org/blog/src/foundation/sync/concurrent-collections)
+   Compiling blog-family-consumption-checks v0.0.0 (/tmp/blog-zxs-five/checks)
+warning: unexpected `cfg` condition value: `unicode-perl`
+  --> tests/../retained/test/regex-family/../foundation/regex/tests/regression.rs:49:7
+   |
+49 | #[cfg(feature = "unicode-perl")]
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: expected values for `feature` are: `alloc`, `codec`, `default`, `output`, `parser`, `simd`, `std`, and `streams`
+   = help: consider adding `unicode-perl` as a feature in `Cargo.toml`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+   = note: `#[warn(unexpected_cfgs)]` on by default
+
+warning: unexpected `cfg` condition value: `unicode`
+  --> tests/../retained/test/regex-family/../foundation/regex/tests/regression.rs:57:7
+   |
+57 | #[cfg(feature = "unicode")]
+   |       ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: expected values for `feature` are: `alloc`, `codec`, `default`, `output`, `parser`, `simd`, `std`, and `streams`
+   = help: consider adding `unicode` as a feature in `Cargo.toml`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `unicode-perl`
+  --> tests/../retained/test/regex-family/../foundation/regex/tests/regression.rs:68:7
+   |
+68 | #[cfg(feature = "unicode-perl")]
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: expected values for `feature` are: `alloc`, `codec`, `default`, `output`, `parser`, `simd`, `std`, and `streams`
+   = help: consider adding `unicode-perl` as a feature in `Cargo.toml`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `unicode`
+  --> tests/../retained/test/regex-family/../foundation/regex/tests/regression_fuzz.rs:25:7
+   |
+25 | #[cfg(feature = "unicode")]
+   |       ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: expected values for `feature` are: `alloc`, `codec`, `default`, `output`, `parser`, `simd`, `std`, and `streams`
+   = help: consider adding `unicode` as a feature in `Cargo.toml`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: `blog-family-consumption-checks` (test "regex") generated 4 warnings
+    Finished `test` profile [unoptimized] target(s) in 15.29s
+     Running unittests src/lib.rs (blog-zxs-five/target/debug/deps/blog_family_consumption_checks-a912eee1983f2c3b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/compression.rs (blog-zxs-five/target/debug/deps/compression-4049f79d79efd703)
+
+running 11 tests
+test retained::codec::independent_python_zlib_known_vectors ... ok
+test retained::checksum_known_vectors_and_resume ... ok
+test retained::codec::reject_invalid_truncated_and_checksum_corrupt_inputs ... ok
+test retained::codec::output_limit_is_enforced ... ok
+test retained::streams::concatenated_gzip_and_trailing_bytes_contract ... ok
+test retained::streams::gzip_rejects_each_truncation_and_corrupt_crc_or_length ... ok
+test retained::streams::independent_python_gzip_vector ... ok
+test retained::streams::tiny_output_buffers_preserve_progress_counters ... ok
+test retained::codec::raw_and_zlib_roundtrips_across_levels ... ok
+test retained::accelerated_checksums_match_scalar_at_alignment_and_chunk_boundaries ... ok
+test retained::streams::all_formats_roundtrip_with_incremental_writes_and_flush ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
+
+     Running tests/concurrent.rs (blog-zxs-five/target/debug/deps/concurrent-f3f9ab7b840b997c)
+
+running 2 tests
+test worker_stealing_and_epoch_guards_remain_available ... ok
+test bounded_and_unbounded_queues_keep_values_and_capacity ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/regex.rs (blog-zxs-five/target/debug/deps/regex-4e525452c847e030)
+
+running 49 tests
+test retained::misc::capture_index_lifetime ... ok
+test retained::misc::capture_index ... ok
+test retained::misc::capture_index_panic_usize - should panic ... ok
+test retained::misc::capture_index_panic_name - should panic ... ok
+test retained::misc::capture_misc ... ok
+test retained::misc::re_bytes_macro ... ok
+test retained::misc::capture_names ... ok
+test retained::misc::re_macro ... ok
+test retained::misc::sub_capture_matches ... ok
+test retained::misc::regex_string ... ok
+test retained::misc::unclosed_group_error ... ok
+test retained::regression::invalid_regexes_no_crash ... ok
+test retained::misc::dfa_handles_pathological_case ... ok
+test retained::regression::regression_complete_literals_suffix_incorrect ... ok
+test retained::regression::regression_invalid_flags_expression ... ok
+test retained::regression::regression_captures_rep ... ok
+test retained::regression::regression_invalid_repetition_expr ... ok
+test retained::regression_fuzz::fuzz1 ... ignored
+test retained::regression_fuzz::fail_branch_prevents_match ... ok
+test retained::regression_fuzz::todo ... ok
+test retained::replace::all ... ok
+test retained::replace::closure_returning_reference ... ok
+test retained::replace::capture_longest_possible_name ... ok
+test retained::replace::closure_returning_value ... ok
+test retained::replace::double_dollar ... ok
+test retained::replace::first ... ok
+test retained::replace::groups ... ok
+test retained::replace::impl_cow_str_borrowed ... ok
+test retained::replace::impl_cow_str_borrowed_ref ... ok
+test retained::replace::impl_cow_str_owned ... ok
+test retained::replace::impl_cow_str_owned_ref ... ok
+test retained::replace::impl_string ... ok
+test retained::replace::literal_dollar1 ... ok
+test retained::replace::literal_dollar2 ... ok
+test retained::replace::match_at_start_replace_with_empty ... ok
+test retained::replace::named ... ok
+test retained::replace::impl_string_ref ... ok
+test retained::replace::no_expand1 ... ok
+test retained::replace::number_hyphen ... ok
+test retained::replace::no_expand2 ... ok
+test retained::replace::replacen_no_captures ... ok
+test retained::replace::plus ... ok
+test retained::replace::replacen_with_captures ... ok
+test retained::replace::simple_expand ... ok
+test retained::replace::single_empty_match ... ok
+test retained::replace::trim ... ok
+test retained::regression::regression_big_regex_overflow ... ok
+test retained::regression::regression_many_repeat_stack_overflow ... ok
+test retained::regression_fuzz::big_regex_fails_to_compile ... ok
+
+test result: ok. 48 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.89s
+
+     Running tests/terminal.rs (blog-zxs-five/target/debug/deps/terminal-eb5bdd124b78b596)
+
+running 3 tests
+test retained::parser_dispatches_split_sequences ... ok
+test retained::output_strips_incrementally_and_shares_global_choice ... ok
+test retained::style_protocol_is_canonical ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/toml.rs (blog-zxs-five/target/debug/deps/toml-60bcc17dd322361a)
+
+running 4 tests
+test retained::datetime_and_wire_markers_remain_exact ... ok
+test retained::byte_spans_and_unicode_are_preserved ... ok
+test retained::formatting_and_error_offsets_remain_byte_based ... ok
+test retained::utf8_fast_path_boundaries_reject_malformed_syntax ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests blog_family_consumption_checks
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -1,0 +1,1572 @@
+--- upstream/Cargo.toml
++++ crates/blog-core/Cargo.toml
+@@ -2,12 +2,7 @@
+-"version" = "1.0.0"
+-"edition" = "2024"
+-"rust-version" = "1.99"
+-"authors" = ["sarmg <isarmg@163.com>"]
+-"license" = "Apache-2.0"
+-"repository" = "https://github.com/isarmg/xcss"
+-"homepage" = "https://github.com/isarmg/xcss"
+-"name" = "xcss"
+-"description" = "Linux AMD64 server support monolith"
+-
+-[lib]
+-"path" = "src/lib.rs"
++name = "blog-core"
++version = "1.0.0"
++edition = "2024"
++rust-version = "1.99"
++license = "Apache-2.0"
++authors = ["sarmg <isarmg@163.com>"]
++publish = false
+@@ -16,2 +11,2 @@
+-"default" = ["tracing"]
+-"tracing" = []
++default = ["tracing"]
++tracing = []
+@@ -19 +14 @@
+-[target.'cfg(all(target_os = "linux", target_arch = "x86_64", target_env = "gnu"))'.dependencies]
++[dependencies]
+@@ -21,23 +16,23 @@
+-"argon2" = { "version" = "0.5", "features" = ["std"] }
+-"base64" = { "version" = "0.23.1" }
+-"getrandom" = { "version" = "0.4" }
+-"hmac" = { "version" = "0.13.0" }
+-"sha2" = { "version" = "0.11.0" }
+-"subtle" = { "version" = "2.6" }
+-"thiserror" = { "version" = "2" }
+-"axum" = { "version" = "0.8.9" }
+-"bytes" = { "version" = "1" }
+-"http-body-util" = { "version" = "0.1" }
+-"mime" = { "version" = "0.3" }
+-"tokio" = { "version" = "1.53.2", "features" = ["fs", "io-util", "macros", "net", "rt-multi-thread", "signal", "sync", "test-util", "time"] }
+-"serde" = { "version" = "1", "features" = ["derive"] }
+-"serde_json" = { "version" = "1" }
+-"async-trait" = { "version" = "0.1" }
+-"http-body" = { "version" = "1" }
+-"hyper" = { "version" = "1", "features" = ["http1", "server"] }
+-"tower" = { "version" = "0.5", "features" = ["util"] }
+-"sqlx" = { "version" = "=0.9.0", "default-features" = false, "features" = ["runtime-tokio", "sqlite-bundled"] }
+-"rustix" = { "version" = "1.1.5", "features" = ["event", "fs", "process"] }
+-"futures-executor" = { "version" = "0.3" }
+-"libsqlite3-sys" = { "version" = "=0.37.0", "features" = ["bundled"] }
+-"tempfile" = { "version" = "3" }
++"argon2" = { version = "0.5", features = ["std"] }
++"base64" = { version = "0.23.1" }
++"getrandom" = { version = "0.4" }
++"hmac" = { version = "0.13.0" }
++"sha2" = { version = "0.11.0" }
++"subtle" = { version = "2.6" }
++"thiserror" = { version = "2" }
++"axum" = { version = "0.8.9" }
++"bytes" = { version = "1" }
++"http-body-util" = { version = "0.1" }
++"mime" = { version = "0.3" }
++"tokio" = { version = "1.53.2", features = ["fs", "io-util", "macros", "net", "rt-multi-thread", "signal", "sync", "test-util", "time"] }
++"serde" = { version = "1", features = ["derive"] }
++"serde_json" = { version = "1" }
++"async-trait" = { version = "0.1" }
++"http-body" = { version = "1" }
++"hyper" = { version = "1", features = ["http1", "server"] }
++"tower" = { version = "0.5", features = ["util"] }
++"sqlx" = { version = "=0.9.0", default-features = false, features = ["runtime-tokio", "sqlite-bundled"] }
++"rustix" = { version = "1.1.5", features = ["event", "fs", "process"] }
++"futures-executor" = { version = "0.3" }
++"libsqlite3-sys" = { version = "=0.37.0", features = ["bundled"] }
++"tempfile" = { version = "3" }
+@@ -45,19 +40,11 @@
+-"futures-util" = { "version" = "0.3", "default-features" = false, "features" = ["std"] }
+-"hyper-util" = { "version" = "0.1", "features" = ["service", "tokio"] }
+-"tokio-util" = { "version" = "0.7", "features" = ["rt"] }
+-"socket2" = { "version" = "0.6" }
+-"reqwest" = { "version" = "0.13.5", "default-features" = false, "features" = ["rustls"] }
+-"serde_path_to_error" = { "version" = "0.1.20" }
+-"chrono" = { "version" = "0.4", "default-features" = false, "features" = ["clock", "std"] }
+-"tracing" = { "version" = "0.1" }
+-"tracing-subscriber" = { "version" = "0.3", "default-features" = false, "features" = ["registry"] }
+-"zeroize" = { "version" = "1.8" }
+-"aes-gcm" = { "version" = "0.11.1" }
+-"hkdf" = { "version" = "0.13.0" }
+-"url" = { "version" = "2" }
+-"uuid" = { "version" = "1", "features" = ["v4"] }
+-"anyhow" = { "version" = "1" }
+-"http" = { "version" = "1" }
+-
+-[target.'cfg(all(target_os = "linux", target_arch = "x86_64", target_env = "gnu"))'.dev-dependencies]
+-"tokio-rustls" = "0.26.5"
++"futures-util" = { version = "0.3", default-features = false, features = ["std"] }
++"hyper-util" = { version = "0.1", features = ["service", "tokio"] }
++"tokio-util" = { version = "0.7", features = ["rt"] }
++"socket2" = { version = "0.6" }
++"serde_path_to_error" = { version = "0.1.20" }
++"chrono" = { version = "0.4", default-features = false, features = ["clock", "std"] }
++"tracing" = { version = "0.1" }
++"tracing-subscriber" = { version = "0.3", default-features = false, features = ["registry"] }
++"url" = { version = "2" }
++"anyhow" = { version = "1" }
++"http" = { version = "1" }
+@@ -66,2 +53,2 @@
+-"unsafe_code" = "deny"
+-"unsafe_op_in_unsafe_fn" = "deny"
++unsafe_code = "deny"
++unsafe_op_in_unsafe_fn = "deny"
+@@ -70,3 +57,3 @@
+-"dbg_macro" = "deny"
+-"todo" = "deny"
+-"undocumented_unsafe_blocks" = "deny"
++dbg_macro = "deny"
++todo = "deny"
++undocumented_unsafe_blocks = "deny"
+--- upstream/src/admin_axum/mod.rs
++++ crates/blog-core/src/admin_axum/mod.rs
+@@ -26 +26 @@
+-pub struct XcssErrorResponse;
++pub struct BlogErrorResponse;
+@@ -595 +595 @@
+-    response.extensions_mut().insert(XcssErrorResponse);
++    response.extensions_mut().insert(BlogErrorResponse);
+--- upstream/src/admin_sqlite/login_attempts.rs
++++ crates/blog-core/src/admin_sqlite/login_attempts.rs
+@@ -353,2 +353,2 @@
+-        let path = std::env::var("XCSS_TEST_WRITER_DATABASE")?;
+-        let expected_busy = std::env::var("XCSS_TEST_WRITER_BUSY")? == "true";
++        let path = std::env::var("BLOG_TEST_WRITER_DATABASE")?;
++        let expected_busy = std::env::var("BLOG_TEST_WRITER_BUSY")? == "true";
+@@ -391,2 +391,2 @@
+-            .env("XCSS_TEST_WRITER_DATABASE", path)
+-            .env("XCSS_TEST_WRITER_BUSY", blocked.to_string())
++            .env("BLOG_TEST_WRITER_DATABASE", path)
++            .env("BLOG_TEST_WRITER_BUSY", blocked.to_string())
+--- upstream/src/config/tests.rs
++++ crates/blog-core/src/config/tests.rs
+@@ -494,2 +494,2 @@
+-            .env("XCSS_CONFIG_TEST_ROOT", root.path())
+-            .env("XCSS_CONFIG_TEST_KIND", kind)
++            .env("BLOG_CONFIG_TEST_ROOT", root.path())
++            .env("BLOG_CONFIG_TEST_KIND", kind)
+@@ -580,2 +580,2 @@
+-    let root = PathBuf::from(std::env::var_os("XCSS_CONFIG_TEST_ROOT").expect("isolated fixture"));
+-    let kind = std::env::var("XCSS_CONFIG_TEST_KIND").unwrap();
++    let root = PathBuf::from(std::env::var_os("BLOG_CONFIG_TEST_ROOT").expect("isolated fixture"));
++    let kind = std::env::var("BLOG_CONFIG_TEST_KIND").unwrap();
+--- upstream/src/contracts/mod.rs
++++ crates/blog-core/src/contracts/mod.rs
+@@ -1 +1 @@
+-//! Strict Rust representations of the current Xcss JSON contracts.
++//! Strict Rust representations of the current Blog JSON contracts.
+@@ -49 +49 @@
+-    // identities or credentials. `xcss::admin_auth` owns canonical username
++    // identities or credentials. `blog_core::admin_auth` owns canonical username
+@@ -171 +171 @@
+-/// This is deliberately the canonical type from `xcss::schema_identity`, not
++/// This is deliberately the canonical type from `blog_core::schema_identity`, not
+@@ -473 +473 @@
+-/// Parse the shared error envelope through the canonical `xcss::error` type.
++/// Parse the shared error envelope through the canonical `blog_core::error` type.
+--- upstream/src/installation_material.rs
++++ crates/blog-core/src/installation_material.rs
+@@ -184 +184 @@
+-            "xcss/src/admin_auth/mod.rs",
++            "crates/blog-core/src/admin_auth/mod.rs",
+@@ -188 +188 @@
+-            "xcss/src/admin_core/mod.rs",
++            "crates/blog-core/src/admin_core/mod.rs",
+@@ -192 +192 @@
+-            "xcss/src/admin_sqlite/mod.rs",
++            "crates/blog-core/src/admin_sqlite/mod.rs",
+@@ -196 +196 @@
+-            "xcss/src/admin_sqlite/installation_contract.rs",
++            "crates/blog-core/src/admin_sqlite/installation_contract.rs",
+@@ -200 +200 @@
+-            "xcss/schemas/admin/persistent-v1.sql",
++            "crates/blog-core/schemas/admin/persistent-v1.sql",
+@@ -204 +204 @@
+-            "xcss/src/schema_identity/mod.rs",
++            "crates/blog-core/src/schema_identity/mod.rs",
+@@ -208 +208 @@
+-            "xcss/src/platform_db/mod.rs",
++            "crates/blog-core/src/platform_db/mod.rs",
+@@ -212 +212 @@
+-            "xcss/schemas/platform/v1.sql",
++            "crates/blog-core/schemas/platform/v1.sql",
+@@ -216 +216 @@
+-            "xcss/src/secret_envelope/mod.rs",
++            "crates/blog-core/src/secret_envelope/mod.rs",
+@@ -220 +220 @@
+-            "xcss/src/installation_material.rs",
++            "crates/blog-core/src/installation_material.rs",
+@@ -224 +224 @@
+-            "xcss/src/configuration_contract.rs",
++            "crates/blog-core/src/configuration_contract.rs",
+@@ -228 +228 @@
+-            "xcss/src/configuration_contract/rules.rs",
++            "crates/blog-core/src/configuration_contract/rules.rs",
+@@ -232 +232 @@
+-            "xcss/src/server_layout.rs",
++            "crates/blog-core/src/server_layout.rs",
+@@ -249 +249 @@
+-        json!({"path":path,"sha256":sha256,"generator":"xcss::installation_material::common"})
++        json!({"path":path,"sha256":sha256,"generator":"blog_core::installation_material::common"})
+--- upstream/src/lib.rs
++++ crates/blog-core/src/lib.rs
+@@ -1 +1 @@
+-//! xcss server support in one Linux AMD64 crate.
++//! Repository-owned Linux AMD64 support for blog.
+@@ -3 +2,0 @@
+-
+@@ -5,4 +4,2 @@
+-compile_error!("xcss supports only x86_64-unknown-linux-gnu server builds");
+-
+-extern crate self as xcss;
+-
++compile_error!("blog-core supports only x86_64-unknown-linux-gnu");
++extern crate self as blog_core;
+@@ -12 +8,0 @@
+-pub mod admin_hyper;
+@@ -21,2 +17 @@
+-pub mod operations;
+-pub mod platform_db;
++pub(crate) mod platform_db;
+@@ -24,3 +19 @@
+-pub mod secret;
+-pub mod secret_envelope;
+-pub mod secure_http;
++pub(crate) mod secret_envelope;
+@@ -30 +22,0 @@
+-pub mod server_secrets;
+@@ -34 +26,2 @@
+-pub mod testkit;
++#[cfg(test)]
++pub(crate) mod testkit;
+--- upstream/src/log/mod.rs
++++ crates/blog-core/src/log/mod.rs
+@@ -9,4 +8,0 @@
+-#[cfg(windows)]
+-mod windows_rotating;
+-#[cfg(windows)]
+-pub use windows_rotating::{RotatingLogFile, WindowsLogAccess};
+@@ -17 +13 @@
+-pub use tracing_layer::XcssStructuredLayer;
++pub use tracing_layer::BlogStructuredLayer;
+--- upstream/src/log/tracing_layer.rs
++++ crates/blog-core/src/log/tracing_layer.rs
+@@ -27 +27 @@
+-pub struct XcssStructuredLayer {
++pub struct BlogStructuredLayer {
+@@ -40 +40 @@
+-impl XcssStructuredLayer {
++impl BlogStructuredLayer {
+@@ -177 +177 @@
+-impl<S> Layer<S> for XcssStructuredLayer
++impl<S> Layer<S> for BlogStructuredLayer
+@@ -309 +309 @@
+-        let layer = XcssStructuredLayer::new("example")
++        let layer = BlogStructuredLayer::new("example")
+@@ -359 +359 @@
+-        let layer = XcssStructuredLayer::new("example")
++        let layer = BlogStructuredLayer::new("example")
+@@ -393 +393 @@
+-        let layer = XcssStructuredLayer::new("example")
++        let layer = BlogStructuredLayer::new("example")
+--- upstream/src/platform_db/mod.rs
++++ crates/blog-core/src/platform_db/mod.rs
+@@ -1,11 +1 @@
+-//! Current-only lifecycle and metadata checks for a Xcss platform database.
+-//!
+-//! This crate opens only an existing database whose complete schema identity
+-//! and platform component are exactly what the running product compiled for.
+-
+-use crate::schema_identity::SchemaIdentity;
+-use crate::sqlite::PoolOptions;
+-use crate::state_file::{InstanceLock, PrivateStateDirectory, SecureStateFile};
+-use sqlx::{Row, SqliteConnection, SqlitePool};
+-use thiserror::Error;
+-
++//! Installation metadata descriptors retained for the current blog contract.
+@@ -15,0 +6 @@
++#[allow(dead_code)]
+@@ -18,438 +8,0 @@
+-
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub struct ProductDescriptor {
+-    product_id: String,
+-    profile: String,
+-    database_file: String,
+-}
+-
+-impl ProductDescriptor {
+-    pub fn new(
+-        product_id: impl Into<String>,
+-        profile: impl Into<String>,
+-        database_file: impl Into<String>,
+-    ) -> Result<Self, Error> {
+-        let descriptor = Self {
+-            product_id: product_id.into(),
+-            profile: profile.into(),
+-            database_file: database_file.into(),
+-        };
+-        require_product_id(&descriptor.product_id)?;
+-        if descriptor.profile != "server-control-plane" {
+-            return Err(Error::UnsupportedProfile {
+-                actual: descriptor.profile,
+-            });
+-        }
+-        if descriptor.database_file.is_empty() {
+-            return Err(Error::InvalidDatabaseFile);
+-        }
+-        Ok(descriptor)
+-    }
+-
+-    pub fn product_id(&self) -> &str {
+-        &self.product_id
+-    }
+-
+-    pub fn profile(&self) -> &str {
+-        &self.profile
+-    }
+-
+-    pub fn database_file(&self) -> &str {
+-        &self.database_file
+-    }
+-}
+-
+-#[derive(Clone, Debug, Eq, PartialEq)]
+-pub struct PlatformMetadata {
+-    pub platform_generation: u32,
+-    pub platform_schema_revision: u32,
+-    pub profile: String,
+-    pub created_at_micros: u64,
+-}
+-
+-#[derive(Debug)]
+-pub struct PlatformDatabase {
+-    pool: SqlitePool,
+-    metadata: PlatformMetadata,
+-    descriptor: ProductDescriptor,
+-    _secure_file: SecureStateFile,
+-    _instance_lock: InstanceLock,
+-}
+-
+-impl PlatformDatabase {
+-    pub async fn open(
+-        state_directory: PrivateStateDirectory,
+-        product_descriptor: ProductDescriptor,
+-        expected_schema: SchemaIdentity,
+-    ) -> Result<Self, Error> {
+-        Self::open_with_options(
+-            state_directory,
+-            product_descriptor,
+-            expected_schema,
+-            PoolOptions::default(),
+-        )
+-        .await
+-    }
+-
+-    pub async fn open_with_options(
+-        state_directory: PrivateStateDirectory,
+-        product_descriptor: ProductDescriptor,
+-        expected_schema: SchemaIdentity,
+-        pool_options: PoolOptions,
+-    ) -> Result<Self, Error> {
+-        if expected_schema.application != product_descriptor.product_id {
+-            return Err(Error::ProductIdentityMismatch {
+-                descriptor: product_descriptor.product_id.clone(),
+-                schema: expected_schema.application,
+-            });
+-        }
+-        state_directory.verify_identity()?;
+-        let instance_lock = state_directory.try_instance_lock()?;
+-        let secure_file = state_directory.open_existing(&product_descriptor.database_file)?;
+-        let pool = crate::sqlite::open_existing(secure_file.path(), pool_options).await?;
+-        secure_file.verify_identity()?;
+-        crate::sqlite::require_pool_current_schema(&pool, &expected_schema).await?;
+-        let metadata =
+-            require_current_platform_metadata(&pool, product_descriptor.profile()).await?;
+-        secure_file.verify_identity()?;
+-        Ok(Self {
+-            pool,
+-            metadata,
+-            descriptor: product_descriptor,
+-            _secure_file: secure_file,
+-            _instance_lock: instance_lock,
+-        })
+-    }
+-
+-    pub fn pool(&self) -> &SqlitePool {
+-        &self.pool
+-    }
+-
+-    pub fn metadata(&self) -> &PlatformMetadata {
+-        &self.metadata
+-    }
+-
+-    pub fn descriptor(&self) -> &ProductDescriptor {
+-        &self.descriptor
+-    }
+-
+-    pub async fn close(self) {
+-        self.pool.close().await;
+-    }
+-}
+-
+-pub async fn read_platform_metadata(pool: &SqlitePool) -> Result<PlatformMetadata, Error> {
+-    validate_platform_table(pool).await?;
+-    let rows = sqlx::query(PLATFORM_METADATA_READ_SQL)
+-        .fetch_all(pool)
+-        .await?;
+-    if rows.len() != 1 {
+-        return Err(Error::PlatformMetadataRowCount { actual: rows.len() });
+-    }
+-    let row = &rows[0];
+-    for (field, index, expected) in [
+-        ("singleton", 0, "integer"),
+-        ("platform_generation", 2, "integer"),
+-        ("platform_schema_revision", 4, "integer"),
+-        ("profile", 6, "text"),
+-        ("created_at_micros", 8, "integer"),
+-    ] {
+-        let actual: String = row.try_get(index)?;
+-        if actual != expected {
+-            return Err(Error::PlatformMetadataStorageClass {
+-                field,
+-                expected,
+-                actual,
+-            });
+-        }
+-    }
+-    let singleton: i64 = row.try_get(1)?;
+-    if singleton != 1 {
+-        return Err(Error::InvalidPlatformSingleton { actual: singleton });
+-    }
+-    Ok(PlatformMetadata {
+-        platform_generation: positive_u32("platform_generation", row.try_get(3)?)?,
+-        platform_schema_revision: positive_u32("platform_schema_revision", row.try_get(5)?)?,
+-        profile: row.try_get(7)?,
+-        created_at_micros: nonnegative_u64("created_at_micros", row.try_get(9)?)?,
+-    })
+-}
+-
+-/// Inserts the single current platform metadata row while a product creates
+-/// its current schema. Product rows remain outside this crate.
+-pub async fn initialize_current_platform_metadata(
+-    connection: &mut SqliteConnection,
+-    profile: &str,
+-    created_at_micros: u64,
+-) -> Result<PlatformMetadata, Error> {
+-    require_supported_profile(profile)?;
+-    let created_at_micros = i64::try_from(created_at_micros)
+-        .map_err(|_| Error::PlatformTimestampOutOfRange { created_at_micros })?;
+-    sqlx::query(PLATFORM_METADATA_INSERT_SQL)
+-        .bind(i64::from(PLATFORM_GENERATION))
+-        .bind(i64::from(PLATFORM_SCHEMA_REVISION))
+-        .bind(profile)
+-        .bind(created_at_micros)
+-        .execute(connection)
+-        .await?;
+-    Ok(PlatformMetadata {
+-        platform_generation: PLATFORM_GENERATION,
+-        platform_schema_revision: PLATFORM_SCHEMA_REVISION,
+-        profile: profile.to_owned(),
+-        created_at_micros: u64::try_from(created_at_micros)
+-            .expect("validated platform timestamp is non-negative"),
+-    })
+-}
+-
+-/// Reads and verifies the exact current platform metadata contract expected by
+-/// a product profile.
+-pub async fn require_current_platform_metadata(
+-    pool: &SqlitePool,
+-    expected_profile: &str,
+-) -> Result<PlatformMetadata, Error> {
+-    require_supported_profile(expected_profile)?;
+-    let metadata = read_platform_metadata(pool).await?;
+-    require_current_platform(&metadata, expected_profile)?;
+-    Ok(metadata)
+-}
+-
+-async fn validate_platform_table(pool: &SqlitePool) -> Result<(), Error> {
+-    let ddl: Option<String> = sqlx::query_scalar(
+-        "SELECT sql FROM sqlite_schema WHERE type='table' AND name='_common_platform_metadata'",
+-    )
+-    .fetch_optional(pool)
+-    .await?;
+-    let ddl = ddl.ok_or(Error::PlatformMetadataTableMissing)?;
+-    if normalize_sql(&ddl) != normalize_sql(PLATFORM_METADATA_DDL) {
+-        return Err(Error::PlatformMetadataDdlMismatch);
+-    }
+-    Ok(())
+-}
+-
+-fn normalize_sql(sql: &str) -> String {
+-    sql.chars()
+-        .filter(|character| !character.is_ascii_whitespace() && *character != ';')
+-        .flat_map(char::to_lowercase)
+-        .collect()
+-}
+-
+-fn require_current_platform(
+-    metadata: &PlatformMetadata,
+-    expected_profile: &str,
+-) -> Result<(), Error> {
+-    if metadata.platform_generation != PLATFORM_GENERATION {
+-        return Err(Error::PlatformGenerationMismatch {
+-            expected: PLATFORM_GENERATION,
+-            actual: metadata.platform_generation,
+-        });
+-    }
+-    if metadata.platform_schema_revision != PLATFORM_SCHEMA_REVISION {
+-        return Err(Error::PlatformSchemaRevisionMismatch {
+-            expected: PLATFORM_SCHEMA_REVISION,
+-            actual: metadata.platform_schema_revision,
+-        });
+-    }
+-    if metadata.profile != expected_profile {
+-        return Err(Error::PlatformProfileMismatch {
+-            expected: expected_profile.to_owned(),
+-            actual: metadata.profile.clone(),
+-        });
+-    }
+-    Ok(())
+-}
+-
+-fn require_supported_profile(profile: &str) -> Result<(), Error> {
+-    if profile != "server-control-plane" {
+-        return Err(Error::UnsupportedProfile {
+-            actual: profile.to_owned(),
+-        });
+-    }
+-    Ok(())
+-}
+-
+-fn require_product_id(value: &str) -> Result<(), Error> {
+-    let bytes = value.as_bytes();
+-    if bytes.is_empty()
+-        || bytes.len() > 63
+-        || !bytes[0].is_ascii_lowercase()
+-        || !bytes
+-            .iter()
+-            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || *byte == b'-')
+-    {
+-        return Err(Error::InvalidProductId);
+-    }
+-    Ok(())
+-}
+-
+-fn positive_u32(field: &'static str, value: i64) -> Result<u32, Error> {
+-    let value = u32::try_from(value).map_err(|_| Error::InvalidPlatformInteger { field, value })?;
+-    if value == 0 {
+-        Err(Error::InvalidPlatformInteger {
+-            field,
+-            value: i64::from(value),
+-        })
+-    } else {
+-        Ok(value)
+-    }
+-}
+-
+-fn nonnegative_u64(field: &'static str, value: i64) -> Result<u64, Error> {
+-    u64::try_from(value).map_err(|_| Error::InvalidPlatformInteger { field, value })
+-}
+-
+-#[derive(Debug, Error)]
+-pub enum Error {
+-    #[error("product ID is not canonical")]
+-    InvalidProductId,
+-    #[error("platform database requires profile server-control-plane, found {actual}")]
+-    UnsupportedProfile { actual: String },
+-    #[error("database file name is empty")]
+-    InvalidDatabaseFile,
+-    #[error("descriptor product {descriptor} differs from schema application {schema}")]
+-    ProductIdentityMismatch { descriptor: String, schema: String },
+-    #[error(transparent)]
+-    StateFile(#[from] crate::state_file::Error),
+-    #[error(transparent)]
+-    Sqlite(#[from] crate::sqlite::Error),
+-    #[error("platform metadata table is missing")]
+-    PlatformMetadataTableMissing,
+-    #[error("platform metadata DDL differs from the current xcss DDL")]
+-    PlatformMetadataDdlMismatch,
+-    #[error("platform metadata must contain exactly one row, found {actual}")]
+-    PlatformMetadataRowCount { actual: usize },
+-    #[error("platform metadata singleton must be 1, found {actual}")]
+-    InvalidPlatformSingleton { actual: i64 },
+-    #[error("platform metadata {field} must use storage class {expected}, found {actual}")]
+-    PlatformMetadataStorageClass {
+-        field: &'static str,
+-        expected: &'static str,
+-        actual: String,
+-    },
+-    #[error("platform metadata {field} has invalid integer {value}")]
+-    InvalidPlatformInteger { field: &'static str, value: i64 },
+-    #[error("platform metadata timestamp {created_at_micros} exceeds SQLite INTEGER")]
+-    PlatformTimestampOutOfRange { created_at_micros: u64 },
+-    #[error("platform generation must be {expected}, found {actual}")]
+-    PlatformGenerationMismatch { expected: u32, actual: u32 },
+-    #[error("platform schema revision must be {expected}, found {actual}")]
+-    PlatformSchemaRevisionMismatch { expected: u32, actual: u32 },
+-    #[error("platform profile must be {expected}, found {actual}")]
+-    PlatformProfileMismatch { expected: String, actual: String },
+-    #[error("SQLite platform query failed: {0}")]
+-    Sqlx(#[from] sqlx::Error),
+-}
+-
+-#[cfg(test)]
+-mod tests {
+-    use super::*;
+-    use std::{fs, os::unix::fs::PermissionsExt};
+-
+-    async fn current_database(
+-        profile: &str,
+-    ) -> Result<
+-        (tempfile::TempDir, PrivateStateDirectory, SchemaIdentity),
+-        Box<dyn std::error::Error>,
+-    > {
+-        let parent = tempfile::tempdir()?;
+-        fs::set_permissions(parent.path(), fs::Permissions::from_mode(0o700))?;
+-        let state = PrivateStateDirectory::create(parent.path().join("state"))?;
+-        state.create_file("state.sqlite3")?;
+-        let pool =
+-            crate::sqlite::open_existing(state.path().join("state.sqlite3"), PoolOptions::new(1))
+-                .await?;
+-        sqlx::raw_sql(crate::sqlite::PRODUCT_METADATA_DDL)
+-            .execute(&pool)
+-            .await?;
+-        sqlx::raw_sql(PLATFORM_METADATA_DDL).execute(&pool).await?;
+-        sqlx::query(
+-            "INSERT INTO _common_platform_metadata(\
+-               singleton, platform_generation, platform_schema_revision, profile, created_at_micros\
+-             ) VALUES(1, 1, 1, ?, 7)",
+-        )
+-        .bind(profile)
+-        .execute(&pool)
+-        .await?;
+-        let fingerprint = crate::sqlite::schema_fingerprint(&pool).await?;
+-        let identity = SchemaIdentity::new("example-product", "0.5.0", 1, fingerprint)?;
+-        sqlx::query(
+-            "INSERT INTO product_metadata(\
+-               singleton, application, application_version, schema_revision, schema_sha256\
+-             ) VALUES(1, ?, ?, ?, ?)",
+-        )
+-        .bind(&identity.application)
+-        .bind(&identity.application_version)
+-        .bind(i64::try_from(identity.schema_revision)?)
+-        .bind(&identity.schema_sha256)
+-        .execute(&pool)
+-        .await?;
+-        pool.close().await;
+-        Ok((parent, state, identity))
+-    }
+-
+-    #[tokio::test]
+-    async fn opens_only_the_exact_current_platform_database()
+-    -> Result<(), Box<dyn std::error::Error>> {
+-        let (_parent, state, identity) = current_database("server-control-plane").await?;
+-        let descriptor =
+-            ProductDescriptor::new("example-product", "server-control-plane", "state.sqlite3")?;
+-        let database = PlatformDatabase::open(state.clone(), descriptor, identity).await?;
+-        assert_eq!(database.metadata().created_at_micros, 7);
+-        assert!(matches!(
+-            PlatformDatabase::open(
+-                state,
+-                ProductDescriptor::new(
+-                    "example-product",
+-                    "server-control-plane",
+-                    "state.sqlite3",
+-                )?,
+-                SchemaIdentity::new("example-product", "9.9.9", 1, "0".repeat(64))?,
+-            )
+-            .await,
+-            Err(Error::StateFile(crate::state_file::Error::LockUnavailable { .. }))
+-        ));
+-        database.close().await;
+-        Ok(())
+-    }
+-
+-    #[tokio::test]
+-    async fn rejects_wrong_platform_profile() -> Result<(), Box<dyn std::error::Error>> {
+-        let (_parent, state, identity) = current_database("server-filesystem").await?;
+-        let error = PlatformDatabase::open(
+-            state,
+-            ProductDescriptor::new("example-product", "server-control-plane", "state.sqlite3")?,
+-            identity,
+-        )
+-        .await
+-        .unwrap_err();
+-        assert!(matches!(error, Error::PlatformProfileMismatch { .. }));
+-        Ok(())
+-    }
+-
+-    #[tokio::test]
+-    async fn initializes_and_validates_current_platform_metadata()
+-    -> Result<(), Box<dyn std::error::Error>> {
+-        let pool = SqlitePool::connect("sqlite::memory:").await?;
+-        sqlx::raw_sql(PLATFORM_METADATA_DDL).execute(&pool).await?;
+-        let mut connection = pool.acquire().await?;
+-        let initialized =
+-            initialize_current_platform_metadata(&mut connection, "server-control-plane", 42)
+-                .await?;
+-        assert_eq!(initialized.created_at_micros, 42);
+-        drop(connection);
+-        assert_eq!(
+-            require_current_platform_metadata(&pool, "server-control-plane").await?,
+-            initialized
+-        );
+-        let mut connection = pool.acquire().await?;
+-        assert!(matches!(
+-            initialize_current_platform_metadata(&mut connection, "server-control-plane", 43,)
+-                .await,
+-            Err(Error::Sqlx(_))
+-        ));
+-        assert!(matches!(
+-            require_current_platform_metadata(&pool, "server-filesystem").await,
+-            Err(Error::UnsupportedProfile { .. })
+-        ));
+-        Ok(())
+-    }
+-}
+--- upstream/src/secret_envelope/mod.rs
++++ crates/blog-core/src/secret_envelope/mod.rs
+@@ -1,11 +1 @@
+-//! A single current envelope with explicit product domain and caller-provided object binding.
+-
+-use crate::secret::{SecretBytes, SecretKey};
+-use aes_gcm::{
+-    Aes256Gcm, KeyInit, Nonce,
+-    aead::{Aead, Payload},
+-};
+-use hkdf::Hkdf;
+-use sha2::Sha256;
+-use zeroize::Zeroizing;
+-
++//! Pure installation descriptor; blog does not implement encrypted secret files.
+@@ -43,341 +32,0 @@
+-
+-pub trait EnvelopeDomain {
+-    const DOMAIN: &'static [u8];
+-    const REVISION: u16;
+-}
+-
+-pub fn seal<D: EnvelopeDomain>(
+-    master: &SecretKey<MASTER_KEY_BYTES>,
+-    binding: &[u8],
+-    plaintext: &SecretBytes,
+-) -> Result<Vec<u8>, Error> {
+-    seal_with_domain(master, D::DOMAIN, D::REVISION, binding, plaintext)
+-}
+-
+-/// Seal the one current envelope using a verified caller-owned domain policy.
+-pub fn seal_with_domain(
+-    master: &SecretKey<MASTER_KEY_BYTES>,
+-    domain: &[u8],
+-    revision: u16,
+-    binding: &[u8],
+-    plaintext: &SecretBytes,
+-) -> Result<Vec<u8>, Error> {
+-    validate_domain_binding(domain, binding)?;
+-    if plaintext.expose().len() > MAX_PLAINTEXT_BYTES {
+-        return Err(Error::PlaintextTooLarge);
+-    }
+-    let key = derive_key(master, domain, binding)?;
+-    let cipher = Aes256Gcm::new_from_slice(&key[..]).map_err(|_| Error::Crypto)?;
+-    let mut nonce = [0_u8; NONCE_BYTES];
+-    getrandom::fill(&mut nonce).map_err(|_| Error::Randomness)?;
+-    let aad = aad(domain, revision, binding)?;
+-    let ciphertext = cipher
+-        .encrypt(
+-            <&Nonce<aes_gcm::aead::consts::U12>>::try_from(&nonce[..])
+-                .map_err(|_| Error::Crypto)?,
+-            Payload {
+-                msg: plaintext.expose(),
+-                aad: &aad,
+-            },
+-        )
+-        .map_err(|_| Error::Crypto)?;
+-    let mut output = Vec::with_capacity(HEADER_BYTES + NONCE_BYTES + ciphertext.len());
+-    output.extend_from_slice(MAGIC);
+-    output.extend_from_slice(&revision.to_be_bytes());
+-    output.extend_from_slice(&nonce);
+-    output.extend_from_slice(&ciphertext);
+-    Ok(output)
+-}
+-
+-pub fn open<D: EnvelopeDomain>(
+-    master: &SecretKey<MASTER_KEY_BYTES>,
+-    binding: &[u8],
+-    envelope: &[u8],
+-) -> Result<SecretBytes, Error> {
+-    open_with_domain(master, D::DOMAIN, D::REVISION, binding, envelope)
+-}
+-
+-/// Verify the exact current domain/revision obtained from trusted contract
+-/// data. Never infer the expected policy from the untrusted envelope header.
+-pub fn open_with_domain(
+-    master: &SecretKey<MASTER_KEY_BYTES>,
+-    domain: &[u8],
+-    revision: u16,
+-    binding: &[u8],
+-    envelope: &[u8],
+-) -> Result<SecretBytes, Error> {
+-    validate_domain_binding(domain, binding)?;
+-    if envelope.len() < HEADER_BYTES + NONCE_BYTES + TAG_BYTES
+-        || envelope.len() > HEADER_BYTES + NONCE_BYTES + TAG_BYTES + MAX_PLAINTEXT_BYTES
+-    {
+-        return Err(Error::Malformed);
+-    }
+-    if &envelope[..4] != MAGIC || u16::from_be_bytes([envelope[4], envelope[5]]) != revision {
+-        return Err(Error::WrongRevision);
+-    }
+-    let key = derive_key(master, domain, binding)?;
+-    let cipher = Aes256Gcm::new_from_slice(&key[..]).map_err(|_| Error::Crypto)?;
+-    let aad = aad(domain, revision, binding)?;
+-    let plaintext = cipher
+-        .decrypt(
+-            <&Nonce<aes_gcm::aead::consts::U12>>::try_from(
+-                &envelope[HEADER_BYTES..HEADER_BYTES + NONCE_BYTES],
+-            )
+-            .map_err(|_| Error::Malformed)?,
+-            Payload {
+-                msg: &envelope[HEADER_BYTES + NONCE_BYTES..],
+-                aad: &aad,
+-            },
+-        )
+-        .map_err(|_| Error::Authentication)?;
+-    Ok(SecretBytes::new(plaintext))
+-}
+-
+-fn validate_domain_binding(domain: &[u8], binding: &[u8]) -> Result<(), Error> {
+-    if domain.is_empty() || binding.is_empty() {
+-        return Err(Error::MissingDomainBinding);
+-    }
+-    if domain.len() > MAX_DOMAIN_BYTES {
+-        return Err(Error::DomainTooLarge);
+-    }
+-    if binding.len() > MAX_BINDING_BYTES {
+-        return Err(Error::BindingTooLarge);
+-    }
+-    Ok(())
+-}
+-
+-fn derive_key(
+-    master: &SecretKey<MASTER_KEY_BYTES>,
+-    domain: &[u8],
+-    binding: &[u8],
+-) -> Result<Zeroizing<[u8; MASTER_KEY_BYTES]>, Error> {
+-    let hk = Hkdf::<Sha256>::new(Some(domain), master.expose());
+-    let mut key = Zeroizing::new([0_u8; MASTER_KEY_BYTES]);
+-    hk.expand(binding, key.as_mut())
+-        .map_err(|_| Error::Crypto)?;
+-    Ok(key)
+-}
+-fn aad(domain: &[u8], revision: u16, binding: &[u8]) -> Result<Vec<u8>, Error> {
+-    let domain_len = u16::try_from(domain.len()).map_err(|_| Error::MissingDomainBinding)?;
+-    let binding_len = u32::try_from(binding.len()).map_err(|_| Error::MissingDomainBinding)?;
+-    let mut aad = Vec::with_capacity(8 + domain.len() + binding.len());
+-    aad.extend_from_slice(&domain_len.to_be_bytes());
+-    aad.extend_from_slice(domain);
+-    aad.extend_from_slice(&revision.to_be_bytes());
+-    aad.extend_from_slice(&binding_len.to_be_bytes());
+-    aad.extend_from_slice(binding);
+-    Ok(aad)
+-}
+-
+-#[derive(Debug, thiserror::Error, Eq, PartialEq)]
+-pub enum Error {
+-    #[error("envelope requires a non-empty domain and binding")]
+-    MissingDomainBinding,
+-    #[error("plaintext exceeds the envelope budget")]
+-    PlaintextTooLarge,
+-    #[error("envelope domain exceeds its byte budget")]
+-    DomainTooLarge,
+-    #[error("object binding exceeds the envelope budget")]
+-    BindingTooLarge,
+-    #[error("malformed envelope")]
+-    Malformed,
+-    #[error("envelope revision does not match the current domain revision")]
+-    WrongRevision,
+-    #[error("envelope authentication failed")]
+-    Authentication,
+-    #[error("cryptographic operation failed")]
+-    Crypto,
+-    #[error("secure randomness unavailable")]
+-    Randomness,
+-}
+-
+-#[cfg(test)]
+-mod tests {
+-    use super::*;
+-    struct Test;
+-    impl EnvelopeDomain for Test {
+-        const DOMAIN: &'static [u8] = b"test/credential";
+-        const REVISION: u16 = 1;
+-    }
+-    #[test]
+-    fn independent_hkdf_aes_gcm_vector_preserves_current_envelope_bytes() {
+-        // Independently generated with Python cryptography HKDF-SHA256 and
+-        // AESGCM (fixed test-only master/nonce), not this crate's seal function.
+-        let master = SecretKey::new([9; 32]);
+-        let expected_key = [
+-            0x1a, 0xd2, 0x78, 0x0b, 0x8e, 0xa1, 0xdf, 0xfd, 0xe4, 0xed, 0xad, 0x0c, 0x5c, 0x75,
+-            0x6e, 0x09, 0x48, 0x92, 0x34, 0x79, 0xc6, 0xd9, 0xbe, 0xab, 0x0b, 0xe5, 0x7d, 0xee,
+-            0xa8, 0x6f, 0x67, 0xeb,
+-        ];
+-        assert_eq!(
+-            &derive_key(&master, Test::DOMAIN, b"object-1").unwrap()[..],
+-            &expected_key
+-        );
+-        let envelope = [
+-            0x53, 0x47, 0x45, 0x56, 0x00, 0x01, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+-            0x08, 0x09, 0x0a, 0x0b, 0x9b, 0x37, 0xbc, 0xe1, 0x9c, 0xdb, 0x9c, 0x13, 0xcc, 0x3e,
+-            0x16, 0xb2, 0x67, 0x3c, 0xea, 0x12, 0xaf, 0x36, 0x82, 0x04, 0xf8, 0x4d,
+-        ];
+-        assert_eq!(
+-            open::<Test>(&master, b"object-1", &envelope)
+-                .unwrap()
+-                .expose(),
+-            b"secret"
+-        );
+-        assert_eq!(
+-            open::<Test>(&master, b"object-2", &envelope).unwrap_err(),
+-            Error::Authentication
+-        );
+-        let cipher = Aes256Gcm::new_from_slice(&expected_key).unwrap();
+-        let aad = aad(Test::DOMAIN, Test::REVISION, b"object-1").unwrap();
+-        let actual = cipher
+-            .encrypt(
+-                <&Nonce<aes_gcm::aead::consts::U12>>::try_from(
+-                    &envelope[HEADER_BYTES..HEADER_BYTES + NONCE_BYTES],
+-                )
+-                .unwrap(),
+-                Payload {
+-                    msg: b"secret",
+-                    aad: &aad,
+-                },
+-            )
+-            .unwrap();
+-        assert_eq!(&actual, &envelope[HEADER_BYTES + NONCE_BYTES..]);
+-    }
+-    fn fixture_bytes(value: &serde_json::Value, field: &str) -> Vec<u8> {
+-        let hex = value[field].as_str().unwrap();
+-        assert_eq!(hex.len() % 2, 0);
+-        hex.as_bytes()
+-            .as_chunks::<2>()
+-            .0
+-            .iter()
+-            .map(|pair| u8::from_str_radix(std::str::from_utf8(pair).unwrap(), 16).unwrap())
+-            .collect()
+-    }
+-
+-    #[test]
+-    fn public_vectors_verify_actual_kdf_aad_and_current_format() {
+-        let vector: serde_json::Value =
+-            serde_json::from_str(CURRENT_ENVELOPE_VALIDATION_VECTORS_JSON).unwrap();
+-        let master = SecretKey::new(fixture_bytes(&vector, "master_hex").try_into().unwrap());
+-        let domain = fixture_bytes(&vector, "domain_hex");
+-        let binding = fixture_bytes(&vector, "binding_hex");
+-        let envelope = fixture_bytes(&vector, "envelope_hex");
+-        let revision = u16::try_from(vector["revision"].as_u64().unwrap()).unwrap();
+-        assert_eq!(
+-            derive_key(&master, &domain, &binding).unwrap().as_slice(),
+-            fixture_bytes(&vector, "derived_key_hex")
+-        );
+-        assert_eq!(
+-            aad(&domain, revision, &binding).unwrap(),
+-            fixture_bytes(&vector, "aad_hex")
+-        );
+-        assert_eq!(
+-            open_with_domain(&master, &domain, revision, &binding, &envelope)
+-                .unwrap()
+-                .expose(),
+-            fixture_bytes(&vector, "plaintext_hex")
+-        );
+-        assert_eq!(
+-            &envelope[HEADER_BYTES..HEADER_BYTES + NONCE_BYTES],
+-            fixture_bytes(&vector, "nonce_hex")
+-        );
+-        assert_eq!(
+-            envelope.len(),
+-            HEADER_BYTES + NONCE_BYTES + TAG_BYTES + fixture_bytes(&vector, "plaintext_hex").len()
+-        );
+-    }
+-
+-    #[test]
+-    fn dynamic_and_static_domains_use_one_current_format_and_reject_untrusted_metadata() {
+-        let master = SecretKey::new([9; 32]);
+-        let plaintext = SecretBytes::new(b"secret".to_vec());
+-        let sealed = seal_with_domain(
+-            &master,
+-            Test::DOMAIN,
+-            Test::REVISION,
+-            b"object-1",
+-            &plaintext,
+-        )
+-        .unwrap();
+-        assert_eq!(
+-            open::<Test>(&master, b"object-1", &sealed)
+-                .unwrap()
+-                .expose(),
+-            b"secret"
+-        );
+-        let sealed = seal::<Test>(&master, b"object-1", &plaintext).unwrap();
+-        assert_eq!(
+-            open_with_domain(&master, Test::DOMAIN, Test::REVISION, b"object-1", &sealed)
+-                .unwrap()
+-                .expose(),
+-            b"secret"
+-        );
+-        assert_eq!(
+-            open_with_domain(
+-                &master,
+-                Test::DOMAIN,
+-                Test::REVISION + 1,
+-                b"object-1",
+-                &sealed
+-            )
+-            .unwrap_err(),
+-            Error::WrongRevision
+-        );
+-        assert_eq!(
+-            open_with_domain(
+-                &master,
+-                b"different/domain",
+-                Test::REVISION,
+-                b"object-1",
+-                &sealed
+-            )
+-            .unwrap_err(),
+-            Error::Authentication
+-        );
+-        let mut wrong_magic = sealed.clone();
+-        wrong_magic[0] ^= 1;
+-        assert_eq!(
+-            open_with_domain(
+-                &master,
+-                Test::DOMAIN,
+-                Test::REVISION,
+-                b"object-1",
+-                &wrong_magic
+-            )
+-            .unwrap_err(),
+-            Error::WrongRevision
+-        );
+-        let oversized_domain = vec![0; MAX_DOMAIN_BYTES + 1];
+-        assert_eq!(
+-            seal_with_domain(&master, &oversized_domain, 1, b"object-1", &plaintext),
+-            Err(Error::DomainTooLarge)
+-        );
+-        let oversized_binding = vec![0; MAX_BINDING_BYTES + 1];
+-        assert_eq!(
+-            seal_with_domain(&master, Test::DOMAIN, 1, &oversized_binding, &plaintext),
+-            Err(Error::BindingTooLarge)
+-        );
+-    }
+-
+-    #[test]
+-    fn roundtrip_is_bound_to_object_and_tampering_fails() {
+-        let key = SecretKey::new([9; 32]);
+-        let plain = SecretBytes::new(b"secret".to_vec());
+-        let sealed = seal::<Test>(&key, b"object-1", &plain).unwrap();
+-        assert_eq!(
+-            open::<Test>(&key, b"object-1", &sealed).unwrap().expose(),
+-            b"secret"
+-        );
+-        assert_eq!(
+-            open::<Test>(&key, b"object-2", &sealed).unwrap_err(),
+-            Error::Authentication
+-        );
+-        let mut corrupt = sealed;
+-        *corrupt.last_mut().unwrap() ^= 1;
+-        assert_eq!(
+-            open::<Test>(&key, b"object-1", &corrupt).unwrap_err(),
+-            Error::Authentication
+-        );
+-    }
+-}
+--- upstream/src/server_cli/mod.rs
++++ crates/blog-core/src/server_cli/mod.rs
+@@ -13 +12,0 @@
+-use serde::{Deserialize, Serialize};
+@@ -16 +14,0 @@
+-    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
+@@ -19 +16,0 @@
+-    time::Duration,
+@@ -30,2 +26,0 @@
+-pub const STATUS_TIMEOUT: Duration = Duration::from_secs(3);
+-pub const MAX_STATUS_BYTES: usize = 4096;
+@@ -187,142 +181,0 @@
+-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+-#[serde(rename_all = "snake_case")]
+-pub enum ReadinessState {
+-    Ready,
+-    NotReady,
+-}
+-
+-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+-pub struct StatusReport {
+-    pub service: String,
+-    pub state: ReadinessState,
+-    pub ready: bool,
+-}
+-
+-#[derive(Deserialize)]
+-#[serde(deny_unknown_fields)]
+-struct ReadinessResponse {
+-    ready: bool,
+-}
+-
+-/// Probe actual business readiness with a bounded, proxy-free request. An
+-/// unspecified listening address means loopback for the local diagnostics
+-/// request. Redirects and another service's response are rejected.
+-pub async fn query_status(
+-    mut bind: SocketAddr,
+-    expected_service: &str,
+-) -> Result<StatusReport, ErrorEnvelope> {
+-    if expected_service.is_empty()
+-        || !expected_service
+-            .bytes()
+-            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-'))
+-    {
+-        return Err(failure(
+-            "invalid_input",
+-            "A current service identity is required.",
+-        ));
+-    }
+-    if bind.ip().is_unspecified() {
+-        bind.set_ip(match bind.ip() {
+-            IpAddr::V4(_) => IpAddr::V4(Ipv4Addr::LOCALHOST),
+-            IpAddr::V6(_) => IpAddr::V6(Ipv6Addr::LOCALHOST),
+-        });
+-    }
+-    let client = reqwest::Client::builder()
+-        .no_proxy()
+-        .redirect(reqwest::redirect::Policy::none())
+-        .timeout(STATUS_TIMEOUT)
+-        .build()
+-        .map_err(|_| {
+-            failure(
+-                "dependency_unavailable",
+-                "Cannot create the readiness client.",
+-            )
+-        })?;
+-    let mut response = client
+-        .get(format!("http://{bind}/readyz"))
+-        .send()
+-        .await
+-        .map_err(|_| {
+-            failure(
+-                "dependency_unavailable",
+-                "The configured service did not answer the readiness query.",
+-            )
+-            .retryable(true)
+-        })?;
+-    let status = response.status();
+-    if response
+-        .headers()
+-        .get(SERVICE_IDENTITY_HEADER)
+-        .and_then(|value| value.to_str().ok())
+-        != Some(expected_service)
+-    {
+-        return Err(failure(
+-            "service_identity_mismatch",
+-            "The endpoint did not confirm the configured service identity.",
+-        ));
+-    }
+-    if !matches!(status.as_u16(), 200 | 503)
+-        || response
+-            .content_length()
+-            .is_some_and(|length| length > MAX_STATUS_BYTES as u64)
+-    {
+-        return Err(failure(
+-            "invalid_status_response",
+-            "The service returned an invalid readiness response.",
+-        ));
+-    }
+-    let mut body = Vec::new();
+-    while let Some(chunk) = response.chunk().await.map_err(|_| {
+-        failure(
+-            "dependency_unavailable",
+-            "The readiness response was interrupted.",
+-        )
+-        .retryable(true)
+-    })? {
+-        if body.len().saturating_add(chunk.len()) > MAX_STATUS_BYTES {
+-            return Err(failure(
+-                "invalid_status_response",
+-                "The readiness response exceeded its size limit.",
+-            ));
+-        }
+-        body.extend_from_slice(&chunk);
+-    }
+-    let readiness: ReadinessResponse = serde_json::from_slice(&body).map_err(|_| {
+-        failure(
+-            "invalid_status_response",
+-            "The service returned an invalid readiness response.",
+-        )
+-    })?;
+-    if readiness.ready != (status.as_u16() == 200) {
+-        return Err(failure(
+-            "invalid_status_response",
+-            "Readiness HTTP status and response body disagree.",
+-        ));
+-    }
+-    Ok(StatusReport {
+-        service: expected_service.into(),
+-        ready: readiness.ready,
+-        state: if readiness.ready {
+-            ReadinessState::Ready
+-        } else {
+-            ReadinessState::NotReady
+-        },
+-    })
+-}
+-
+-pub fn print_report(report: &StatusReport, json: bool) -> io::Result<()> {
+-    let mut output = io::stdout().lock();
+-    if json {
+-        serde_json::to_writer(&mut output, report)?;
+-        writeln!(output)?;
+-    } else {
+-        writeln!(
+-            output,
+-            "{}: {}",
+-            report.service,
+-            if report.ready { "ready" } else { "not ready" }
+-        )?;
+-    }
+-    output.flush()
+-}
+-
+@@ -383 +235,0 @@
+-    use axum::{Json, Router, middleware, routing::get};
+@@ -447,41 +298,0 @@
+-    #[tokio::test]
+-    async fn status_verifies_service_identity_http_semantics_and_actual_readiness() {
+-        for (ready, status) in [(true, 200), (false, 503), (true, 503)] {
+-            let app = Router::new()
+-                .route(
+-                    "/readyz",
+-                    get(move || async move {
+-                        (
+-                            axum::http::StatusCode::from_u16(status).unwrap(),
+-                            Json(serde_json::json!({"ready":ready})),
+-                        )
+-                    }),
+-                )
+-                .layer(middleware::from_fn_with_state(
+-                    "example".to_string(),
+-                    service_identity_middleware,
+-                ));
+-            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+-            let address = listener.local_addr().unwrap();
+-            let server = tokio::spawn(async move {
+-                axum::serve(listener, app).await.unwrap();
+-            });
+-            let result = query_status(address, "example").await;
+-            if ready == (status == 200) {
+-                assert_eq!(result.unwrap().ready, ready);
+-            } else {
+-                assert_eq!(result.unwrap_err().code.as_str(), "invalid_status_response");
+-            }
+-            assert_eq!(
+-                query_status(address, "another")
+-                    .await
+-                    .unwrap_err()
+-                    .code
+-                    .as_str(),
+-                "service_identity_mismatch"
+-            );
+-            server.abort();
+-            let _ = server.await;
+-        }
+-    }
+-
+--- upstream/src/server_runtime/mod.rs
++++ crates/blog-core/src/server_runtime/mod.rs
+@@ -49 +49 @@
+-    pub common_revision: String,
++    pub core_source_sha256: String,
+@@ -70 +70 @@
+-        let bound = self.common_revision.len() == 40
++        let bound = self.core_source_sha256.len() == 64
+@@ -72 +72 @@
+-                .common_revision
++                .core_source_sha256
+@@ -75,3 +75,2 @@
+-        let development = cfg!(debug_assertions) && self.common_revision == "unbound";
+-        if !bound && !development {
+-            return Err(Error::InvalidDescriptor("common_revision"));
++        if !bound {
++            return Err(Error::InvalidDescriptor("core_source_sha256"));
+@@ -600 +599 @@
+-        .insert(crate::admin_axum::XcssErrorResponse);
++        .insert(crate::admin_axum::BlogErrorResponse);
+@@ -799 +798,2 @@
+-            common_revision: "0123456789abcdef0123456789abcdef01234567".into(),
++            core_source_sha256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
++                .into(),
+@@ -1036 +1036 @@
+-    fn revision_requires_a_full_immutable_commit() {
++    fn core_identity_requires_a_full_source_sha256() {
+@@ -1039 +1039 @@
+-        product.common_revision.truncate(7);
++        product.core_source_sha256.truncate(7);
+@@ -1041 +1041 @@
+-        product.common_revision = "A".repeat(40);
++        product.core_source_sha256 = "A".repeat(64);
+--- upstream/src/server_runtime/transport.rs
++++ crates/blog-core/src/server_runtime/transport.rs
+@@ -336 +336,2 @@
+-            common_revision: "0123456789abcdef0123456789abcdef01234567".into(),
++            core_source_sha256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
++                .into(),
+@@ -379 +380,2 @@
+-            common_revision: "0123456789abcdef0123456789abcdef01234567".into(),
++            core_source_sha256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
++                .into(),
+@@ -436 +438,2 @@
+-            common_revision: "0123456789abcdef0123456789abcdef01234567".into(),
++            core_source_sha256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
++                .into(),
+--- upstream/src/server_target/mod.rs
++++ crates/blog-core/src/server_target/mod.rs
+@@ -1 +1 @@
+-//! Compile-time target gate shared by Xcss server binaries.
++//! Compile-time target gate shared by Blog server binaries.
+@@ -14 +14 @@
+-    "Xcss server binaries support only x86_64-unknown-linux-gnu (AMD64); no fallback target is provided"
++    "Blog server binaries support only x86_64-unknown-linux-gnu (AMD64); no fallback target is provided"
+--- upstream/src/sqlite/mod.rs
++++ crates/blog-core/src/sqlite/mod.rs
+@@ -1 +1 @@
+-//! Strict SQLx adapters for the Xcss SQLite baseline.
++//! Strict SQLx adapters for the Blog SQLite baseline.
+@@ -336 +336 @@
+-/// executor. The pure algorithm lives in `xcss::schema_identity`.
++/// executor. The pure algorithm lives in `blog_core::schema_identity`.
+--- upstream/src/state_file/mod.rs
++++ crates/blog-core/src/state_file/mod.rs
+@@ -641,2 +641,2 @@
+-                .env("XCSS_ADMIN_TEST_DATA", &path)
+-                .env("XCSS_ADMIN_TEST_DENIED", if denied { "yes" } else { "no" })
++                .env("BLOG_ADMIN_TEST_DATA", &path)
++                .env("BLOG_ADMIN_TEST_DENIED", if denied { "yes" } else { "no" })
+@@ -687,2 +687,2 @@
+-        let path = PathBuf::from(std::env::var_os("XCSS_ADMIN_TEST_DATA").unwrap());
+-        if std::env::var("XCSS_ADMIN_TEST_DENIED").unwrap() == "yes" {
++        let path = PathBuf::from(std::env::var_os("BLOG_ADMIN_TEST_DATA").unwrap());
++        if std::env::var("BLOG_ADMIN_TEST_DENIED").unwrap() == "yes" {
+--- upstream/src/web_assets/build.rs
++++ crates/blog-core/src/web_assets/build.rs
+@@ -19,13 +19,25 @@
+-}
+-
+-/// Generate `OUT_DIR/xcss-web-assets.rs`, exporting `ASSETS`, `MANIFEST`, and `DIGEST`.
+-/// Cargo watches the source directories and files, including additions/removals.
+-pub fn generate(root: impl AsRef<Path>) -> Result<()> {
+-    generate_to(root, "xcss-web-assets.rs")
+-}
+-
+-/// Generate a separately named source file, useful for independent Web entry points.
+-/// Each included module exports the same three names. `filename` must be one safe name.
+-pub fn generate_to(root: impl AsRef<Path>, filename: &str) -> Result<()> {
+-    println!("cargo:rerun-if-env-changed=XSSI_BUILD_RECEIPT_DIR");
+-    println!("cargo:rerun-if-env-changed=XSSI_BUILD_SOURCE_REVISION");
++    source_dirty: Option<bool>,
++    source_tree_sha256: Option<String>,
++    build_mode: String,
++    schema_sha256: &'a str,
++    core_source_sha256: &'a str,
++}
++
++/// Generate the exact Web inventory and a canonical compiled product identity.
++/// The product passes its already computed current schema and local core hashes.
++/// Runtime and offline setup both validate this identity before opening state.
++pub fn generate(
++    root: impl AsRef<Path>,
++    schema_sha256: &str,
++    core_source_sha256: &str,
++) -> Result<()> {
++    const FILENAME: &str = "blog-web-assets.rs";
++    for name in [
++        "BLOG_BUILD_METADATA_DIR",
++        "BLOG_SOURCE_REVISION",
++        "BLOG_SOURCE_DIRTY",
++        "BLOG_SOURCE_TREE_SHA256",
++        "BLOG_BUILD_MODE",
++    ] {
++        println!("cargo:rerun-if-env-changed={name}");
++    }
+@@ -33,6 +45,73 @@
+-    generate_at(root.as_ref(), Path::new(&output), filename)?;
+-    if let Some(destination) = env::var_os("XSSI_BUILD_RECEIPT_DIR") {
+-        ensure!(
+-            filename == "xcss-web-assets.rs",
+-            "build receipt requires the primary Web inventory"
+-        );
++    let output = Path::new(&output);
++    generate_at(root.as_ref(), output, FILENAME)?;
++    let manifest = fs::read(output.join(format!("{FILENAME}.manifest.json")))?;
++    let digest = sha256(&manifest);
++    let product = env::var("CARGO_PKG_NAME").context("Cargo product identity is required")?;
++    ensure!(
++        safe_relative(&product) && !product.contains('/'),
++        "unsafe Cargo product identity"
++    );
++    let source_revision = env::var("BLOG_SOURCE_REVISION").unwrap_or_else(|_| "unbound".into());
++    let destination = env::var_os("BLOG_BUILD_METADATA_DIR");
++    let explicit = destination.is_some() || source_revision != "unbound";
++    let (source_dirty, source_tree_sha256, build_mode) = if explicit {
++        let dirty = match env::var("BLOG_SOURCE_DIRTY").as_deref() {
++            Ok("true") => true,
++            Ok("false") => false,
++            _ => anyhow::bail!("BLOG_SOURCE_DIRTY must identify the actual source state"),
++        };
++        let tree = env::var("BLOG_SOURCE_TREE_SHA256")
++            .context("actual source tree SHA-256 is required")?;
++        let mode = env::var("BLOG_BUILD_MODE").context("explicit build mode is required")?;
++        (Some(dirty), Some(tree), mode)
++    } else {
++        ensure!(
++            env::var("PROFILE").as_deref() == Ok("debug"),
++            "unbound native builds require the debug profile"
++        );
++        (None, None, "development".into())
++    };
++    let identity = BuildIdentity {
++        format: "blog-build-v1",
++        product: product.clone(),
++        version: env::var("CARGO_PKG_VERSION").context("Cargo version is required")?,
++        source_revision,
++        target: env::var("TARGET").context("Cargo target is required")?,
++        web_assets_sha256: &digest,
++        source_dirty,
++        source_tree_sha256,
++        build_mode,
++        schema_sha256,
++        core_source_sha256,
++    };
++    validate_build_identity(&identity, env::var("PROFILE").as_deref() == Ok("debug"))?;
++    println!(
++        "cargo:rustc-env=BLOG_COMPILED_SOURCE_DIRTY={}",
++        identity
++            .source_dirty
++            .map(|dirty| if dirty { "true" } else { "false" })
++            .unwrap_or("unknown")
++    );
++    println!(
++        "cargo:rustc-env=BLOG_COMPILED_SOURCE_TREE_SHA256={}",
++        identity.source_tree_sha256.as_deref().unwrap_or("unbound")
++    );
++    println!(
++        "cargo:rustc-env=BLOG_COMPILED_BUILD_MODE={}",
++        identity.build_mode
++    );
++    let identity = serde_json::to_vec(&identity)?;
++    let identity_sha256 = sha256(&identity);
++    let generated = output.join(FILENAME);
++    use std::io::Write;
++    let mut declarations = fs::OpenOptions::new().append(true).open(generated)?;
++    writeln!(
++        declarations,
++        "pub static BUILD_IDENTITY: &[u8] = &{identity:?};"
++    )?;
++    writeln!(
++        declarations,
++        "pub static BUILD_IDENTITY_SHA256: &str = {identity_sha256:?};"
++    )?;
++    fs::write(output.join("blog-build-identity.json"), &identity)?;
++    if let Some(destination) = destination {
+@@ -41,25 +119,0 @@
+-        let product = env::var("CARGO_PKG_NAME").context("Cargo product identity is required")?;
+-        ensure!(
+-            safe_relative(&product) && !product.contains('/'),
+-            "unsafe Cargo product identity"
+-        );
+-        let manifest = fs::read(Path::new(&output).join(format!("{filename}.manifest.json")))?;
+-        let digest = sha256(&manifest);
+-        let source_revision = env::var("XSSI_BUILD_SOURCE_REVISION")
+-            .context("build receipt source identity is required")?;
+-        ensure!(
+-            (source_revision == "unbound" && env::var("PROFILE").as_deref() == Ok("debug"))
+-                || (source_revision.len() == 40
+-                    && source_revision
+-                        .bytes()
+-                        .all(|byte| byte.is_ascii_digit() || matches!(byte, b'a'..=b'f'))),
+-            "build receipt source identity must match a bound release or unbound development build"
+-        );
+-        let identity = BuildIdentity {
+-            format: "xssi-build-v1",
+-            product: product.clone(),
+-            version: env::var("CARGO_PKG_VERSION").context("Cargo version is required")?,
+-            source_revision,
+-            target: env::var("TARGET").context("Cargo target is required")?,
+-            web_assets_sha256: &digest,
+-        };
+@@ -72 +126 @@
+-            serde_json::to_vec(&identity)?,
++            identity,
+@@ -74,0 +129,53 @@
++    }
++    Ok(())
++}
++
++fn validate_build_identity(identity: &BuildIdentity<'_>, debug: bool) -> Result<()> {
++    let hash = |value: &str| {
++        value.len() == 64
++            && value
++                .bytes()
++                .all(|b| b.is_ascii_digit() || matches!(b, b'a'..=b'f'))
++    };
++    ensure!(
++        hash(identity.schema_sha256) && hash(identity.core_source_sha256),
++        "invalid native schema or core source hash"
++    );
++    ensure!(
++        matches!(
++            identity.build_mode.as_str(),
++            "development" | "candidate" | "release"
++        ),
++        "invalid build mode"
++    );
++    if identity.build_mode == "development" {
++        ensure!(
++            debug && identity.source_revision == "unbound",
++            "development identity requires unbound debug source"
++        );
++        ensure!(
++            identity.source_dirty.is_some() == identity.source_tree_sha256.is_some(),
++            "source stamp must be complete or explicitly unavailable"
++        );
++        if let Some(tree) = &identity.source_tree_sha256 {
++            ensure!(hash(tree), "invalid source tree hash");
++        }
++    } else {
++        ensure!(
++            !debug
++                && identity.source_revision.len() == 40
++                && identity
++                    .source_revision
++                    .bytes()
++                    .all(|b| b.is_ascii_digit() || matches!(b, b'a'..=b'f')),
++            "candidate and release require a bound release profile"
++        );
++        ensure!(
++            identity.source_dirty.is_some()
++                && identity.source_tree_sha256.as_deref().is_some_and(hash),
++            "bound builds require the actual source stamp"
++        );
++        ensure!(
++            identity.build_mode != "release" || identity.source_dirty == Some(false),
++            "release requires clean source"
++        );
+@@ -98 +205 @@
+-        "// Generated by xcss::web_assets; do not edit.\npub static ASSETS: &[xcss::web_assets::EmbeddedAsset] = &[\n",
++        "// Generated by blog_core::web_assets; do not edit.\npub static ASSETS: &[blog_core::web_assets::EmbeddedAsset] = &[\n",
+@@ -121 +228 @@
+-        declarations.push_str(&format!("    xcss::web_assets::EmbeddedAsset {{ path: {path:?}, content_type: {mime:?}, bytes: include_bytes!({snapshot:?}), sha256: {digest:?} }},\n"));
++        declarations.push_str(&format!("    blog_core::web_assets::EmbeddedAsset {{ path: {path:?}, content_type: {mime:?}, bytes: include_bytes!({snapshot:?}), sha256: {digest:?} }},\n"));
+--- upstream/src/web_assets/mod.rs
++++ crates/blog-core/src/web_assets/mod.rs
+@@ -25 +25 @@
+-pub const MANIFEST_FORMAT: &str = "web-assets-v1";
++pub const MANIFEST_FORMAT: &str = "blog-web-assets-v1";

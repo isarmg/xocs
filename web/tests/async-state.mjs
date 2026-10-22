@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { chromium, firefox, expect } from '@playwright/test';
-import { preview } from '../../tools/web-build/test-preview.mjs';
+import { preview } from '../../tools/assets/test-preview.mjs';
 import { mockApi, pageOf, summary } from './browser-fixtures.mjs';
 
 const server = await preview({ preview: { host: '127.0.0.1', port: 0, strictPort: true } });
@@ -27,7 +27,7 @@ try {
       await page.addInitScript(() => {
         const nativeFetch = window.fetch.bind(window);
         window.asyncNotices = [];
-        window.addEventListener('xcss-notify', event => window.asyncNotices.push(event.detail));
+        window.addEventListener('blog-notify', event => window.asyncNotices.push(event.detail));
         // Delay a response only after native fetch has succeeded. Rust still
         // owns its AbortSignal, decoding and completion callbacks.
         window.fetch = async (input, options = {}) => {
@@ -53,7 +53,7 @@ try {
           return route.fulfill({ json: { items: [{ ...record, [field]: `Old ${kind} row` }], total: 21, page: number, size: 20 } });
         });
         await page.goto(`${base}admin?lang=en#${kind}`);
-        await expect(page.locator('html')).toHaveAttribute('data-xcss-runtime', 'xcss-web');
+        await expect(page.locator('html')).toHaveAttribute('data-blog-runtime', 'blog-interface');
         await expect(page.getByRole('table')).toContainText(`Old ${kind} row`);
         if (kind === 'notes') await page.getByLabel('Note content', { exact: true }).fill('Unsaved note');
         await page.getByRole('button', { name: 'Next page', exact: true }).click();

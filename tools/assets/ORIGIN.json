@@ -1,0 +1,22 @@
+{
+  "format": 1,
+  "ownership": "repository-maintained",
+  "package": "blog-assets",
+  "upstream": {
+    "package": "xcss-web-build",
+    "version": "1.0.0",
+    "origin": "https://github.com/isarmg/xcss",
+    "base_revision": "0c8b63cb3a43cbef7ab9929f587c587661e4678c",
+    "source_directory": "tools/web-build",
+    "receipt": "compliance/web-origins/xcss-web-build.SOURCE.json",
+    "receipt_sha256": "ef6a5e855e5f5473eaab7c2a0a5d98f56a82134d236c434be3df8f6b8ccbd9ec",
+    "archive": "compliance/web-origins/xcss-web-build.snapshot.tar.gz",
+    "archive_sha256": "c2c9c15eaaafd34ae7d59577eb0cd554da15cd5a0d2a9ff868be5ad5585cec1c"
+  },
+  "changes": [
+    {
+      "date": "2026-10-22",
+      "description": "Maintain the Rust builder within this repository; support web/app and web/ui and local origin records instead of enforcing unchanged xcss snapshots."
+    }
+  ]
+}

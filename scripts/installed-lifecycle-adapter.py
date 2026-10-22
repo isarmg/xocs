@@ -1,9 +1,9 @@
-"""XOCS business assertions for the real production installed lifecycle."""
+"""BLOG business assertions for the real production installed lifecycle."""
 import json
 
-PRODUCT = 'xocs'
-SERVICES = ('xocs.service',)
-ACCOUNT = 'isarmg-xocs'
+PRODUCT = 'blog'
+SERVICES = ('blog.service',)
+ACCOUNT = 'isarmg-blog'
 # installation_definition.rs declares no separate secret files.
 RETAINED_FILES = ('state/site.sqlite',)
 SITE = '/api/v1/content/site'

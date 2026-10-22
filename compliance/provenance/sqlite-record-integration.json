@@ -1,0 +1,38 @@
+{
+  "upstream_origins": [
+    "sqlx-macros@0.9.0",
+    "sqlx-macros-core@0.9.0"
+  ],
+  "files": [
+    {
+      "from": "src/foundation/sqlx-macros-core-0.9.0/src/derives/row.rs",
+      "to": "src/foundation/storage/record-derive/src/row.rs",
+      "source_sha256": "7bc0fd43bee7a81f51c10732381cf4e055dc725897c760c7328d6835747fe7b7",
+      "local_sha256": "a1015f34a2a218ab1231dc1d066e7faac53a723884f3cd4035e58012944d20e7"
+    },
+    {
+      "from": "src/foundation/sqlx-macros-core-0.9.0/src/derives/attributes.rs",
+      "to": "src/foundation/storage/record-derive/src/attributes.rs",
+      "source_sha256": "bd0c8fe519e793a568ef3bee4fbf01bac4e4440abdd243a9c2915a433c9be51c",
+      "local_sha256": "df49dc4175e6643096a4186256bcf3ba7f0ab80cd1e2deb11515a3012aa5db3f"
+    },
+    {
+      "from": "src/foundation/sqlx-macros-core-0.9.0/src/derives/mod.rs",
+      "to": "src/foundation/storage/record-derive/src/lib.rs",
+      "source_sha256": "26c75643943c95316b47b65324fa8864dedb8150f0e35f2b2514df90acb1624a",
+      "local_sha256": "d3ec441b668d5c4620449df94d6b2961f2bac30f81f985ec5387fe963f12af24"
+    },
+    {
+      "from": "src/foundation/sqlx-macros-0.9.0/src/lib.rs",
+      "to": "src/foundation/storage/record-derive/src/lib.rs",
+      "source_sha256": "daacaeeee1f8a77653aed2b22fd6728169f34d8934ba3f83e2af08f4b4a9ea56",
+      "local_sha256": "d3ec441b668d5c4620449df94d6b2961f2bac30f81f985ec5387fe963f12af24"
+    }
+  ],
+  "changes": [
+    "Inline only FromRow expansion and supported field/container attributes",
+    "Remove host database/runtime/query/migration dependencies",
+    "Preserve real generic, borrowed, flattened and conversion row mapping",
+    "Make invalid attributes return compile errors, and preserve generic default bounds"
+  ]
+}
