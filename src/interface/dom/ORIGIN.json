@@ -1,0 +1,33 @@
+{
+  "format": 1,
+  "ownership": "repository-maintained",
+  "package": "blog-dom",
+  "upstream": {
+    "package": "xcss-web-core",
+    "version": "0.8.19",
+    "origin": "https://github.com/isarmg/xcss",
+    "base_revision": "a055fdf5ce4bdf6cb943284813e42ba864c74b9d",
+    "source_directory": "web/xcss-web/vendor/xcss-web-core",
+    "receipt": "compliance/web-origins/xcss-web-core.SOURCE.json",
+    "receipt_sha256": "08623b10ea01234c8b5126806b93d470417539b5458c00535bfe5206ab72f600",
+    "archive": "compliance/web-origins/xcss-web-core.snapshot.tar.gz",
+    "archive_sha256": "d4592cb0649ba55961bea5afcc2e136a6fefecbad72a2b0fbb7d3a040258452a"
+  },
+  "changes": [
+    {
+      "date": "2026-10-22",
+      "description": "Integrate the existing Leptos-derived core source into blog maintenance. Rename the package/library, local dependency paths and generated macro references from xcss_web to blog_ui. Preserve all original MIT copyright and license bytes. Original per-file source receipt is archived unchanged."
+    },
+    {
+      "date": "2026-10-22",
+      "description": "Specialize the runtime for the actual browser CSR consumers. Remove unreachable SSR/hydration/island/lazy modules and their dependency edges. Retain component props, children, keyed/context ownership, mount/unmount cleanup and portal including the use_shadow failure guard. Replace AnimatedShow RSX with equivalent element/props builders. Keep the application font/startup-failure contracts unchanged."
+    },
+    {
+      "date": "2026-10-22",
+      "description": "Integrate retained CSR implementation modules and compiler helpers as recorded in INTEGRATED-SOURCES.json. Preserve earlier provenance and original licenses. Component names use an independently implemented Unicode-aware conversion; discarded implementations are explicitly retired in the append-only migration ledger."
+    }
+  ],
+  "integration_receipts": [
+    "compliance/provenance/integrations/browser-csr/integration.json"
+  ]
+}

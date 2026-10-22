@@ -3,17 +3,17 @@ import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { chromium, firefox, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { preview } from '../../tools/web-build/test-preview.mjs';
+import { preview } from '../../tools/assets/test-preview.mjs';
 import { mockApi, session } from './browser-fixtures.mjs';
 
-const output = process.env.XOCS_UI_ARTIFACT_DIR;
+const output = process.env.BLOG_UI_ARTIFACT_DIR;
 if (output) await mkdir(output, { recursive: true });
 const server = await preview({ preview: { host: '127.0.0.1', port: 0, strictPort: true } });
 const base = `http://127.0.0.1:${server.httpServer.address().port}`;
 const image = { name: '旅行图片.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64') };
 
 async function assertProjectCurve(button) {
-  await expect(button).toHaveAttribute('data-xcss-server-corner-state', 'paint');
+  await expect(button).toHaveAttribute('data-blog-server-corner-state', 'paint');
   const paint = await button.evaluate(async node => {
     const css = getComputedStyle(node);
     const dimension = (name, sides) => parseFloat(css[name]) + (css.boxSizing === 'border-box' ? 0 :
@@ -25,7 +25,7 @@ async function assertProjectCurve(button) {
     await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = reject; image.src = match[1]; });
     const svg = new DOMParser().parseFromString(await (await fetch(match[1])).text(), 'image/svg+xml');
     const full = svg.querySelector('clipPath#inside path');
-    return { width: dimension('width', ['left', 'right']), height: dimension('height', ['top', 'bottom']), extent: parseFloat(css.getPropertyValue('--xcss-server-corner-extent')),
+    return { width: dimension('width', ['left', 'right']), height: dimension('height', ['top', 'bottom']), extent: parseFloat(css.getPropertyValue('--blog-server-corner-extent')),
       radius: css.borderRadius, compact: !full, actualPath: (full ?? svg.querySelector('svg > path')).getAttribute('d') };
   });
   assert.equal(paint.radius, '0px');
@@ -89,9 +89,9 @@ try {
           const triggerName = label => (english ? 'Choose file: ' : '选择文件：') + label;
           await page.goto(`${base}/admin?lang=${language}#dashboard`);
           await expect(page.getByRole('heading', { name: english ? 'Overview' : '总览', exact: true })).toBeVisible();
-          await expect(page.locator('.xocs-dashboard-sections a[href="/admin#users"]')).toHaveCount(0);
-          await page.locator('.xcss-header-navigation').getByRole('button', { name: english ? 'Community' : '社区', exact: true }).click();
-          await expect(page.locator('.xcss-secondary-navigation').getByRole('button')).toHaveCount(2);
+          await expect(page.locator('.blog-dashboard-sections a[href="/admin#users"]')).toHaveCount(0);
+          await page.locator('.blog-header-navigation').getByRole('button', { name: english ? 'Community' : '社区', exact: true }).click();
+          await expect(page.locator('.blog-secondary-navigation').getByRole('button')).toHaveCount(2);
           await expect(page.getByRole('button', { name: english ? 'Users' : '用户管理', exact: true })).toHaveCount(0);
           await page.getByRole('button', { name: english ? 'Account settings' : '账号设置', exact: true }).click();
           await expect(page.getByRole('region', { name: english ? 'Account settings' : '账号设置', exact: true })).toBeVisible();
@@ -107,17 +107,17 @@ try {
           if (output) await button.screenshot({ path: path.join(output, `file-button-${engine.name()}-${language}.png`) });
           await choose(page, button, true);
           assert.equal(uploads.length, 0, 'Choosing a resource file must not submit the form');
-          await expect(page.locator('.xocs-file-picker-name')).toHaveText(image.name);
+          await expect(page.locator('.blog-file-picker-name')).toHaveText(image.name);
           const upload = page.getByRole('button', { name: english ? 'Upload' : '上传', exact: true });
           await upload.click(); await expect.poll(() => pending.length).toBe(1);
           await expect(button).toBeDisabled(); await expect(file).toBeDisabled();
           await expect(page.getByRole('button', { name: english ? 'Uploading…' : '上传中…', exact: true })).toBeDisabled();
           await pending.shift()();
           await expect(button).toBeEnabled();
-          await expect(page.locator('.xocs-file-picker-name')).toHaveText(english ? 'No file chosen' : '未选择文件');
+          await expect(page.locator('.blog-file-picker-name')).toHaveText(english ? 'No file chosen' : '未选择文件');
           assert.equal(await file.evaluate(node => node.files.length), 0);
           await choose(page, button);
-          await expect(page.locator('.xocs-file-picker-name')).toHaveText(image.name);
+          await expect(page.locator('.blog-file-picker-name')).toHaveText(image.name);
           assert.equal(uploads.length, 1, 'The same file is selectable again after the native input is cleared');
           assert.deepEqual((await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations, []);
 
@@ -146,7 +146,7 @@ try {
               .locator(`a[href^="${removed}"]`)).toHaveCount(0);
           }
           await page.goto(`${base}/jotting?lang=${language}`);
-          await expect(page.getByRole('heading', { name: 'xocs', exact: true }).first()).toBeVisible();
+          await expect(page.getByRole('heading', { name: 'blog', exact: true }).first()).toBeVisible();
           assert.deepEqual(removedCalls, []);
           assert.deepEqual(errors, []);
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));

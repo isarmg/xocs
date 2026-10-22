@@ -1,0 +1,215 @@
+# Project-owned consolidation; immutable upstream origins remain in compliance.
+[package]
+edition = "2021"
+rust-version = "1.80"
+build = false
+autolib = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+license = "MIT"
+name = "blog-network-request-router"
+publish = false
+description = "request router"
+
+[features]
+default = [
+    "form",
+    "http1",
+    "json",
+    "matched-path",
+    "original-uri",
+    "query",
+    "tokio",
+    "tower-log",
+    "tracing",
+]
+form = [
+    "url-encoding/form",
+    "url-encoding/std",
+    "dep:form-codec",
+    "serde/error-path",
+]
+http1 = [
+    "http-transport/http1",
+]
+json = [
+    "dep:json-codec",
+    "serde/error-path",
+]
+matched-path = []
+original-uri = []
+query = [
+    "url-encoding/form",
+    "url-encoding/std",
+    "dep:form-codec",
+    "serde/error-path",
+]
+tokio = [
+    "dep:http-transport",
+    "dep:tokio",
+    "tokio/net",
+    "tokio/rt",
+    "service-stack/make",
+    "tokio/macros",
+    "http-transport/adapter-server",
+    "http-transport/service-adapter",
+    "http-transport/tokio",
+]
+tower-log = [
+    "service-stack/log",
+]
+tracing = [
+    "dep:tracing",
+]
+
+[lib]
+name = "http_routing"
+path = "src/lib.rs"
+doctest = false
+
+[dependencies.bytes]
+path = "../../encoding/byte-buffer"
+package = "blog-encoding-byte-buffer"
+
+[dependencies.futures]
+path = "../../runtime/async-toolkit"
+default-features = false
+features = [
+    "alloc",
+    "utilities",
+]
+package = "blog-runtime-async-toolkit"
+
+[dependencies.http]
+path = "../http-message"
+package = "blog-network-http-message"
+
+[dependencies.http-body]
+path = "../body-stream"
+features = [
+    "utilities",
+]
+package = "blog-network-body-stream"
+
+[dependencies.itoa]
+path = "../../encoding/integer-format"
+package = "blog-encoding-integer-format"
+
+[dependencies.matchit]
+path = "../route-matcher"
+package = "blog-network-route-matcher"
+
+[dependencies.memchr]
+path = "../../encoding/byte-search"
+package = "blog-encoding-byte-search"
+
+[dependencies.mime]
+path = "../media-type"
+package = "blog-network-media-type"
+
+[dependencies.pin-project-lite]
+path = "../../sync/pinned-projection"
+package = "blog-sync-pinned-projection"
+
+[dependencies.json-codec]
+features = [
+    "raw_value",
+]
+optional = true
+path = "../../format/json"
+package = "blog-format-json"
+
+[dependencies.form-codec]
+optional = true
+path = "../form-data"
+package = "blog-network-form-data"
+
+[dependencies.sync_wrapper]
+path = "../../sync/exclusive-value"
+package = "blog-sync-exclusive-value"
+
+[dependencies.tokio]
+features = [
+    "time",
+]
+optional = true
+package = "blog-runtime-task-scheduler"
+path = "../../runtime/task-scheduler"
+
+[dependencies.tracing]
+optional = true
+default-features = false
+path = "../../diagnostics/structured-events"
+package = "blog-diagnostics-structured-events"
+
+[dependencies.service-stack]
+path = "../request-pipeline"
+default-features = false
+features = [
+    "util",
+]
+package = "blog-network-request-pipeline"
+
+[dependencies.http-transport]
+path = "../http-transport"
+default-features = true
+features = []
+optional = true
+package = "blog-network-http-transport"
+
+[dependencies.url-encoding]
+path = "../web-address"
+default-features = false
+features = [
+    "std",
+]
+package = "blog-network-web-address"
+
+[dependencies.serde]
+optional = false
+path = "../../format/data-model"
+default-features = true
+package = "blog-format-data-model"
+
+[lints.clippy]
+await_holding_lock = "warn"
+dbg_macro = "warn"
+empty_enums = "warn"
+enum_glob_use = "warn"
+exit = "warn"
+filter_map_next = "warn"
+fn_params_excessive_bools = "warn"
+if_let_mutex = "warn"
+imprecise_flops = "warn"
+inefficient_to_string = "warn"
+linkedlist = "warn"
+lossy_float_literal = "warn"
+macro_use_imports = "warn"
+match_wildcard_for_single_variants = "warn"
+mem_forget = "warn"
+must_use_candidate = "warn"
+needless_borrow = "warn"
+needless_continue = "warn"
+option_option = "warn"
+rest_pat_in_fully_bound_structs = "warn"
+return_self_not_must_use = "warn"
+str_to_string = "warn"
+suboptimal_flops = "warn"
+todo = "warn"
+type_complexity = "allow"
+uninlined_format_args = "warn"
+unnested_or_patterns = "warn"
+unused_self = "warn"
+verbose_file_reads = "warn"
+
+[lints.rust]
+missing_debug_implementations = "warn"
+missing_docs = "warn"
+unreachable_pub = "warn"
+unsafe_code = "forbid"
+
+[lints.rust.rust_2018_idioms]
+level = "warn"
+priority = -1

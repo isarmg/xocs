@@ -3,10 +3,10 @@ set -euo pipefail
 trap 'printf "smoke check failed at line %s\n" "$LINENO" >&2' ERR
 
 project_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
-binary="${XOCS_SMOKE_BINARY:-${CARGO_TARGET_DIR:-$project_root/target}/debug/xocs}"
-managed_config="${XOCS_SMOKE_MANAGED_CONFIG:-0}"
-case "$managed_config" in 0|1) ;; *) echo 'XOCS_SMOKE_MANAGED_CONFIG must be 0 or 1' >&2; exit 1 ;; esac
-smoke_dir=$(mktemp -d /tmp/xocs-smoke.XXXXXX)
+binary="${BLOG_SMOKE_BINARY:-${CARGO_TARGET_DIR:-$project_root/target}/debug/blog}"
+managed_config="${BLOG_SMOKE_MANAGED_CONFIG:-0}"
+case "$managed_config" in 0|1) ;; *) echo 'BLOG_SMOKE_MANAGED_CONFIG must be 0 or 1' >&2; exit 1 ;; esac
+smoke_dir=$(mktemp -d /tmp/blog-smoke.XXXXXX)
 server_pid=''
 smoke_uid=$(id -u)
 smoke_gid=$(id -g)
@@ -29,10 +29,10 @@ mkdir -m 0700 "$smoke_dir/config"
 printf '{"bind":"127.0.0.1:%s","development":true}\n' "$smoke_port" > "$smoke_dir/config/config.json"
 chmod 600 "$smoke_dir/config/config.json"
 fixture() {
-  if [[ -n "${XOCS_SMOKE_FIXTURE:-}" ]]; then
-    "$XOCS_SMOKE_FIXTURE" "$smoke_dir" "$@"
+  if [[ -n "${BLOG_SMOKE_FIXTURE:-}" ]]; then
+    "$BLOG_SMOKE_FIXTURE" "$smoke_dir" "$@"
   else
-    cargo run --quiet --locked --example smoke-fixture -- "$smoke_dir" "$@"
+    cargo run --quiet --locked --offline -p blog --example smoke-fixture -- "$smoke_dir" "$@"
   fi
 }
 fixture
@@ -163,8 +163,8 @@ curl -fsS "http://127.0.0.1:$smoke_port/api/v1/notes/page?page=1" | grep -q 'Smo
 curl -fsS "http://127.0.0.1:$smoke_port/api/v1/site" | grep -q 'Smoke site'
 curl -fsS -b "$scratch_dir/cookies" "http://127.0.0.1:$smoke_port/api/v1/content/notes" | grep -q 'Smoke author note'
 echo 'server restart persistence: ok'
-XOCS_SMOKE_URL=http://127.0.0.1:$smoke_port node "$project_root/web/tests/browser-smoke.mjs"
-XOCS_SMOKE_URL=http://127.0.0.1:$smoke_port node "$project_root/web/tests/management-native.mjs"
+BLOG_SMOKE_URL=http://127.0.0.1:$smoke_port node "$project_root/web/tests/browser-smoke.mjs"
+BLOG_SMOKE_URL=http://127.0.0.1:$smoke_port node "$project_root/web/tests/management-native.mjs"
 test "$(curl -s -o /dev/null -w '%{http_code}' -X DELETE http://127.0.0.1:$smoke_port/api/v1/content/notes/2)" = 401
 test "$(curl -s -o /dev/null -w '%{http_code}' -X DELETE -b "$scratch_dir/cookies" \
   -H "Origin: http://127.0.0.1:$smoke_port" -H 'Sec-Fetch-Site: same-origin' -H "X-CSRF-Token: $csrf" \

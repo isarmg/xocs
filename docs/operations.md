@@ -1,18 +1,15 @@
 # 运行维护
 
-部署和权限见[安装与维护](../deploy/linux-x86_64/README.md)。运行程序仅负责服务，不提供初始化、配置检查、密码重置或升级命令。
+运行程序使用 `blog --root ROOT`；初始化、离线结构检查和密码重置由仓库内编译的 `blog-setup` 执行。安装与权限见[部署说明](../deploy/linux-x86_64/README.md)。
 
-使用包中的 `maintenance.sh --help` 查看当前离线检查和密码重置入口；先停止服务再重置凭据，密码从 stdin 读取。离线检查使用 ROOT/run 临时快照，不修改源数据。密码修改会撤销全部现有管理员会话。
+- 新站点：`blog-setup --root ROOT initialize --username admin`，密码从标准输入读取。
+- 停服后检查：`blog-setup --root ROOT check`。
+- 停服后重置：`blog-setup --root ROOT admin-reset --username admin`，新密码从标准输入读取并撤销现有管理员会话。
 
-在线检查监听地址的 `/readyz` 及首页、文章、后台登录；仅进程存在或端口打开不能证明业务成功。诊断日志采用 UTC，位于 ROOT/logs，启动前错误输出 stderr。log_level 由当前 JSON 或 XOCS_LOG_LEVEL 控制。
+离线工具只以显式 ROOT/config/config.json 决定状态目录，忽略 BLOG_DATA_DIR、BLOG_MEDIA 等运行时环境覆盖，避免维护另一实例。需要外置状态目录时，将真实路径写入该 JSON，再启动和维护同一实例。
 
-| 症状 | 检查 |
-| --- | --- |
-| 初始化拒绝已有数据 | 选择真正的新安装目录，已有站点用只读检查 |
-| 配置或状态检查失败 | 精确当前结构、物理路径、所属账号与私有权限 |
-| 后台登录循环 | Secure Cookie、同一 Host/Origin、主机时间 |
-| 匿名提交暂时繁忙 | 全局写入或密码计算容量，保留原提交身份后重试 |
-| 评论尚未确认 | 用同一 UUID 和内容确认原提交；不另造重复请求 |
-| 数据结构不匹配 | 保留原文件，当前为 xocs-db-v1，拒绝未知转换 |
+配置位于 ROOT/config/config.json，数据库位于 ROOT/state/site.sqlite，媒体默认 ROOT/media，日志 ROOT/logs，验证快照 ROOT/run。配置、状态和媒体的权限及物理路径检查由本地实现保留；不要通过复制版本字段绕过数据库结构验证。
 
-升级使用独立 upgrade.sh+xssc，自动下载校验、停服、备份、校验数据、执行已实现的升级、替换 payload、启动并验收。失败保留 ROOT/maintenance 事务和备份；新程序可能已写数据时，恢复需要明确授权恢复旧数据。卸载由用户自行处理。
+实际检查 `/readyz`、首页、文章和后台登录。HTTP 200、进程存在、构建成功、候选包通过和正式发布是不同层次的证据。生产需要 HTTPS 与同源 Cookie；开发 HTTP 只允许回环地址。
+
+本项目不再调用外部多产品安装/升级框架；当前不提供旧 xocs 数据或任意版本之间的自动迁移。升级前停服、备份数据与配置，先验证目标程序的结构和业务行为，不能宣称保留了原外部升级器的全部事务恢复能力。

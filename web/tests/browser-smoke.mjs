@@ -7,14 +7,14 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../dist');
-const base = process.env.XOCS_SMOKE_URL || 'http://xocs.test';
+const base = process.env.BLOG_SMOKE_URL || 'http://blog.test';
 const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
 try {
   const page = await browser.newPage({ locale: 'zh-CN' });
   const errors = [], wasmUrls = new Set();
   page.on('response', response => { if (new URL(response.url()).pathname.endsWith('.wasm')) wasmUrls.add(response.url()); });
   page.on('pageerror', error => errors.push(error.message));
-  if (!process.env.XOCS_SMOKE_URL) await page.route('http://xocs.test/**', async route => {
+  if (!process.env.BLOG_SMOKE_URL) await page.route('http://blog.test/**', async route => {
     const url = new URL(route.request().url());
     if (url.pathname.startsWith('/api/')) {
       const payload = url.pathname === '/api/v1/site'
@@ -41,14 +41,14 @@ try {
       await route.fulfill({ status: 404, body: '' });
     }
   });
-  const homeHeading = process.env.XOCS_SMOKE_URL ? '相信记录的力量' : '测试站点';
-  for (const [route, heading] of [['/', homeHeading], ['/search', '搜索文章'], ['/sort', '文章分类'], ['/jotting', 'xocs'], ['/menory', 'xocs'], ['/favorite', '百宝箱'], ['/favorite?tab=friends', '百宝箱'], ['/favorite?tab=music', '百宝箱'], ['/travel', '时光相册'], ['/love', '这是我们一起走过的'], ['/message', '弹幕']]) {
+  const homeHeading = process.env.BLOG_SMOKE_URL ? '相信记录的力量' : '测试站点';
+  for (const [route, heading] of [['/', homeHeading], ['/search', '搜索文章'], ['/sort', '文章分类'], ['/jotting', 'blog'], ['/menory', 'blog'], ['/favorite', '百宝箱'], ['/favorite?tab=friends', '百宝箱'], ['/favorite?tab=music', '百宝箱'], ['/travel', '时光相册'], ['/love', '这是我们一起走过的'], ['/message', '弹幕']]) {
     await page.goto(`${base}${route}`);
-    await expect(page.locator("html")).toHaveAttribute("data-xcss-runtime", "xcss-web");
+    await expect(page.locator("html")).toHaveAttribute("data-blog-runtime", "blog-interface");
     await page.getByRole('heading', { name: heading }).first().waitFor();
     console.log(`${route}: rendered`);
   }
-  if (process.env.XOCS_SMOKE_URL) {
+  if (process.env.BLOG_SMOKE_URL) {
     assert.ok(wasmUrls.size, 'Axum served an independent WASM artifact');
     const wasmUrl = [...wasmUrls][0];
     const identity = await page.request.get(wasmUrl, {headers: {'Accept-Encoding': 'identity'}});
@@ -62,8 +62,8 @@ try {
     assert.ok(raw.equals(await gzip.body()), 'Negotiated gzip decodes to the exact WASM');
     assert.ok(Number(gzip.headers()['content-length']) < raw.length, 'The negotiated representation saves transfer bytes');
     assert.notEqual(gzip.headers().etag, identity.headers().etag);
-    const metadata = await (await page.request.get(`${base}/assets/xcss-web-build.json`)).json();
-    assert.equal(createHash('sha256').update(raw).digest('hex'), metadata.files['xocs_web_bg.wasm']);
+    const metadata = await (await page.request.get(`${base}/assets/blog-assets.json`)).json();
+    assert.equal(createHash('sha256').update(raw).digest('hex'), metadata.files['blog_browser_bg.wasm']);
     const head = await page.request.head(wasmUrl, {headers: {'Accept-Encoding': 'gzip'}});
     assert.equal(head.status(), 200);assert.equal((await head.body()).length, 0);
     assert.equal(head.headers()['content-length'], gzip.headers()['content-length']);
@@ -75,7 +75,7 @@ try {
     assert.ok(raw.equals(await refused.body()));
     console.log('Axum: WASM MIME, gzip bytes, source inventory, representation ETags, HEAD, 304 and gzip refusal passed');
   }
-  if (!process.env.XOCS_SMOKE_URL) {
+  if (!process.env.BLOG_SMOKE_URL) {
     await page.goto(`${base}/`);
     await page.locator('.aside-categories a[href="/sort?sort_id=1"]').click();
     await page.getByRole('heading', {name: '测试分类'}).first().waitFor();
@@ -87,7 +87,7 @@ try {
   await page.goto(`${base}/letter`);
   await page.getByRole('button', { name: '打开信封' }).click();
   await page.getByRole('heading', { name: '致 Reader' }).waitFor();
-  if (process.env.XOCS_SMOKE_URL) {
+  if (process.env.BLOG_SMOKE_URL) {
     await page.goto(`${base}/love`);
     await page.getByRole('button', { name: /祝福板/ }).click();
     await page.getByText('Smoke love wish').waitFor();
@@ -138,15 +138,15 @@ try {
     console.log('/article/3: unlocked');
   }
   await page.goto(`${base}/admin`);
-  await page.locator('body').getByText('xocs', { exact: true }).first().waitFor();
-  if (process.env.XOCS_SMOKE_URL) {
+  await page.locator('body').getByText('blog', { exact: true }).first().waitFor();
+  if (process.env.BLOG_SMOKE_URL) {
     await page.locator('input[name="username"]').fill('admin');
     await page.locator('input[name="password"]').fill('TemporaryPassphrase123');
     await page.locator('form button[type="submit"]').click();
     await page.getByRole('heading', { name: '文章管理' }).waitFor();
     for (const [group, label] of [['总览','总览'], ['设置','首页栏目'], ['内容','分类管理'], ['内容','标签管理'], ['社区','评论管理'], ['内容','随笔管理'], ['社区','留言板管理'], ['资源','文件管理'], ['资源','内容资源'], ['资源','恋爱笔记'], ['设置','网站设置']]) {
-      await page.locator('.xcss-header-navigation').getByRole('button', { name: group, exact: true }).click();
-      if (group !== '总览') await page.locator('.xcss-secondary-navigation').getByRole('button', { name: label, exact: true }).click();
+      await page.locator('.blog-header-navigation').getByRole('button', { name: group, exact: true }).click();
+      if (group !== '总览') await page.locator('.blog-secondary-navigation').getByRole('button', { name: label, exact: true }).click();
       await page.getByRole('heading', { name: label }).waitFor();
       if (label === '评论管理') {
         const wish = page.getByRole('row').filter({hasText:'Smoke love wish'});
@@ -176,7 +176,7 @@ try {
         if (order[1] !== '专栏速览') throw new Error('Home section order was not persisted');
       }
     }
-    if (process.env.XOCS_SMOKE_SCREENSHOT) await page.screenshot({ path: process.env.XOCS_SMOKE_SCREENSHOT, fullPage: true });
+    if (process.env.BLOG_SMOKE_SCREENSHOT) await page.screenshot({ path: process.env.BLOG_SMOKE_SCREENSHOT, fullPage: true });
     console.log('/admin: signed in and navigated');
   }
   console.log('/admin: rendered');

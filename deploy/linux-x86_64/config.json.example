@@ -1,6 +1,5 @@
 {
   "bind": "127.0.0.1:8081",
-  "data_dir": "/opt/isarmg/xocs/state",
-  "development": false,
-  "log_level": "info"
+  "log_level": "info",
+  "development": false
 }

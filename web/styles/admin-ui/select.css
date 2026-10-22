@@ -1,0 +1,41 @@
+.blog-select { display: block; min-width: 0; width: 100%; }
+.blog-select-native { display: none; --blog-server-corner-extent: 0px; }
+.blog-select-trigger {
+  display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+  text-align: start; cursor: pointer; min-width: 0;
+  --blog-server-corner-extent: var(--blog-server-corner-control, 27px);
+  --blog-server-corner-mode: clip;
+}
+.blog-select-trigger:disabled { opacity: .6; cursor: not-allowed; }
+.blog-select-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.blog-select-trigger .blog-select-arrow { display: block; flex: none; width: 16px; height: 16px; fill: none; transform-origin: center; }
+.blog-select-trigger[aria-expanded=true] .blog-select-arrow { transform: rotate(90deg); }
+.blog-select-panel {
+  position: fixed; inset: auto; margin: 0; padding: 0; box-sizing: border-box;
+  min-width: 0; max-width: calc(100vw - 16px); overflow: auto; overscroll-behavior: contain;
+  color: var(--blog-text-primary, #18181b); background: var(--blog-bg-panel, #fff);
+  border: 1px solid var(--blog-block-border, currentColor); font: inherit;
+  --blog-server-corner-extent: var(--blog-server-corner-panel, 42px);
+  --blog-server-corner-mode: clip;
+  --blog-server-corner-foreground: 1;
+}
+/* Hidden popovers cannot be measured. Reveal a newly opened panel only once
+ * its shared contour and shadow are painted, including the first frame. */
+.blog-select-panel:popover-open:not([data-blog-server-corner-state=clip]):not([data-blog-server-corner-reason=forced-colors]) { visibility: hidden; }
+.blog-select-option {
+  display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+  min-height: 44px; padding: .5rem max(1rem, var(--blog-server-corner-text-inset, 26px));
+  box-sizing: border-box; cursor: pointer; overflow-wrap: anywhere;
+  --blog-server-corner-extent: 0px;
+}
+.blog-select-option[data-active=true] { background: var(--blog-bg-page, #edf2f7); color: var(--blog-text-primary, #18181b); }
+.blog-select-option[aria-selected=true] { font-weight: 700; }
+.blog-select-option[aria-disabled=true] { opacity: .5; cursor: not-allowed; }
+.blog-select-group { display: block; padding: .5rem 1.5rem; font-size: .875em; font-weight: 700; color: var(--blog-block-muted, #64748b); }
+.blog-select-error { display: block; margin-block-start: .4rem; color: var(--blog-text-danger, #b91c1c); }
+.blog-input.blog-select-list { --blog-server-corner-extent: var(--blog-server-corner-panel, 42px); --blog-server-corner-mode: clip; }
+@media (forced-colors: active) {
+  .blog-select-trigger, .blog-select-panel { color: ButtonText; background: Canvas; border: 1px solid ButtonText; }
+  .blog-select-option[data-active=true] { background: Highlight; color: HighlightText; }
+  .blog-select-option[aria-disabled=true] { color: GrayText; opacity: 1; }
+}

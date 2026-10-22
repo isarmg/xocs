@@ -1,0 +1,26 @@
+[package]
+name = "blog-sync-concurrent-collections"
+edition = "2021"
+rust-version = "1.99"
+publish = false
+license = "MIT OR Apache-2.0"
+description = "并发工具、队列、epoch回收与工作窃取"
+autolib = false
+autobins = false
+autotests = false
+autobenches = false
+autoexamples = false
+build = "build.rs"
+
+[lib]
+name = "blog_sync_concurrent_collections"
+path = "src/lib.rs"
+
+[features]
+default = ["std"]
+std = ["alloc"]
+alloc = []
+
+[lints.rust.unexpected_cfgs]
+level = "warn"
+check-cfg = ["cfg(crossbeam_loom)", "cfg(crossbeam_sanitize)"]

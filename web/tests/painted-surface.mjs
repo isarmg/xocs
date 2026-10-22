@@ -3,7 +3,7 @@
 export async function paintedSurfaceColor(locator) {
   return locator.evaluate(async element => {
     const css = getComputedStyle(element);
-    const state = element.getAttribute("data-xcss-server-corner-state");
+    const state = element.getAttribute("data-blog-server-corner-state");
     if (state !== "paint" && state !== "clip") return css.backgroundColor;
     if (!css.borderImageSlice.split(/\s+/).includes("fill")) {
       throw new Error("Rendered surface has no border-image fill");

@@ -1,4 +1,4 @@
-# xocs 文档
+# blog 文档
 
 所有日期、时间输入、显示与日志日界统一使用 UTC，页面明确标注 UTC；一天固定为 24 小时，不随服务器或浏览器时区、夏令时改变。无时区的 SQLite 时间及日期输入也按 UTC 解释。
 
@@ -15,11 +15,17 @@
 ## 开发与参考
 
 - [开发与验证](development.md)：源码构建、自动化检查与发行输入。
-- [xcss-web 迁移记录](xcss-web-migration.md)：Rust/WASM 页面、公共快照与浏览器验收。
+- [用途架构与定制](maintained-design.md)：当前目录、内部版本、SQLite/CSR 定制与优化边界。
+- [依赖分析与深度定制](dependency-customization.md)：按真实消费者定制实现、评估合并代价与验证优化收益。
+- [Rust 源码管理](rust-sources.md)、[维护规则](RUST_SOURCE_MAINTENANCE.md)：来源、完整文件收据和显式迁移。
+- [生成的用途关系](RUST_SOURCE_ARCHITECTURE.md)、[原始来源清单](THIRD_PARTY_RUST_SOURCES.md)：实际包映射、入口和依赖关系。
+- [历史 xocs Web 迁移记录](xcss-web-migration.md)：改名前的实现与当时验证，当前结构见独立实现说明。
 - [当前实现参考](current-guide.md)：数据库身份、公开响应与评论重试语义。
 - [账号设置](account-settings.md)、[公共支撑](common-support.md)。
-- [项目首页](../README.md)、[MIT 许可证](../LICENSE)。第三方前端许可证位于 `web/licenses/`。
+- [项目首页](../README.md)、[MIT 许可证](../LICENSE)。第三方 Rust 许可材料位于 `compliance/licenses/`，整合组件和字体另保留其原始许可证与 `compliance/` 来源记录。
 
-当前源码使用 `xocs-db-v1`。程序会校验实际数据结构；不匹配时只读失败，不自动迁移。
+当前源码使用 `blog-db-v1`。程序会校验实际数据结构；不匹配时只读失败，不自动迁移。
 
-当前安装、运行和升级合同见 [1.0.0 发布说明](releases/1.0.0.md)。
+当前安装、运行和维护合同见[部署说明](../deploy/linux-x86_64/README.md)与[当前实现参考](current-guide.md)；[1.0.0 发布说明](releases/1.0.0.md)保留改名前的历史合同。
+
+- [独立实现与项目改名](independence.md)：本地源码边界、来源许可证、构建验证与数据身份。

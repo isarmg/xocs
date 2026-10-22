@@ -1,0 +1,110 @@
+[package]
+name = "blog-application"
+edition = "2024"
+rust-version = "1.99"
+license = "Apache-2.0"
+publish = false
+description = "认证、SQLite 持久化、安装契约和资产响应"
+
+[features]
+default = ["tracing"]
+tracing = []
+
+[dependencies]
+schemars = { path = "../foundation/format/json-schema",package = "blog-format-json-schema"}
+argon2 = {  features = ["std"], path = "../foundation/crypto/password-derivation",package = "blog-crypto-password-derivation"}
+base64 = {  path = "../foundation/encoding/application-base-encoding",package = "blog-encoding-application-base-encoding"}
+getrandom = {  path = "../foundation/platform/system-entropy",package = "blog-platform-system-entropy"}
+hmac = {  path = "../foundation/crypto/message-authentication",package = "blog-crypto-message-authentication"}
+sha2 = {  path = "../foundation/crypto/secure-hash",package = "blog-crypto-secure-hash"}
+subtle = {  path = "../foundation/crypto/constant-time-comparison",package = "blog-crypto-constant-time-comparison"}
+thiserror = {  path = "../foundation/diagnostics/typed-error",package = "blog-diagnostics-typed-error"}
+bytes = {  path = "../foundation/encoding/byte-buffer",package = "blog-encoding-byte-buffer"}
+mime = {  path = "../foundation/network/media-type",package = "blog-network-media-type"}
+tokio = {  features = ["fs", "io-util", "macros", "net", "rt-multi-thread", "signal", "sync", "test-util", "time"], path = "../foundation/runtime/task-scheduler",package = "blog-runtime-task-scheduler"}
+serde = {  features = ["derive", "error-path"], path = "../foundation/format/data-model",package = "blog-format-data-model",default-features = true,optional = false}
+serde_json = {  path = "../foundation/format/json",package = "blog-format-json"}
+async-trait = {  path = "../foundation/syntax/async-trait",package = "blog-syntax-async-trait"}
+sqlx = {  default-features = false, features = ["runtime-tokio", "sqlite-bundled"], path = "../foundation/storage/sqlite-access",package = "blog-storage-sqlite-access"}
+rustix = {  features = ["event", "fs", "process"], path = "../foundation/platform/system-calls",package = "blog-platform-system-calls"}
+libsqlite3-sys = {  features = ["bundled"], path = "../foundation/storage/sqlite-native",package = "blog-storage-sqlite-native"}
+tempfile = {  path = "../foundation/filesystem/temporary-storage",package = "blog-filesystem-temporary-storage"}
+libc = { path = "../foundation/platform/system-abi",package = "blog-platform-system-abi"}
+tokio-util = {  features = ["rt"], path = "../foundation/runtime/scheduled-io",package = "blog-runtime-scheduled-io"}
+socket2 = {  path = "../foundation/platform/socket-options",package = "blog-platform-socket-options"}
+chrono = {  default-features = false, features = ["clock", "std"], path = "../foundation/format/date-time",package = "blog-format-date-time"}
+anyhow = {  path = "../foundation/diagnostics/error-context",package = "blog-diagnostics-error-context"}
+http = {  path = "../foundation/network/http-message",package = "blog-network-http-message"}
+
+[lints.rust]
+unsafe_code = "deny"
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+dbg_macro = "deny"
+todo = "deny"
+undocumented_unsafe_blocks = "deny"
+
+[dependencies.axum]
+path = "../foundation/network/request-router"
+package = "blog-network-request-router"
+default-features = true
+
+[dependencies.http-body]
+path = "../foundation/network/body-stream"
+package = "blog-network-body-stream"
+default-features = true
+features = [
+    "utilities",
+]
+
+[dependencies.hyper]
+features = [
+    "http1",
+    "server",
+    "service-adapter",
+    "tokio",
+]
+path = "../foundation/network/http-transport"
+package = "blog-network-http-transport"
+default-features = true
+
+[dependencies.tower]
+features = [
+    "util",
+]
+path = "../foundation/network/request-pipeline"
+package = "blog-network-request-pipeline"
+default-features = true
+
+[dependencies.futures]
+path = "../foundation/runtime/async-toolkit"
+package = "blog-runtime-async-toolkit"
+default-features = false
+features = [
+    "executor",
+    "shared-state",
+    "std",
+    "utilities",
+]
+
+[dependencies.tracing]
+path = "../foundation/diagnostics/structured-events"
+package = "blog-diagnostics-structured-events"
+default-features = true
+features = [
+    "attributes",
+    "collector",
+    "registry",
+    "std",
+]
+
+[dependencies.url-encoding]
+path = "../foundation/network/web-address"
+package = "blog-network-web-address"
+default-features = true
+features = [
+    "parser",
+    "std",
+]
+

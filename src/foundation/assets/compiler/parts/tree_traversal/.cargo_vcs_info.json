@@ -1,0 +1,6 @@
+{
+  "git": {
+    "sha1": "7f56ec9301e7327b4402c3010c87803b58b6ea30"
+  },
+  "path_in_vcs": "crates/oxc_traverse"
+}

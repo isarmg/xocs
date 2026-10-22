@@ -1,0 +1,109 @@
+# Project-owned consolidation; immutable upstream origins remain in compliance.
+[package]
+edition = "2018"
+rust-version = "1.71"
+build = false
+autolib = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+license = "MIT OR Apache-2.0"
+name = "blog-runtime-async-toolkit"
+publish = false
+description = "async toolkit"
+
+[features]
+default = [
+    "std",
+    "utilities",
+    "sink",
+    "channel",
+    "io",
+    "async-await-macro",
+    "executor",
+    "shared-state",
+]
+alloc = []
+std = [
+    "alloc",
+    "slab?/std",
+]
+utilities = [
+    "dep:pin-project-lite",
+]
+shared-state = [
+    "std",
+    "utilities",
+    "dep:slab",
+]
+sink = []
+channel = [
+    "alloc",
+]
+io = [
+    "std",
+    "utilities",
+    "dep:memchr",
+]
+async-await = [
+    "utilities",
+]
+async-await-macro = [
+    "async-await",
+    "dep:futures-macro",
+]
+executor = [
+    "std",
+    "utilities",
+]
+thread-pool = [
+    "executor",
+]
+bilock = [
+    "utilities",
+]
+unstable = []
+write-all-vectored = [
+    "io",
+]
+
+[lib]
+name = "futures"
+path = "src/lib.rs"
+doctest = false
+
+[dependencies.futures-macro]
+optional = true
+default-features = false
+path = "../future-macros"
+package = "blog-runtime-future-macros"
+
+[dependencies.memchr]
+optional = true
+path = "../../encoding/byte-search"
+package = "blog-encoding-byte-search"
+
+[dependencies.pin-project-lite]
+optional = true
+path = "../../sync/pinned-projection"
+package = "blog-sync-pinned-projection"
+
+[dependencies.slab]
+optional = true
+default-features = false
+path = "../../collections/slot-storage"
+package = "blog-collections-slot-storage"
+
+[lints.rust]
+missing_debug_implementations = "warn"
+rust_2018_idioms = "warn"
+single_use_lifetimes = "warn"
+unreachable_pub = "warn"
+
+[lints.rust.unexpected_cfgs]
+level = "warn"
+priority = 0
+check-cfg = [
+    "cfg(futures_sanitizer)",
+]

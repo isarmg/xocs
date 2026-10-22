@@ -1,0 +1,14 @@
+{
+  "format": 1,
+  "web": {
+    "directory": "web",
+    "script": "build",
+    "dist": "dist"
+  },
+  "rust": {
+    "manifest": "src/server/Cargo.toml",
+    "package": "blog",
+    "binary": "blog",
+    "source_revision_env": "BLOG_SOURCE_REVISION"
+  }
+}

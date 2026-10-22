@@ -24,7 +24,7 @@ class AdapterContract(unittest.TestCase):
         self.assertEqual(config['development'], False)
         self.assertEqual(config['bind'], '127.0.0.1:12345')
         self.assertEqual(config['data_dir'], '/installed/state')
-        source = (ROOT / 'src/installation_definition.rs').read_text()
+        source = (ROOT / 'src/server/src/installation_definition.rs').read_text()
         self.assertIn('database["name"] = json!("site");', source)
         self.assertIn('path["suffix"] = json!("site.sqlite");', source)
         self.assertIn('material["secrets"] = json!([]);', source)
@@ -92,7 +92,7 @@ class AdapterContract(unittest.TestCase):
             adapter.persisted(request, session, expected, require)
 
     def test_routes_are_current_product_routes(self):
-        routes = (ROOT / 'src/content/mod.rs').read_text() + (ROOT / 'src/admin.rs').read_text()
+        routes = (ROOT / 'src/server/src/content/mod.rs').read_text() + (ROOT / 'src/server/src/admin.rs').read_text()
         for path in (adapter.SITE, adapter.CATEGORIES, adapter.LABELS, adapter.ARTICLES,
                      '/api/v1/site', '/api/v1/categories', '/api/v1/articles/{id}'):
             self.assertIn('"' + path + '"', routes)

@@ -1,0 +1,43 @@
+/*
+ * 显式作用域的最小 reset。消费者必须在应用根节点添加 data-blog-scope，
+ * 因而引入本文件不会改变同一页面上不属于 Xcss 应用的内容。
+ */
+[data-blog-scope],
+[data-blog-scope] *,
+[data-blog-scope] *::before,
+[data-blog-scope] *::after {
+  box-sizing: border-box;
+}
+
+[data-blog-scope] {
+  min-width: 320px;
+  min-height: 100%;
+  font-family: var(--blog-font-ui, ui-monospace, monospace);
+  font-size: var(--blog-font-size-body, 1rem);
+  line-height: var(--blog-line-height-body, 1.5);
+  overflow-wrap: anywhere;
+  text-size-adjust: 100%;
+}
+
+[data-blog-scope] :where(button, input, select, textarea) {
+  font: inherit;
+  line-height: inherit;
+}
+
+[data-blog-scope] button:not(:disabled) {
+  cursor: pointer;
+}
+
+[data-blog-scope] button:disabled {
+  cursor: not-allowed;
+}
+
+[data-blog-scope] :where(h1, h2, h3) {
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+[data-blog-scope] [hidden] {
+  display: none !important;
+}

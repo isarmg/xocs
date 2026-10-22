@@ -1,0 +1,74 @@
+[package]
+name = "blog"
+version = "1.0.1"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+build = "build.rs"
+description = "博客 HTTP 服务、内容业务与管理员 API"
+
+[dependencies]
+schemars = { path = "../foundation/format/json-schema",package = "blog-format-json-schema"}
+anyhow = { path = "../foundation/diagnostics/error-context",package = "blog-diagnostics-error-context"}
+async-trait = { path = "../foundation/syntax/async-trait",package = "blog-syntax-async-trait"}
+chrono = {  features = ["serde", "clock"], path = "../foundation/format/date-time",package = "blog-format-date-time"}
+clap = {  features = ["derive", "env"], path = "../foundation/cli/arguments",package = "blog-cli-arguments"}
+hex = { path = "../foundation/encoding/hex-codec",package = "blog-encoding-hex-codec"}
+sha2 = { path = "../foundation/crypto/secure-hash",package = "blog-crypto-secure-hash"}
+serde = {  features = ["derive"], path = "../foundation/format/data-model",package = "blog-format-data-model"}
+serde_json = { path = "../foundation/format/json",package = "blog-format-json"}
+sqlx = {  default-features = false, features = ["sqlite-bundled", "runtime-tokio", "chrono", "json", "derive"], path = "../foundation/storage/sqlite-access",package = "blog-storage-sqlite-access"}
+tokio = {  features = ["macros", "rt-multi-thread", "net", "signal", "fs", "sync"], path = "../foundation/runtime/task-scheduler",package = "blog-runtime-task-scheduler"}
+tower-http = {  features = ["fs", "trace"], path = "../foundation/network/http-middleware",package = "blog-network-http-middleware"}
+tempfile = { path = "../foundation/filesystem/temporary-storage",package = "blog-filesystem-temporary-storage"}
+blog-application = {  features = ["tracing"], path = "../application"}
+
+[build-dependencies]
+schemars = { path = "../foundation/format/json-schema",package = "blog-format-json-schema"}
+serde = {  features = ["derive"], path = "../foundation/format/data-model",package = "blog-format-data-model"}
+sha2 = { path = "../foundation/crypto/secure-hash",package = "blog-crypto-secure-hash"}
+serde_json = { path = "../foundation/format/json",package = "blog-format-json"}
+blog-application = {  path = "../application"}
+
+[dev-dependencies]
+
+[lints.rust]
+unsafe_code = "deny"
+
+
+[features]
+maintenance = []
+
+
+[dependencies.axum]
+path = "../foundation/network/request-router"
+package = "blog-network-request-router"
+default-features = true
+
+[dependencies.url-encoding]
+path = "../foundation/network/web-address"
+package = "blog-network-web-address"
+default-features = false
+features = [
+    "std",
+]
+
+[dependencies.tracing]
+path = "../foundation/diagnostics/structured-events"
+package = "blog-diagnostics-structured-events"
+default-features = true
+features = [
+    "attributes",
+    "collector",
+    "collector-default",
+    "std",
+]
+
+[dev-dependencies.tower]
+features = [
+    "util",
+]
+path = "../foundation/network/request-pipeline"
+package = "blog-network-request-pipeline"
+default-features = true
+
