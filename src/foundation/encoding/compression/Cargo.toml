@@ -1,0 +1,69 @@
+[package]
+name = "blog-encoding-compression"
+edition = "2021"
+rust-version = "1.99"
+publish = false
+license = "MIT"
+description = "DEFLATE、gzip与zlib流和Adler校验"
+autolib = false
+autobins = false
+autotests = false
+autobenches = false
+autoexamples = false
+build = false
+
+[lib]
+name = "blog_encoding_compression"
+path = "src/lib.rs"
+
+[features]
+default = []
+std = []
+alloc = []
+codec = []
+streams = ["std", "alloc", "codec", "dep:crc32fast"]
+simd = []
+runtime-detection = ["std", "crc32fast?/std"]
+block-boundary = ["codec"]
+serialization = ["codec", "alloc", "dep:data-serialization"]
+
+[dependencies.crc32fast]
+path = "../../checksum/fast-crc"
+package = "blog-checksum-fast-crc"
+optional = true
+default-features = false
+
+[dependencies.data-serialization]
+path = "../../format/data-model"
+package = "blog-format-data-model"
+optional = true
+default-features = false
+features = ["derive", "alloc"]
+
+[lints.rust.unexpected_cfgs]
+level = "warn"
+check-cfg = ["cfg(fuzzing)"]
+
+[[test]]
+name = "contracts"
+path = "retained/test/compression/contracts.rs"
+
+[[test]]
+name = "empty-read"
+path = "retained/test/foundation/compression/streams/tests/empty-read.rs"
+required-features = ["streams"]
+
+[[test]]
+name = "early-flush"
+path = "retained/test/foundation/compression/streams/tests/early-flush.rs"
+required-features = ["streams"]
+
+[[test]]
+name = "gunzip"
+path = "retained/test/foundation/compression/streams/tests/gunzip.rs"
+required-features = ["streams"]
+
+[[test]]
+name = "zero-write"
+path = "retained/test/foundation/compression/streams/tests/zero-write.rs"
+required-features = ["streams"]

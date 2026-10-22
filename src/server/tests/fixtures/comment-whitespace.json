@@ -1,0 +1,162 @@
+[
+  {
+    "name": "U+0009 whitespace edges",
+    "input": "\thello\t",
+    "expected": "hello"
+  },
+  {
+    "name": "U+000A whitespace edges",
+    "input": "\nhello\n",
+    "expected": "hello"
+  },
+  {
+    "name": "U+000B whitespace edges",
+    "input": "\u000bhello\u000b",
+    "expected": "hello"
+  },
+  {
+    "name": "U+000C whitespace edges",
+    "input": "\fhello\f",
+    "expected": "hello"
+  },
+  {
+    "name": "U+000D whitespace edges",
+    "input": "\rhello\r",
+    "expected": "hello"
+  },
+  {
+    "name": "U+0020 whitespace edges",
+    "input": " hello ",
+    "expected": "hello"
+  },
+  {
+    "name": "U+0085 whitespace edges",
+    "input": "\u0085hello\u0085",
+    "expected": "hello"
+  },
+  {
+    "name": "U+00A0 whitespace edges",
+    "input": "\u00a0hello\u00a0",
+    "expected": "hello"
+  },
+  {
+    "name": "U+1680 whitespace edges",
+    "input": "\u1680hello\u1680",
+    "expected": "hello"
+  },
+  {
+    "name": "U+2000 whitespace edges",
+    "input": "\u2000hello\u2000",
+    "expected": "hello"
+  },
+  {
+    "name": "U+2001 whitespace edges",
+    "input": "\u2001hello\u2001",
+    "expected": "hello"
+  },
+  {
+    "name": "U+2002 whitespace edges",
+    "input": "\u2002hello\u2002",
+    "expected": "hello"
+  },
+  {
+    "name": "U+2003 whitespace edges",
+    "input": "\u2003hello\u2003",
+    "expected": "hello"
+  },
+  {
+    "name": "U+2004 whitespace edges",
+    "input": "\u2004hello\u2004",
+    "expected": "hello"
+  },
+  {
+    "name": "U+2005 whitespace edges",
+    "input": "\u2005hello\u2005",
+    "expected": "hello"
+  },
+  {
+    "name": "U+2006 whitespace edges",
+    "input": "\u2006hello\u2006",
+    "expected": "hello"
+  },
+  {
+    "name": "U+2007 whitespace edges",
+    "input": "\u2007hello\u2007",
+    "expected": "hello"
+  },
+  {
+    "name": "U+2008 whitespace edges",
+    "input": "\u2008hello\u2008",
+    "expected": "hello"
+  },
+  {
+    "name": "U+2009 whitespace edges",
+    "input": "\u2009hello\u2009",
+    "expected": "hello"
+  },
+  {
+    "name": "U+200A whitespace edges",
+    "input": "\u200ahello\u200a",
+    "expected": "hello"
+  },
+  {
+    "name": "U+2028 whitespace edges",
+    "input": "\u2028hello\u2028",
+    "expected": "hello"
+  },
+  {
+    "name": "U+2029 whitespace edges",
+    "input": "\u2029hello\u2029",
+    "expected": "hello"
+  },
+  {
+    "name": "U+202F whitespace edges",
+    "input": "\u202fhello\u202f",
+    "expected": "hello"
+  },
+  {
+    "name": "U+205F whitespace edges",
+    "input": "\u205fhello\u205f",
+    "expected": "hello"
+  },
+  {
+    "name": "U+3000 whitespace edges",
+    "input": "\u3000hello\u3000",
+    "expected": "hello"
+  },
+  {
+    "name": "U+180E retained edges",
+    "input": "\u180ehello\u180e",
+    "expected": "\u180ehello\u180e"
+  },
+  {
+    "name": "U+200B retained edges",
+    "input": "\u200bhello\u200b",
+    "expected": "\u200bhello\u200b"
+  },
+  {
+    "name": "U+2060 retained edges",
+    "input": "\u2060hello\u2060",
+    "expected": "\u2060hello\u2060"
+  },
+  {
+    "name": "U+FEFF retained edges",
+    "input": "\ufeffhello\ufeff",
+    "expected": "\ufeffhello\ufeff"
+  },
+  {
+    "name": "All Unicode White_Space only",
+    "input": "\t\n\u000b\f\r \u0085\u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000",
+    "expected": ""
+  },
+  {
+    "name": "Interior whitespace is preserved",
+    "input": "\u0085hel\u0085lo\u0085",
+    "expected": "hel\u0085lo"
+  },
+  {
+    "name": "FEFF prevents stripping through it",
+    "input": "\u0085\ufeff\u0085hello\u0085\ufeff\u0085",
+    "expected": "\ufeff\u0085hello\u0085\ufeff"
+  }
+]

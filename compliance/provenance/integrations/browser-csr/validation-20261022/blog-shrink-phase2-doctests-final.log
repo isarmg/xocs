@@ -1,0 +1,590 @@
+warning: use of deprecated constant `core::u8::MAX`: replaced by the `MAX` associated constant on this type
+   --> src/foundation/encoding/byte-search/src/arch/all/packedpair/mod.rs:179:41
+    |
+179 |         let max = usize::from(core::u8::MAX);
+    |                                         ^^^
+    |
+    = note: `#[warn(deprecated)]` on by default
+
+warning: use of deprecated constant `core::u32::MAX`: replaced by the `MAX` associated constant on this type
+   --> src/foundation/encoding/byte-search/src/memmem/searcher.rs:916:34
+    |
+916 |             Err(_) => core::u32::MAX,
+    |                                  ^^^
+
+warning: `blog-encoding-byte-search` (lib) generated 2 warnings
+warning: use of deprecated constant `std::f64::EPSILON`: replaced by the `EPSILON` associated constant on `f64`
+    --> src/foundation/interface/javascript-api/src/lib.rs:6074:35
+     |
+6074 |     pub const EPSILON: f64 = f64::EPSILON;
+     |                                   ^^^^^^^
+     |
+     = note: `#[warn(deprecated)]` on by default
+
+warning: use of deprecated constant `std::f64::MAX`: replaced by the `MAX` associated constant on `f64`
+    --> src/foundation/interface/javascript-api/src/lib.rs:6082:37
+     |
+6082 |     pub const MAX_VALUE: f64 = f64::MAX;
+     |                                     ^^^
+
+warning: use of deprecated constant `std::f64::NAN`: replaced by the `NAN` associated constant on `f64`
+    --> src/foundation/interface/javascript-api/src/lib.rs:6096:31
+     |
+6096 |     pub const NAN: f64 = f64::NAN;
+     |                               ^^^
+
+warning: use of deprecated constant `std::f64::NEG_INFINITY`: replaced by the `NEG_INFINITY` associated constant on `f64`
+    --> src/foundation/interface/javascript-api/src/lib.rs:6100:45
+     |
+6100 |     pub const NEGATIVE_INFINITY: f64 = f64::NEG_INFINITY;
+     |                                             ^^^^^^^^^^^^
+
+warning: use of deprecated constant `std::f64::INFINITY`: replaced by the `INFINITY` associated constant on `f64`
+    --> src/foundation/interface/javascript-api/src/lib.rs:6104:45
+     |
+6104 |     pub const POSITIVE_INFINITY: f64 = f64::INFINITY;
+     |                                             ^^^^^^^^
+
+warning: `blog-interface-javascript-api` (lib) generated 5 warnings
+warning: unexpected `cfg` condition value: `futures-core-03-stream`
+  --> src/foundation/wasm/browser-futures/src/lib.rs:16:7
+   |
+16 | #[cfg(feature = "futures-core-03-stream")]
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: expected values for `feature` are: `default` and `std`
+   = help: consider adding `futures-core-03-stream` as a feature in `Cargo.toml`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+   = note: requested on the command line with `-W unexpected-cfgs`
+
+warning: unexpected `cfg` condition value: `borsh`
+   --> src/foundation/collections/ordered-map/src/lib.rs:112:7
+    |
+112 | #[cfg(feature = "borsh")]
+    |       ^^^^^^^^^^^^^^^^^
+    |
+    = note: expected values for `feature` are: `default`, `rayon`, `serde`, `std`, and `test_debug`
+    = help: consider adding `borsh` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: requested on the command line with `-W unexpected-cfgs`
+
+warning: unexpected `cfg` condition value: `sval`
+   --> src/foundation/collections/ordered-map/src/lib.rs:116:7
+    |
+116 | #[cfg(feature = "sval")]
+    |       ^^^^^^^^^^^^^^^^
+    |
+    = note: expected values for `feature` are: `default`, `rayon`, `serde`, `std`, and `test_debug`
+    = help: consider adding `sval` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `arbitrary`
+ --> src/foundation/collections/ordered-map/src/arbitrary.rs:1:7
+  |
+1 | #[cfg(feature = "arbitrary")]
+  |       ^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: expected values for `feature` are: `default`, `rayon`, `serde`, `std`, and `test_debug`
+  = help: consider adding `arbitrary` as a feature in `Cargo.toml`
+  = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `quickcheck`
+  --> src/foundation/collections/ordered-map/src/arbitrary.rs:38:7
+   |
+38 | #[cfg(feature = "quickcheck")]
+   |       ^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: expected values for `feature` are: `default`, `rayon`, `serde`, `std`, and `test_debug`
+   = help: consider adding `quickcheck` as a feature in `Cargo.toml`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: `blog-wasm-browser-futures` (lib) generated 1 warning
+warning: `blog-collections-ordered-map` (lib) generated 4 warnings
+   Compiling blog-dom v0.0.0 (/mnt/sarmg.org/blog/src/interface/dom)
+    Finished `test` profile [unoptimized] target(s) in 46.65s
+   Doc-tests blog_dom
+
+running 480 tests
+test src/interface/dom/src/kernel/alternatives/mod.rs - alternatives::Either (line 936) - compile ... ok
+test src/interface/dom/src/kernel/alternatives/mod.rs - alternatives::Either (line 942) - compile ... ok
+test src/interface/dom/src/for_loop.rs - for_loop::__component_for (line 16) ... ok
+test src/interface/dom/src/for_loop.rs - for_loop::ForProps (line 33) ... ok
+test src/interface/dom/src/for_loop.rs - for_loop::For (line 36) ... ok
+test src/interface/dom/src/children.rs - children::ToChildren (line 53) ... ok
+test src/interface/dom/src/kernel/browser_helpers/helpers.rs - browser_helpers::helpers::window_event_listener (line 485) - compile ... ok
+test src/interface/dom/src/kernel/browser_helpers/helpers.rs - browser_helpers::helpers::debounce (line 318) - compile ... ok
+test src/interface/dom/src/kernel/alternatives/mod.rs - alternatives::either (line 718) ... ok
+test src/interface/dom/src/kernel/events/mod.rs - events::EventListener::new (line 282) - compile ... ok
+test src/interface/dom/src/kernel/events/mod.rs - events::EventListener::new (line 301) - compile ... ok
+test src/interface/dom/src/kernel/events/mod.rs - events::EventListener::new (line 319) - compile ... ok
+test src/interface/dom/src/kernel/events/mod.rs - events::EventListener::new_with_options (line 413) - compile ... ok
+test src/interface/dom/src/kernel/erased_value/erased_box.rs - erased_value::erased_box::ErasedBox (line 10) ... ok
+test src/interface/dom/src/kernel/events/mod.rs - events::EventListener::new_with_options (line 431) - compile ... ok
+test src/interface/dom/src/kernel/events/mod.rs - events::EventListener::once_with_options (line 477) - compile ... ok
+test src/interface/dom/src/kernel/events/mod.rs - events::EventListener (line 189) ... ok
+test src/interface/dom/src/kernel/erased_value/erased_mut_ref.rs - erased_value::erased_mut_ref::ErasedMut (line 7) ... ok
+test src/interface/dom/src/kernel/events/mod.rs - events::EventListener::once (line 359) - compile ... ok
+test src/interface/dom/src/kernel/events/mod.rs - events::EventListener::once_with_options (line 495) - compile ... ok
+test src/interface/dom/src/kernel/erased_value/erased_ref.rs - erased_value::erased_ref::Erased (line 7) ... ok
+test src/interface/dom/src/kernel/events/mod.rs - events::EventListenerOptions (line 56) ... ok
+test src/interface/dom/src/kernel/events/mod.rs - events::EventListenerOptions (line 78) ... ok
+test src/interface/dom/src/kernel/events/mod.rs - events::EventListenerOptions::enable_prevent_default (line 136) ... ok
+test src/interface/dom/src/kernel/events/mod.rs - events::EventListenerOptions (line 70) ... ok
+test src/interface/dom/src/kernel/events/mod.rs - events::EventListenerOptions (line 86) ... ok
+test src/interface/dom/src/kernel/events/mod.rs - events::EventListenerOptions::run_in_capture_phase (line 115) ... ok
+test src/interface/dom/src/kernel/events/mod.rs - events::EventListenerPhase (line 25) ... ok
+test src/interface/dom/src/kernel/iterators/either_or_both.rs - iterators::either_or_both::EitherOrBoth<A,B>::insert_right (line 415) ... ok
+test src/interface/dom/src/kernel/iterators/either_or_both.rs - iterators::either_or_both::EitherOrBoth<A,B>::insert_left (line 372) ... ok
+test src/interface/dom/src/kernel/iterators/concat_impl.rs - iterators::concat_impl::concat (line 9) ... ok
+test src/interface/dom/src/kernel/iterators/either_or_both.rs - iterators::either_or_both::EitherOrBoth<A,B>::just_left (line 74) ... ok
+test src/interface/dom/src/kernel/iterators/either_or_both.rs - iterators::either_or_both::EitherOrBoth<A,B>::or (line 281) ... ok
+test src/interface/dom/src/kernel/iterators/either_or_both.rs - iterators::either_or_both::EitherOrBoth<A,B>::just_right (line 99) ... ok
+test src/interface/dom/src/kernel/iterators/either_or_both.rs - iterators::either_or_both::EitherOrBoth<A,B>::or_else (line 317) ... ok
+test src/interface/dom/src/kernel/iterators/either_or_both.rs - iterators::either_or_both::EitherOrBoth<T,T>::reduce (line 474) ... ok
+test src/interface/dom/src/kernel/iterators/free.rs - iterators::free::all (line 198) ... ok
+test src/interface/dom/src/kernel/iterators/free.rs - iterators::free::any (line 215) ... ok
+test src/interface/dom/src/kernel/iterators/free.rs - iterators::free::chain (line 139) ... ok
+test src/interface/dom/src/kernel/iterators/free.rs - iterators::free::cloned (line 164) ... ok
+test src/interface/dom/src/kernel/iterators/free.rs - iterators::free::enumerate (line 71) ... ok
+test src/interface/dom/src/kernel/iterators/free.rs - iterators::free::fold (line 181) ... ok
+test src/interface/dom/src/kernel/iterators/free.rs - iterators::free::intersperse_with (line 52) ... ok
+test src/interface/dom/src/kernel/iterators/free.rs - iterators::free::intersperse (line 34) ... ok
+test src/interface/dom/src/kernel/iterators/free.rs - iterators::free::join (line 266) ... ok
+test src/interface/dom/src/kernel/iterators/free.rs - iterators::free::max (line 232) ... ok
+test src/interface/dom/src/kernel/iterators/free.rs - iterators::free::min (line 249) ... ok
+test src/interface/dom/src/kernel/iterators/free.rs - iterators::free::rev (line 90) ... ok
+test src/interface/dom/src/kernel/iterators/free.rs - iterators::free::sorted (line 283) ... ok
+test src/interface/dom/src/kernel/iterators/free.rs - iterators::free::sorted_unstable (line 302) ... ok
+test src/interface/dom/src/kernel/iterators/free.rs - iterators::free::zip (line 112) ... ok
+test src/interface/dom/src/kernel/iterators/grouping_map.rs - iterators::grouping_map::GroupingMap<I>::aggregate (line 88) ... ok
+test src/interface/dom/src/kernel/iterators/grouping_map.rs - iterators::grouping_map::GroupingMap<I>::collect (line 254) ... ok
+test src/interface/dom/src/kernel/iterators/grouping_map.rs - iterators::grouping_map::GroupingMap<I>::fold (line 181) ... ok
+test src/interface/dom/src/kernel/iterators/grouping_map.rs - iterators::grouping_map::GroupingMap<I>::fold_with (line 137) ... ok
+test src/interface/dom/src/kernel/iterators/grouping_map.rs - iterators::grouping_map::GroupingMap<I>::max (line 289) ... ok
+test src/interface/dom/src/kernel/iterators/grouping_map.rs - iterators::grouping_map::GroupingMap<I>::max_by (line 315) ... ok
+test src/interface/dom/src/kernel/iterators/grouping_map.rs - iterators::grouping_map::GroupingMap<I>::max_by_key (line 344) ... ok
+test src/interface/dom/src/kernel/iterators/grouping_map.rs - iterators::grouping_map::GroupingMap<I>::min (line 370) ... ok
+test src/interface/dom/src/kernel/iterators/grouping_map.rs - iterators::grouping_map::GroupingMap<I>::min_by (line 396) ... ok
+test src/interface/dom/src/kernel/iterators/grouping_map.rs - iterators::grouping_map::GroupingMap<I>::min_by_key (line 425) ... ok
+test src/interface/dom/src/kernel/iterators/grouping_map.rs - iterators::grouping_map::GroupingMap<I>::minmax (line 459) ... ok
+test src/interface/dom/src/kernel/iterators/grouping_map.rs - iterators::grouping_map::GroupingMap<I>::minmax_by (line 489) ... ok
+test src/interface/dom/src/kernel/iterators/grouping_map.rs - iterators::grouping_map::GroupingMap<I>::minmax_by_key (line 540) ... ok
+test src/interface/dom/src/kernel/iterators/grouping_map.rs - iterators::grouping_map::GroupingMap<I>::product (line 594) ... ok
+test src/interface/dom/src/kernel/iterators/grouping_map.rs - iterators::grouping_map::GroupingMap<I>::reduce (line 216) ... ok
+test src/interface/dom/src/kernel/iterators/grouping_map.rs - iterators::grouping_map::GroupingMap<I>::sum (line 568) ... ok
+test src/interface/dom/src/kernel/iterators/kmerge_impl.rs - iterators::kmerge_impl::kmerge (line 132) ... ok
+test src/interface/dom/src/kernel/iterators/minmax.rs - iterators::minmax::MinMaxResult<T>::into_option (line 26) ... ok
+test src/interface/dom/src/kernel/iterators/merge_join.rs - iterators::merge_join::merge (line 29) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::all_equal (line 2171) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::all_equal_value (line 2199) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::at_most_one (line 4366) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::all_unique (line 2230) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::batching (line 621) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::array_combinations (line 1671) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::cartesian_product (line 1187) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::chunk_by (line 665) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::chunks (line 714) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::coalesce (line 1264) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::circular_tuple_windows (line 785) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::collect_array (line 1976) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::collect_tuple (line 2022) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::combinations (line 1717) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::combinations (line 1730) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::combinations_with_replacement (line 1754) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::concat (line 2306) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::contains (line 2140) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::counts (line 4416) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::dedup (line 1292) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::counts_by (line 4439) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::dedup_by (line 1315) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::dedup_by_with_count (line 1361) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::dedup_with_count (line 1338) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::dropping (line 2256) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::dropping_back (line 2284) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::duplicates (line 1383) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::duplicates_by (line 1408) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::filter_map_ok (line 933) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::exactly_one (line 4333) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::filter_ok (line 914) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::find_or_first (line 2104) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::fold_ok (line 2495) - compile ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::find_or_last (line 2067) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::find_position (line 2051) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::fold1 (line 2579) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::flatten_ok (line 954) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::fold_ok (line 2508) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::fold_options (line 2548) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::fold_while (line 2764) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::format (line 2426) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::format_with (line 2454) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::get (line 533) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::interleave (line 441) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::interleave_shortest (line 460) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::intersperse (line 481) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::intersperse_with (line 501) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::into_group_map (line 3641) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::into_group_map_by (line 3665) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::join (line 2393) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::k_largest (line 3348) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::k_largest_by (line 3376) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::k_largest_by_key (line 3404) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::k_largest_relaxed (line 3433) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::k_largest_relaxed_by_key (line 3489) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::k_largest_relaxed_by (line 3461) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::k_smallest (line 3133) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::k_smallest_by (line 3190) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::k_smallest_relaxed (line 3259) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::k_smallest_by_key (line 3221) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::k_smallest_relaxed_by (line 3288) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::kmerge (line 1135) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::k_smallest_relaxed_by_key (line 3317) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::map_into (line 878) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::kmerge_by (line 1164) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::map_ok (line 895) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::max_set (line 3828) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::max_set_by (line 3859) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::max_set_by_key (line 3891) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::merge (line 1017) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::merge_by (line 1041) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::merge_join_by (line 1076) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::merge_join_by (line 1105) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::min_set (line 3734) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::min_set_by (line 3765) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::min_set_by_key (line 3797) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::minmax (line 3934) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::multi_cartesian_product (line 1215) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::multipeek (line 4394) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::multi_cartesian_product (line 1233) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::multiunzip (line 4483) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::next_array (line 1956) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::next_tuple (line 2000) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::pad_using (line 1864) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::partition_map (line 3574) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::partition_result (line 3612) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::permutations (line 1787) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::position_max_by (line 4065) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::position_max (line 4004) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::permutations (line 1803) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::position_max_by_key (line 4034) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::position_min (line 4094) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::position_min_by_key (line 4124) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::position_min_by (line 4155) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::position_minmax (line 4203) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::position_minmax_by (line 4293) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::position_minmax_by_key (line 4248) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::positions (line 1915) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::powerset (line 1836) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::process_results (line 988) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::product1 (line 2860) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::set_from (line 2370) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::sorted (line 2990) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::sorted_by (line 3021) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::sorted_by_cached_key (line 3093) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::sorted_by_key (line 3056) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::sorted_unstable (line 2888) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::sorted_unstable_by (line 2919) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::sorted_unstable_by_key (line 2954) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::sum1 (line 2832) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::take_while_inclusive (line 1537) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::tail (line 3517) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::take_while_inclusive (line 1548) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::take_while_ref (line 1504) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::take_while_inclusive (line 1568) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::tee (line 859) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::tree_reduce (line 2642) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::try_collect (line 2336) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::try_len (line 4510) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::tuple_combinations (line 1624) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::tuple_windows (line 742) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::tuples (line 817) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::unique (line 1435) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::update (line 1934) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::unique_by (line 1461) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::while_some (line 1597) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::with_position (line 1890) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::assert_equal (line 4555) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::Itertools::zip_longest (line 586) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::chain (line 367) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::chain (line 376) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::chain (line 385) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::iproduct (line 241) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::equal (line 4536) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::izip (line 299) ... ok
+test src/interface/dom/src/kernel/iterators/mod.rs - iterators::partition (line 4599) ... ok
+test src/interface/dom/src/kernel/iterators/peek_nth.rs - iterators::peek_nth::PeekNth<I>::peek_nth (line 54) ... ok
+test src/interface/dom/src/kernel/iterators/put_back_n_impl.rs - iterators::put_back_n_impl::PutBackN<I>::put_back (line 36) ... ok
+test src/interface/dom/src/kernel/iterators/peek_nth.rs - iterators::peek_nth::PeekNth<I>::peek_nth_mut (line 85) ... ok
+test src/interface/dom/src/kernel/iterators/rciter_impl.rs - iterators::rciter_impl::rciter (line 24) ... ok
+test src/interface/dom/src/kernel/iterators/sources.rs - iterators::sources::iterate (line 128) ... ok
+test src/interface/dom/src/kernel/iterators/sources.rs - iterators::sources::unfold (line 17) ... ok
+test src/interface/dom/src/kernel/iterators/sources.rs - iterators::sources::iterate (line 136) ... ok
+test src/interface/dom/src/kernel/iterators/tuple_impl.rs - iterators::tuple_impl::Tuples<I,T>::into_buffer (line 147) ... ok
+test src/interface/dom/src/kernel/iterators/unziptuple.rs - iterators::unziptuple::multiunzip (line 8) ... ok
+test src/interface/dom/src/kernel/iterators/zip_eq_impl.rs - iterators::zip_eq_impl::zip_eq (line 18) ... ok
+test src/interface/dom/src/kernel/iterators/ziptuple.rs - iterators::ziptuple::multizip (line 26) ... ok
+test src/interface/dom/src/kernel/reactivity/callback.rs - reactivity::callback::UnsyncCallback (line 37) ... ok
+test src/interface/dom/src/kernel/reactivity/callback.rs - reactivity::callback::Callback (line 132) ... ok
+test src/interface/dom/src/kernel/reactivity/computed/memo.rs - reactivity::computed::memo::Memo (line 33) ... ok
+test src/interface/dom/src/kernel/reactivity/computed.rs - reactivity::computed::create_slice (line 36) ... ok
+test src/interface/dom/src/kernel/reactivity/computed/arc_memo.rs - reactivity::computed::arc_memo::ArcMemo (line 40) ... ok
+test src/interface/dom/src/kernel/reactivity/computed/memo.rs - reactivity::computed::memo::Memo<T>::new (line 154) ... ok
+test src/interface/dom/src/kernel/reactivity/computed/selector.rs - reactivity::computed::selector::Selector (line 20) ... ok
+test src/interface/dom/src/kernel/reactivity/effect/effect.rs - reactivity::effect::effect::Effect (line 36) ... ok
+test src/interface/dom/src/kernel/reactivity/effect/effect.rs - reactivity::effect::effect::Effect<LocalStorage>::watch (line 209) ... ok
+test src/interface/dom/src/kernel/reactivity/effect/effect.rs - reactivity::effect::effect::Effect<LocalStorage>::watch (line 241) ... ok
+test src/interface/dom/src/kernel/reactivity/effect/immediate.rs - reactivity::effect::immediate::ImmediateEffect (line 26) ... ok
+test src/interface/dom/src/kernel/reactivity/effect/effect.rs - reactivity::effect::effect::Effect<LocalStorage>::watch (line 280) ... ok
+test src/interface/dom/src/kernel/reactivity/graph/subscriber.rs - reactivity::graph::subscriber::untrack (line 101) ... ok
+test src/interface/dom/src/kernel/reactivity/owner/context.rs - reactivity::owner::context::expect_context (line 264) ... ok
+test src/interface/dom/src/kernel/reactivity/owner/context.rs - reactivity::owner::context::provide_context (line 134) ... ok
+test src/interface/dom/src/kernel/reactivity/owner/context.rs - reactivity::owner::context::provide_context (line 167) ... ok
+test src/interface/dom/src/kernel/reactivity/owner/context.rs - reactivity::owner::context::take_context (line 321) ... ok
+test src/interface/dom/src/kernel/reactivity/owner/context.rs - reactivity::owner::context::update_context (line 405) ... ok
+test src/interface/dom/src/kernel/reactivity/owner/context.rs - reactivity::owner::context::use_context (line 216) ... ok
+test src/interface/dom/src/kernel/reactivity/owner/context.rs - reactivity::owner::context::with_context (line 366) ... ok
+test src/interface/dom/src/kernel/reactivity/signal.rs - reactivity::signal::arc_signal (line 39) ... ok
+test src/interface/dom/src/kernel/reactivity/signal.rs - reactivity::signal::create_signal (line 144) ... ok
+test src/interface/dom/src/kernel/reactivity/signal/arc_read.rs - reactivity::signal::arc_read::ArcReadSignal (line 47) ... ok
+test src/interface/dom/src/kernel/reactivity/signal.rs - reactivity::signal::signal (line 85) ... ok
+test src/interface/dom/src/kernel/reactivity/signal/arc_rw.rs - reactivity::signal::arc_rw::ArcRwSignal (line 64) ... ok
+test src/interface/dom/src/kernel/reactivity/signal/arc_write.rs - reactivity::signal::arc_write::ArcWriteSignal (line 36) ... ok
+test src/interface/dom/src/kernel/reactivity/signal/read.rs - reactivity::signal::read::ReadSignal (line 51) ... ok
+test src/interface/dom/src/kernel/reactivity/signal/rw.rs - reactivity::signal::rw::RwSignal (line 69) ... ok
+test src/interface/dom/src/kernel/reactivity/signal/write.rs - reactivity::signal::write::WriteSignal (line 32) ... ok
+test src/interface/dom/src/kernel/reactivity/wrappers.rs - reactivity::wrappers::read::ArcSignal<T,SyncStorage>::derive (line 159) ... ok
+test src/interface/dom/src/kernel/reactivity/wrappers.rs - reactivity::wrappers::read::MaybeProp (line 1595) ... ok
+test src/interface/dom/src/kernel/reactivity/wrappers.rs - reactivity::wrappers::read::Signal<T>::derive (line 569) ... ok
+test src/interface/dom/src/kernel/reactivity/wrappers.rs - reactivity::wrappers::read::MaybeSignal (line 1307) ... ok
+test src/interface/dom/src/kernel/shared_value/mod.rs - shared_value::Oco<'_,CStr>::as_c_str (line 185) ... ok
+test src/interface/dom/src/kernel/reactivity/wrappers.rs - reactivity::wrappers::write::SignalSetter (line 2057) ... ok
+test src/interface/dom/src/kernel/shared_value/mod.rs - shared_value::Oco<'_,OsStr>::as_os_str (line 203) ... ok
+test src/interface/dom/src/kernel/shared_value/mod.rs - shared_value::Oco<'_,Path>::as_path (line 220) ... ok
+test src/interface/dom/src/kernel/shared_value/mod.rs - shared_value::Oco<'_,T>::is_counted (line 98) ... ok
+test src/interface/dom/src/kernel/shared_value/mod.rs - shared_value::Oco<'_,T>::is_borrowed (line 85) ... ok
+test src/interface/dom/src/kernel/shared_value/mod.rs - shared_value::Oco<'_,T>::is_owned (line 111) ... ok
+test src/interface/dom/src/kernel/shared_value/mod.rs - shared_value::Oco<'_,[T]>::as_slice (line 240) ... ok
+test src/interface/dom/src/kernel/shared_value/mod.rs - shared_value::Oco<'_,str>::as_str (line 170) ... ok
+test src/interface/dom/src/kernel/shared_value/mod.rs - shared_value::Oco<'a,T>::clone (line 262) ... ok
+test src/interface/dom/src/kernel/shared_value/mod.rs - shared_value::Oco<'a,T>::clone (line 270) ... ok
+test src/interface/dom/src/kernel/shared_value/mod.rs - shared_value::Oco<'a,T>::clone_inplace (line 311) ... ok
+test src/interface/dom/src/kernel/shared_value/mod.rs - shared_value::Oco<'a,T>::upgrade_inplace (line 294) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<DefaultKey,V>::new (line 141) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<DefaultKey,V>::with_capacity (line 156) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<K,V>::capacity (line 255) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<K,V>::clear (line 605) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<K,V>::contains_key (line 311) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<K,V>::detach (line 485) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<K,V>::drain (line 632) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<K,V>::get (line 648) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<K,V>::get_disjoint_mut (line 743) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<K,V>::get_disjoint_unchecked_mut (line 807) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<K,V>::get_unchecked (line 674) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<K,V>::get_mut (line 691) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<K,V>::get_unchecked_mut (line 718) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<K,V>::insert (line 335) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<K,V>::iter (line 836) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<K,V>::is_empty (line 238) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<K,V>::insert_with_key (line 357) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<K,V>::iter_mut (line 866) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<K,V>::reattach (line 521) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<K,V>::keys (line 902) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<K,V>::len (line 222) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<K,V>::remove (line 455) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<K,V>::reserve (line 275) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<K,V>::retain (line 559) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<K,V>::try_insert_with_key (line 384) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<K,V>::try_reserve (line 294) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<K,V>::values (line 925) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<K,V>::values_mut (line 948) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<K,V>::with_capacity_and_key (line 189) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<DefaultKey,V>::new (line 45) ... ok
+test src/interface/dom/src/kernel/slots/basic.rs - slots::basic::SlotMap<K,V>::with_key (line 170) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<DefaultKey,V>::with_capacity (line 60) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::as_mut_slices (line 961) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::as_slices (line 940) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::capacity (line 159) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::clear (line 514) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::contains_key (line 218) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::detach (line 397) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::get (line 554) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::drain (line 538) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::get_disjoint_mut (line 662) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::get_disjoint_unchecked_mut (line 727) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::get_mut (line 605) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::insert (line 242) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::get_unchecked (line 584) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::get_unchecked_mut (line 636) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::insert_with_key (line 264) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::is_empty (line 142) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::iter (line 753) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::iter_mut (line 778) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::keys (line 807) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::keys_as_slice (line 871) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::len (line 126) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::remove (line 368) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::reattach (line 438) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::reserve (line 178) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::retain (line 473) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::try_insert_with_key (line 292) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::try_reserve (line 199) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::values (line 827) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::values_as_mut_slice (line 918) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::values_as_slice (line 894) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::values_mut (line 847) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::with_capacity_and_key (line 93) ... ok
+test src/interface/dom/src/kernel/slots/dense.rs - slots::dense::DenseSlotMap<K,V>::with_key (line 74) ... ok
+test src/interface/dom/src/kernel/slots/hop.rs - slots::hop::HopSlotMap<DefaultKey,V>::new (line 163) ... ok
+test src/interface/dom/src/kernel/slots/hop.rs - slots::hop::HopSlotMap<DefaultKey,V>::with_capacity (line 178) ... ok
+test src/interface/dom/src/kernel/slots/hop.rs - slots::hop::HopSlotMap<K,V>::capacity (line 279) ... ok
+test src/interface/dom/src/kernel/slots/hop.rs - slots::hop::HopSlotMap<K,V>::clear (line 637) ... ok
+test src/interface/dom/src/kernel/slots/hop.rs - slots::hop::HopSlotMap<K,V>::contains_key (line 335) ... ok
+test src/interface/dom/src/kernel/slots/hop.rs - slots::hop::HopSlotMap<K,V>::drain (line 661) ... ok
+test src/interface/dom/src/kernel/slots/hop.rs - slots::hop::HopSlotMap<K,V>::get (line 680) ... ok
+test src/interface/dom/src/kernel/slots/hop.rs - slots::hop::HopSlotMap<K,V>::get_disjoint_mut (line 780) ... ok
+test src/interface/dom/src/kernel/slots/hop.rs - slots::hop::HopSlotMap<K,V>::get_disjoint_unchecked_mut (line 844) ... ok
+test src/interface/dom/src/kernel/slots/hop.rs - slots::hop::HopSlotMap<K,V>::get_mut (line 725) ... ok
+test src/interface/dom/src/kernel/slots/hop.rs - slots::hop::HopSlotMap<K,V>::get_unchecked (line 708) ... ok
+test src/interface/dom/src/kernel/slots/hop.rs - slots::hop::HopSlotMap<K,V>::get_unchecked_mut (line 754) ... ok
+test src/interface/dom/src/kernel/slots/hop.rs - slots::hop::HopSlotMap<K,V>::insert (line 360) ... ok
+test src/interface/dom/src/kernel/slots/hop.rs - slots::hop::HopSlotMap<K,V>::insert_with_key (line 390) ... ok
+test src/interface/dom/src/kernel/slots/hop.rs - slots::hop::HopSlotMap<K,V>::is_empty (line 262) ... ok
+test src/interface/dom/src/kernel/slots/hop.rs - slots::hop::HopSlotMap<K,V>::iter (line 870) ... ok
+test src/interface/dom/src/kernel/slots/hop.rs - slots::hop::HopSlotMap<K,V>::iter_mut (line 896) ... ok
+test src/interface/dom/src/kernel/slots/hop.rs - slots::hop::HopSlotMap<K,V>::len (line 246) ... ok
+test src/interface/dom/src/kernel/slots/hop.rs - slots::hop::HopSlotMap<K,V>::keys (line 927) ... ok
+test src/interface/dom/src/kernel/slots/hop.rs - slots::hop::HopSlotMap<K,V>::remove (line 563) ... ok
+test src/interface/dom/src/kernel/slots/hop.rs - slots::hop::HopSlotMap<K,V>::reserve (line 299) ... ok
+test src/interface/dom/src/kernel/slots/hop.rs - slots::hop::HopSlotMap<K,V>::retain (line 587) ... ok
+test src/interface/dom/src/kernel/slots/hop.rs - slots::hop::HopSlotMap<K,V>::try_insert_with_key (line 418) ... ok
+test src/interface/dom/src/kernel/slots/hop.rs - slots::hop::HopSlotMap<K,V>::try_reserve (line 318) ... ok
+test src/interface/dom/src/kernel/slots/hop.rs - slots::hop::HopSlotMap<K,V>::values (line 947) ... ok
+test src/interface/dom/src/kernel/slots/hop.rs - slots::hop::HopSlotMap<K,V>::values_mut (line 967) ... ok
+test src/interface/dom/src/kernel/slots/hop.rs - slots::hop::HopSlotMap<K,V>::with_capacity_and_key (line 211) ... ok
+test src/interface/dom/src/kernel/slots/hop.rs - slots::hop::HopSlotMap<K,V>::with_key (line 192) ... ok
+test src/interface/dom/src/kernel/slots/mod.rs - slots::Key::data (line 391) ... ok
+test src/interface/dom/src/kernel/slots/mod.rs - slots::Key::is_null (line 375) ... ok
+test src/interface/dom/src/kernel/slots/mod.rs - slots::Key::null (line 357) ... ok
+test src/interface/dom/src/kernel/slots/mod.rs - slots::new_key_type (line 410) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::Entry<'a,K,V>::and_modify (line 1011) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::Entry<'a,K,V>::key (line 990) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::Entry<'a,K,V>::or_default (line 1042) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::Entry<'a,K,V>::or_insert_with (line 970) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::Entry<'a,K,V>::or_insert (line 949) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::OccupiedEntry<'a,K,V>::get (line 1100) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::OccupiedEntry<'a,K,V>::get_mut (line 1124) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::OccupiedEntry<'a,K,V>::insert (line 1179) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::OccupiedEntry<'a,K,V>::key (line 1061) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::OccupiedEntry<'a,K,V>::into_mut (line 1151) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::OccupiedEntry<'a,K,V>::remove (line 1202) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::OccupiedEntry<'a,K,V>::remove_entry (line 1078) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::SecondaryMap (line 100) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::SecondaryMap<K,V>::capacity (line 197) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::SecondaryMap<K,V>::clear (line 416) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::SecondaryMap<K,V>::contains_key (line 266) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::SecondaryMap<K,V>::drain (line 444) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::SecondaryMap<K,V>::entry (line 805) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::SecondaryMap<K,V>::get (line 463) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::SecondaryMap<K,V>::get_disjoint_mut (line 564) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::SecondaryMap<K,V>::get_disjoint_unchecked_mut (line 639) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::SecondaryMap<K,V>::get_mut (line 511) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::SecondaryMap<K,V>::get_unchecked (line 491) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::SecondaryMap<K,V>::get_unchecked_mut (line 540) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::SecondaryMap<K,V>::insert (line 291) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::SecondaryMap<K,V>::is_empty (line 183) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::SecondaryMap<K,V>::iter (line 669) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::SecondaryMap<K,V>::iter_mut (line 698) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::SecondaryMap<K,V>::new (line 130) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::SecondaryMap<K,V>::keys (line 732) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::SecondaryMap<K,V>::len (line 166) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::SecondaryMap<K,V>::remove (line 337) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::SecondaryMap<K,V>::retain (line 378) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::SecondaryMap<K,V>::set_capacity (line 220) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::SecondaryMap<K,V>::try_set_capacity (line 245) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::SecondaryMap<K,V>::values (line 756) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::SecondaryMap<K,V>::values_mut (line 780) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::SecondaryMap<K,V>::with_capacity (line 147) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::VacantEntry<'a,K,V>::insert (line 1255) ... ok
+test src/interface/dom/src/kernel/slots/secondary.rs - slots::secondary::VacantEntry<'a,K,V>::key (line 1233) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::Entry<'a,K,V>::and_modify (line 1011) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::Entry<'a,K,V>::or_default (line 1042) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::Entry<'a,K,V>::key (line 990) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::Entry<'a,K,V>::or_insert (line 949) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::Entry<'a,K,V>::or_insert_with (line 970) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::OccupiedEntry<'a,K,V>::get (line 1100) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::OccupiedEntry<'a,K,V>::insert (line 1179) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::OccupiedEntry<'a,K,V>::get_mut (line 1124) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::OccupiedEntry<'a,K,V>::key (line 1061) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::OccupiedEntry<'a,K,V>::into_mut (line 1151) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::OccupiedEntry<'a,K,V>::remove (line 1202) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::SparseSecondaryMap<K,V,S>::capacity (line 187) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::OccupiedEntry<'a,K,V>::remove_entry (line 1078) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::SparseSecondaryMap (line 49) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::SparseSecondaryMap<K,V,S>::clear (line 383) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::SparseSecondaryMap<K,V,S>::contains_key (line 236) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::SparseSecondaryMap<K,V,S>::drain (line 408) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::SparseSecondaryMap<K,V,S>::entry (line 761) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::SparseSecondaryMap<K,V,S>::get (line 430) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::SparseSecondaryMap<K,V,S>::get_disjoint_mut (line 529) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::SparseSecondaryMap<K,V,S>::get_mut (line 477) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::SparseSecondaryMap<K,V,S>::get_disjoint_unchecked_mut (line 596) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::SparseSecondaryMap<K,V,S>::get_unchecked (line 458) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::SparseSecondaryMap<K,V,S>::get_unchecked_mut (line 506) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::SparseSecondaryMap<K,V,S>::insert (line 260) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::SparseSecondaryMap<K,V,S>::is_empty (line 173) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::SparseSecondaryMap<K,V,S>::iter_mut (line 655) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::SparseSecondaryMap<K,V,S>::iter (line 627) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::SparseSecondaryMap<K,V,S>::keys (line 688) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::SparseSecondaryMap<K,V,S>::len (line 156) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::SparseSecondaryMap<K,V,S>::remove (line 314) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::SparseSecondaryMap<K,V,S>::reserve (line 206) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::SparseSecondaryMap<K,V,S>::retain (line 352) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::SparseSecondaryMap<K,V,S>::try_reserve (line 222) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::SparseSecondaryMap<K,V,S>::values (line 712) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::SparseSecondaryMap<K,V,S>::with_capacity_and_hasher (line 138) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::SparseSecondaryMap<K,V,S>::with_hasher (line 116) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::SparseSecondaryMap<K,V,S>::values_mut (line 736) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::SparseSecondaryMap<K,V,hash_map::RandomState>::new (line 78) ... ok
+test src/interface/dom/src/kernel/timers/callback.rs - timers::callback::Interval::cancel (line 206) - compile ... ok
+test src/interface/dom/src/kernel/timers/callback.rs - timers::callback::Interval::forget (line 185) - compile ... ok
+test src/interface/dom/src/kernel/timers/callback.rs - timers::callback::Interval::new (line 152) - compile ... ok
+test src/interface/dom/src/kernel/timers/callback.rs - timers::callback::Timeout::cancel (line 106) - compile ... ok
+test src/interface/dom/src/kernel/timers/callback.rs - timers::callback::Timeout::forget (line 84) - compile ... ok
+test src/interface/dom/src/kernel/timers/callback.rs - timers::callback::Timeout::new (line 51) - compile ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::SparseSecondaryMap<K,V,hash_map::RandomState>::with_capacity (line 93) ... ok
+test src/interface/dom/src/kernel/timers/future.rs - timers::future::IntervalStream::new (line 131) - compile fail ... ok
+test src/interface/dom/src/kernel/timers/future.rs - timers::future::TimeoutFuture (line 26) - compile ... ok
+test src/interface/dom/src/kernel/timers/future.rs - timers::future::TimeoutFuture::new (line 59) - compile ... ok
+test src/interface/dom/src/kernel/timers/future.rs - timers::future::sleep (line 87) - compile fail ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::VacantEntry<'a,K,V>::insert (line 1250) ... ok
+test src/interface/dom/src/kernel/slots/sparse_secondary.rs - slots::sparse_secondary::VacantEntry<'a,K,V>::key (line 1228) ... ok
+test src/interface/dom/src/kernel/view_tree/html/directive.rs - view_tree::html::directive::IntoDirective (line 196) ... ignored
+test src/interface/dom/src/kernel/view_tree/html/directive.rs - view_tree::html::directive::IntoDirective (line 223) ... ignored
+test src/interface/dom/src/kernel/view_tree/html/element/element_ext.rs - view_tree::html::element::element_ext::ElementExt (line 17) ... ignored
+test src/interface/dom/src/kernel/vector_drain/mod.rs - vector_drain::VecExt::drain_filter (line 14) ... ok
+test src/interface/dom/src/kernel/view_tree/reactive_graph/bind.rs - view_tree::reactive_graph::bind::BindAttribute::bind (line 55) ... ignored
+test src/interface/dom/src/kernel/vector_drain/copypasted_impl.rs - vector_drain::copypasted_impl::DrainFilter (line 36) ... ok
+test src/interface/dom/src/kernel/vector_drain/copypasted_impl.rs - vector_drain::copypasted_impl::DrainFilter<'_,T,F>::keep_rest (line 72) ... ok
+test src/interface/dom/src/kernel/vector_drain/mod.rs - vector_drain::VecExt::drain_filter (line 40) ... ok
+test src/interface/dom/src/kernel/view_tree/html/event.rs - view_tree::html::event::Custom<E>::options_mut (line 487) ... ok
+test src/interface/dom/src/lib.rs - browser_panic (line 74) ... ok
+test src/interface/dom/src/lib.rs - browser_panic (line 59) ... ok
+test src/interface/dom/src/lib.rs - erased_value (line 51) ... ok
+test src/interface/dom/src/lib.rs - html_escaping (line 49) ... ok
+test src/interface/dom/src/lib.rs - html_escaping (line 55) ... ok
+test src/interface/dom/src/lib.rs - html_escaping (line 72) ... ok
+test src/interface/dom/src/lib.rs - iterators (line 41) ... ok
+test src/interface/dom/src/lib.rs - html_escaping (line 76) ... ok
+test src/interface/dom/src/lib.rs - iterators (line 59) ... ok
+test src/interface/dom/src/lib.rs - iterators (line 49) ... ok
+test src/interface/dom/src/lib.rs - poison (line 48) ... ok
+test src/interface/dom/src/lib.rs - tasks (line 67) - compile ... ok
+test src/interface/dom/src/lib.rs - shared_value (line 54) ... ok
+test src/interface/dom/src/lib.rs - timers (line 74) - compile ... ok
+test src/interface/dom/src/lib.rs - slots (line 204) ... ok
+test src/interface/dom/src/lib.rs - timers (line 89) - compile ... ok
+test src/interface/dom/src/lib.rs - reactivity (line 59) ... ok
+test src/interface/dom/src/lib.rs - slots (line 75) ... ok
+test src/interface/dom/src/lib.rs - thread_bound (line 73) ... ok
+
+test result: ok. 476 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 71.20s
+

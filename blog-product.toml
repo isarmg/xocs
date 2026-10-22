@@ -1,0 +1,5 @@
+format = 1
+product_id = "blog"
+target = "x86_64-unknown-linux-gnu"
+
+# Runtime support is maintained inside src/application; no external foundation contract.

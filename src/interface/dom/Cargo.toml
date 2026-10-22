@@ -1,0 +1,94 @@
+[package]
+name = "blog-dom"
+edition = "2021"
+rust-version = "1.99"
+license = "MIT AND Zlib"
+publish = false
+build = false
+autotests = false
+autobenches = false
+description = "CSR DOM, reactive state and browser lifecycle kernel"
+[lib]
+name = "blog_dom"
+path = "src/lib.rs"
+[features]
+default = ["csr"]
+csr = ["blog_component_macros/csr"]
+shadow-dom = ["web-sys/ShadowRoot", "web-sys/ShadowRootInit", "web-sys/ShadowRootMode"]
+
+[dependencies.async-trait]
+package = "blog-syntax-async-trait"
+path = "../../foundation/syntax/async-trait"
+default-features = true
+
+[dependencies.blog_component_macros]
+package = "blog-component-macros"
+path = "../macros"
+default-features = true
+
+[dependencies.cfg-if]
+package = "blog-native-target-conditions"
+path = "../../foundation/native/target-conditions"
+default-features = true
+
+[dependencies.either]
+package = "blog-syntax-alternative"
+path = "../../foundation/syntax/alternative"
+default-features = false
+
+
+[dependencies.futures]
+package = "blog-runtime-async-toolkit"
+path = "../../foundation/runtime/async-toolkit"
+default-features = true
+features = ["async-await-macro", "channel", "executor", "io", "shared-state", "sink", "std", "utilities"]
+
+[dependencies.indexmap]
+package = "blog-collections-ordered-map"
+path = "../../foundation/collections/ordered-map"
+default-features = true
+
+[dependencies.js-sys]
+package = "blog-interface-javascript-api"
+path = "../../foundation/interface/javascript-api"
+default-features = true
+
+[dependencies.pin-project-lite]
+package = "blog-sync-pinned-projection"
+path = "../../foundation/sync/pinned-projection"
+default-features = true
+
+[dependencies.rustc-hash]
+package = "blog-collections-compiler-hash"
+path = "../../foundation/collections/compiler-hash"
+default-features = true
+
+[dependencies.serde]
+package = "blog-format-data-model"
+path = "../../foundation/format/data-model"
+default-features = true
+
+[dependencies.thiserror]
+package = "blog-diagnostics-typed-error"
+path = "../../foundation/diagnostics/typed-error"
+default-features = true
+
+[dependencies.wasm-bindgen]
+package = "blog-wasm-browser-bridge"
+path = "../../foundation/wasm/browser-bridge"
+default-features = true
+
+[dependencies.wasm-bindgen-futures]
+package = "blog-wasm-browser-futures"
+path = "../../foundation/wasm/browser-futures"
+default-features = true
+
+[dependencies.web-sys]
+package = "blog-interface-browser-api"
+path = "../../foundation/interface/browser-api"
+default-features = true
+features = ["AddEventListenerOptions", "AnimationEvent", "BeforeUnloadEvent", "ClipboardEvent", "Comment", "CompositionEvent", "CssStyleDeclaration", "CustomEvent", "DeviceMotionEvent", "DeviceOrientationEvent", "Document", "DocumentFragment", "DomStringMap", "DomTokenList", "DragEvent", "Element", "ErrorEvent", "Event", "EventTarget", "FocusEvent", "GamepadEvent", "HashChangeEvent", "HtmlAnchorElement", "HtmlAreaElement", "HtmlAudioElement", "HtmlBaseElement", "HtmlBodyElement", "HtmlBrElement", "HtmlButtonElement", "HtmlCanvasElement", "HtmlCollection", "HtmlDListElement", "HtmlDataElement", "HtmlDataListElement", "HtmlDetailsElement", "HtmlDialogElement", "HtmlDivElement", "HtmlElement", "HtmlEmbedElement", "HtmlFieldSetElement", "HtmlFormElement", "HtmlHeadElement", "HtmlHeadingElement", "HtmlHrElement", "HtmlHtmlElement", "HtmlIFrameElement", "HtmlImageElement", "HtmlInputElement", "HtmlLabelElement", "HtmlLegendElement", "HtmlLiElement", "HtmlLinkElement", "HtmlMapElement", "HtmlMenuElement", "HtmlMetaElement", "HtmlMeterElement", "HtmlModElement", "HtmlOListElement", "HtmlObjectElement", "HtmlOptGroupElement", "HtmlOptionElement", "HtmlOutputElement", "HtmlParagraphElement", "HtmlParamElement", "HtmlPictureElement", "HtmlPreElement", "HtmlProgressElement", "HtmlQuoteElement", "HtmlScriptElement", "HtmlSelectElement", "HtmlSlotElement", "HtmlSourceElement", "HtmlSpanElement", "HtmlStyleElement", "HtmlTableCaptionElement", "HtmlTableCellElement", "HtmlTableColElement", "HtmlTableElement", "HtmlTableRowElement", "HtmlTableSectionElement", "HtmlTemplateElement", "HtmlTextAreaElement", "HtmlTimeElement", "HtmlTitleElement", "HtmlTrackElement", "HtmlUListElement", "HtmlVideoElement", "InputEvent", "KeyboardEvent", "Location", "MessageEvent", "MouseEvent", "Node", "PageTransitionEvent", "PointerEvent", "PopStateEvent", "ProgressEvent", "PromiseRejectionEvent", "SecurityPolicyViolationEvent", "ShadowRoot", "StorageEvent", "SubmitEvent", "SvgElement", "Text", "TouchEvent", "TransitionEvent", "UiEvent", "WheelEvent", "Window", "console"]
+
+[lints.rust.unexpected_cfgs]
+level = "warn"
+check-cfg = ["cfg(loom)", "cfg(nightly)", "cfg(rustc_nightly)", "cfg(leptos_debuginfo)", "cfg(docsrs)", "cfg(erase_components)"]

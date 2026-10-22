@@ -1,0 +1,611 @@
+{
+  "format": 1,
+  "origin": {
+    "repository": "https://github.com/isarmg/xcss.git",
+    "revision": "d9f6f2a900d85eac0bb8c53575ccd4ca09890514",
+    "license": "Apache-2.0",
+    "license_file": "crates/blog-core/LICENSE",
+    "notice": "No upstream root NOTICE file exists at this revision.",
+    "authors": [
+      "sarmg <isarmg@163.com>"
+    ]
+  },
+  "scope": "Native modules referenced by blog and their transitive contracts, with test-only HTTP fixtures. Platform and envelope modules contain descriptors only.",
+  "excluded_modules": [
+    "admin_hyper",
+    "operations",
+    "secure_http",
+    "server_secrets",
+    "secret",
+    "Windows logging implementation"
+  ],
+  "files": [
+    {
+      "source_path": "Cargo.toml",
+      "source_sha256": "5e10ed2119381b2503076dd9afc86c9b75cdd56de54fbc5c3e7c3fdeb57b8296",
+      "local_path": "crates/blog-core/Cargo.toml",
+      "changes": [
+        "Define repository-owned blog-core; retain required registry dependencies and remove unused crypto/status/TLS dependencies."
+      ],
+      "local_sha256": "4f67413eda06275717c36b168b43d6fc21b66b20a1799acae230d10a78739d28",
+      "modified": true
+    },
+    {
+      "source_path": "LICENSE",
+      "source_sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "local_path": "crates/blog-core/LICENSE",
+      "changes": [],
+      "local_sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "modified": false
+    },
+    {
+      "source_path": "schemas/admin/persistent-v1.sql",
+      "source_sha256": "767889d1925178d8ac632ed54e2e4e69ec8253d2b4e798b62bcfca4d948d8ec6",
+      "local_path": "crates/blog-core/schemas/admin/persistent-v1.sql",
+      "changes": [],
+      "local_sha256": "767889d1925178d8ac632ed54e2e4e69ec8253d2b4e798b62bcfca4d948d8ec6",
+      "modified": false
+    },
+    {
+      "source_path": "schemas/platform/v1.sql",
+      "source_sha256": "f96ee5c99dc7dd89dc2c0bfb4dc332ce9ca28a314e4e6685aa1e96ee7cdae199",
+      "local_path": "crates/blog-core/schemas/platform/v1.sql",
+      "changes": [],
+      "local_sha256": "f96ee5c99dc7dd89dc2c0bfb4dc332ce9ca28a314e4e6685aa1e96ee7cdae199",
+      "modified": false
+    },
+    {
+      "source_path": "src/admin_auth/mod.rs",
+      "source_sha256": "bf2c2cf08949e956537568ba1ae2784cb0b3bf4750e1e5d45b9540328e387cbe",
+      "local_path": "crates/blog-core/src/admin_auth/mod.rs",
+      "changes": [],
+      "local_sha256": "bf2c2cf08949e956537568ba1ae2784cb0b3bf4750e1e5d45b9540328e387cbe",
+      "modified": false
+    },
+    {
+      "source_path": "src/admin_axum/body.rs",
+      "source_sha256": "efa86210507fc244a4b5f2c723ffab193ebc219ebb86b423bcf7327d8886c22a",
+      "local_path": "crates/blog-core/src/admin_axum/body.rs",
+      "changes": [],
+      "local_sha256": "efa86210507fc244a4b5f2c723ffab193ebc219ebb86b423bcf7327d8886c22a",
+      "modified": false
+    },
+    {
+      "source_path": "src/admin_axum/management.rs",
+      "source_sha256": "3e689dc51e9991c30524e71ba075104f9aaea6c8f0a74c8dfa55bcd705da165a",
+      "local_path": "crates/blog-core/src/admin_axum/management.rs",
+      "changes": [],
+      "local_sha256": "3e689dc51e9991c30524e71ba075104f9aaea6c8f0a74c8dfa55bcd705da165a",
+      "modified": false
+    },
+    {
+      "source_path": "src/admin_axum/mod.rs",
+      "source_sha256": "6603322160e7bf7676e17c74bde7758b16804478c563677471b2ad09c7dd4397",
+      "local_path": "crates/blog-core/src/admin_axum/mod.rs",
+      "changes": [
+        "Use blog_core API/type names, local source paths and blog Web inventory names."
+      ],
+      "local_sha256": "892402f8c7dea4e85deb08883a7fcca6db8dbc14c38fa4ff3c970886982676d8",
+      "modified": true
+    },
+    {
+      "source_path": "src/admin_core/login_attempts.rs",
+      "source_sha256": "00a15bb4ed45d00730127a6ee683805adfcd154cbfe2e98914aa8e5aaa51f095",
+      "local_path": "crates/blog-core/src/admin_core/login_attempts.rs",
+      "changes": [],
+      "local_sha256": "00a15bb4ed45d00730127a6ee683805adfcd154cbfe2e98914aa8e5aaa51f095",
+      "modified": false
+    },
+    {
+      "source_path": "src/admin_core/management.rs",
+      "source_sha256": "9622d8f4fc87f711b0c9bfa1fc597d0021fb6cc2a0a70e5df3d79adc9235bd32",
+      "local_path": "crates/blog-core/src/admin_core/management.rs",
+      "changes": [],
+      "local_sha256": "9622d8f4fc87f711b0c9bfa1fc597d0021fb6cc2a0a70e5df3d79adc9235bd32",
+      "modified": false
+    },
+    {
+      "source_path": "src/admin_core/mod.rs",
+      "source_sha256": "a4e67dd82fb82bb9edb0e80b347fb81d7090b5f2d2b6c2a6f2d54bf548572340",
+      "local_path": "crates/blog-core/src/admin_core/mod.rs",
+      "changes": [],
+      "local_sha256": "a4e67dd82fb82bb9edb0e80b347fb81d7090b5f2d2b6c2a6f2d54bf548572340",
+      "modified": false
+    },
+    {
+      "source_path": "src/admin_sqlite/installation_contract.rs",
+      "source_sha256": "653979a044de010a05bfeba51af09f53fb09a69dbc42cf42bc98f7a99d1bb9ba",
+      "local_path": "crates/blog-core/src/admin_sqlite/installation_contract.rs",
+      "changes": [],
+      "local_sha256": "653979a044de010a05bfeba51af09f53fb09a69dbc42cf42bc98f7a99d1bb9ba",
+      "modified": false
+    },
+    {
+      "source_path": "src/admin_sqlite/login_attempts.rs",
+      "source_sha256": "311f346899ceb0ed70bba6039e73ead411fff3354087edd97a3ba2b99c75509d",
+      "local_path": "crates/blog-core/src/admin_sqlite/login_attempts.rs",
+      "changes": [
+        "Format selected pinned source for this repository and rename private test environment variables to BLOG_* where present."
+      ],
+      "local_sha256": "c5de6396f6265817a7c205757d3f36e90908eb18337c326c9fb72933ddd52e73",
+      "modified": true
+    },
+    {
+      "source_path": "src/admin_sqlite/management.rs",
+      "source_sha256": "d27812684da70b26ae2af22dd53ef65f3412888a33458c2d90fb367ec7338767",
+      "local_path": "crates/blog-core/src/admin_sqlite/management.rs",
+      "changes": [],
+      "local_sha256": "d27812684da70b26ae2af22dd53ef65f3412888a33458c2d90fb367ec7338767",
+      "modified": false
+    },
+    {
+      "source_path": "src/admin_sqlite/mod.rs",
+      "source_sha256": "700c4e4c814cfa578f4207c86f32b0ae6aee4d77c4f06a667804fb4ef182840d",
+      "local_path": "crates/blog-core/src/admin_sqlite/mod.rs",
+      "changes": [],
+      "local_sha256": "700c4e4c814cfa578f4207c86f32b0ae6aee4d77c4f06a667804fb4ef182840d",
+      "modified": false
+    },
+    {
+      "source_path": "src/config/managed.rs",
+      "source_sha256": "ea2b033379c29db3bed28cf744a8043be3ba8157cb1ee299a35d96bb77f7bfe9",
+      "local_path": "crates/blog-core/src/config/managed.rs",
+      "changes": [],
+      "local_sha256": "ea2b033379c29db3bed28cf744a8043be3ba8157cb1ee299a35d96bb77f7bfe9",
+      "modified": false
+    },
+    {
+      "source_path": "src/config/mod.rs",
+      "source_sha256": "a0cea90ed68aa75e510e2166995cb1572a464efb073f71129dcfc890f118a35d",
+      "local_path": "crates/blog-core/src/config/mod.rs",
+      "changes": [],
+      "local_sha256": "a0cea90ed68aa75e510e2166995cb1572a464efb073f71129dcfc890f118a35d",
+      "modified": false
+    },
+    {
+      "source_path": "src/config/strict.rs",
+      "source_sha256": "fd9c2ca2a33184f862deeb8171071b434ded8b6228bea0ed5511119c0ae47168",
+      "local_path": "crates/blog-core/src/config/strict.rs",
+      "changes": [],
+      "local_sha256": "fd9c2ca2a33184f862deeb8171071b434ded8b6228bea0ed5511119c0ae47168",
+      "modified": false
+    },
+    {
+      "source_path": "src/config/tests.rs",
+      "source_sha256": "f5f7d0d17a86a09826f8d0c864aefb0a47ca456f41237443c0ff74ab3398e614",
+      "local_path": "crates/blog-core/src/config/tests.rs",
+      "changes": [
+        "Format selected pinned source for this repository and rename private test environment variables to BLOG_* where present."
+      ],
+      "local_sha256": "18ec8a3598dd0eb354e7311ce74859df5c6f22f913954912ca5bddcfabfd226c",
+      "modified": true
+    },
+    {
+      "source_path": "src/configuration_contract.rs",
+      "source_sha256": "15fbb00534cfe8e118263d76f489c241ac3cb2366205bb07f110280558365a50",
+      "local_path": "crates/blog-core/src/configuration_contract.rs",
+      "changes": [],
+      "local_sha256": "15fbb00534cfe8e118263d76f489c241ac3cb2366205bb07f110280558365a50",
+      "modified": false
+    },
+    {
+      "source_path": "src/configuration_contract/rules.rs",
+      "source_sha256": "5bc7babfe12f3ba1a800c35a708872d4a879e40b7628a454fc477199c7622416",
+      "local_path": "crates/blog-core/src/configuration_contract/rules.rs",
+      "changes": [],
+      "local_sha256": "5bc7babfe12f3ba1a800c35a708872d4a879e40b7628a454fc477199c7622416",
+      "modified": false
+    },
+    {
+      "source_path": "src/configuration_contract/rules/tests.rs",
+      "source_sha256": "a2300e2673d2771f9bcd84f8dfbd56e24dd9192ee061c0ab89374ec7c7b4d875",
+      "local_path": "crates/blog-core/src/configuration_contract/rules/tests.rs",
+      "changes": [],
+      "local_sha256": "a2300e2673d2771f9bcd84f8dfbd56e24dd9192ee061c0ab89374ec7c7b4d875",
+      "modified": false
+    },
+    {
+      "source_path": "src/contracts/administrators.rs",
+      "source_sha256": "c16c7507b93118d03aa77ebd507c301964c7899fcc61c12f7a6771b290bc670b",
+      "local_path": "crates/blog-core/src/contracts/administrators.rs",
+      "changes": [],
+      "local_sha256": "c16c7507b93118d03aa77ebd507c301964c7899fcc61c12f7a6771b290bc670b",
+      "modified": false
+    },
+    {
+      "source_path": "src/contracts/mod.rs",
+      "source_sha256": "afe816242d1a8c69dad1dc9606bfabcc76b73230a48977c6e87c075641b3c9a2",
+      "local_path": "crates/blog-core/src/contracts/mod.rs",
+      "changes": [
+        "Use blog_core API/type names, local source paths and blog Web inventory names."
+      ],
+      "local_sha256": "76762f4717ecbd19ba9398450a0af35a73f8040ae5c32b620d9ffa27eff738fb",
+      "modified": true
+    },
+    {
+      "source_path": "src/error/mod.rs",
+      "source_sha256": "0e01db81f3e284dc72a02511a00d57ac3aa157cbe154388db38e6085a504243c",
+      "local_path": "crates/blog-core/src/error/mod.rs",
+      "changes": [],
+      "local_sha256": "0e01db81f3e284dc72a02511a00d57ac3aa157cbe154388db38e6085a504243c",
+      "modified": false
+    },
+    {
+      "source_path": "src/fs_safety/linux.rs",
+      "source_sha256": "f88ca6c8b86a2f79a4c2b0218c9e8bad5a010ab0de77f32b5d07983b43e303c8",
+      "local_path": "crates/blog-core/src/fs_safety/linux.rs",
+      "changes": [],
+      "local_sha256": "f88ca6c8b86a2f79a4c2b0218c9e8bad5a010ab0de77f32b5d07983b43e303c8",
+      "modified": false
+    },
+    {
+      "source_path": "src/fs_safety/mod.rs",
+      "source_sha256": "c3bfde657fe1d9d108a2f604ea45e6260aedc355410fa5a90c76704ecacc1ad5",
+      "local_path": "crates/blog-core/src/fs_safety/mod.rs",
+      "changes": [],
+      "local_sha256": "c3bfde657fe1d9d108a2f604ea45e6260aedc355410fa5a90c76704ecacc1ad5",
+      "modified": false
+    },
+    {
+      "source_path": "src/fs_safety/unix.rs",
+      "source_sha256": "2c9215f73401deb19ada263d119f5198c40054afd3cb98a41b10b2b0da4ec764",
+      "local_path": "crates/blog-core/src/fs_safety/unix.rs",
+      "changes": [],
+      "local_sha256": "2c9215f73401deb19ada263d119f5198c40054afd3cb98a41b10b2b0da4ec764",
+      "modified": false
+    },
+    {
+      "source_path": "src/installation_material.rs",
+      "source_sha256": "fb181f891bff0f6a38bd921d171d50693bbd2edb2c2460a5d6056fbcd4b1796e",
+      "local_path": "crates/blog-core/src/installation_material.rs",
+      "changes": [
+        "Use blog_core API/type names, local source paths and blog Web inventory names."
+      ],
+      "local_sha256": "b175826c81ad79caa07289fe7dda4618caf6503cbb2aa9ff6f93f2526b62a76e",
+      "modified": true
+    },
+    {
+      "source_path": "src/installation_material/tests.rs",
+      "source_sha256": "0b5f382d5edaf2dc592557319970b1da4b0d8128037a48f4140dca5516119057",
+      "local_path": "crates/blog-core/src/installation_material/tests.rs",
+      "changes": [],
+      "local_sha256": "0b5f382d5edaf2dc592557319970b1da4b0d8128037a48f4140dca5516119057",
+      "modified": false
+    },
+    {
+      "source_path": "src/lib.rs",
+      "source_sha256": "f5f7073ffdde527afb21b6018584ac80b569a2f9d5953f58d4c7806679a84451",
+      "local_path": "crates/blog-core/src/lib.rs",
+      "changes": [
+        "Expose only selected modules; gate testkit to tests and retain installation descriptors without unrelated runtimes."
+      ],
+      "local_sha256": "923d6ec8bdab8a626472fd347fbf345ef687f15dcb441bbcc636ac7fe58bb16f",
+      "modified": true
+    },
+    {
+      "source_path": "src/log/mod.rs",
+      "source_sha256": "1642bbf49a1fcd5d381b000cfdf9a734d1c746b7cf476574146f650e8edfcc1e",
+      "local_path": "crates/blog-core/src/log/mod.rs",
+      "changes": [
+        "Use blog_core API/type names, local source paths and blog Web inventory names.",
+        "Omit Windows logging modules; this crate explicitly supports Linux x86_64 GNU only."
+      ],
+      "local_sha256": "ca5b284cfa6956e798ea85b793bd252144510a3812ecb608581dcf1dcedba60c",
+      "modified": true
+    },
+    {
+      "source_path": "src/log/rotating.rs",
+      "source_sha256": "59cac13abffa7d0aa9a1c1817a1ee180f05162d543a5e0b7b7876fcb8457dfb7",
+      "local_path": "crates/blog-core/src/log/rotating.rs",
+      "changes": [],
+      "local_sha256": "59cac13abffa7d0aa9a1c1817a1ee180f05162d543a5e0b7b7876fcb8457dfb7",
+      "modified": false
+    },
+    {
+      "source_path": "src/log/tracing_layer.rs",
+      "source_sha256": "d0f7073614ab235895d4b9b262bd0eb0309d1779f750ad5c9acf4004d6dcb2fa",
+      "local_path": "crates/blog-core/src/log/tracing_layer.rs",
+      "changes": [
+        "Use blog_core API/type names, local source paths and blog Web inventory names."
+      ],
+      "local_sha256": "fc3a5a7d38451f949159d123f027fcc994735d6c6662b840504d043e489d7373",
+      "modified": true
+    },
+    {
+      "source_path": "src/platform_db/mod.rs",
+      "source_sha256": "5e94383faf5c4482e0a4f2aa52b32b54db07ce98462d13e43f79101ea2dddf33",
+      "local_path": "crates/blog-core/src/platform_db/mod.rs",
+      "changes": [
+        "Retain metadata constants only; omit unused platform runtime lifecycle."
+      ],
+      "local_sha256": "aae78fe6c0614faaaa1e775cbabe2528fd5b2dfd2a33e5daee5bc2ba4c50cbf0",
+      "modified": true
+    },
+    {
+      "source_path": "src/schema_identity/fixtures/schema-fingerprint-v1.json",
+      "source_sha256": "640ef41a225c86e69e21751ec17cffe7884326665bf19403569d6b097ef52bdd",
+      "local_path": "crates/blog-core/src/schema_identity/fixtures/schema-fingerprint-v1.json",
+      "changes": [],
+      "local_sha256": "640ef41a225c86e69e21751ec17cffe7884326665bf19403569d6b097ef52bdd",
+      "modified": false
+    },
+    {
+      "source_path": "src/schema_identity/mod.rs",
+      "source_sha256": "99a7beb0ee8bdb9e74d4b201d6d5d550aa0dbbab39da0d9e64926115c61f2216",
+      "local_path": "crates/blog-core/src/schema_identity/mod.rs",
+      "changes": [],
+      "local_sha256": "99a7beb0ee8bdb9e74d4b201d6d5d550aa0dbbab39da0d9e64926115c61f2216",
+      "modified": false
+    },
+    {
+      "source_path": "src/secret_envelope/fixtures/current-envelope-v1.json",
+      "source_sha256": "03a37059fa6ef97093d64a7ebd2874f772d1536519e12ae68d54c74d861a919a",
+      "local_path": "crates/blog-core/src/secret_envelope/fixtures/current-envelope-v1.json",
+      "changes": [],
+      "local_sha256": "03a37059fa6ef97093d64a7ebd2874f772d1536519e12ae68d54c74d861a919a",
+      "modified": false
+    },
+    {
+      "source_path": "src/secret_envelope/mod.rs",
+      "source_sha256": "37d7ff0e8f44b6a35cacd5561bc42b5938e11078580b9ff15c2f78c6415f4656",
+      "local_path": "crates/blog-core/src/secret_envelope/mod.rs",
+      "changes": [
+        "Retain envelope constants and pure descriptor only; omit unused encryption and key handling."
+      ],
+      "local_sha256": "cf754fa0d1fbc7eee409eaa5dec3786ca228b017a74f28550c17880e08798ab1",
+      "modified": true
+    },
+    {
+      "source_path": "src/server_cli/http.rs",
+      "source_sha256": "4e5507e5b5cbb40d1f2b0eefedc62e5bb4c21057a343d94ab742f2aad776aaa8",
+      "local_path": "crates/blog-core/src/server_cli/http.rs",
+      "changes": [],
+      "local_sha256": "4e5507e5b5cbb40d1f2b0eefedc62e5bb4c21057a343d94ab742f2aad776aaa8",
+      "modified": false
+    },
+    {
+      "source_path": "src/server_cli/mod.rs",
+      "source_sha256": "27df14bafa8cc8e3dadefb75fc21dfece81b3e0fc06863bd02139fc6807f819e",
+      "local_path": "crates/blog-core/src/server_cli/mod.rs",
+      "changes": [
+        "Remove unused status HTTP client and its tests; readiness routes and server error mapping remain."
+      ],
+      "local_sha256": "3d8783648f8893ce656fa5bca5e430aca84df1af4f08a5a2523e9d8eae800f1f",
+      "modified": true
+    },
+    {
+      "source_path": "src/server_layout.rs",
+      "source_sha256": "994dd0d1b8cec6e4f0472cf42217bf566d17066c631f70c3b2880a796f02a509",
+      "local_path": "crates/blog-core/src/server_layout.rs",
+      "changes": [],
+      "local_sha256": "994dd0d1b8cec6e4f0472cf42217bf566d17066c631f70c3b2880a796f02a509",
+      "modified": false
+    },
+    {
+      "source_path": "src/server_runtime/http1.rs",
+      "source_sha256": "070b4095972266401a4d1733599b67f9a3743a2f088ac2f4730e93330aa356a5",
+      "local_path": "crates/blog-core/src/server_runtime/http1.rs",
+      "changes": [],
+      "local_sha256": "070b4095972266401a4d1733599b67f9a3743a2f088ac2f4730e93330aa356a5",
+      "modified": false
+    },
+    {
+      "source_path": "src/server_runtime/listeners.rs",
+      "source_sha256": "f57da036d100fde7de91a762a105469ac8225ab69eccf6b6d325fa9f45fb98c6",
+      "local_path": "crates/blog-core/src/server_runtime/listeners.rs",
+      "changes": [],
+      "local_sha256": "f57da036d100fde7de91a762a105469ac8225ab69eccf6b6d325fa9f45fb98c6",
+      "modified": false
+    },
+    {
+      "source_path": "src/server_runtime/mod.rs",
+      "source_sha256": "77b7ff8d0a304c8b8036c0d31c2556a70d8dc269ee55aae28a80ac87bf123751",
+      "local_path": "crates/blog-core/src/server_runtime/mod.rs",
+      "changes": [
+        "Use blog_core API/type names, local source paths and blog Web inventory names.",
+        "Replace external common Git revision identity with actual local core source SHA-256 and validate its 64 lowercase hex bytes."
+      ],
+      "local_sha256": "fe391413d4f0f06b21300b45fd44f111946a182f0e20d63b6de7b3f789977bd1",
+      "modified": true
+    },
+    {
+      "source_path": "src/server_runtime/shutdown.rs",
+      "source_sha256": "a5007abd53d84375185c81c22e84129e346b9eb64a34586548cd31b48e0a9b72",
+      "local_path": "crates/blog-core/src/server_runtime/shutdown.rs",
+      "changes": [],
+      "local_sha256": "a5007abd53d84375185c81c22e84129e346b9eb64a34586548cd31b48e0a9b72",
+      "modified": false
+    },
+    {
+      "source_path": "src/server_runtime/tasks.rs",
+      "source_sha256": "9c892dd6fbd658d3ab68b54e0a6b62346271679d022f22e4e148dccef2014c7c",
+      "local_path": "crates/blog-core/src/server_runtime/tasks.rs",
+      "changes": [],
+      "local_sha256": "9c892dd6fbd658d3ab68b54e0a6b62346271679d022f22e4e148dccef2014c7c",
+      "modified": false
+    },
+    {
+      "source_path": "src/server_runtime/transport.rs",
+      "source_sha256": "c53b339f714f2bd1251aa2db67f9aab10690ffb07f95c1131523312ff6f137c9",
+      "local_path": "crates/blog-core/src/server_runtime/transport.rs",
+      "changes": [
+        "Use local core source SHA-256 in test runtime descriptors."
+      ],
+      "local_sha256": "73eae5864157e2d64887b2b293ad94470d86872404c88b8d354ec91bafb14efd",
+      "modified": true
+    },
+    {
+      "source_path": "src/server_target/mod.rs",
+      "source_sha256": "07e908358f141c42e45988e6d4c3dc761111c2bd887bfd3047b226f55f3ad095",
+      "local_path": "crates/blog-core/src/server_target/mod.rs",
+      "changes": [
+        "Use blog_core API/type names, local source paths and blog Web inventory names."
+      ],
+      "local_sha256": "9260f2b3a2ab613ed1dcff793f99001227001637c8012e4b2d444d12048da4a6",
+      "modified": true
+    },
+    {
+      "source_path": "src/sqlite/blocking.rs",
+      "source_sha256": "b3d15336a1cdb9c7f1c9ad06a96d72640ad0392ca9cee720069992f4bc14efd0",
+      "local_path": "crates/blog-core/src/sqlite/blocking.rs",
+      "changes": [],
+      "local_sha256": "b3d15336a1cdb9c7f1c9ad06a96d72640ad0392ca9cee720069992f4bc14efd0",
+      "modified": false
+    },
+    {
+      "source_path": "src/sqlite/mod.rs",
+      "source_sha256": "bbdc5e12ea0efbd58a0082efb310b1794dcbc3fa9bc1b906572eaf5a7f555330",
+      "local_path": "crates/blog-core/src/sqlite/mod.rs",
+      "changes": [
+        "Use blog_core API/type names, local source paths and blog Web inventory names."
+      ],
+      "local_sha256": "42456b27934cc0070fa23c03bc0c7909133c7216dca9dd4dbbb538267d7cfa21",
+      "modified": true
+    },
+    {
+      "source_path": "src/sqlite/native_limits.rs",
+      "source_sha256": "ab906f45f7a2069f8c2110b9efa0d8ec8ec6cc902eea677305e31589a79d9436",
+      "local_path": "crates/blog-core/src/sqlite/native_limits.rs",
+      "changes": [],
+      "local_sha256": "ab906f45f7a2069f8c2110b9efa0d8ec8ec6cc902eea677305e31589a79d9436",
+      "modified": false
+    },
+    {
+      "source_path": "src/sqlite/native_security.rs",
+      "source_sha256": "03fdbd579a8476b8030a2aaf960a8c2f08a02fc8af83bf027d33c62650437b90",
+      "local_path": "crates/blog-core/src/sqlite/native_security.rs",
+      "changes": [],
+      "local_sha256": "03fdbd579a8476b8030a2aaf960a8c2f08a02fc8af83bf027d33c62650437b90",
+      "modified": false
+    },
+    {
+      "source_path": "src/sqlite/tests.rs",
+      "source_sha256": "d30dee0530ea9e6d53ae4ce6310a559de84ae3f6c903464d0c94996ff225d334",
+      "local_path": "crates/blog-core/src/sqlite/tests.rs",
+      "changes": [],
+      "local_sha256": "d30dee0530ea9e6d53ae4ce6310a559de84ae3f6c903464d0c94996ff225d334",
+      "modified": false
+    },
+    {
+      "source_path": "src/sqlite/trusted_ddl.rs",
+      "source_sha256": "eba9f8c19d4ffd297253203699c064b7389894d11f7222f62f8a40a2c549d97c",
+      "local_path": "crates/blog-core/src/sqlite/trusted_ddl.rs",
+      "changes": [],
+      "local_sha256": "eba9f8c19d4ffd297253203699c064b7389894d11f7222f62f8a40a2c549d97c",
+      "modified": false
+    },
+    {
+      "source_path": "src/sqlite/validation_snapshot.rs",
+      "source_sha256": "5d73a9fa13bd1356e2e2a4bb5b42a535e9a6c780afb32df7a0790ac9be464aad",
+      "local_path": "crates/blog-core/src/sqlite/validation_snapshot.rs",
+      "changes": [],
+      "local_sha256": "5d73a9fa13bd1356e2e2a4bb5b42a535e9a6c780afb32df7a0790ac9be464aad",
+      "modified": false
+    },
+    {
+      "source_path": "src/state_file/mod.rs",
+      "source_sha256": "9956afcbd55e04b8dd4f23c0dc0461b1e8e082b7867b63ac376dc24fae0d493f",
+      "local_path": "crates/blog-core/src/state_file/mod.rs",
+      "changes": [
+        "Format selected pinned source for this repository and rename private test environment variables to BLOG_* where present."
+      ],
+      "local_sha256": "0987ca0ba7f53ddfdd521479fdc5acea53230b3740483cae8b8fb295dbd37bee",
+      "modified": true
+    },
+    {
+      "source_path": "src/testkit/management.rs",
+      "source_sha256": "8dbd6a02eba5af5863fe6c182b2ee764d3d9c383b65a297f507123628fabe832",
+      "local_path": "crates/blog-core/src/testkit/management.rs",
+      "changes": [],
+      "local_sha256": "8dbd6a02eba5af5863fe6c182b2ee764d3d9c383b65a297f507123628fabe832",
+      "modified": false
+    },
+    {
+      "source_path": "src/testkit/mod.rs",
+      "source_sha256": "7da623f695543b2291b27d6459623032af9f45fd2b136f637e88c3bc6cea36a8",
+      "local_path": "crates/blog-core/src/testkit/mod.rs",
+      "changes": [],
+      "local_sha256": "7da623f695543b2291b27d6459623032af9f45fd2b136f637e88c3bc6cea36a8",
+      "modified": false
+    },
+    {
+      "source_path": "src/web_assets/build.rs",
+      "source_sha256": "b993f45281db58b5e18ce413c3e8e1befaaabe8efd887e0548f7af7a04cae51d",
+      "local_path": "crates/blog-core/src/web_assets/build.rs",
+      "changes": [
+        "Use blog_core API/type names, local source paths and blog Web inventory names.",
+        "Use BLOG_* build metadata inputs, blog-build-v1 identity and actual candidate dirty/tree digest/build mode fields; emitted code uses blog_core."
+      ],
+      "local_sha256": "d65900f4d98d9648161675de66e5d0c18307dc5e07c7e046da8ee2b57b7e54a2",
+      "modified": true
+    },
+    {
+      "source_path": "src/web_assets/mod.rs",
+      "source_sha256": "fc8bcdbf49e9457d55380cb6b6e8a273200d5469f5de399e125d66b0ead2fcf7",
+      "local_path": "crates/blog-core/src/web_assets/mod.rs",
+      "changes": [
+        "Use blog-web-assets-v1 asset inventory format."
+      ],
+      "local_sha256": "aea3d5ffcc7dad88838d3cdeb7511be0b8cdbf7539303c4875018096a5dc6091",
+      "modified": true
+    },
+    {
+      "source_path": "src/web_assets/tests.rs",
+      "source_sha256": "42a8216260a1e81166ba350a21c7318c43a4333d0994bd6f2a1ce178b48bf083",
+      "local_path": "crates/blog-core/src/web_assets/tests.rs",
+      "changes": [],
+      "local_sha256": "42a8216260a1e81166ba350a21c7318c43a4333d0994bd6f2a1ce178b48bf083",
+      "modified": false
+    },
+    {
+      "source_path": "src/web_assets/wasm.rs",
+      "source_sha256": "c968be3b8f79ad68ea1e5d3aaa76ba98d8505416870402dadd14e19274067a8c",
+      "local_path": "crates/blog-core/src/web_assets/wasm.rs",
+      "changes": [],
+      "local_sha256": "c968be3b8f79ad68ea1e5d3aaa76ba98d8505416870402dadd14e19274067a8c",
+      "modified": false
+    },
+    {
+      "source_path": "web/contracts/fixtures/administrator-auth.fixtures.json",
+      "source_sha256": "3620693c7cf179e06ffcc76e2b63b07e6003b53a5ee976daca18fbfcf38d24e6",
+      "local_path": "crates/blog-core/web/contracts/fixtures/administrator-auth.fixtures.json",
+      "changes": [],
+      "local_sha256": "3620693c7cf179e06ffcc76e2b63b07e6003b53a5ee976daca18fbfcf38d24e6",
+      "modified": false
+    },
+    {
+      "source_path": "web/contracts/fixtures/backup-manifest.fixtures.json",
+      "source_sha256": "9a06175c3297bebe366faf39778e27c2d8ae1107cdf6b6a35468873352535eea",
+      "local_path": "crates/blog-core/web/contracts/fixtures/backup-manifest.fixtures.json",
+      "changes": [],
+      "local_sha256": "9a06175c3297bebe366faf39778e27c2d8ae1107cdf6b6a35468873352535eea",
+      "modified": false
+    },
+    {
+      "source_path": "web/contracts/fixtures/error-envelope.fixtures.json",
+      "source_sha256": "a41a84b073e638865eaf5f67d94b0519f86b9be55af27d728340cbe25a587353",
+      "local_path": "crates/blog-core/web/contracts/fixtures/error-envelope.fixtures.json",
+      "changes": [],
+      "local_sha256": "a41a84b073e638865eaf5f67d94b0519f86b9be55af27d728340cbe25a587353",
+      "modified": false
+    },
+    {
+      "source_path": "web/contracts/fixtures/release.fixtures.json",
+      "source_sha256": "eeb2b31d814bc8f282685d82ac70940de69283398503f121d7b91dedb8265bdc",
+      "local_path": "crates/blog-core/web/contracts/fixtures/release.fixtures.json",
+      "changes": [],
+      "local_sha256": "eeb2b31d814bc8f282685d82ac70940de69283398503f121d7b91dedb8265bdc",
+      "modified": false
+    },
+    {
+      "source_path": "web/contracts/fixtures/state-contract.fixtures.json",
+      "source_sha256": "0ae149ab0daeb000bc33a4c943c7b4c6179638cf01e7539435836fc67716a2d2",
+      "local_path": "crates/blog-core/web/contracts/fixtures/state-contract.fixtures.json",
+      "changes": [],
+      "local_sha256": "0ae149ab0daeb000bc33a4c943c7b4c6179638cf01e7539435836fc67716a2d2",
+      "modified": false
+    }
+  ],
+  "modification_patch": "compliance/native-sources/modifications.patch",
+  "local_source_identity": "Build.rs hashes sorted relative path, NUL, current file bytes, NUL for every file in crates/blog-core; runtime reports that SHA-256 as core_source_sha256."
+}

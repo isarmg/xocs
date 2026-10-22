@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { chromium, firefox, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { preview } from '../../tools/web-build/test-preview.mjs';
+import { preview } from '../../tools/assets/test-preview.mjs';
 import { mockApi, pageOf } from './browser-fixtures.mjs';
 
 async function checkHeaderScrolling(page, width, english) {
@@ -115,7 +115,7 @@ try {
           await expect(comments.locator('.public-comment').first()).toContainText('Keep this draft on failure');
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
           const header = await page.locator('.public-header').evaluate(element => {
-            const surface = element.querySelector(':scope > [data-xcss-server-corner-decoration]') || element;
+            const surface = element.querySelector(':scope > [data-blog-server-corner-decoration]') || element;
             const style = getComputedStyle(surface);
             return { background: style.backgroundColor, blur: style.backdropFilter };
           });

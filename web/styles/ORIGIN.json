@@ -1,0 +1,22 @@
+{
+  "format": 1,
+  "ownership": "repository-maintained",
+  "package": "blog-styles",
+  "upstream": {
+    "package": "@xcss/web",
+    "version": "2.0.0",
+    "origin": "https://github.com/isarmg/xcss",
+    "base_revision": "a055fdf5ce4bdf6cb943284813e42ba864c74b9d",
+    "source_directory": "web",
+    "receipt": "compliance/web-origins/xcss-styles.SOURCE.json",
+    "receipt_sha256": "3bccf5dad68ce08dff8f3b0b318b3d81a3aee294eb9575c62de42e06692ccfb6",
+    "archive": "compliance/web-origins/xcss-styles.snapshot.tar.gz",
+    "archive_sha256": "d19cf7838957c236bb0f5ed4890226651f0879be2e9be36ee3b66141928b33b9"
+  },
+  "changes": [
+    {
+      "date": "2026-10-22",
+      "description": "Move the required CSS and licensed fonts into web/styles; maintain blog DOM/CSS/font identifiers locally."
+    }
+  ]
+}

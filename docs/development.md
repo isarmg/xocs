@@ -1,56 +1,58 @@
-# xocs 开发与验证
+# 从源码开发运行
 
-当前生产 Web 构建使用 `cargo +1.99.0 run --quiet --locked --manifest-path tools/web-build/Cargo.toml -- build --product-root .`（产品根目录），无需 npm 安装。开发监听与 Node 浏览器测试见 [Rust 原生 Web 构建](rust-native-web.md)；以下命令均使用当前 Rust 构建链。
+准备 Rust 1.99.0（含 rustfmt、Clippy）、`wasm32-unknown-unknown` 目标和 Linux 原生编译环境。根 Cargo.toml 是虚拟 workspace，只有根 Cargo.lock；服务端包位于 `src/server`，浏览器应用在 `src/browser`，本地 UI 在 `src/interface`，构建器 `blog-assets` 在 `tools/assets`，浏览器 WASM 绑定生成已整合到该工具。所有 Rust 依赖通过本仓库路径解析，默认离线，不需要相邻项目、预装 wasm-bindgen CLI 或注册表源码缓存。工具链、目标标准库和原生依赖不属于这份 Rust 源码闭包。
 
-## 构建
-
-后台的[账号设置](account-settings.md)作为普通后台菜单页面，使用随仓库记录来源的 xcss xcss-web 账号组件提供用户名、当前密码、新密码、确认新密码和保存按钮。
-
-生产构建需要 Rust 1.99.0、wasm32-unknown-unknown 和 wasm-bindgen-cli 0.2.129；浏览器验收另需精确的 Node.js 26.7.0。从项目根目录运行：
-
-```bash
-rustup toolchain install 1.99.0 --profile minimal --component rustfmt,clippy --target wasm32-unknown-unknown
-cargo +1.99.0 install wasm-bindgen-cli --version 0.2.129 --locked
-export XOCS_SOURCE_REVISION="$(git rev-parse HEAD)"
-cargo +1.99.0 run --quiet --locked --manifest-path tools/web-build/Cargo.toml -- server \
-  --product-root . --config xcss-web-build.json --mode release \
-  --source-revision "$XOCS_SOURCE_REVISION"
+```sh
+python3 tools/rust-sources/manage.py verify --metadata
+python3 tools/check-independence.py
+cargo +1.99.0 run --locked --offline -p blog-assets -- build --product-root . --offline
+cargo +1.99.0 build --locked --offline --bin blog
+cargo +1.99.0 build --locked --offline -p blog-setup
 ```
 
-Rust 公共依赖固定官方 xcss 仓库的版本 `=1.0.0` 与完整 revision `f6ac3fb1b2d0754d12df0e2d3e0cd29ce10344b8`；CSS、字体与必要 DOM 适配从 `web/vendor/xcss` 读取，`SOURCE.json` 保留官方发行来源与摘要，不安装旧 npm 工具链，不读取相邻工作区。Xocs 软件版本为 `1.0.1`，数据库格式身份为 `xocs-db-v1`，软件版本与数据格式版本分别管理。
+首次运行使用新的独立 ROOT。以下回环 HTTP 配置仅用于本机开发，密码由 `blog-setup` 从标准输入读取：
 
-服务端 Cargo workspace 与 lock 位于根目录；xcss-web 浏览器工作区及独立锁位于 `web/xcss-web`，公共 Rust UI 快照位于其 `vendor/xcss-web` 并带逐文件来源校验。共同 builder 验证 Linux AMD64 GNU target、真实源码 revision 和实际二进制资源清单，报告真实输出路径；默认正式输出为 `target/x86_64-unknown-linux-gnu/release/xocs`。独立缓存通过 `CARGO_TARGET_DIR` 选择，打包脚本从精确源码提交生成私有快照，并使用固定 xssi 修订编译同源 setup。正式包要求干净源码、annotated `v1.0.1` 精确指向 HEAD 和匹配该 HEAD 的二进制身份，不允许 unbound 程序打包。
+```sh
+BLOG_ROOT="$(pwd)/.local-run/site"
+install -d -m 0700 "$BLOG_ROOT/config"
+printf '%s\n' '{"bind":"127.0.0.1:18091","development":true}' > "$BLOG_ROOT/config/config.json"
+chmod 0600 "$BLOG_ROOT/config/config.json"
+read -r -s -p "管理员密码: " blog_password
+printf '\n'
+printf '%s\n' "$blog_password" | cargo +1.99.0 run --locked --offline -p blog-setup -- --root "$BLOG_ROOT" initialize --username admin
+unset blog_password
+./target/debug/blog --root "$BLOG_ROOT"
+```
 
-## 验证
+访问 `http://127.0.0.1:18091/` 和 `/admin`。对已有 ROOT 使用 `blog-setup --root ROOT check`，不要重复初始化。`src/server/examples/smoke-fixture.rs` 只提供测试账号，真实站点使用自选密码的 setup 工具。
 
-```bash
-cargo fmt --all -- --check
-cargo clippy --locked --all-targets -- -D warnings
-cargo test --locked
-cargo build --locked
-cargo +1.99.0 run --locked --manifest-path tools/web-build/Cargo.toml -- check --product-root .
-cargo +1.99.0 run --locked --manifest-path tools/web-build/Cargo.toml -- test --product-root .
-cargo +1.99.0 test --locked --manifest-path tools/web-build/Cargo.toml
-python3 scripts/check-comment-retries.py "${CARGO_TARGET_DIR:-target}/debug/xocs"
-cd web
-npm ci
-npm run check:xcss
-npm run build
-npm run test:unit
-node tests/language.mjs
-node tests/admin-layout.mjs
-node tests/xcss-web-runtime.mjs
-node tests/contract-fixes.mjs
-node tests/public-layout.mjs
-node tests/anonymous-comments.mjs
-cd ..
+验证按支持的入口分开运行：默认成员是服务端、`blog-application` 与 setup；Web 应用使用 WASM 目标，构建器和 domain 合同使用原生目标。不能用跨目标 `--workspace --all-features` 联合替代这些实际配置。
+
+```sh
+cargo +1.99.0 fmt -p blog -p blog-application -p blog-setup -p blog-assets -p blog-browser -p blog-browser-domain-tests -p blog-interface -p blog-dom -p blog-component-macros -- --check
+cargo +1.99.0 clippy --locked --offline --all-targets -- -D warnings
+cargo +1.99.0 clippy --locked --offline -p blog-assets -p blog-browser-domain-tests --all-targets -- -D warnings
+cargo +1.99.0 clippy --locked --offline -p blog-browser --target wasm32-unknown-unknown -- -D warnings
+cargo +1.99.0 test --locked --offline
+cargo +1.99.0 test --locked --offline -p blog-assets -p blog-browser-domain-tests
+cargo +1.99.0 run --locked --offline -p blog-assets -- test --product-root . --offline
 bash scripts/smoke.sh
 ```
 
-浏览器检查需要安装 Chromium 和 Firefox（`cd web && npx playwright install chromium firefox`）。语言与布局检查使用临时 Web 预览和模拟 API；后台检查覆盖导航、浏览器历史、手机布局、深色模式对比度、加载重试和设置保存。前台检查覆盖手机至 2560 像素宽屏、家页面的相册筛选与分页、计时、深色模式、空状态和匿名评论。`scripts/smoke.sh` 在本机回环地址启动临时服务，创建临时数据库和媒体目录，执行 API 与浏览器检查，结束时清理。
+浏览器测试另需 Node 26.7.0、npm 锁定依赖和浏览器执行环境：
 
-首次启动按[安装指南](getting-started.md)准备隔离的测试数据。配置、页面操作和评论重试分别见[配置](configuration.md)、[使用](usage.md)和[实现参考](current-guide.md)。
+```sh
+cd web
+npm ci
+npx playwright install --with-deps chromium firefox
+npm run test:unit
+npm run test:browser:blog-interface
+```
 
-集成测试使用仅供测试的当前 DDL fixture，并运行仅接受 --root 的实际程序，验证未初始化拒绝、重复实例拒绝、管理员结构损坏拒绝与真实就绪；xssi 独立验证安装、密码重置和 xssc 的升级恢复事务。系统级服务验收仍需部署主机执行。
+`web/package.json` 只有两个直接 devDependencies，`web/package-lock.json` 包含五个非根锁包，均是测试工具。首次安装这些 npm 包、浏览器和系统依赖可能联网；不能将 Rust 离线构建的结果扩大到这部分。浏览器验证入口及真实后端测试边界见[浏览器验证](browser-testing.md)。
 
-Web 业务代码和前后端边界说明见[xcss-web 迁移记录](xcss-web-migration.md)。浏览器验收必须观察实际 WASM 请求以及 Rust 启动时设置的 `data-xcss-runtime=xcss-web`；已删除旧实现与 HookHost；回归用例直接验证当前 WASM 行为。
+`BLOG_WEB_DIST` 指向实际生成资源，`CARGO_TARGET_DIR` 与 `BLOG_WASM_TARGET_DIR` 分别选择原生和 WASM 构建输出；它们是可重建产物，不是源码来源。前端使用 `web-release` profile（继承 release，体积优化、LTO、panic abort）。候选模式明确记录未提交源码；正式发布仍要求干净源码和匹配的正式 tag，不能用修改版本字段代替。
+
+当前用途目录、内部版本、宏与界面裁剪见[用途架构与定制](maintained-design.md)。所有 Cargo 操作仍从根 workspace 进行；不为工具或测试目录重建独立锁文件。
+
+修改本地 Rust 源码后，先审查变动，再显式执行 `python3 tools/rust-sources/manage.py refresh` 接纳新的维护摘要；随后重新执行 `verify --metadata` 和对应验证。该操作不更新或伪造原始上游归档。具体规则见[源码管理说明](rust-sources.md)。

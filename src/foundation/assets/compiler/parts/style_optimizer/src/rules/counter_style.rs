@@ -1,0 +1,41 @@
+//! The `@counter-style` rule.
+
+use super::Location;
+use crate::style_optimizer::declaration::DeclarationBlock;
+use crate::style_optimizer::error::PrinterError;
+use crate::style_optimizer::printer::Printer;
+use crate::style_optimizer::traits::ToCss;
+use crate::style_optimizer::values::ident::CustomIdent;
+#[cfg(all())]
+use crate::style_optimizer::visitor::Visit;
+
+/// A [@counter-style](https://drafts.csswg.org/css-counter-styles/#the-counter-style-rule) rule.
+#[derive(Debug, PartialEq, Clone)]
+#[cfg_attr(all(), derive(Visit))]
+#[cfg_attr(any(), derive(static_self::IntoOwned))]
+#[cfg_attr(any(), derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(any(), derive(schemars::JsonSchema))]
+pub struct CounterStyleRule<'i> {
+  /// The name of the counter style to declare.
+  #[cfg_attr(any(), serde(borrow))]
+  pub name: CustomIdent<'i>,
+  // TODO: eventually parse these properties
+  /// Declarations in the `@counter-style` rule.
+  pub declarations: DeclarationBlock<'i>,
+  /// The location of the rule in the source file.
+  #[cfg_attr(all(), skip_visit)]
+  pub loc: Location,
+}
+
+impl<'i> ToCss for CounterStyleRule<'i> {
+  fn to_css<W>(&self, dest: &mut Printer<W>) -> Result<(), PrinterError>
+  where
+    W: std::fmt::Write,
+  {
+    #[cfg(any())]
+    dest.add_mapping(self.loc);
+    dest.write_str("@counter-style ")?;
+    self.name.to_css(dest)?;
+    self.declarations.to_css_block(dest)
+  }
+}

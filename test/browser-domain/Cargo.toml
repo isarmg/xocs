@@ -1,0 +1,24 @@
+[package]
+name = "blog-browser-domain-tests"
+edition = "2024"
+publish = false
+description = "浏览器数据契约与Markdown逻辑的宿主测试"
+
+[lib]
+path = "lib.rs"
+name = "blog_browser_domain_tests"
+
+[dependencies]
+serde = {  features = ["derive"], path = "../../src/foundation/format/data-model",package = "blog-format-data-model"}
+serde_json = { path = "../../src/foundation/format/json",package = "blog-format-json"}
+pulldown-cmark = {  default-features = false, features = ["html"], path = "../../src/foundation/assets/markdown-parser",package = "blog-assets-markdown-parser"}
+
+[dependencies.url-encoding]
+path = "../../src/foundation/network/web-address"
+package = "blog-network-web-address"
+default-features = true
+features = [
+    "parser",
+    "std",
+]
+

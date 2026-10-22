@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import { chromium, firefox, expect } from '@playwright/test';
-import { preview } from '../../tools/web-build/test-preview.mjs';
+import { preview } from '../../tools/assets/test-preview.mjs';
 
 import { authored, mockApi, schemaPrefixes, summary, waitForApplication } from './browser-fixtures.mjs';
 
 const routes = [
   ['/', 'Believe in the power of stories'], ['/search', 'Search articles'], ['/sort', 'Article categories'],
-  ['/jotting', 'xocs'], ['/menory', 'xocs'], ['/favorite', 'Toolbox'],
+  ['/jotting', 'blog'], ['/menory', 'blog'], ['/favorite', 'Toolbox'],
   ['/favorite?tab=friends', 'Toolbox'], ['/favorite?tab=music', 'Toolbox'], ['/travel', 'Photo album'], ['/love', 'Our journey together'],
   ['/message', 'Message wall'], ['/letter', 'Letter'],
   ['/article/1', summary.article_title],
@@ -53,15 +53,15 @@ try {
         // Wait for the actual successful list result, not just its heading.
         const adminPage = url.pathname === '/admin' ? url.hash.slice(1) : '';
         if (adminEmptyStates[adminPage]) {
-          await expect(page.locator('.xcss-admin-shell .xcss-empty')).toHaveText(adminEmptyStates[adminPage]);
-          await expect(page.locator('.xcss-admin-shell .xcss-loading')).toHaveCount(0);
+          await expect(page.locator('.blog-admin-shell .blog-empty')).toHaveText(adminEmptyStates[adminPage]);
+          await expect(page.locator('.blog-admin-shell .blog-loading')).toHaveCount(0);
         } else if (adminPage === 'labels') {
           await expect(page.getByRole('combobox', { name: 'Category', exact: true })).toBeEnabled();
           const category = page.getByRole('combobox', { name: 'Category', exact: true });
           await category.click();
           await expect(page.getByRole('option', { name: '中文分类', exact: true })).toBeVisible();
           await category.press('Escape');
-          await expect(page.locator('.xcss-admin-shell .xcss-loading')).toHaveCount(0);
+          await expect(page.locator('.blog-admin-shell .blog-loading')).toHaveCount(0);
         }
         assert.equal(await page.getByRole('alert').count(), 0, `${path}: ${await page.getByRole('alert').allTextContents()}`);
         await assertEnglish(page);

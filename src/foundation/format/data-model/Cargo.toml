@@ -1,0 +1,39 @@
+# Internal source component. Original manifest and origin: compliance/provenance.
+
+[package]
+edition = "2021"
+rust-version = "1.99"
+name = "blog-format-data-model"
+build = false
+autolib = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+description = "data model"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[features]
+alloc = []
+default = ["std"]
+derive = ["dep:serde_derive"]
+error-path = ["alloc", "dep:itoa"]
+rc = []
+std = ["alloc"]
+result = []
+unstable = []
+
+[lib]
+name = "blog_format_data_model"
+path = "src/lib.rs"
+
+[dependencies.serde_derive]
+optional = true
+path = "../data-model-derive"
+package = "blog-format-data-model-derive"
+
+[dependencies.itoa]
+optional = true
+path = "../../encoding/integer-format"
+package = "blog-encoding-integer-format"

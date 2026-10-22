@@ -24,28 +24,32 @@ test('server and browser groups are independent and preserve every gate', () => 
   assert.match(browser, /fail-fast: false/);
   assert.match(browser, /group: \[admin, public\]/);
   for (const command of [
-    'cargo fmt --all -- --check', 'cargo clippy --locked --all-targets -- -D warnings',
-    'cargo test --locked', 'cargo build --locked', 'bash scripts/smoke.sh',
-    'verify-manifest --product-root', 'verify-source --product-root',
-    'fmt --manifest-path web/xcss-web/Cargo.toml -- --check',
-    'clippy --manifest-path web/xcss-web/Cargo.toml --target wasm32-unknown-unknown --locked -- -D warnings',
-    'cargo +1.99.0 run --quiet --locked --manifest-path tools/web-build/Cargo.toml -- test --product-root .',
-    'cargo +1.99.0 test --locked --manifest-path web/xcss-web/domain-tests/Cargo.toml',
-    'cargo +1.99.0 test --locked --manifest-path tools/web-build/Cargo.toml',
+    'cargo fmt -p blog -p blog-application -p blog-setup -p blog-assets -p blog-browser -p blog-browser-domain-tests -p blog-interface -p blog-dom -p blog-component-macros -- --check',
+    'cargo clippy --locked --offline --all-targets -- -D warnings',
+    'cargo clippy --locked --offline -p blog-assets -p blog-browser-domain-tests --all-targets -- -D warnings',
+    'cargo clippy --locked --offline -p blog-browser --target wasm32-unknown-unknown -- -D warnings',
+    'cargo test --locked --offline', 'cargo build --locked --offline', 'bash scripts/smoke.sh',
+    'python3 tools/check-independence.py',
+    'python3 tools/rust-sources/manage.py verify --metadata',
+    'python3 -I -B tools/rust-sources/test_audit.py',
+    'cargo run --quiet --locked --offline -p blog-assets -- test --product-root . --offline',
+    'cargo test --locked --offline -p blog-assets -p blog-browser-domain-tests',
   ]) assert.ok(server.includes(command), `missing server check: ${command}`);
   const expected = [
     'language', 'admin-layout', 'account-settings', 'admin-cleanup',
-    'management', 'contract-fixes', 'xcss-web-runtime', 'async-state', 'startup-failure', 'rust-native-domain', 'public-footer', 'public-layout', 'anonymous-comments',
+    'management', 'contract-fixes', 'blog-interface-runtime', 'async-state', 'startup-failure', 'rust-native-domain', 'public-footer', 'public-layout', 'anonymous-comments',
   ];
   const actual = [...browser.matchAll(/node tests\/([a-z-]+)\.mjs/g)].map(match => match[1]);
   assert.deepEqual(actual.sort(), expected.sort());
   assert.equal(browser.match(/npm run test:unit/g)?.length, 1);
   assert.match(browser, /TEST_GROUP: \$\{\{ matrix.group \}\}/);
   for (const block of [server, browser]) {
-    assert.match(block, /npm ci\n          cargo \+1\.99\.0 run --quiet --locked --manifest-path \.\.\/tools\/web-build\/Cargo\.toml -- build --product-root \.\./);
+    assert.match(block, /Prepare browser test dependencies\n        working-directory: web\n        run: npm ci/);
+    assert.match(block, /Build web from repository Rust sources\n        run: cargo run --quiet --locked --offline -p blog-assets -- build --product-root \. --offline/);
     assert.match(block, /playwright install --with-deps chromium firefox/);
     assert.match(block, /rustup toolchain install 1\.99\.0 .*--target wasm32-unknown-unknown/);
-    assert.match(block, /cargo \+1\.99\.0 install wasm-bindgen-cli --version 0\.2\.129 --locked/);
+    assert.doesNotMatch(block, /cargo.*install wasm-bindgen-cli/);
+    assert.doesNotMatch(block, /--workspace.*--all-features/);
   }
 });
 
@@ -75,7 +79,7 @@ test('the old required check fails closed for all server and matrix outcomes', (
 test('both matrix branches execute every original UI script exactly once', () => {
   const run = browser.match(/        run: \|\n(          set -euo pipefail\n(?:          .*\n)+)/)?.[1];
   assert.ok(run, 'missing browser matrix shell');
-  const directory = mkdtempSync(join(tmpdir(), 'xocs-ci-dispatch-'));
+  const directory = mkdtempSync(join(tmpdir(), 'blog-ci-dispatch-'));
   try {
     for (const tool of ['node', 'npm']) {
       const path = join(directory, tool);
@@ -95,7 +99,7 @@ test('both matrix branches execute every original UI script exactly once', () =>
     assert.deepEqual(actual.sort(), [
       'run test:unit', 'tests/language.mjs', 'tests/admin-layout.mjs',
       'tests/account-settings.mjs', 'tests/admin-cleanup.mjs', 'tests/management.mjs',
-      'tests/contract-fixes.mjs', 'tests/xcss-web-runtime.mjs', 'tests/async-state.mjs', 'tests/startup-failure.mjs', 'tests/rust-native-domain.mjs',
+      'tests/contract-fixes.mjs', 'tests/blog-interface-runtime.mjs', 'tests/async-state.mjs', 'tests/startup-failure.mjs', 'tests/rust-native-domain.mjs',
       'tests/public-footer.mjs', 'tests/public-layout.mjs', 'tests/anonymous-comments.mjs',
     ].sort());
     const unknown = spawnSync('bash', ['-c', run], {

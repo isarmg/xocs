@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "source_project": "zxs",
+  "source_file": "tools/web-bindings/src/main.rs",
+  "source_sha256": "94d5fac4f2626c50e7e945aa3ce25beee3e621f6146b5bcabac3f11184bab058",
+  "upstream": "wasm-bindgen-cli 0.2.129",
+  "changes": [
+    "Integrate Web-only CLI as blog-web-bindings in the root workspace.",
+    "Use original clap package API and remove ZXS-specific logger/tests."
+  ],
+  "license": "MIT OR Apache-2.0",
+  "source_commit": "aa7ffc46e702bde224d21db6e7df6a278238a230",
+  "source_snapshot": "compliance/provenance/integrated/blog-web-bindings/zxs-main.rs.txt",
+  "license_materials": [
+    "compliance/licenses/integrated/blog-web-bindings/LICENSE-APACHE",
+    "compliance/licenses/integrated/blog-web-bindings/LICENSE-MIT"
+  ],
+  "upstream_source_mapping": "compliance/provenance/integrated/blog-web-bindings/zxs-upstream-receipt.json",
+  "upstream_receipt_sha256": "192ab3b6a087af706e3a32aed9be6336bd9ccfa673a905d4a7f0dfdb6e16e27f"
+}

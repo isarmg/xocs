@@ -1,0 +1,6 @@
+{
+  "git": {
+    "sha1": "4f54347555d2f520ac38b406cf69ff66d9570a57"
+  },
+  "path_in_vcs": "crates/escape-simd"
+}

@@ -1,0 +1,60 @@
+[package]
+name = "blog-interface"
+edition = "2024"
+rust-version = "1.99"
+license = "Apache-2.0"
+description = "博客组件、浏览器 API、主题和应用挂载"
+publish = false
+
+[dependencies]
+blog-dom = {  default-features = false, features = ["csr"], path = "dom"}
+serde = {  features = ["derive"], path = "../foundation/format/data-model",package = "blog-format-data-model"}
+serde_json = { path = "../foundation/format/json",package = "blog-format-json"}
+wasm-bindgen = { path = "../foundation/wasm/browser-bridge",package = "blog-wasm-browser-bridge"}
+wasm-bindgen-futures = { path = "../foundation/wasm/browser-futures",package = "blog-wasm-browser-futures"}
+js-sys = { path = "../foundation/interface/javascript-api",package = "blog-interface-javascript-api"}
+web-sys = {  features = [
+  "AbortController", "AbortSignal", "BeforeUnloadEvent", "Blob", "BlobPropertyBag",
+  "Clipboard", "Crypto", "CssStyleDeclaration", "CustomEvent", "CustomEventInit",
+  "DataTransfer", "Document", "DocumentFragment", "DomException", "DomMatrix", "DomMatrixReadOnly", "DomRect", "DomRectList",
+  "DomTokenList", "DragEvent", "Element", "Event", "EventSource",
+  "EventTarget", "File", "FileList", "FocusEvent", "FontFace",
+  "FontFaceSet", "FormData", "Headers", "History", "HtmlAudioElement",
+  "HtmlButtonElement", "HtmlCollection", "HtmlDialogElement", "HtmlElement", "HtmlFormElement",
+  "HtmlImageElement", "HtmlInputElement", "HtmlMediaElement", "HtmlOptionElement", "HtmlOptionsCollection",
+  "HtmlSelectElement", "HtmlTemplateElement", "HtmlTextAreaElement", "HtmlVideoElement", "InputEvent",
+  "KeyboardEvent", "Location", "MediaQueryList", "MediaQueryListEvent", "MediaStream",
+  "MediaStreamTrack", "MessageEvent", "MouseEvent", "MutationObserver", "MutationObserverInit",
+  "Navigator", "Node", "NodeList", "PageTransitionEvent", "Performance", "PointerEvent",
+  "ProgressEvent", "ReadableStream", "ReadableStreamDefaultReader", "ReadableStreamReadResult", "Request",
+  "RequestCache", "RequestCredentials", "RequestInit", "RequestMode", "RequestRedirect",
+  "ResizeObserver", "Response", "RtcConfiguration", "RtcIceGatheringState", "RtcIceServer", "RtcPeerConnection",
+  "RtcPeerConnectionState", "RtcRtpTransceiver", "RtcRtpTransceiverDirection", "RtcRtpTransceiverInit", "RtcSdpType",
+  "RtcSessionDescription", "RtcSessionDescriptionInit", "RtcTrackEvent", "ScrollBehavior", "ScrollToOptions",
+  "Storage", "SubmitEvent", "SvgAnimatedRect", "SvgElement", "SvgGraphicsElement", "SvgMatrix", "SvgRect", "SvgsvgElement", "Text", "TransitionEvent", "Url", "UrlSearchParams",
+  "ValidityState", "Window", "XmlHttpRequest", "XmlHttpRequestEventTarget", "XmlHttpRequestUpload",
+  "console",
+], path = "../foundation/interface/browser-api",package = "blog-interface-browser-api"}
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[features]
+default = ["csr"]
+csr = ["blog-dom/csr"]
+
+[dependencies.futures]
+path = "../foundation/runtime/async-toolkit"
+package = "blog-runtime-async-toolkit"
+default-features = true
+features = [
+    "async-await-macro",
+    "channel",
+    "executor",
+    "io",
+    "shared-state",
+    "sink",
+    "std",
+    "utilities",
+]
+

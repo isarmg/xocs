@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run comment regressions against a freshly initialized local xocs binary.
+"""Run comment regressions against a freshly initialized local blog binary.
 
 Only temporary fixture data is used. No browser, installed instance or production
 service is contacted. Pass the built binary as the sole argument.
@@ -42,9 +42,9 @@ def post(base, content, identity=None, visitor=None):
 
 def main():
     binary = str(Path(sys.argv[1]).resolve())
-    fixture = os.environ.get('XOCS_SMOKE_FIXTURE')
-    fixture_command = [str(Path(fixture).resolve(strict=True))] if fixture else ['cargo', 'run', '--quiet', '--locked', '--example', 'smoke-fixture', '--']
-    with tempfile.TemporaryDirectory(prefix='xocs-comment-regression-') as directory:
+    fixture = os.environ.get('BLOG_SMOKE_FIXTURE')
+    fixture_command = [str(Path(fixture).resolve(strict=True))] if fixture else ['cargo', 'run', '--quiet', '--locked', '--offline', '-p', 'blog', '--example', 'smoke-fixture', '--']
+    with tempfile.TemporaryDirectory(prefix='blog-comment-regression-') as directory:
         os.chmod(directory, 0o700)
         database = Path(directory) / 'state/site.sqlite'
         address = port()
@@ -55,7 +55,7 @@ def main():
         subprocess.run([*fixture_command, directory], cwd=Path(__file__).resolve().parents[1], check=True)
         with sqlite3.connect(database) as db:
             version, revision, fingerprint = db.execute('SELECT application_version,schema_revision,schema_sha256 FROM product_metadata').fetchone()
-            assert (version, revision) == ('xocs-db-v1', 1)
+            assert (version, revision) == ('blog-db-v1', 1)
             print('initialized actual DDL:', version, revision, fingerprint)
         base = f'http://127.0.0.1:{address}'
         server = None
