@@ -10,10 +10,10 @@ base = "/"
 "/api" = "http://127.0.0.1:8081"
 
 [aliases]
-"@xcss/web/" = "vendor/xcss/"
+"@blog/styles/" = "styles/"
 
 # Preserve original notices in standalone dist as well as release receipts.
 [web.copies]
-"assets/LICENSE-xcss-web-core-MIT.txt" = "xcss-web/vendor/xcss-web/vendor/xcss-web-core/LICENSE"
-"assets/LICENSE-xcss-web-macro-MIT.txt" = "xcss-web/vendor/xcss-web/vendor/xcss-web-macro/LICENSE"
-"assets/LICENSE-xcss-Apache-2.0.txt" = "vendor/xcss/LICENSE"
+"assets/LICENSE-blog-dom-MIT.txt" = "licenses/LICENSE-blog-dom-MIT.txt"
+"assets/LICENSE-blog-component-macros-MIT.txt" = "licenses/LICENSE-blog-component-macros-MIT.txt"
+"assets/LICENSE-blog-Apache-2.0.txt" = "styles/LICENSE"

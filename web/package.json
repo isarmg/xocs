@@ -1,5 +1,5 @@
 {
-  "name": "xocs-web",
+  "name": "blog-browser",
   "version": "1.0.1",
   "private": true,
   "type": "module",
@@ -7,20 +7,20 @@
     "node": ">=26.7.0 <27"
   },
   "scripts": {
-    "dev": "cargo +1.99.0 run --quiet --locked --manifest-path ../tools/web-build/Cargo.toml -- serve --product-root .. --debug --bind 127.0.0.1:5173",
-    "build": "cargo +1.99.0 run --quiet --locked --manifest-path ../tools/web-build/Cargo.toml -- build --product-root ..",
-    "preview": "cargo +1.99.0 run --quiet --locked --manifest-path ../tools/web-build/Cargo.toml -- preview --product-root .. --bind 127.0.0.1:4173",
-    "test:unit": "npm run check:xcss && npm run test:xcss-web && node --test tests/browser-fixtures.test.mjs",
+    "dev": "cargo +1.99.0 run --quiet --locked --offline --manifest-path ../Cargo.toml -p blog-assets -- serve --product-root .. --debug --bind 127.0.0.1:5173",
+    "build": "cargo +1.99.0 run --quiet --locked --offline --manifest-path ../Cargo.toml -p blog-assets -- build --product-root .. --offline",
+    "preview": "cargo +1.99.0 run --quiet --locked --offline --manifest-path ../Cargo.toml -p blog-assets -- preview --product-root .. --bind 127.0.0.1:4173",
+    "test:unit": "npm run check:toolchain && npm run test:blog-interface && node --test tests/browser-fixtures.test.mjs",
     "test:language": "npm run build && node tests/language.mjs",
     "test:admin": "npm run build && node tests/admin-layout.mjs && node tests/account-settings.mjs",
     "test:public": "npm run build && node tests/public-layout.mjs && node tests/anonymous-comments.mjs",
-    "build:xcss-web": "cargo +1.99.0 run --quiet --locked --manifest-path ../tools/web-build/Cargo.toml -- build --product-root ..",
-    "check:xcss-web": "cargo +1.99.0 run --quiet --locked --manifest-path ../tools/web-build/Cargo.toml -- check --product-root ..",
-    "test:xcss-web": "cargo +1.99.0 run --quiet --locked --manifest-path ../tools/web-build/Cargo.toml -- test --product-root .. && cargo +1.99.0 test --locked --manifest-path xcss-web/domain-tests/Cargo.toml",
-    "test:browser:xcss-web": "npm run build && node tests/xcss-web-runtime.mjs && node tests/async-state.mjs && node tests/browser-smoke.mjs && node tests/rust-native-domain.mjs",
-    "test:domain:rust": "cargo +1.99.0 test --locked --manifest-path xcss-web/domain-tests/Cargo.toml",
+    "build:blog-interface": "cargo +1.99.0 run --quiet --locked --offline --manifest-path ../Cargo.toml -p blog-assets -- build --product-root .. --offline",
+    "check:blog-interface": "cargo +1.99.0 run --quiet --locked --offline --manifest-path ../Cargo.toml -p blog-assets -- check --product-root .. --offline",
+    "test:blog-interface": "cargo +1.99.0 run --quiet --locked --offline --manifest-path ../Cargo.toml -p blog-assets -- test --product-root .. --offline && cargo +1.99.0 test --locked --offline --manifest-path ../Cargo.toml -p blog-browser-domain-tests",
+    "test:browser:blog-interface": "npm run build && node tests/blog-interface-runtime.mjs && node tests/async-state.mjs && node tests/browser-smoke.mjs && node tests/rust-native-domain.mjs",
+    "test:domain:rust": "cargo +1.99.0 test --locked --offline --manifest-path ../Cargo.toml -p blog-browser-domain-tests",
     "test:startup": "node tests/startup-failure.mjs",
-    "check:xcss": "node scripts/check-xcss-toolchain.mjs && node --test tests/toolchain-contract.test.mjs"
+    "check:toolchain": "node scripts/check-toolchain.mjs && node --test tests/toolchain-contract.test.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.12.1",

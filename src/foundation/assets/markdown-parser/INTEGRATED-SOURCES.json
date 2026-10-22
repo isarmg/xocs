@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "ownership": "repository-maintained",
+  "package": "blog-assets-markdown-parser",
+  "originals": [
+    {
+      "id": "linkify@0.11.0",
+      "package": "linkify",
+      "version": "0.11.0",
+      "archive": "compliance/provenance/archives/linkify-0.11.0.crate",
+      "archive_sha256": "92f9ae2f3d31697697311f016320fe984127e636b45cf5eb5c175b7eb103dadb",
+      "license": "MIT OR Apache-2.0",
+      "license_materials": [
+        "compliance/licenses/upstream/linkify-0.11.0/LICENSE-APACHE",
+        "compliance/licenses/upstream/linkify-0.11.0/LICENSE-MIT"
+      ],
+      "historical_input_directories": [
+        "src/foundation/text/link-detection"
+      ],
+      "integration": "compliance/provenance/integrations/browser-csr/integration.json"
+    },
+    {
+      "id": "pulldown-cmark-escape@0.11.0",
+      "package": "pulldown-cmark-escape",
+      "version": "0.11.0",
+      "archive": "compliance/provenance/archives/pulldown-cmark-escape-0.11.0.crate",
+      "archive_sha256": "007d8adb5ddab6f8e3f491ac63566a7d5002cc7ed73901f72057943fa71ae1ae",
+      "license": "MIT",
+      "license_materials": [
+        "compliance/licenses/upstream/pulldown-cmark-escape-0.11.0/LICENSE"
+      ],
+      "historical_input_directories": [
+        "src/foundation/assets/markdown-escaping"
+      ],
+      "integration": "compliance/provenance/integrations/browser-csr/integration.json"
+    },
+    {
+      "id": "pulldown-cmark@0.13.4",
+      "package": "pulldown-cmark",
+      "version": "0.13.4",
+      "archive": "compliance/provenance/archives/pulldown-cmark-0.13.4.crate",
+      "archive_sha256": "e9f068eba8e7071c5f9511831b44f32c740d5adf574e990f946ddb53db2f314e",
+      "license": "MIT",
+      "license_materials": [
+        "compliance/licenses/upstream/pulldown-cmark-0.13.4/LICENSE"
+      ],
+      "historical_input_directories": [],
+      "integration": "compliance/provenance/integrations/browser-csr/integration.json"
+    }
+  ],
+  "snapshot_receipt": "compliance/provenance/integrations/browser-csr/integration.json",
+  "current_files_receipt": "compliance/rust-sources.json",
+  "changes": "Integrate the actually retained implementations into purpose-owned modules; original registry archive bytes, original file hashes and licenses remain separate from current source hashes."
+}

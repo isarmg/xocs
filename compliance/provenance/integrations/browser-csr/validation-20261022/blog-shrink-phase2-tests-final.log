@@ -1,0 +1,886 @@
+   Compiling blog-syntax-rust-parser v0.0.0 (/mnt/sarmg.org/blog/src/foundation/syntax/rust-parser)
+warning: use of deprecated constant `core::u8::MAX`: replaced by the `MAX` associated constant on this type
+   --> src/foundation/encoding/byte-search/src/arch/all/packedpair/mod.rs:179:41
+    |
+179 |         let max = usize::from(core::u8::MAX);
+    |                                         ^^^
+    |
+    = note: `#[warn(deprecated)]` on by default
+
+warning: use of deprecated constant `core::u32::MAX`: replaced by the `MAX` associated constant on this type
+   --> src/foundation/encoding/byte-search/src/memmem/searcher.rs:916:34
+    |
+916 |             Err(_) => core::u32::MAX,
+    |                                  ^^^
+
+warning: `blog-encoding-byte-search` (lib) generated 2 warnings
+warning: unexpected `cfg` condition value: `no-panic`
+   --> src/foundation/encoding/decimal-float-format/src/lib.rs:122:7
+    |
+122 | #[cfg(feature = "no-panic")]
+    |       ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `no-panic` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: `#[warn(unexpected_cfgs)]` on by default
+
+warning: unexpected `cfg` condition value: `no-panic`
+   --> src/foundation/encoding/decimal-float-format/src/lib.rs:180:12
+    |
+180 | #[cfg_attr(feature = "no-panic", no_panic)]
+    |            ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `no-panic` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `no-panic`
+   --> src/foundation/encoding/decimal-float-format/src/lib.rs:185:12
+    |
+185 | #[cfg_attr(feature = "no-panic", no_panic)]
+    |            ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `no-panic` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `no-panic`
+   --> src/foundation/encoding/decimal-float-format/src/lib.rs:196:12
+    |
+196 | #[cfg_attr(feature = "no-panic", no_panic)]
+    |            ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `no-panic` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `no-panic`
+   --> src/foundation/encoding/decimal-float-format/src/lib.rs:748:12
+    |
+748 | #[cfg_attr(feature = "no-panic", no_panic)]
+    |            ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `no-panic` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `no-panic`
+   --> src/foundation/encoding/decimal-float-format/src/lib.rs:780:12
+    |
+780 | #[cfg_attr(feature = "no-panic", no_panic)]
+    |            ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `no-panic` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `no-panic`
+    --> src/foundation/encoding/decimal-float-format/src/lib.rs:1039:12
+     |
+1039 | #[cfg_attr(feature = "no-panic", no_panic)]
+     |            ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+     |
+     = note: no expected values for `feature`
+     = help: consider adding `no-panic` as a feature in `Cargo.toml`
+     = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `no-panic`
+    --> src/foundation/encoding/decimal-float-format/src/lib.rs:1087:12
+     |
+1087 | #[cfg_attr(feature = "no-panic", no_panic)]
+     |            ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+     |
+     = note: no expected values for `feature`
+     = help: consider adding `no-panic` as a feature in `Cargo.toml`
+     = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `no-panic`
+    --> src/foundation/encoding/decimal-float-format/src/lib.rs:1143:12
+     |
+1143 | #[cfg_attr(feature = "no-panic", no_panic)]
+     |            ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+     |
+     = note: no expected values for `feature`
+     = help: consider adding `no-panic` as a feature in `Cargo.toml`
+     = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `no-panic`
+    --> src/foundation/encoding/decimal-float-format/src/lib.rs:1243:12
+     |
+1243 | #[cfg_attr(feature = "no-panic", no_panic)]
+     |            ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+     |
+     = note: no expected values for `feature`
+     = help: consider adding `no-panic` as a feature in `Cargo.toml`
+     = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `no-panic`
+    --> src/foundation/encoding/decimal-float-format/src/lib.rs:1303:12
+     |
+1303 | #[cfg_attr(feature = "no-panic", no_panic)]
+     |            ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+     |
+     = note: no expected values for `feature`
+     = help: consider adding `no-panic` as a feature in `Cargo.toml`
+     = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `no-panic`
+    --> src/foundation/encoding/decimal-float-format/src/lib.rs:1367:12
+     |
+1367 | #[cfg_attr(feature = "no-panic", no_panic)]
+     |            ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+     |
+     = note: no expected values for `feature`
+     = help: consider adding `no-panic` as a feature in `Cargo.toml`
+     = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `no-panic`
+    --> src/foundation/encoding/decimal-float-format/src/lib.rs:1508:12
+     |
+1508 | #[cfg_attr(feature = "no-panic", no_panic)]
+     |            ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+     |
+     = note: no expected values for `feature`
+     = help: consider adding `no-panic` as a feature in `Cargo.toml`
+     = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `no-panic`
+    --> src/foundation/encoding/decimal-float-format/src/lib.rs:1722:16
+     |
+1722 |     #[cfg_attr(feature = "no-panic", no_panic)]
+     |                ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+     |
+     = note: no expected values for `feature`
+     = help: consider adding `no-panic` as a feature in `Cargo.toml`
+     = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `no-panic`
+    --> src/foundation/encoding/decimal-float-format/src/lib.rs:1739:16
+     |
+1739 |     #[cfg_attr(feature = "no-panic", no_panic)]
+     |                ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+     |
+     = note: no expected values for `feature`
+     = help: consider adding `no-panic` as a feature in `Cargo.toml`
+     = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `no-panic`
+    --> src/foundation/encoding/decimal-float-format/src/lib.rs:1763:16
+     |
+1763 |     #[cfg_attr(feature = "no-panic", no_panic)]
+     |                ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+     |
+     = note: no expected values for `feature`
+     = help: consider adding `no-panic` as a feature in `Cargo.toml`
+     = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `no-panic`
+    --> src/foundation/encoding/decimal-float-format/src/lib.rs:1801:20
+     |
+1801 |         #[cfg_attr(feature = "no-panic", inline)]
+     |                    ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+     |
+     = note: no expected values for `feature`
+     = help: consider adding `no-panic` as a feature in `Cargo.toml`
+     = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `no-panic`
+    --> src/foundation/encoding/decimal-float-format/src/lib.rs:1815:20
+     |
+1815 |         #[cfg_attr(feature = "no-panic", inline)]
+     |                    ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+     |
+     = note: no expected values for `feature`
+     = help: consider adding `no-panic` as a feature in `Cargo.toml`
+     = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `no-panic`
+    --> src/foundation/encoding/decimal-float-format/src/lib.rs:1830:20
+     |
+1830 |         #[cfg_attr(feature = "no-panic", inline)]
+     |                    ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+     |
+     = note: no expected values for `feature`
+     = help: consider adding `no-panic` as a feature in `Cargo.toml`
+     = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `no-panic`
+    --> src/foundation/encoding/decimal-float-format/src/lib.rs:1844:20
+     |
+1844 |         #[cfg_attr(feature = "no-panic", inline)]
+     |                    ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+     |
+     = note: no expected values for `feature`
+     = help: consider adding `no-panic` as a feature in `Cargo.toml`
+     = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `no-panic`
+    --> src/foundation/encoding/decimal-float-format/src/lib.rs:1853:16
+     |
+1853 |     #[cfg_attr(feature = "no-panic", no_panic)]
+     |                ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+     |
+     = note: no expected values for `feature`
+     = help: consider adding `no-panic` as a feature in `Cargo.toml`
+     = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: `blog-encoding-decimal-float-format` (lib) generated 21 warnings
+warning: unexpected `cfg` condition value: `no-panic`
+  --> src/foundation/encoding/integer-format/src/lib.rs:59:7
+   |
+59 | #[cfg(feature = "no-panic")]
+   |       ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+   |
+   = note: no expected values for `feature`
+   = help: consider adding `no-panic` as a feature in `Cargo.toml`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+   = note: `#[warn(unexpected_cfgs)]` on by default
+
+warning: unexpected `cfg` condition value: `no-panic`
+   --> src/foundation/encoding/integer-format/src/lib.rs:246:12
+    |
+246 | #[cfg_attr(feature = "no-panic", no_panic)]
+    |            ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `no-panic` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `no-panic`
+   --> src/foundation/encoding/integer-format/src/lib.rs:407:12
+    |
+407 | #[cfg_attr(feature = "no-panic", no_panic)]
+    |            ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `no-panic` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `no-panic`
+   --> src/foundation/encoding/integer-format/src/lib.rs:449:12
+    |
+449 | #[cfg_attr(feature = "no-panic", no_panic)]
+    |            ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `no-panic` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `no-panic`
+ --> src/foundation/encoding/integer-format/src/u128_ext.rs:1:7
+  |
+1 | #[cfg(feature = "no-panic")]
+  |       ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+  |
+  = note: no expected values for `feature`
+  = help: consider adding `no-panic` as a feature in `Cargo.toml`
+  = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `no-panic`
+ --> src/foundation/encoding/integer-format/src/u128_ext.rs:6:12
+  |
+6 | #[cfg_attr(feature = "no-panic", no_panic)]
+  |            ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+  |
+  = note: no expected values for `feature`
+  = help: consider adding `no-panic` as a feature in `Cargo.toml`
+  = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `no-panic`
+  --> src/foundation/encoding/integer-format/src/lib.rs:97:16
+   |
+97 |     #[cfg_attr(feature = "no-panic", no_panic)]
+   |                ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+   |
+   = note: no expected values for `feature`
+   = help: consider adding `no-panic` as a feature in `Cargo.toml`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `no-panic`
+   --> src/foundation/encoding/integer-format/src/lib.rs:105:16
+    |
+105 |     #[cfg_attr(feature = "no-panic", no_panic)]
+    |                ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `no-panic` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `no-panic`
+   --> src/foundation/encoding/integer-format/src/lib.rs:151:24
+    |
+151 |             #[cfg_attr(feature = "no-panic", no_panic)]
+    |                        ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+...
+185 | impl_Integer!(i8, u8);
+    | --------------------- in this macro invocation
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `no-panic` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: this warning originates in the macro `impl_Integer` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `no-panic`
+   --> src/foundation/encoding/integer-format/src/lib.rs:167:24
+    |
+167 |             #[cfg_attr(feature = "no-panic", no_panic)]
+    |                        ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+...
+185 | impl_Integer!(i8, u8);
+    | --------------------- in this macro invocation
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `no-panic` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: this warning originates in the macro `impl_Integer` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `no-panic`
+   --> src/foundation/encoding/integer-format/src/lib.rs:151:24
+    |
+151 |             #[cfg_attr(feature = "no-panic", no_panic)]
+    |                        ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+...
+186 | impl_Integer!(i16, u16);
+    | ----------------------- in this macro invocation
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `no-panic` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: this warning originates in the macro `impl_Integer` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `no-panic`
+   --> src/foundation/encoding/integer-format/src/lib.rs:167:24
+    |
+167 |             #[cfg_attr(feature = "no-panic", no_panic)]
+    |                        ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+...
+186 | impl_Integer!(i16, u16);
+    | ----------------------- in this macro invocation
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `no-panic` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: this warning originates in the macro `impl_Integer` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `no-panic`
+   --> src/foundation/encoding/integer-format/src/lib.rs:151:24
+    |
+151 |             #[cfg_attr(feature = "no-panic", no_panic)]
+    |                        ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+...
+187 | impl_Integer!(i32, u32);
+    | ----------------------- in this macro invocation
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `no-panic` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: this warning originates in the macro `impl_Integer` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `no-panic`
+   --> src/foundation/encoding/integer-format/src/lib.rs:167:24
+    |
+167 |             #[cfg_attr(feature = "no-panic", no_panic)]
+    |                        ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+...
+187 | impl_Integer!(i32, u32);
+    | ----------------------- in this macro invocation
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `no-panic` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: this warning originates in the macro `impl_Integer` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `no-panic`
+   --> src/foundation/encoding/integer-format/src/lib.rs:151:24
+    |
+151 |             #[cfg_attr(feature = "no-panic", no_panic)]
+    |                        ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+...
+188 | impl_Integer!(i64, u64);
+    | ----------------------- in this macro invocation
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `no-panic` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: this warning originates in the macro `impl_Integer` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `no-panic`
+   --> src/foundation/encoding/integer-format/src/lib.rs:167:24
+    |
+167 |             #[cfg_attr(feature = "no-panic", no_panic)]
+    |                        ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+...
+188 | impl_Integer!(i64, u64);
+    | ----------------------- in this macro invocation
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `no-panic` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: this warning originates in the macro `impl_Integer` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `no-panic`
+   --> src/foundation/encoding/integer-format/src/lib.rs:151:24
+    |
+151 |             #[cfg_attr(feature = "no-panic", no_panic)]
+    |                        ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+...
+189 | impl_Integer!(i128, u128);
+    | ------------------------- in this macro invocation
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `no-panic` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: this warning originates in the macro `impl_Integer` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `no-panic`
+   --> src/foundation/encoding/integer-format/src/lib.rs:167:24
+    |
+167 |             #[cfg_attr(feature = "no-panic", no_panic)]
+    |                        ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+...
+189 | impl_Integer!(i128, u128);
+    | ------------------------- in this macro invocation
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `no-panic` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: this warning originates in the macro `impl_Integer` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `no-panic`
+   --> src/foundation/encoding/integer-format/src/lib.rs:203:24
+    |
+203 |             #[cfg_attr(feature = "no-panic", no_panic)]
+    |                        ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+...
+215 | impl_Integer_size!(isize as i64 #[cfg(target_pointer_width = "64")]);
+    | -------------------------------------------------------------------- in this macro invocation
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `no-panic` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: this warning originates in the macro `impl_Integer_size` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `no-panic`
+   --> src/foundation/encoding/integer-format/src/lib.rs:203:24
+    |
+203 |             #[cfg_attr(feature = "no-panic", no_panic)]
+    |                        ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+...
+216 | impl_Integer_size!(usize as u64 #[cfg(target_pointer_width = "64")]);
+    | -------------------------------------------------------------------- in this macro invocation
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `no-panic` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: this warning originates in the macro `impl_Integer_size` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `no-panic`
+   --> src/foundation/encoding/integer-format/src/lib.rs:262:24
+    |
+262 |             #[cfg_attr(feature = "no-panic", no_panic)]
+    |                        ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+...
+329 | impl_Unsigned!(u8);
+    | ------------------ in this macro invocation
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `no-panic` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: this warning originates in the macro `impl_Unsigned` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `no-panic`
+   --> src/foundation/encoding/integer-format/src/lib.rs:262:24
+    |
+262 |             #[cfg_attr(feature = "no-panic", no_panic)]
+    |                        ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+...
+330 | impl_Unsigned!(u16);
+    | ------------------- in this macro invocation
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `no-panic` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: this warning originates in the macro `impl_Unsigned` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `no-panic`
+   --> src/foundation/encoding/integer-format/src/lib.rs:262:24
+    |
+262 |             #[cfg_attr(feature = "no-panic", no_panic)]
+    |                        ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+...
+331 | impl_Unsigned!(u32);
+    | ------------------- in this macro invocation
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `no-panic` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: this warning originates in the macro `impl_Unsigned` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `no-panic`
+   --> src/foundation/encoding/integer-format/src/lib.rs:262:24
+    |
+262 |             #[cfg_attr(feature = "no-panic", no_panic)]
+    |                        ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+...
+332 | impl_Unsigned!(u64);
+    | ------------------- in this macro invocation
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `no-panic` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: this warning originates in the macro `impl_Unsigned` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: `no-panic`
+   --> src/foundation/encoding/integer-format/src/lib.rs:335:16
+    |
+335 |     #[cfg_attr(feature = "no-panic", no_panic)]
+    |                ^^^^^^^^^^^^^^^^^^^^ help: remove the condition
+    |
+    = note: no expected values for `feature`
+    = help: consider adding `no-panic` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: `blog-encoding-integer-format` (lib) generated 25 warnings
+warning: unexpected `cfg` condition value: `borsh`
+   --> src/foundation/collections/ordered-map/src/lib.rs:112:7
+    |
+112 | #[cfg(feature = "borsh")]
+    |       ^^^^^^^^^^^^^^^^^
+    |
+    = note: expected values for `feature` are: `default`, `rayon`, `serde`, `std`, and `test_debug`
+    = help: consider adding `borsh` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: requested on the command line with `-W unexpected-cfgs`
+
+warning: unexpected `cfg` condition value: `sval`
+   --> src/foundation/collections/ordered-map/src/lib.rs:116:7
+    |
+116 | #[cfg(feature = "sval")]
+    |       ^^^^^^^^^^^^^^^^
+    |
+    = note: expected values for `feature` are: `default`, `rayon`, `serde`, `std`, and `test_debug`
+    = help: consider adding `sval` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `arbitrary`
+ --> src/foundation/collections/ordered-map/src/arbitrary.rs:1:7
+  |
+1 | #[cfg(feature = "arbitrary")]
+  |       ^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: expected values for `feature` are: `default`, `rayon`, `serde`, `std`, and `test_debug`
+  = help: consider adding `arbitrary` as a feature in `Cargo.toml`
+  = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `quickcheck`
+  --> src/foundation/collections/ordered-map/src/arbitrary.rs:38:7
+   |
+38 | #[cfg(feature = "quickcheck")]
+   |       ^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: expected values for `feature` are: `default`, `rayon`, `serde`, `std`, and `test_debug`
+   = help: consider adding `quickcheck` as a feature in `Cargo.toml`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: `blog-collections-ordered-map` (lib) generated 4 warnings
+warning: unexpected `cfg` condition value: `malloc_size_of`
+   --> src/foundation/collections/inline-vector/src/lib.rs:118:7
+    |
+118 | #[cfg(feature = "malloc_size_of")]
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: expected values for `feature` are: `const_generics`, `const_new`, `drain_filter`, `drain_keep_rest`, `impl_bincode`, `may_dangle`, `serde`, `specialization`, `union`, and `write`
+    = help: consider adding `malloc_size_of` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: requested on the command line with `-W unexpected-cfgs`
+
+warning: unexpected `cfg` condition value: `malloc_size_of`
+    --> src/foundation/collections/inline-vector/src/lib.rs:2205:7
+     |
+2205 | #[cfg(feature = "malloc_size_of")]
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: expected values for `feature` are: `const_generics`, `const_new`, `drain_filter`, `drain_keep_rest`, `impl_bincode`, `may_dangle`, `serde`, `specialization`, `union`, and `write`
+     = help: consider adding `malloc_size_of` as a feature in `Cargo.toml`
+     = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `malloc_size_of`
+    --> src/foundation/collections/inline-vector/src/lib.rs:2216:7
+     |
+2216 | #[cfg(feature = "malloc_size_of")]
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: expected values for `feature` are: `const_generics`, `const_new`, `drain_filter`, `drain_keep_rest`, `impl_bincode`, `may_dangle`, `serde`, `specialization`, `union`, and `write`
+     = help: consider adding `malloc_size_of` as a feature in `Cargo.toml`
+     = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `arbitrary`
+    --> src/foundation/collections/inline-vector/src/lib.rs:2239:7
+     |
+2239 | #[cfg(feature = "arbitrary")]
+     |       ^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: expected values for `feature` are: `const_generics`, `const_new`, `drain_filter`, `drain_keep_rest`, `impl_bincode`, `may_dangle`, `serde`, `specialization`, `union`, and `write`
+     = help: consider adding `arbitrary` as a feature in `Cargo.toml`
+     = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: `blog-collections-inline-vector` (lib) generated 4 warnings
+warning: unexpected `cfg` condition value: `arbitrary`
+   --> src/foundation/collections/bit-set/src/external.rs:178:7
+    |
+178 | #[cfg(feature = "arbitrary")]
+    |       ^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: expected values for `feature` are: `example_generated`, `serde`, and `std`
+    = help: consider adding `arbitrary` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: `#[warn(unexpected_cfgs)]` on by default
+
+warning: unexpected `cfg` condition value: `bytemuck`
+   --> src/foundation/collections/bit-set/src/external.rs:181:7
+    |
+181 | #[cfg(feature = "bytemuck")]
+    |       ^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: expected values for `feature` are: `example_generated`, `serde`, and `std`
+    = help: consider adding `bytemuck` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `arbitrary`
+   --> src/foundation/collections/bit-set/src/external.rs:187:7
+    |
+187 | #[cfg(feature = "arbitrary")]
+    |       ^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: expected values for `feature` are: `example_generated`, `serde`, and `std`
+    = help: consider adding `arbitrary` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `arbitrary`
+   --> src/foundation/collections/bit-set/src/external.rs:209:11
+    |
+209 | #[cfg(not(feature = "arbitrary"))]
+    |           ^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: expected values for `feature` are: `example_generated`, `serde`, and `std`
+    = help: consider adding `arbitrary` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `bytemuck`
+   --> src/foundation/collections/bit-set/src/external.rs:224:7
+    |
+224 | #[cfg(feature = "bytemuck")]
+    |       ^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: expected values for `feature` are: `example_generated`, `serde`, and `std`
+    = help: consider adding `bytemuck` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `bytemuck`
+   --> src/foundation/collections/bit-set/src/external.rs:252:11
+    |
+252 | #[cfg(not(feature = "bytemuck"))]
+    |           ^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: expected values for `feature` are: `example_generated`, `serde`, and `std`
+    = help: consider adding `bytemuck` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `arbitrary`
+  --> src/foundation/collections/bit-set/src/external.rs:72:11
+   |
+72 |     #[cfg(feature = "arbitrary")]
+   |           ^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: expected values for `feature` are: `example_generated`, `serde`, and `std`
+   = help: consider adding `arbitrary` as a feature in `Cargo.toml`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `bytemuck`
+  --> src/foundation/collections/bit-set/src/external.rs:75:11
+   |
+75 |     #[cfg(feature = "bytemuck")]
+   |           ^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: expected values for `feature` are: `example_generated`, `serde`, and `std`
+   = help: consider adding `bytemuck` as a feature in `Cargo.toml`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: `blog-collections-bit-set` (lib) generated 8 warnings
+   Compiling blog-syntax-derive-structure v0.0.0 (/mnt/sarmg.org/blog/src/foundation/syntax/derive-structure)
+   Compiling blog-unicode-borrow-conversion-derive v0.0.0 (/mnt/sarmg.org/blog/src/foundation/unicode/borrow-conversion-derive)
+   Compiling blog-unicode-borrowed-data-derive v0.0.0 (/mnt/sarmg.org/blog/src/foundation/unicode/borrowed-data-derive)
+   Compiling blog-unicode-borrowed-vector-derive v0.0.0 (/mnt/sarmg.org/blog/src/foundation/unicode/borrowed-vector-derive)
+   Compiling blog-runtime-future-macros v0.0.0 (/mnt/sarmg.org/blog/src/foundation/runtime/future-macros)
+   Compiling blog-wasm-browser-bridge-entry v0.0.0 (/mnt/sarmg.org/blog/src/foundation/wasm/browser-bridge-entry)
+   Compiling blog-diagnostics-error-display v0.0.0 (/mnt/sarmg.org/blog/src/foundation/diagnostics/error-display)
+   Compiling blog-runtime-async-toolkit v0.0.0 (/mnt/sarmg.org/blog/src/foundation/runtime/async-toolkit)
+warning: lint `no_mangle_generic_items` has been removed: converted into hard error, generic items must always be mangled
+   --> src/foundation/diagnostics/error-display/src/lib.rs:104:5
+    |
+104 |     no_mangle_generic_items,
+    |     ^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(renamed_and_removed_lints)]` on by default
+
+   Compiling blog-unicode-borrow-conversion v0.0.0 (/mnt/sarmg.org/blog/src/foundation/unicode/borrow-conversion)
+   Compiling blog-unicode-borrowed-data v0.0.0 (/mnt/sarmg.org/blog/src/foundation/unicode/borrowed-data)
+   Compiling blog-unicode-borrowed-vector v0.0.0 (/mnt/sarmg.org/blog/src/foundation/unicode/borrowed-vector)
+warning: `blog-diagnostics-error-display` (lib) generated 1 warning
+   Compiling blog-format-data-model-derive v0.0.0 (/mnt/sarmg.org/blog/src/foundation/format/data-model-derive)
+   Compiling blog-text-inline-ascii v0.0.0 (/mnt/sarmg.org/blog/src/foundation/text/inline-ascii)
+   Compiling blog-diagnostics-typed-error-derive v0.0.0 (/mnt/sarmg.org/blog/src/foundation/diagnostics/typed-error-derive)
+   Compiling blog-diagnostics-typed-error v0.0.0 (/mnt/sarmg.org/blog/src/foundation/diagnostics/typed-error)
+   Compiling blog-unicode-locale-identifiers v0.0.0 (/mnt/sarmg.org/blog/src/foundation/unicode/locale-identifiers)
+   Compiling blog-encoding-borrowed-unicode v0.0.0 (/mnt/sarmg.org/blog/src/foundation/encoding/borrowed-unicode)
+   Compiling blog-format-data-model v0.0.0 (/mnt/sarmg.org/blog/src/foundation/format/data-model)
+   Compiling blog-unicode-compact-trie v0.0.0 (/mnt/sarmg.org/blog/src/foundation/unicode/compact-trie)
+   Compiling blog-syntax-async-trait v0.0.0 (/mnt/sarmg.org/blog/src/foundation/syntax/async-trait)
+   Compiling blog-component-macros v0.0.0 (/mnt/sarmg.org/blog/src/interface/macros)
+   Compiling blog-unicode-data-provider v0.0.0 (/mnt/sarmg.org/blog/src/foundation/unicode/data-provider)
+   Compiling blog-unicode-data-collections v0.0.0 (/mnt/sarmg.org/blog/src/foundation/unicode/data-collections)
+   Compiling blog-wasm-browser-bridge v0.0.0 (/mnt/sarmg.org/blog/src/foundation/wasm/browser-bridge)
+   Compiling blog-unicode-character-properties v0.0.0 (/mnt/sarmg.org/blog/src/foundation/unicode/character-properties)
+   Compiling blog-unicode-text-normalizer v0.0.0 (/mnt/sarmg.org/blog/src/foundation/unicode/text-normalizer)
+   Compiling blog-interface-javascript-api v0.0.0 (/mnt/sarmg.org/blog/src/foundation/interface/javascript-api)
+   Compiling blog-format-json v0.0.0 (/mnt/sarmg.org/blog/src/foundation/format/json)
+   Compiling blog-network-web-address v0.0.0 (/mnt/sarmg.org/blog/src/foundation/network/web-address)
+   Compiling blog-browser-domain-tests v0.0.0 (/mnt/sarmg.org/blog/test/browser-domain)
+warning: use of deprecated constant `std::f64::EPSILON`: replaced by the `EPSILON` associated constant on `f64`
+    --> src/foundation/interface/javascript-api/src/lib.rs:6074:35
+     |
+6074 |     pub const EPSILON: f64 = f64::EPSILON;
+     |                                   ^^^^^^^
+     |
+     = note: `#[warn(deprecated)]` on by default
+
+warning: use of deprecated constant `std::f64::MAX`: replaced by the `MAX` associated constant on `f64`
+    --> src/foundation/interface/javascript-api/src/lib.rs:6082:37
+     |
+6082 |     pub const MAX_VALUE: f64 = f64::MAX;
+     |                                     ^^^
+
+warning: use of deprecated constant `std::f64::NAN`: replaced by the `NAN` associated constant on `f64`
+    --> src/foundation/interface/javascript-api/src/lib.rs:6096:31
+     |
+6096 |     pub const NAN: f64 = f64::NAN;
+     |                               ^^^
+
+warning: use of deprecated constant `std::f64::NEG_INFINITY`: replaced by the `NEG_INFINITY` associated constant on `f64`
+    --> src/foundation/interface/javascript-api/src/lib.rs:6100:45
+     |
+6100 |     pub const NEGATIVE_INFINITY: f64 = f64::NEG_INFINITY;
+     |                                             ^^^^^^^^^^^^
+
+warning: use of deprecated constant `std::f64::INFINITY`: replaced by the `INFINITY` associated constant on `f64`
+    --> src/foundation/interface/javascript-api/src/lib.rs:6104:45
+     |
+6104 |     pub const POSITIVE_INFINITY: f64 = f64::INFINITY;
+     |                                             ^^^^^^^^
+
+   Compiling blog-interface-browser-api v0.0.0 (/mnt/sarmg.org/blog/src/foundation/interface/browser-api)
+   Compiling blog-wasm-browser-futures v0.0.0 (/mnt/sarmg.org/blog/src/foundation/wasm/browser-futures)
+warning: unexpected `cfg` condition value: `futures-core-03-stream`
+  --> src/foundation/wasm/browser-futures/src/lib.rs:16:7
+   |
+16 | #[cfg(feature = "futures-core-03-stream")]
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: expected values for `feature` are: `default` and `std`
+   = help: consider adding `futures-core-03-stream` as a feature in `Cargo.toml`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+   = note: requested on the command line with `-W unexpected-cfgs`
+
+warning: `blog-wasm-browser-futures` (lib) generated 1 warning
+warning: `blog-interface-javascript-api` (lib) generated 5 warnings
+   Compiling blog-dom v0.0.0 (/mnt/sarmg.org/blog/src/interface/dom)
+   Compiling blog-interface v0.0.0 (/mnt/sarmg.org/blog/src/interface)
+    Finished `test` profile [unoptimized] target(s) in 1m 31s
+     Running unittests lib.rs (target/optimized-web/debug/deps/blog_browser_domain_tests-0affc890e9ae1fa9)
+
+running 13 tests
+test contracts::tests::invalid_pages_and_missing_nulls_rejected ... ok
+test contracts::tests::consumed_read_models_reject_malformed_fields ... ok
+test contracts::tests::read_page_identity_and_nullable_fields ... ok
+test contracts::tests::upload_path_and_size ... ok
+test markdown::tests::links_attributes_and_code_are_escaped_and_never_nested ... ok
+test markdown::tests::raw_html_is_text_including_svg_math_and_attribute_payloads ... ok
+test models::tests::detail_decodes_without_summary_only_fields_and_hydrates_no_password ... ok
+test markdown::tests::common_article_features_and_plain_links_remain ... ok
+test markdown::tests::dangerous_and_obfuscated_destinations_are_not_executable ... ok
+test models::tests::typed_article_draft_preserves_nullable_write_semantics ... ok
+test models::tests::typed_flags_preserve_numeric_wire_contract ... ok
+test models::tests::typed_pages_reject_wrong_page_and_unsafe_integers ... ok
+test models::tests::typed_site_keeps_required_nullable_fields_and_ignores_extensions ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/optimized-web/debug/deps/blog_component_macros-e3be68c1055040ba)
+
+running 2 tests
+test names::tests::names_preserve_boundaries ... ok
+test component::maintained_doc_tests::component_docs_preserve_markdown_and_rust_examples ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/optimized-web/debug/deps/blog_interface-023a1ad9724303f8)
+
+running 29 tests
+test api::tests::api_boundary_rejects_cross_origin_and_fragment_paths ... ok
+test api::tests::older_logout_cannot_settle_a_newer_logout_barrier ... ok
+test api::tests::queued_login_does_not_discard_confirmed_logout ... ok
+test api::tests::queued_login_does_not_discard_logout_failure ... ok
+test api::tests::restore_does_not_touch_the_browser_during_revocation ... ok
+test api::tests::typed_body_serialization_errors_are_explicit ... ok
+test api::tests::typed_decode_preserves_large_integers_and_null_contracts ... ok
+test i18n::tests::locale_admission_matches_current_contract ... ok
+test contracts::tests::credentials_keep_utf8_byte_policy_and_unicode_names ... ok
+test server_corners::geometry::tests::analytic_endpoints_join_lines_at_g3_not_g4 ... ok
+test contracts::tests::unknown_session_fields_and_nonadmin_roles_are_rejected ... ok
+test server_corners::geometry::tests::invalid_coordinates_budgets_parameters_and_offsets_are_rejected ... ok
+test server_corners::geometry::tests::corner_boxes_are_convex_across_rectangles_and_small_extents ... ok
+test server_corners::geometry::tests::parallel_offsets_resample_analytic_curves_and_reject_singularities ... ok
+test server_corners::geometry::tests::serialized_public_shapes_match_browser_contracts ... ok
+test server_corners::geometry::tests::all_four_corners_preserve_identical_physical_coordinates ... ok
+test server_corners::geometry::tests::svg_decimal_format_preserves_javascript_rounding_and_negative_zero ... ok
+test server_corners::geometry::tests::source_controls_proportions_and_independent_polynomial_agree ... ok
+test server_corners::paint::tests::compact_paint_shares_physical_corner_size ... ok
+test server_corners::paint::tests::border_shadows_and_foreground_follow_existing_paint_contract ... ok
+test server_corners::geometry::tests::polynomial_hulls_certify_speed_curvature_and_offset_radius ... ok
+test server_corners::paint::tests::numeric_prefixes_and_css_formatting ... ok
+test server_corners::paint::tests::only_owned_property_families_are_removed_from_transitions ... ok
+test server_corners::paint::tests::parses_supported_multi_layer_shadows_and_rejects_inset ... ok
+test server_corners::paint::tests::splits_css_functions_without_splitting_their_arguments ... ok
+test server_corners::paint::tests::escapes_css_paint_values_and_cache_keeps_variants_separate ... ok
+test server_corners::paint::tests::mask_keeps_outside_focus_visible_and_clips_host_content ... ok
+test server_corners::geometry::tests::adaptive_error_budgets_bound_independently_evaluated_curves ... ok
+test server_corners::geometry::tests::bounded_caches_reuse_geometry_and_discard_old_entries ... ok
+
+test result: ok. 29 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+
+     Running tests/csr_components.rs (target/optimized-web/debug/deps/csr_components-d2b2c2f0593206d2)
+
+running 8 tests
+test callback_arity_and_output_conversions ... ok
+test children_conversion_and_context_owner_are_preserved ... ok
+test macro_hygiene::component_uses_absolute_facade_paths ... ok
+test defaults_conversion_generics_and_destructured_props ... ok
+test reactive_closure_plain_and_prebuilt_signal_conversions ... ok
+test regular_components_untrack_and_transparent_components_keep_the_observer ... ok
+test returned_view_does_not_capture_input_lifetime ... ok
+test unsupported_shadow_portal_still_fails_before_mounting - should panic ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/kernel_state.rs (target/optimized-web/debug/deps/kernel_state-27ba92a8ab464dbb)
+
+running 5 tests
+test escaping_keeps_text_and_quoted_attribute_boundaries ... ok
+test lazy_groups_keep_equal_keys_and_buffer_unconsumed_previous_groups ... ok
+test memo_observes_updates_without_an_async_resource_or_executor ... ok
+test owner_cleanup_runs_once_and_disposes_its_signals ... ok
+test reused_slots_never_resurrect_a_disposed_key ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -1,0 +1,70 @@
+# Internal source component. Original manifest and origin: compliance/provenance.
+
+[package]
+edition = "2021"
+rust-version = "1.81"
+name = "blog-wasm-browser-bridge-entry"
+build = false
+autolib = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+description = "browser bridge entry"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[features]
+strict-macro = []
+extra-traits = []
+
+[lib]
+name = "blog_wasm_browser_bridge_entry"
+path = "src/lib.rs"
+proc-macro = true
+
+[dependencies.bumpalo]
+path = "../../memory/arena"
+package = "blog-memory-arena"
+
+[dependencies.proc-macro2]
+path = "../../syntax/token-stream"
+package = "blog-syntax-token-stream"
+
+[dependencies.quote]
+path = "../../syntax/token-templates"
+package = "blog-syntax-token-templates"
+
+[dependencies.syn]
+features = ["visit", "visit-mut", "full", "extra-traits"]
+path = "../../syntax/rust-parser"
+package = "blog-syntax-rust-parser"
+
+[dependencies.wasm-bindgen-shared]
+path = "../browser-bridge-schema"
+package = "blog-wasm-browser-bridge-schema"
+
+
+[lints.clippy]
+large_enum_variant = "allow"
+new_without_default = "allow"
+overly_complex_bool_expr = "allow"
+too_many_arguments = "allow"
+type_complexity = "allow"
+uninlined_format_args = "warn"
+
+[lints.rust]
+unused_lifetimes = "warn"
+
+[lints.rust.unexpected_cfgs]
+level = "warn"
+priority = 0
+check-cfg = [
+    "cfg(wasm_bindgen_unstable_test_coverage)",
+    "cfg(wasm_bindgen_use_js_sys)",
+    "cfg(xxx_debug_only_print_generated_code)",
+    "cfg(legacy_eh)",
+    "cfg(tokio_unstable)",
+    "cfg(wasm_bindgen_unstable_tokio)",
+    "cfg(wasm_bindgen_unstable_jspi)",
+]

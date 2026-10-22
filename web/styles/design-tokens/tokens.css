@@ -1,0 +1,25 @@
+:root {
+  --blog-font-ui: "Sarmg Maple", ui-monospace, monospace;
+  --blog-font-mono: "Sarmg Maple", ui-monospace, monospace;
+  --blog-font-size-body: 1rem;
+  --blog-line-height-body: 1.5;
+  --blog-blue-500: #3b82f6;
+  --blog-blue-600: #2563eb;
+  --blog-gray-50: #fafafa;
+  --blog-gray-100: #f4f4f5;
+  --blog-gray-900: #18181b;
+  --blog-red-600: #dc2626;
+  --blog-space-1: 4px;
+  --blog-space-2: 8px;
+  --blog-space-3: 12px;
+  --blog-space-4: 16px;
+  --blog-space-6: 24px;
+  --blog-space-8: 32px;
+  --blog-content-spacing: var(--blog-space-4);
+  --blog-action-primary: var(--blog-blue-600);
+  --blog-text-link: var(--blog-blue-600);
+  --blog-bg-page: var(--blog-gray-50);
+  --blog-bg-panel: #ffffff;
+  --blog-text-primary: var(--blog-gray-900);
+  --blog-text-danger: var(--blog-red-600);
+}

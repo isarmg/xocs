@@ -1,0 +1,53 @@
+# Project synchronization. Original sources and versions: compliance/provenance.
+[package]
+name = "blog-sync-mutex"
+edition = "2021"
+rust-version = "1.71"
+license = "MIT OR Apache-2.0"
+build = "build.rs"
+autotests = false
+autobenches = false
+autoexamples = false
+publish = false
+description = "mutex"
+[features]
+default = ["locks"]
+std = []
+parking = ["std", "dep:cfg-if", "dep:smallvec", "dep:libc"]
+locks = ["parking", "atomic_usize"]
+arc_lock = []
+atomic_usize = []
+serde = ["dep:serde"]
+send_guard = []
+hardware-lock-elision = []
+nightly = []
+
+[dependencies.scopeguard]
+path = "../scope-cleanup"
+default-features = false
+package = "blog-sync-scope-cleanup"
+
+[dependencies.serde]
+path = "../../format/data-model"
+optional = true
+default-features = false
+package = "blog-format-data-model"
+
+[dependencies.cfg-if]
+path = "../../native/target-conditions"
+optional = true
+package = "blog-native-target-conditions"
+
+[dependencies.smallvec]
+path = "../../collections/inline-vector"
+optional = true
+package = "blog-collections-inline-vector"
+
+[target.'cfg(unix)'.dependencies.libc]
+path = "../../platform/system-abi"
+optional = true
+package = "blog-platform-system-abi"
+
+[lib]
+name = "blog_sync_mutex"
+path = "src/lib.rs"

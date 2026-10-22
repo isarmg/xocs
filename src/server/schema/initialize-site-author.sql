@@ -1,0 +1,1 @@
+INSERT INTO user(id,username,user_type) VALUES(1,'site-author',0)

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { chromium, firefox, expect } from '@playwright/test';
-import { preview } from '../../tools/web-build/test-preview.mjs';
+import { preview } from '../../tools/assets/test-preview.mjs';
 import { mockApi } from './browser-fixtures.mjs';
 
 const server = await preview({ preview: { host: '127.0.0.1', port: 0, strictPort: true } });
@@ -23,7 +23,7 @@ try {
             const root = page.locator('.original-public');
             await expect(root).toBeVisible();
             await expect(page.locator('.public-footer, footer')).toHaveCount(0);
-            await expect(page.locator('body')).not.toContainText('Powered by xocs');
+            await expect(page.locator('body')).not.toContainText('Powered by blog');
             const sheets = await page.evaluate(async () => Promise.all(Array.from(document.querySelectorAll('link[rel="stylesheet"]'), async node => (await fetch(node.href)).text())));
             assert.ok(sheets.every(css => !css.includes('.public-footer')), 'No removed footer background/spacing CSS remains');
             // Empty fixtures may be short. Add content inside the real main

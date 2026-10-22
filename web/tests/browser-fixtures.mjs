@@ -10,14 +10,14 @@ function observeApplicationRequests(page){
 }
 export async function waitForApplication(page){
   const {expect}=await import('@playwright/test');
-  await expect(page.locator('html')).toHaveAttribute('data-xcss-runtime','xcss-web');
+  await expect(page.locator('html')).toHaveAttribute('data-blog-runtime','blog-interface');
   for(let pass=0;pass<2;pass++){
     await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
     await expect.poll(()=>[...(applicationRequests.get(page)??[])].map(request=>request.url()),{message:`Current application reads: ${page.url()}`}).toEqual([]);
   }
 }
 export const session = { authenticated: true, user_id: 'A'.repeat(43), username: 'admin', role: 'admin', csrf_token: 'A'.repeat(43) };
-export const site = { web_name: 'XOCS', web_title: null, notices: null, background_image: null, avatar: null, random_cover: null };
+export const site = { web_name: 'BLOG', web_title: null, notices: null, background_image: null, avatar: null, random_cover: null };
 export const adminSite = { ...site, author_name: 'Site owner' };
 export const letter = { recipient: 'Reader', sender: 'Writer', content: 'A letter from the site.\nEveryday stories belong here.' };
 const category = { id: 1, sort_name: '中文分类', sort_description: null, priority: 0, article_count: 1 };

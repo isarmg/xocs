@@ -1,0 +1,17 @@
+/* A resource failure must be readable without the application fonts or WASM. */
+html[data-blog-startup="failed"] body { visibility: visible !important; }
+html[data-blog-startup="failed"] body > :not(#blog-startup-error) { display: none !important; }
+#blog-startup-error {
+  box-sizing: border-box;
+  max-width: 42rem;
+  margin: 4rem auto;
+  padding: 2rem;
+  background: Canvas;
+  color: CanvasText;
+  line-height: 1.6;
+}
+#blog-startup-error, #blog-startup-error * { font-family: system-ui, sans-serif !important; }
+#blog-startup-error h1 { font-size: 1.5rem; }
+#blog-startup-error button { padding: .5rem 1rem; cursor: pointer; }
+#blog-startup-error button:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+@media (max-width: 40rem) { #blog-startup-error { margin: 1rem; padding: 1rem; } }

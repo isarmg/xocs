@@ -1,0 +1,130 @@
+# Internal source component. Original manifest and origin: compliance/provenance.
+
+[package]
+edition = "2024"
+rust-version = "1.88"
+name = "blog-unicode-character-properties"
+build = "build.rs"
+autolib = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+description = "character properties"
+license = "Unicode-3.0"
+resolver = "2"
+publish = false
+
+[features]
+alloc = ["icu_collections/alloc", "serde?/alloc", "zerovec/alloc"]
+compiled_data = ["icu_provider/baked"]
+default = ["compiled_data"]
+log = ["dep:log"]
+serde = ["dep:serde", "icu_locale_core/serde", "zerovec/serde", "icu_collections/serde", "icu_provider/serde", "zerotrie/serde"]
+unstable = []
+
+[lib]
+name = "blog_unicode_character_properties"
+path = "src/lib.rs"
+
+[dependencies.displaydoc]
+default-features = false
+path = "../../diagnostics/error-display"
+package = "blog-diagnostics-error-display"
+
+[dependencies.icu_collections]
+default-features = false
+path = "../data-collections"
+package = "blog-unicode-data-collections"
+
+[dependencies.icu_locale_core]
+features = ["zerovec"]
+default-features = false
+path = "../locale-identifiers"
+package = "blog-unicode-locale-identifiers"
+
+[dependencies.icu_provider]
+default-features = false
+path = "../data-provider"
+package = "blog-unicode-data-provider"
+
+[dependencies.log]
+optional = true
+default-features = false
+path = "../../diagnostics/event-facade"
+package = "blog-diagnostics-event-facade"
+
+[dependencies.serde]
+features = ["derive"]
+optional = true
+default-features = false
+path = "../../format/data-model"
+package = "blog-format-data-model"
+
+[dependencies.zerotrie]
+features = ["yoke", "zerofrom"]
+default-features = false
+path = "../compact-trie"
+package = "blog-unicode-compact-trie"
+
+[dependencies.zerovec]
+features = ["derive", "yoke"]
+default-features = false
+path = "../borrowed-vector"
+package = "blog-unicode-borrowed-vector"
+
+
+[lints.clippy]
+alloc_instead_of_core = "warn"
+bool_assert_comparison = "allow"
+branches_sharing_code = "warn"
+collection_is_never_read = "warn"
+crosspointer_transmute = "warn"
+dbg_macro = "warn"
+debug_assert_with_mut_call = "warn"
+doc_markdown = "warn"
+exhaustive_enums = "deny"
+exhaustive_structs = "deny"
+fn_to_numeric_cast_any = "warn"
+infinite_loop = "warn"
+large_stack_arrays = "warn"
+mismatching_type_param_order = "warn"
+missing_fields_in_debug = "warn"
+missing_transmute_annotations = "warn"
+negative_feature_names = "warn"
+or_fun_call = "warn"
+same_functions_in_if_condition = "warn"
+todo = "warn"
+transmute_bytes_to_str = "warn"
+transmute_int_to_bool = "warn"
+transmute_int_to_non_zero = "warn"
+transmute_ptr_to_ptr = "warn"
+transmute_ptr_to_ref = "warn"
+transmute_undefined_repr = "warn"
+transmutes_expressible_as_ptr_casts = "warn"
+trivially_copy_pass_by_ref = "deny"
+unnecessary_wraps = "warn"
+useless_transmute = "warn"
+wildcard_dependencies = "warn"
+
+[lints.rust]
+missing_debug_implementations = "deny"
+trivial_numeric_casts = "deny"
+unused_lifetimes = "warn"
+unused_macro_rules = "warn"
+unused_qualifications = "warn"
+
+[lints.rust.unexpected_cfgs]
+level = "warn"
+priority = 0
+# Historical implementation branches are retained, not selectable Cargo features.
+# These names only suppress cfg diagnostics; they never enable dormant code.
+check-cfg = [
+    "cfg(feature, values(\"harfbuzz_traits\", \"unicode_bidi\", \"datagen\"))",
+    "cfg(icu4x_custom_data)",
+    "cfg(icu4c_enable_renaming)",
+    "cfg(needs_alloc_error_handler)",
+    "cfg(icu4x_nightly_tests)",
+    "cfg(icu4x_run_size_tests)",
+    "cfg(icu4x_unstable_fast_trie_only)",
+]

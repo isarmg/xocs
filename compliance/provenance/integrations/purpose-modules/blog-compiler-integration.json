@@ -1,0 +1,363 @@
+{
+  "package": {
+    "directory": "src/foundation/assets/compiler",
+    "name": "blog-assets-compiler",
+    "version": "0.0.0",
+    "layer": "assets",
+    "purpose": "宿主 JS/CSS AST、语义分析、资源链接与压缩"
+  },
+  "inputs": [
+    {
+      "directory": "src/foundation/assets/style-color",
+      "name": "blog-assets-style-color",
+      "module": "style_color",
+      "selected_host_features": [],
+      "library": "parts/style_color/lib.rs"
+    },
+    {
+      "directory": "src/foundation/assets/style-optimizer",
+      "name": "blog-assets-style-optimizer",
+      "module": "style_optimizer",
+      "selected_host_features": [
+        "visitor"
+      ],
+      "library": "parts/style_optimizer/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/assets/style-parser",
+      "name": "blog-assets-style-parser",
+      "module": "style_parser",
+      "selected_host_features": [],
+      "library": "parts/style_parser/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/assets/style-selectors",
+      "name": "blog-assets-style-selectors",
+      "module": "style_selectors",
+      "selected_host_features": [],
+      "library": "parts/style_selectors/lib.rs"
+    },
+    {
+      "directory": "src/foundation/javascript/browser-compatibility",
+      "name": "blog-javascript-browser-compatibility",
+      "module": "browser_compatibility",
+      "selected_host_features": [],
+      "library": "parts/browser_compatibility/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/javascript/browser-targets",
+      "name": "blog-javascript-browser-targets",
+      "module": "browser_targets",
+      "selected_host_features": [
+        "default"
+      ],
+      "library": "parts/browser_targets/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/javascript/code-generator",
+      "name": "blog-javascript-code-generator",
+      "module": "code_generator",
+      "selected_host_features": [
+        "sourcemap"
+      ],
+      "library": "parts/code_generator/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/javascript/compiler-collections",
+      "name": "blog-javascript-compiler-collections",
+      "module": "compiler_collections",
+      "selected_host_features": [
+        "assert_unchecked",
+        "branch_hints",
+        "code_buffer",
+        "default",
+        "fieldless_enum",
+        "inline_string",
+        "slice_iter",
+        "stack",
+        "string_ext"
+      ],
+      "library": "parts/compiler_collections/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/javascript/compiler-errors",
+      "name": "blog-javascript-compiler-errors",
+      "module": "compiler_errors",
+      "selected_host_features": [],
+      "library": "parts/compiler_errors/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/javascript/compiler-strings",
+      "name": "blog-javascript-compiler-strings",
+      "module": "compiler_strings",
+      "selected_host_features": [
+        "default"
+      ],
+      "library": "parts/compiler_strings/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/javascript/language-semantics",
+      "name": "blog-javascript-language-semantics",
+      "module": "language_semantics",
+      "selected_host_features": [
+        "constant_evaluation",
+        "side_effects"
+      ],
+      "library": "parts/language_semantics/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/javascript/name-compaction",
+      "name": "blog-javascript-name-compaction",
+      "module": "name_compaction",
+      "selected_host_features": [],
+      "library": "parts/name_compaction/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/javascript/optimizer",
+      "name": "blog-javascript-optimizer",
+      "module": "optimizer",
+      "selected_host_features": [],
+      "library": "parts/optimizer/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/javascript/parser",
+      "name": "blog-javascript-parser",
+      "module": "parser",
+      "selected_host_features": [
+        "default",
+        "regular_expression"
+      ],
+      "library": "parts/parser/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/javascript/regular-expression",
+      "name": "blog-javascript-regular-expression",
+      "module": "regular_expression",
+      "selected_host_features": [],
+      "library": "parts/regular_expression/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/javascript/scope-analysis",
+      "name": "blog-javascript-scope-analysis",
+      "module": "scope_analysis",
+      "selected_host_features": [
+        "default"
+      ],
+      "library": "parts/scope_analysis/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/javascript/source-location",
+      "name": "blog-javascript-source-location",
+      "module": "source_location",
+      "selected_host_features": [
+        "default"
+      ],
+      "library": "parts/source_location/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/javascript/source-map",
+      "name": "blog-javascript-source-map",
+      "module": "source_map",
+      "selected_host_features": [
+        "default"
+      ],
+      "library": "parts/source_map/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/javascript/syntax-arena",
+      "name": "blog-javascript-syntax-arena",
+      "module": "syntax_arena",
+      "selected_host_features": [
+        "bitset"
+      ],
+      "library": "parts/syntax_arena/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/javascript/syntax-serialization",
+      "name": "blog-javascript-syntax-serialization",
+      "module": "syntax_serialization",
+      "selected_host_features": [
+        "default"
+      ],
+      "library": "parts/syntax_serialization/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/javascript/syntax-tree",
+      "name": "blog-javascript-syntax-tree",
+      "module": "syntax_tree",
+      "selected_host_features": [
+        "default"
+      ],
+      "library": "parts/syntax_tree/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/javascript/syntax-types",
+      "name": "blog-javascript-syntax-types",
+      "module": "syntax_types",
+      "selected_host_features": [
+        "default",
+        "to_js_string"
+      ],
+      "library": "parts/syntax_types/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/javascript/syntax-visitor",
+      "name": "blog-javascript-syntax-visitor",
+      "module": "syntax_visitor",
+      "selected_host_features": [
+        "default"
+      ],
+      "library": "parts/syntax_visitor/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/javascript/toolkit",
+      "name": "blog-javascript-toolkit",
+      "module": "toolkit",
+      "selected_host_features": [
+        "ast_visit",
+        "codegen",
+        "default",
+        "minifier",
+        "oxc_ast_visit",
+        "oxc_codegen",
+        "oxc_mangler",
+        "oxc_minifier",
+        "oxc_regular_expression",
+        "oxc_semantic",
+        "regular_expression",
+        "semantic"
+      ],
+      "library": "parts/toolkit/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/javascript/tree-traversal",
+      "name": "blog-javascript-tree-traversal",
+      "module": "tree_traversal",
+      "selected_host_features": [],
+      "library": "parts/tree_traversal/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/javascript/typed-index",
+      "name": "blog-javascript-typed-index",
+      "module": "typed_index",
+      "selected_host_features": [
+        "nonmax",
+        "serde"
+      ],
+      "library": "parts/typed_index/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/collections/cached-hash",
+      "name": "blog-collections-cached-hash",
+      "module": "cached_hash",
+      "selected_host_features": [],
+      "library": "parts/cached_hash/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/encoding/byte-count",
+      "name": "blog-encoding-byte-count",
+      "module": "byte_count",
+      "selected_host_features": [],
+      "library": "parts/byte_count/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/encoding/float-format",
+      "name": "blog-encoding-float-format",
+      "module": "float_format",
+      "selected_host_features": [],
+      "library": "parts/float_format/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/encoding/json-escaping",
+      "name": "blog-encoding-json-escaping",
+      "module": "json_escaping",
+      "selected_host_features": [
+        "default"
+      ],
+      "library": "parts/json_escaping/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/encoding/short-float-format",
+      "name": "blog-encoding-short-float-format",
+      "module": "short_float_format",
+      "selected_host_features": [],
+      "library": "parts/short_float_format/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/filesystem/relative-path",
+      "name": "blog-filesystem-relative-path",
+      "module": "relative_path",
+      "selected_host_features": [],
+      "library": "parts/relative_path/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/memory/bounded-index",
+      "name": "blog-memory-bounded-index",
+      "module": "bounded_index",
+      "selected_host_features": [
+        "default",
+        "std"
+      ],
+      "library": "parts/bounded_index/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/text/borrowed-text",
+      "name": "blog-text-borrowed-text",
+      "module": "borrowed_text",
+      "selected_host_features": [
+        "default"
+      ],
+      "library": "parts/borrowed_text/src/lib.rs"
+    },
+    {
+      "directory": "src/foundation/text/script-identifiers",
+      "name": "blog-text-script-identifiers",
+      "module": "script_identifiers",
+      "selected_host_features": [],
+      "library": "parts/script_identifiers/src/lib.rs"
+    }
+  ],
+  "external_aliases": {
+    "blog-collections-keyed-hash": "ahash",
+    "blog-collections-bit-set": "bitflags",
+    "blog-text-compile-time-text": "const_str",
+    "blog-encoding-radix-codecs": "data_encoding",
+    "blog-collections-ordered-map": "indexmap",
+    "blog-syntax-style-iterators": "itertools",
+    "blog-sync-lazy-global": "lazy_static",
+    "blog-assets-style-value-derive": "lightningcss_derive",
+    "blog-syntax-token-concat": "pastey",
+    "blog-collections-inline-vector": "smallvec",
+    "blog-platform-compiler-entropy": "getrandom",
+    "blog-assets-style-token-macros": "cssparser_macros",
+    "blog-encoding-integer-format": "itoa",
+    "blog-lookup-style-table": "phf",
+    "blog-diagnostics-event-facade": "log",
+    "blog-collections-compiler-hash": "rustc_hash",
+    "blog-format-data-model": "serde",
+    "blog-encoding-deflate-engine": "miniz_oxide",
+    "blog-format-binary-record": "postcard",
+    "blog-diagnostics-typed-error": "thiserror",
+    "blog-platform-system-abi": "libc",
+    "blog-interface-javascript-api": "js_sys",
+    "blog-encoding-byte-search": "memchr",
+    "blog-text-line-layout": "textwrap",
+    "blog-text-text-boundaries": "unicode_segmentation",
+    "blog-text-terminal-width": "unicode_width",
+    "blog-collections-inline-string": "compact_str",
+    "blog-collections-hash-table": "hashbrown",
+    "blog-encoding-script-float-format": "dragonbox_ecma",
+    "blog-math-large-integer": "num_bigint",
+    "blog-math-numeric-traits": "num_traits",
+    "blog-syntax-compiler-iterators": "blog_syntax_compiler_iterators",
+    "blog-text-constant-pattern": "lazy_regex",
+    "blog-syntax-index-expansion": "seq_macro",
+    "blog-javascript-syntax-derive": "oxc_ast_macros",
+    "blog-lookup-script-table": "blog_lookup_script_table",
+    "blog-memory-owned-borrow": "self_cell",
+    "blog-encoding-vector-base-encoding": "base64_simd",
+    "blog-format-json": "serde_json",
+    "blog-memory-allocator": "allocator_api2",
+    "blog-encoding-vector-escaping": "escape_simd"
+  }
+}

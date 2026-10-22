@@ -1,0 +1,184 @@
+# Project-owned consolidation; immutable upstream origins remain in compliance.
+[package]
+edition = "2018"
+rust-version = "1.65.0"
+build = false
+autolib = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+license = "MIT"
+name = "blog-diagnostics-structured-events"
+publish = false
+description = "structured events"
+
+[badges.maintenance]
+status = "actively-developed"
+
+[features]
+attributes = [
+    "tracing-attributes",
+]
+default = [
+    "std",
+    "attributes",
+]
+log-always = [
+    "log",
+]
+log = [
+    "dep:log",
+]
+max_level_debug = []
+max_level_error = []
+max_level_info = []
+max_level_off = []
+max_level_trace = []
+max_level_warn = []
+release_max_level_debug = []
+release_max_level_error = []
+release_max_level_info = []
+release_max_level_off = []
+release_max_level_trace = []
+release_max_level_warn = []
+std = [
+    "alloc",
+    "dep:once_cell",
+]
+alloc = []
+collector = [
+    "alloc",
+]
+registry = [
+    "collector",
+    "std",
+    "dep:sharded-slab",
+    "dep:thread_local",
+]
+fmt = [
+    "registry",
+    "std",
+]
+ansi = [
+    "fmt",
+    "dep:nu-ansi-term",
+]
+json = [
+    "fmt",
+    "serde",
+    "dep:json-codec",
+]
+log-bridge = [
+    "std",
+    "dep:log",
+    "log/std",
+    "dep:once_cell",
+]
+log-tracer = [
+    "log-bridge",
+]
+collector-default = [
+    "fmt",
+    "ansi",
+    "log-tracer",
+    "smallvec",
+]
+parking = [
+    "collector",
+    "std",
+    "dep:synchronization",
+    "synchronization/locks",
+]
+smallvec = [
+    "collector",
+    "dep:smallvec",
+]
+serde = [
+    "collector",
+    "dep:serde",
+]
+
+[lib]
+name = "tracing"
+path = "src/lib.rs"
+doctest = false
+
+[dependencies.log]
+optional = true
+path = "../event-facade"
+default-features = false
+package = "blog-diagnostics-event-facade"
+
+[dependencies.pin-project-lite]
+path = "../../sync/pinned-projection"
+package = "blog-sync-pinned-projection"
+
+[dependencies.tracing-attributes]
+optional = true
+path = "../event-instrumentation"
+package = "blog-diagnostics-event-instrumentation"
+
+[dependencies.nu-ansi-term]
+optional = true
+path = "../../cli/terminal-format"
+package = "blog-cli-terminal-format"
+
+[dependencies.once_cell]
+optional = true
+path = "../../sync/initialization"
+package = "blog-sync-initialization"
+
+[dependencies.synchronization]
+optional = true
+default-features = false
+path = "../../sync/mutex"
+package = "blog-sync-mutex"
+features = ["locks"]
+
+[dependencies.json-codec]
+optional = true
+path = "../../format/json"
+package = "blog-format-json"
+
+[dependencies.sharded-slab]
+optional = true
+path = "../../collections/concurrent-slab"
+package = "blog-collections-concurrent-slab"
+
+[dependencies.smallvec]
+optional = true
+path = "../../collections/inline-vector"
+package = "blog-collections-inline-vector"
+
+[dependencies.thread_local]
+optional = true
+path = "../../sync/thread-storage"
+package = "blog-sync-thread-storage"
+
+[dependencies.serde]
+optional = true
+path = "../../format/data-model"
+package = "blog-format-data-model"
+
+[lints.rust.unexpected_cfgs]
+level = "warn"
+priority = 0
+check-cfg = [
+    "cfg(flaky_tests)",
+    "cfg(tracing_unstable)",
+    "cfg(unsound_local_offset)",
+]
+
+[dev-dependencies.regex]
+path = "../../text/pattern-search"
+package = "blog-text-pattern-search"
+
+[[test]]
+name = "log-bridge"
+path = "../../../../test/tracing/log_bridge.rs"
+required-features = [
+    "registry",
+    "log-tracer",
+    "log",
+]

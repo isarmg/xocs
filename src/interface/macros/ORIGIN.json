@@ -1,0 +1,47 @@
+{
+  "format": 1,
+  "ownership": "repository-maintained",
+  "package": "blog-component-macros",
+  "upstream": {
+    "package": "xcss-web-macro",
+    "version": "0.8.19",
+    "origin": "https://github.com/isarmg/xcss",
+    "base_revision": "a055fdf5ce4bdf6cb943284813e42ba864c74b9d",
+    "source_directory": "web/xcss-web/vendor/xcss-web-macro",
+    "receipt": "compliance/web-origins/xcss-web-macro.SOURCE.json",
+    "receipt_sha256": "129205a72b2b620ab750388c62fc0059a15d09add7c381ee7b8ab8b347132896",
+    "archive": "compliance/web-origins/xcss-web-macro.snapshot.tar.gz",
+    "archive_sha256": "d692f0b16e505fe8c48a13bf77384fe4270fcd0a48a0871463554b5c37a0d790"
+  },
+  "changes": [
+    {
+      "date": "2026-10-22",
+      "description": "Integrate the existing Leptos-derived macro source into blog maintenance. Rename the package/library, local dependency paths and generated macro references from xcss_web to blog_ui. Preserve all original MIT copyright and license bytes. Original per-file source receipt is archived unchanged."
+    },
+    {
+      "date": "2026-10-22",
+      "description": "Specialize the host macro to the component attribute and typed props constructors used by repository consumers. Retain generic/impl-Trait/lifetime/destructured props, IntoReactiveValue conversions, transparent/untracked execution and IDE error fallback. Retire RSX/template/include-view/island/lazy/server/slot/memo/slice/Params surfaces. Integrate the small literal-extraction helper formerly imported from leptos_hot_reload; preserve source archives and licenses. Move retained component behavior tests to the facade CSR consumer integration test."
+    },
+    {
+      "date": "2026-10-22",
+      "description": "Integrate retained CSR implementation modules and compiler helpers as recorded in INTEGRATED-SOURCES.json. Preserve earlier provenance and original licenses. Component names use an independently implemented Unicode-aware conversion; discarded implementations are explicitly retired in the append-only migration ledger."
+    }
+  ],
+  "integrated_sources": [
+    {
+      "package": "leptos_hot_reload",
+      "version": "0.8.7",
+      "source": "src/foundation/leptos_hot_reload-0.8.7/src/parsing.rs",
+      "source_sha256": "4ebaff14f0c29ccc80cd8b6f754620db09cb570548d88fa3f20cad8787661331",
+      "source_lines": "33-44",
+      "destination": "src/component.rs:value_to_string",
+      "archive": "compliance/provenance/archives/leptos_hot_reload-0.8.7.crate",
+      "archive_sha256": "d84989bd3d604e66adbfe13a32bec2ea47bdcb6c9fcd643f784facbb32f6ef10",
+      "license": "MIT",
+      "changes": "Keep literal matching behavior; replace redundant match &value with match value. Original archive and hashes are unchanged."
+    }
+  ],
+  "integration_receipts": [
+    "compliance/provenance/integrations/browser-csr/integration.json"
+  ]
+}

@@ -3,12 +3,12 @@
 import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 import { chromium, firefox, expect } from '@playwright/test';
-import { preview } from '../../tools/web-build/test-preview.mjs';
+import { preview } from '../../tools/assets/test-preview.mjs';
 import { article, mockApi, session, waitForApplication } from './browser-fixtures.mjs';
 
-const requested = (process.env.XOCS_DOMAIN_ENGINES || 'chromium,firefox').split(',');
+const requested = (process.env.BLOG_DOMAIN_ENGINES || 'chromium,firefox').split(',');
 assert.ok(requested.length && new Set(requested).size === requested.length && requested.every(name => ['chromium','firefox'].includes(name)));
-const external = process.env.XOCS_WEB_URL;
+const external = process.env.BLOG_WEB_URL;
 if (external) {
   const url = new URL(external);
   assert.equal(url.protocol, 'http:');
@@ -184,5 +184,5 @@ try {
   summary.all_passed=true;
 } finally {
   if(server)await server.close();
-  if(process.env.XOCS_DOMAIN_REPORT)await writeFile(process.env.XOCS_DOMAIN_REPORT,JSON.stringify(summary,null,2)+'\n');
+  if(process.env.BLOG_DOMAIN_REPORT)await writeFile(process.env.BLOG_DOMAIN_REPORT,JSON.stringify(summary,null,2)+'\n');
 }

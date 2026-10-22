@@ -1,0 +1,104 @@
+warning: use of deprecated constant `core::u8::MAX`: replaced by the `MAX` associated constant on this type
+   --> src/foundation/encoding/byte-search/src/arch/all/packedpair/mod.rs:179:41
+    |
+179 |         let max = usize::from(core::u8::MAX);
+    |                                         ^^^
+    |
+    = note: `#[warn(deprecated)]` on by default
+
+warning: use of deprecated constant `core::u32::MAX`: replaced by the `MAX` associated constant on this type
+   --> src/foundation/encoding/byte-search/src/memmem/searcher.rs:916:34
+    |
+916 |             Err(_) => core::u32::MAX,
+    |                                  ^^^
+
+warning: `blog-encoding-byte-search` (lib) generated 2 warnings
+warning: use of deprecated constant `std::f64::EPSILON`: replaced by the `EPSILON` associated constant on `f64`
+    --> src/foundation/interface/javascript-api/src/lib.rs:6074:35
+     |
+6074 |     pub const EPSILON: f64 = f64::EPSILON;
+     |                                   ^^^^^^^
+     |
+     = note: `#[warn(deprecated)]` on by default
+
+warning: use of deprecated constant `std::f64::MAX`: replaced by the `MAX` associated constant on `f64`
+    --> src/foundation/interface/javascript-api/src/lib.rs:6082:37
+     |
+6082 |     pub const MAX_VALUE: f64 = f64::MAX;
+     |                                     ^^^
+
+warning: use of deprecated constant `std::f64::NAN`: replaced by the `NAN` associated constant on `f64`
+    --> src/foundation/interface/javascript-api/src/lib.rs:6096:31
+     |
+6096 |     pub const NAN: f64 = f64::NAN;
+     |                               ^^^
+
+warning: use of deprecated constant `std::f64::NEG_INFINITY`: replaced by the `NEG_INFINITY` associated constant on `f64`
+    --> src/foundation/interface/javascript-api/src/lib.rs:6100:45
+     |
+6100 |     pub const NEGATIVE_INFINITY: f64 = f64::NEG_INFINITY;
+     |                                             ^^^^^^^^^^^^
+
+warning: use of deprecated constant `std::f64::INFINITY`: replaced by the `INFINITY` associated constant on `f64`
+    --> src/foundation/interface/javascript-api/src/lib.rs:6104:45
+     |
+6104 |     pub const POSITIVE_INFINITY: f64 = f64::INFINITY;
+     |                                             ^^^^^^^^
+
+warning: `blog-interface-javascript-api` (lib) generated 5 warnings
+warning: unexpected `cfg` condition value: `futures-core-03-stream`
+  --> src/foundation/wasm/browser-futures/src/lib.rs:16:7
+   |
+16 | #[cfg(feature = "futures-core-03-stream")]
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: expected values for `feature` are: `default` and `std`
+   = help: consider adding `futures-core-03-stream` as a feature in `Cargo.toml`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+   = note: requested on the command line with `-W unexpected-cfgs`
+
+warning: unexpected `cfg` condition value: `borsh`
+   --> src/foundation/collections/ordered-map/src/lib.rs:112:7
+    |
+112 | #[cfg(feature = "borsh")]
+    |       ^^^^^^^^^^^^^^^^^
+    |
+    = note: expected values for `feature` are: `default`, `rayon`, `serde`, `std`, and `test_debug`
+    = help: consider adding `borsh` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: requested on the command line with `-W unexpected-cfgs`
+
+warning: unexpected `cfg` condition value: `sval`
+   --> src/foundation/collections/ordered-map/src/lib.rs:116:7
+    |
+116 | #[cfg(feature = "sval")]
+    |       ^^^^^^^^^^^^^^^^
+    |
+    = note: expected values for `feature` are: `default`, `rayon`, `serde`, `std`, and `test_debug`
+    = help: consider adding `sval` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `arbitrary`
+ --> src/foundation/collections/ordered-map/src/arbitrary.rs:1:7
+  |
+1 | #[cfg(feature = "arbitrary")]
+  |       ^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: expected values for `feature` are: `default`, `rayon`, `serde`, `std`, and `test_debug`
+  = help: consider adding `arbitrary` as a feature in `Cargo.toml`
+  = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: unexpected `cfg` condition value: `quickcheck`
+  --> src/foundation/collections/ordered-map/src/arbitrary.rs:38:7
+   |
+38 | #[cfg(feature = "quickcheck")]
+   |       ^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: expected values for `feature` are: `default`, `rayon`, `serde`, `std`, and `test_debug`
+   = help: consider adding `quickcheck` as a feature in `Cargo.toml`
+   = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+
+warning: `blog-wasm-browser-futures` (lib) generated 1 warning
+warning: `blog-collections-ordered-map` (lib) generated 4 warnings
+    Checking blog-dom v0.0.0 (/mnt/sarmg.org/blog/src/interface/dom)
+    Finished `dev` profile [unoptimized] target(s) in 22.85s

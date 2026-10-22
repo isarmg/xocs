@@ -1,0 +1,175 @@
+# Project-owned consolidation; immutable upstream origins remain in compliance.
+[package]
+edition = "2018"
+rust-version = "1.64.0"
+build = false
+autolib = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+license = "MIT"
+name = "blog-network-request-pipeline"
+publish = false
+description = "request pipeline"
+
+[features]
+balance = [
+    "discover",
+    "load",
+    "ready-cache",
+    "make",
+    "slab",
+    "util",
+]
+buffer = [
+    "tokio/sync",
+    "tokio/rt",
+    "dep:tokio-util",
+    "tracing",
+    "pin-project-lite",
+]
+discover = [
+    "dep:futures",
+    "futures/std",
+    "pin-project-lite",
+]
+filter = [
+    "dep:futures",
+    "futures/alloc",
+    "futures/utilities",
+    "pin-project-lite",
+]
+full = [
+    "balance",
+    "buffer",
+    "discover",
+    "filter",
+    "limit",
+    "load",
+    "load-shed",
+    "make",
+    "ready-cache",
+    "reconnect",
+    "retry",
+    "spawn-ready",
+    "steer",
+    "timeout",
+    "util",
+]
+limit = [
+    "tokio/time",
+    "tokio/sync",
+    "dep:tokio-util",
+    "tracing",
+    "pin-project-lite",
+]
+load = [
+    "tokio/time",
+    "tracing",
+    "pin-project-lite",
+]
+load-shed = [
+    "pin-project-lite",
+]
+log = [
+    "tracing/log",
+]
+make = [
+    "pin-project-lite",
+    "tokio",
+]
+ready-cache = [
+    "dep:futures",
+    "futures/std",
+    "futures/alloc",
+    "futures/utilities",
+    "indexmap",
+    "tokio/sync",
+    "tracing",
+    "pin-project-lite",
+]
+reconnect = [
+    "make",
+    "tracing",
+]
+retry = [
+    "tokio/time",
+    "util",
+]
+spawn-ready = [
+    "dep:futures",
+    "futures/alloc",
+    "futures/utilities",
+    "tokio/sync",
+    "tokio/rt",
+    "util",
+    "tracing",
+]
+steer = []
+timeout = [
+    "pin-project-lite",
+    "tokio/time",
+]
+tokio-stream = []
+util = [
+    "dep:futures",
+    "futures/std",
+    "futures/alloc",
+    "futures/utilities",
+    "pin-project-lite",
+    "sync_wrapper",
+]
+
+[lib]
+name = "service_stack"
+path = "src/lib.rs"
+doctest = false
+
+[dependencies.futures]
+path = "../../runtime/async-toolkit"
+default-features = false
+optional = true
+package = "blog-runtime-async-toolkit"
+
+[dependencies.indexmap]
+optional = true
+path = "../../collections/ordered-map"
+package = "blog-collections-ordered-map"
+
+[dependencies.pin-project-lite]
+optional = true
+path = "../../sync/pinned-projection"
+package = "blog-sync-pinned-projection"
+
+[dependencies.slab]
+optional = true
+path = "../../collections/slot-storage"
+package = "blog-collections-slot-storage"
+
+[dependencies.sync_wrapper]
+optional = true
+path = "../../sync/exclusive-value"
+package = "blog-sync-exclusive-value"
+
+[dependencies.tokio]
+optional = true
+path = "../../runtime/task-scheduler"
+package = "blog-runtime-task-scheduler"
+
+[dependencies.tracing]
+features = [
+    "std",
+]
+optional = true
+default-features = false
+path = "../../diagnostics/structured-events"
+package = "blog-diagnostics-structured-events"
+
+[dependencies.tokio-util]
+path = "../../runtime/scheduled-io"
+package = "blog-runtime-scheduled-io"
+features = [
+    "rt",
+]
+optional = true
