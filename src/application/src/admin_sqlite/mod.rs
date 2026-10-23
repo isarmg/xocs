@@ -70,6 +70,9 @@ pub async fn insert_administrator_on_connection(
 pub struct SqliteAdministratorStore {
     pool: SqlitePool,
     authentication: Arc<OnceLock<Arc<crate::admin_core::AuthenticationState>>>,
+    // Clones share a scan position. Serialize maintenance passes so concurrent
+    // successful logins cannot overwrite progress or race the wrap to the start.
+    session_cleanup_cursor: Arc<tokio::sync::Mutex<Option<i64>>>,
 }
 
 impl SqliteAdministratorStore {
@@ -77,22 +80,63 @@ impl SqliteAdministratorStore {
         Self {
             pool,
             authentication: Arc::new(OnceLock::new()),
+            session_cleanup_cursor: Arc::new(tokio::sync::Mutex::new(None)),
         }
     }
     pub fn pool(&self) -> &SqlitePool {
         &self.pool
     }
 
-    /// Scan at most `limit` oldest rows and delete only revoked/expired sessions.
-    /// Repeated login maintenance eventually advances past still-active rows;
+    /// Scan at most `limit` rows per pass and delete only revoked/expired sessions.
+    /// The keyset cursor advances past live rows and wraps after reaching the end;
     /// security audit retention is independently owned by the product.
     pub async fn prune_inactive_sessions(&self, now_micros: u64, limit: u32) -> Result<u64, Error> {
         if !(1..=128).contains(&limit) {
             return Err(Error::IntegerRange);
         }
         let now = to_i64(now_micros)?;
-        let deleted = sqlx::query("DELETE FROM _common_admin_sessions WHERE rowid IN (SELECT rowid FROM _common_admin_sessions ORDER BY rowid LIMIT ?) AND (revoked_at_micros IS NOT NULL OR idle_expires_at_micros<=? OR absolute_expires_at_micros<=?)")
-            .bind(i64::from(limit)).bind(now).bind(now).execute(&self.pool).await?;
+        let mut cursor = self.session_cleanup_cursor.lock().await;
+        let mut rowids: Vec<i64> = if let Some(after) = *cursor {
+            sqlx::query_scalar(
+                "SELECT rowid FROM _common_admin_sessions WHERE rowid>? ORDER BY rowid LIMIT ?",
+            )
+            .bind(after)
+            .bind(i64::from(limit))
+            .fetch_all(&self.pool)
+            .await?
+        } else {
+            Vec::new()
+        };
+        if rowids.is_empty() {
+            rowids = sqlx::query_scalar(
+                "SELECT rowid FROM _common_admin_sessions ORDER BY rowid LIMIT ?",
+            )
+            .bind(i64::from(limit))
+            .fetch_all(&self.pool)
+            .await?;
+        }
+        let Some(last) = rowids.last().copied() else {
+            *cursor = None;
+            return Ok(0);
+        };
+        let mut delete = sqlx::QueryBuilder::<Sqlite>::new(
+            "DELETE FROM _common_admin_sessions WHERE rowid IN (",
+        );
+        let mut rows = delete.separated(",");
+        for rowid in rowids {
+            rows.push_bind(rowid);
+        }
+        rows.push_unseparated(") AND (revoked_at_micros IS NOT NULL OR idle_expires_at_micros<=");
+        delete
+            .push_bind(now)
+            .push(" OR absolute_expires_at_micros<=")
+            .push_bind(now)
+            .push(")");
+        // Recheck expiry while deleting: another request may have refreshed a
+        // selected session since the scan. Explicit IDs keep deletion bounded
+        // even if other connections insert rows into a gap in the scanned range.
+        let deleted = delete.build().execute(&self.pool).await?;
+        *cursor = Some(last);
         Ok(deleted.rows_affected())
     }
 

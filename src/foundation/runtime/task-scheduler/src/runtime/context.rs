@@ -23,9 +23,6 @@ cfg_rt! {
 
     use std::task::Waker;
 
-    cfg_taskdump! {
-        use crate::runtime::task::trace;
-    }
 }
 
 cfg_rt_multi_thread! {
@@ -63,20 +60,6 @@ struct Context {
     /// Tracks the amount of "work" a task may still do before yielding back to
     /// the scheduler
     budget: Cell<coop::Budget>,
-
-    #[cfg(all(
-        tokio_unstable,
-        feature = "taskdump",
-        feature = "rt",
-        target_os = "linux",
-        any(
-            target_arch = "aarch64",
-            target_arch = "x86",
-            target_arch = "x86_64",
-            target_arch = "s390x"
-        )
-    ))]
-    trace: trace::Context,
 }
 
 tokio_thread_local! {
@@ -110,19 +93,6 @@ tokio_thread_local! {
 
             budget: Cell::new(coop::Budget::unconstrained()),
 
-            #[cfg(all(
-                tokio_unstable,
-                feature = "taskdump",
-                feature = "rt",
-                target_os = "linux",
-                any(
-                    target_arch = "aarch64",
-                    target_arch = "x86",
-                    target_arch = "x86_64",
-                    target_arch = "s390x"
-                )
-            ))]
-            trace: trace::Context::new(),
         }
     }
 }
@@ -201,11 +171,4 @@ cfg_rt! {
             .unwrap_or_else(|_| (f.take().unwrap())(None))
     }
 
-    cfg_taskdump! {
-        /// SAFETY: Callers of this function must ensure that trace frames always
-        /// form a valid linked list.
-        pub(crate) unsafe fn with_trace<R>(f: impl FnOnce(&trace::Context) -> R) -> Option<R> {
-            CONTEXT.try_with(|c| f(&c.trace)).ok()
-        }
-    }
 }

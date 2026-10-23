@@ -21,10 +21,8 @@
 #[cfg_attr(not(all(feature = "os-poll", feature = "net")), doc = "```ignore")]
 /// # use std::error::Error;
 /// # fn main() -> Result<(), Box<dyn Error>> {
-/// # // WASI does not yet support multithreading:
-/// # if cfg!(target_os = "wasi") { return Ok(()) }
-/// use mio::{Events, Interest, Poll, Token};
-/// use mio::net::TcpListener;
+/// use blog_runtime_io_poller::{Events, Interest, Poll, Token};
+/// use blog_runtime_io_poller::net::TcpListener;
 ///
 /// use std::thread;
 /// use std::io::{self, Read};

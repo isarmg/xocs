@@ -229,7 +229,38 @@ def static_structure(root, policy):
             raise ValueError(f'source profile include_dev must be boolean: {item["id"]}')
         if any(name not in documents for name in item['manifests']):
             raise ValueError(f'profile references unknown manifest: {item["id"]}')
+    verify_platform_guard(root, policy, documents)
     return documents
+
+
+def verify_platform_guard(root, policy, documents):
+    guard = policy.get('platform_guard')
+    if not isinstance(guard, str) or not guard:
+        raise ValueError('source policy must declare the shared platform guard')
+    if not safe(root, guard).is_file():
+        raise ValueError('missing shared platform guard')
+    if not any(item['directory'] == '.' or guard.startswith(item['directory'] + '/')
+               for item in policy['owned_sources']):
+        raise ValueError('shared platform guard needs a current project source owner')
+    for item in policy['owned_sources']:
+        directory = item['directory']
+        manifest = 'Cargo.toml' if directory == '.' else directory + '/Cargo.toml'
+        package = documents[manifest]['package']
+        build = package.get('build', 'build.rs')
+        if not isinstance(build, str):
+            raise ValueError(f'project package disables its platform guard: {directory}')
+        script = relative(root, safe(root, directory, allow_root=True) / build)
+        if script == guard:
+            continue
+        path = safe(root, script)
+        if not path.is_file():
+            raise ValueError(f'project package lacks a platform build script: {directory}')
+        source = path.read_text()
+        module = re.search(r'#\[path\s*=\s*"([^"]+)"\]\s*mod\s+platform_contract\s*;', source)
+        call = re.search(r'\bfn\s+main\s*\(\s*\)\s*\{\s*platform_contract::check\(\);', source)
+        if (module is None or call is None
+                or relative(root, path.parent / module[1]) != guard):
+            raise ValueError(f'build script must invoke the shared platform guard first: {directory}')
 
 
 def verify_features(documents, edges):
@@ -560,6 +591,8 @@ def source_packages(root, policy, documents, origins, migration_state=None):
 
 
 def cargo_metadata(root, target, cargo_home):
+    if target not in TARGETS:
+        raise ValueError(f'unsupported source graph target: {target}')
     environment = os.environ.copy()
     environment.update(CARGO_HOME=str(cargo_home), CARGO_NET_OFFLINE='true')
     process = subprocess.run(['cargo', 'metadata', '--locked', '--offline', '--format-version', '1',
@@ -746,6 +779,8 @@ def snapshot(root):
                 immutable_materials_sha256=materials, packages=packages,
                 local_modifications=modifications,
                 local_modifications_sha256=digest(safe(root, LOCAL_MODIFICATIONS).read_bytes()) if modifications is not None else None)
+    guard = policy['platform_guard']
+    result['platform_guard_sha256'] = {guard: digest(safe(root, guard).read_bytes())}
     if migrations is not None:
         result.update(source_migrations=migrations, source_migrations_sha256=digest(safe(root, MIGRATIONS).read_bytes()),
                       retired_origins=migration_state['retired_origins'])

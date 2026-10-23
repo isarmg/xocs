@@ -2,13 +2,8 @@
 
 //! Asynchronous values.
 
-#[cfg(any(feature = "macros", feature = "process"))]
+#[cfg(feature = "macros")]
 pub(crate) mod maybe_done;
-
-cfg_process! {
-    mod try_join;
-    pub(crate) use try_join::try_join3;
-}
 
 cfg_sync! {
     mod block_on;

@@ -950,12 +950,6 @@ impl<T> Receiver<T> {
     pub fn same_channel(&self, other: &Self) -> bool {
         Arc::ptr_eq(&self.shared, &other.shared)
     }
-
-    cfg_process_driver! {
-        pub(crate) fn try_has_changed(&mut self) -> Option<Result<(), error::RecvError>> {
-            maybe_changed(&self.shared, &mut self.version)
-        }
-    }
 }
 
 fn maybe_changed<T>(

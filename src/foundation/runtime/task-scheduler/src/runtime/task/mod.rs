@@ -213,10 +213,6 @@ mod waker;
 
 pub(crate) use self::spawn_location::SpawnLocation;
 
-cfg_taskdump! {
-    pub(crate) mod trace;
-}
-
 use crate::future::Future;
 use crate::util::linked_list;
 use crate::util::sharded_list;
@@ -414,12 +410,6 @@ impl<S: 'static> Task<S> {
         unsafe { Task::new(RawTask::from_raw(ptr)) }
     }
 
-    cfg_taskdump! {
-        pub(super) fn as_raw(&self) -> RawTask {
-            self.raw
-        }
-    }
-
     fn header(&self) -> &Header {
         self.raw.header()
     }
@@ -454,22 +444,6 @@ impl<S: 'static> Task<S> {
             spawned_at: self.spawned_at().into(),
             _phantom: PhantomData,
         }
-    }
-
-    cfg_taskdump! {
-        /// Notify the task for task dumping.
-        ///
-        /// Returns `None` if the task has already been notified.
-        pub(super) fn notify_for_tracing(&self) -> Option<Notified<S>> {
-            if self.as_raw().state().transition_to_notified_for_tracing() {
-                // SAFETY: `transition_to_notified_for_tracing` increments the
-                // refcount.
-                Some(unsafe { Notified(Task::new(self.raw)) })
-            } else {
-                None
-            }
-        }
-
     }
 }
 

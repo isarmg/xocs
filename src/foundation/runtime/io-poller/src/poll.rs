@@ -54,8 +54,8 @@ use crate::{event, sys, Events, Interest, Token};
 #[cfg_attr(not(all(feature = "os-poll", feature = "net")), doc = "```ignore")]
 /// # use std::error::Error;
 /// # fn main() -> Result<(), Box<dyn Error>> {
-/// use mio::{Events, Poll, Interest, Token};
-/// use mio::net::TcpStream;
+/// use blog_runtime_io_poller::{Events, Poll, Interest, Token};
+/// use blog_runtime_io_poller::net::TcpStream;
 ///
 /// use std::net::{self, SocketAddr};
 ///
@@ -152,8 +152,8 @@ use crate::{event, sys, Events, Interest, Token};
 /// # use std::error::Error;
 /// # use std::net;
 /// # fn main() -> Result<(), Box<dyn Error>> {
-/// use mio::{Poll, Interest, Token};
-/// use mio::net::TcpStream;
+/// use blog_runtime_io_poller::{Poll, Interest, Token};
+/// use blog_runtime_io_poller::net::TcpStream;
 /// use std::net::SocketAddr;
 /// use std::time::Duration;
 /// use std::thread;
@@ -183,91 +183,26 @@ use crate::{event, sys, Events, Interest, Token};
 ///
 /// [event sources]: ./event/trait.Source.html
 ///
-/// ### Accessing raw fd/socket/handle
+/// ### Accessing raw file descriptors
 ///
-/// Mio makes it possible for many types to be converted into a raw file
-/// descriptor (fd, Unix), socket (Windows) or handle (Windows). This makes it
-/// possible to support more operations on the type than Mio supports, for
-/// example it makes [mio-aio] possible. However accessing the raw fd is not
-/// without it's pitfalls.
-///
-/// Specifically performing I/O operations outside of Mio on these types (via
-/// the raw fd) has unspecified behaviour. It could cause no more events to be
-/// generated for the type even though it returned `WouldBlock` (in an operation
-/// directly accessing the fd). The behaviour is OS specific and Mio can only
-/// guarantee cross-platform behaviour if it can control the I/O.
-///
-/// [mio-aio]: https://github.com/asomers/mio-aio
-///
-/// *The following is **not** guaranteed, just a description of the current
-/// situation!* Mio is allowed to change the following without it being considered
-/// a breaking change, don't depend on this, it's just here to inform the user.
-/// Currently the kqueue and epoll implementation support direct I/O operations
-/// on the fd without Mio's knowledge. Windows however needs **all** I/O
-/// operations to go through Mio otherwise it is not able to update it's
-/// internal state properly and won't generate events.
+/// Network types expose their Linux file descriptors for operations outside this API.
+/// Such operations must preserve non-blocking mode and the registration's lifetime. Drain
+/// readiness until the operation returns `WouldBlock`, just as when using the wrapper methods.
 ///
 /// ### Polling without registering event sources
 ///
-///
-/// *The following is **not** guaranteed, just a description of the current
-/// situation!* Mio is allowed to change the following without it being
-/// considered a breaking change, don't depend on this, it's just here to inform
-/// the user. On platforms that use epoll, kqueue or IOCP (see implementation
-/// notes below) polling without previously registering [event sources] will
-/// result in sleeping forever, only a process signal will be able to wake up
-/// the thread.
-///
-/// On WASM/WASI this is different as it doesn't support process signals,
-/// furthermore the WASI specification doesn't specify a behaviour in this
-/// situation, thus it's up to the implementation what to do here. As an
-/// example, the wasmtime runtime will return `EINVAL` in this situation, but
-/// different runtimes may return different results. If you have further
-/// insights or thoughts about this situation (and/or how Mio should handle it)
-/// please add you comment to [pull request#1580].
-///
-/// [event sources]: crate::event::Source
-/// [pull request#1580]: https://github.com/tokio-rs/mio/pull/1580
+/// With no registered sources, polling waits for the supplied timeout. With no timeout, a
+/// process signal can interrupt the wait; register an event source or a [`Waker`](crate::Waker)
+/// when the application needs another way to wake it.
 ///
 /// # Implementation notes
 ///
-/// `Poll` is backed by the selector provided by the operating system.
-///
-/// |      OS       |  Selector |
-/// |---------------|-----------|
-/// | Android       | [epoll]   |
-/// | DragonFly BSD | [kqueue]  |
-/// | FreeBSD       | [kqueue]  |
-/// | iOS           | [kqueue]  |
-/// | illumos       | [epoll]   |
-/// | Linux         | [epoll]   |
-/// | NetBSD        | [kqueue]  |
-/// | OpenBSD       | [kqueue]  |
-/// | Solaris       | [event ports] |
-/// | Windows       | [IOCP]    |
-/// | macOS         | [kqueue]  |
-///
-/// On all supported platforms, socket operations are handled by using the
-/// system selector. Platform specific extensions (e.g. [`SourceFd`]) allow
-/// accessing other features provided by individual system selectors. For
-/// example, Linux's [`signalfd`] feature can be used by registering the FD with
-/// `Poll` via [`SourceFd`].
-///
-/// On all platforms except windows, a call to [`Poll::poll`] is mostly just a
-/// direct call to the system selector. However, [IOCP] uses a completion model
-/// instead of a readiness model. In this case, `Poll` must adapt the completion
-/// model Mio's API. While non-trivial, the bridge layer is still quite
-/// efficient. The most expensive part being calls to `read` and `write` require
-/// data to be copied into an intermediate buffer before it is passed to the
-/// kernel.
+/// `Poll` uses Linux [epoll]. Socket readiness comes from the kernel selector; the
+/// `os-ext` feature exposes `SourceFd` for registering other eligible
+/// file descriptors, including Linux [signalfd].
 ///
 /// [epoll]: https://man7.org/linux/man-pages/man7/epoll.7.html
-/// [event ports]: https://docs.oracle.com/cd/E88353_01/html/E37843/port-create-3c.html
-/// [kqueue]: https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
-/// [IOCP]: https://docs.microsoft.com/en-us/windows/win32/fileio/i-o-completion-ports
-/// [`signalfd`]: https://man7.org/linux/man-pages/man2/signalfd.2.html
-/// [`SourceFd`]: unix/struct.SourceFd.html
-/// [`Poll::poll`]: struct.Poll.html#method.poll
+/// [signalfd]: https://man7.org/linux/man-pages/man2/signalfd.2.html
 pub struct Poll {
     registry: Registry,
 }
@@ -300,7 +235,7 @@ impl Poll {
         /// ```
         /// # use std::error::Error;
         /// # fn main() -> Result<(), Box<dyn Error>> {
-        /// use mio::{Poll, Events};
+        /// use blog_runtime_io_poller::{Poll, Events};
         /// use std::time::Duration;
         ///
         /// let mut poll = match Poll::new() {
@@ -387,10 +322,8 @@ impl Poll {
     #[cfg_attr(not(all(feature = "os-poll", feature = "net")), doc = "```ignore")]
     /// # use std::error::Error;
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// # // WASI does not yet support multithreading:
-    /// # if cfg!(target_os = "wasi") { return Ok(()) }
-    /// use mio::{Events, Poll, Interest, Token};
-    /// use mio::net::TcpStream;
+    /// use blog_runtime_io_poller::{Events, Poll, Interest, Token};
+    /// use blog_runtime_io_poller::net::TcpStream;
     ///
     /// use std::net::{TcpListener, SocketAddr};
     /// use std::thread;
@@ -528,8 +461,8 @@ impl Registry {
     /// # use std::error::Error;
     /// # use std::net;
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use mio::{Events, Poll, Interest, Token};
-    /// use mio::net::TcpStream;
+    /// use blog_runtime_io_poller::{Events, Poll, Interest, Token};
+    /// use blog_runtime_io_poller::net::TcpStream;
     /// use std::net::SocketAddr;
     /// use std::time::{Duration, Instant};
     ///
@@ -606,8 +539,8 @@ impl Registry {
     /// # use std::error::Error;
     /// # use std::net;
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use mio::{Poll, Interest, Token};
-    /// use mio::net::TcpStream;
+    /// use blog_runtime_io_poller::{Poll, Interest, Token};
+    /// use blog_runtime_io_poller::net::TcpStream;
     /// use std::net::SocketAddr;
     ///
     /// let poll = Poll::new()?;
@@ -673,8 +606,8 @@ impl Registry {
     /// # use std::error::Error;
     /// # use std::net;
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use mio::{Events, Poll, Interest, Token};
-    /// use mio::net::TcpStream;
+    /// use blog_runtime_io_poller::{Events, Poll, Interest, Token};
+    /// use blog_runtime_io_poller::net::TcpStream;
     /// use std::net::SocketAddr;
     /// use std::time::Duration;
     ///

@@ -368,14 +368,6 @@ impl Core {
     }
 }
 
-#[cfg(feature = "taskdump")]
-fn wake_deferred_tasks_and_free(context: &Context) {
-    let wakers = context.defer.take_deferred();
-    for waker in wakers {
-        waker.wake();
-    }
-}
-
 // ===== impl Context =====
 
 impl Context {
@@ -563,61 +555,6 @@ impl Handle {
         }
 
         handle
-    }
-
-    /// Capture a snapshot of this runtime's state.
-    #[cfg(all(
-        tokio_unstable,
-        feature = "taskdump",
-        target_os = "linux",
-        any(
-            target_arch = "aarch64",
-            target_arch = "x86",
-            target_arch = "x86_64",
-            target_arch = "s390x"
-        )
-    ))]
-    pub(crate) fn dump(self: &Arc<Self>) -> crate::runtime::Dump {
-        use crate::runtime::dump;
-        use scheduler::Context::CurrentThread;
-        use task::trace::trace_current_thread;
-
-        let mut traces = vec![];
-
-        // todo: how to make this work outside of a runtime context?
-        context::with_scheduler(|maybe_context| {
-            // drain the local queue
-            let context = match maybe_context {
-                Some(CurrentThread(context)) if Arc::ptr_eq(self, &context.handle) => context,
-                _ => return,
-            };
-            let mut maybe_core = context.core.borrow_mut();
-            let core = if let Some(core) = maybe_core.as_mut() {
-                core
-            } else {
-                return;
-            };
-            let local = &mut core.tasks;
-
-            if self.shared.inject.is_closed() {
-                return;
-            }
-
-            traces = trace_current_thread(&self.shared.owned, local, &self.shared.inject)
-                .into_iter()
-                .map(|(id, trace)| dump::Task::new(id, trace))
-                .collect();
-
-            // Avoid double borrow panic
-            drop(maybe_core);
-
-            // Taking a taskdump could wakes every task, but we probably don't want
-            // the `yield_now` vector to be that large under normal circumstances.
-            // Therefore, we free its allocation.
-            wake_deferred_tasks_and_free(context);
-        });
-
-        dump::Dump::new(traces)
     }
 
     fn next_remote_task(&self) -> Option<Notified> {

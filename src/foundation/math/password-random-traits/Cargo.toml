@@ -24,8 +24,8 @@ serde = { features = ["derive"], optional = true, path = "../../format/data-mode
 
 [dependencies.getrandom]
 optional = true
-path = "../../platform/random-seed"
-package = "blog-platform-random-seed"
+path = "../../platform/system-entropy"
+package = "blog-platform-system-entropy"
 
 
 [features]

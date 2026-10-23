@@ -2,8 +2,7 @@
 //!
 //! Required types:
 //!
-//! * `Event`: a type alias for the system specific event, e.g. `kevent` or
-//!   `epoll_event`.
+//! * `Event`: a type alias for Linux `epoll_event`.
 //! * `event`: a module with various helper functions for `Event`, see
 //!   [`crate::event::Event`] for the required functions.
 //! * `Events`: collection of `Event`s, see [`crate::Events`].
@@ -28,7 +27,6 @@ cfg_os_poll! {
                         $(#[$target])*
                         #[allow(clippy::bad_bit_mask)] // Apparently some flags are zero.
                         {
-                            // Windows doesn't use `libc` but the `afd` module.
                             if $test(&self.0, &$libc :: $flag) {
                                 if !written_one {
                                     write!(f, "{}", stringify!($flag))?;
@@ -50,34 +48,16 @@ cfg_os_poll! {
     }
 }
 
-#[cfg(any(
-    unix,
-    target_os = "hermit",
-    all(target_os = "wasi", not(target_env = "p1"))
-))]
 cfg_os_poll! {
     mod unix;
     #[allow(unused_imports)]
     pub use self::unix::*;
 }
 
-#[cfg(windows)]
-cfg_os_poll! {
-    mod windows;
-    pub use self::windows::*;
-}
-
-#[cfg(all(target_os = "wasi", target_env = "p1"))]
-cfg_os_poll! {
-    mod wasip1;
-    pub(crate) use self::wasip1::*;
-}
-
 cfg_not_os_poll! {
     mod shell;
     pub(crate) use self::shell::*;
 
-    #[cfg(unix)]
     cfg_any_os_ext! {
         mod unix;
         #[cfg(feature = "os-ext")]

@@ -31,29 +31,13 @@
 //! [`naive_count_32`](fn.naive_count_32.html) method can be faster
 //! still on small strings.
 
-#![cfg_attr(any(), feature(portable_simd))]
 #![deny(missing_docs)]
-#![cfg_attr(not(any()), no_std)]
 
-#[cfg(not(any()))]
 use core::mem;
-#[cfg(any())]
-use std::mem;
 
 mod naive;
 pub use naive::*;
 mod integer_simd;
-
-#[cfg(any(
-    all(
-        any(),
-        any(target_arch = "x86", target_arch = "x86_64")
-    ),
-    all(target_arch = "aarch64", target_endian = "little"),
-    target_arch = "wasm32",
-    any()
-))]
-mod simd;
 
 /// Count occurrences of a byte in a slice of bytes, fast
 ///
@@ -65,57 +49,11 @@ mod simd;
 /// assert_eq!(number_of_spaces, 5);
 /// ```
 pub fn count(haystack: &[u8], needle: u8) -> usize {
-    if haystack.len() >= 32 {
-        #[cfg(all(any(), target_arch = "x86_64"))]
-        {
-            if is_x86_feature_detected!("avx2") {
-                unsafe {
-                    return simd::x86_avx2::chunk_count(haystack, needle);
-                }
-            }
-        }
-
-        #[cfg(any())]
-        return simd::generic::chunk_count(haystack, needle);
-    }
-
-    if haystack.len() >= 16 {
-        #[cfg(all(
-            any(),
-            any(target_arch = "x86", target_arch = "x86_64"),
-            not(any())
-        ))]
-        {
-            if is_x86_feature_detected!("sse2") {
-                unsafe {
-                    return simd::x86_sse2::chunk_count(haystack, needle);
-                }
-            }
-        }
-        #[cfg(all(
-            target_arch = "aarch64",
-            target_endian = "little",
-            not(any())
-        ))]
-        {
-            unsafe {
-                return simd::aarch64::chunk_count(haystack, needle);
-            }
-        }
-
-        #[cfg(target_arch = "wasm32")]
-        {
-            unsafe {
-                return simd::wasm::chunk_count(haystack, needle);
-            }
-        }
-    }
-
     if haystack.len() >= mem::size_of::<usize>() {
-        return integer_simd::chunk_count(haystack, needle);
+        integer_simd::chunk_count(haystack, needle)
+    } else {
+        naive_count(haystack, needle)
     }
-
-    naive_count(haystack, needle)
 }
 
 /// Count the number of UTF-8 encoded Unicode codepoints in a slice of bytes, fast
@@ -131,55 +69,9 @@ pub fn count(haystack: &[u8], needle: u8) -> usize {
 /// assert_eq!(char_count, 4);
 /// ```
 pub fn num_chars(utf8_chars: &[u8]) -> usize {
-    if utf8_chars.len() >= 32 {
-        #[cfg(all(any(), target_arch = "x86_64"))]
-        {
-            if is_x86_feature_detected!("avx2") {
-                unsafe {
-                    return simd::x86_avx2::chunk_num_chars(utf8_chars);
-                }
-            }
-        }
-
-        #[cfg(any())]
-        return simd::generic::chunk_num_chars(utf8_chars);
-    }
-
-    if utf8_chars.len() >= 16 {
-        #[cfg(all(
-            any(),
-            any(target_arch = "x86", target_arch = "x86_64"),
-            not(any())
-        ))]
-        {
-            if is_x86_feature_detected!("sse2") {
-                unsafe {
-                    return simd::x86_sse2::chunk_num_chars(utf8_chars);
-                }
-            }
-        }
-        #[cfg(all(
-            target_arch = "aarch64",
-            target_endian = "little",
-            not(any())
-        ))]
-        {
-            unsafe {
-                return simd::aarch64::chunk_num_chars(utf8_chars);
-            }
-        }
-
-        #[cfg(target_arch = "wasm32")]
-        {
-            unsafe {
-                return simd::wasm::chunk_num_chars(utf8_chars);
-            }
-        }
-    }
-
     if utf8_chars.len() >= mem::size_of::<usize>() {
-        return integer_simd::chunk_num_chars(utf8_chars);
+        integer_simd::chunk_num_chars(utf8_chars)
+    } else {
+        naive_num_chars(utf8_chars)
     }
-
-    naive_num_chars(utf8_chars)
 }

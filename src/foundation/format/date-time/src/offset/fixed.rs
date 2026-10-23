@@ -6,11 +6,8 @@
 use core::fmt;
 use core::str::FromStr;
 
-#[cfg(any(feature = "rkyv", feature = "rkyv-16", feature = "rkyv-32", feature = "rkyv-64"))]
-use rkyv::{Archive, Deserialize, Serialize};
-
 use super::{MappedLocalTime, Offset, TimeZone};
-use crate::format::{OUT_OF_RANGE, ParseError, scan};
+use crate::format::{scan, ParseError, OUT_OF_RANGE};
 use crate::naive::{NaiveDate, NaiveDateTime};
 
 /// The time zone with fixed offset, from UTC-23:59:59 to UTC+23:59:59.
@@ -20,13 +17,6 @@ use crate::naive::{NaiveDate, NaiveDateTime};
 /// `DateTime<FixedOffset>` instances. See the [`east_opt`](#method.east_opt) and
 /// [`west_opt`](#method.west_opt) methods for examples.
 #[derive(PartialEq, Eq, Hash, Copy, Clone)]
-#[cfg_attr(
-    any(feature = "rkyv", feature = "rkyv-16", feature = "rkyv-32", feature = "rkyv-64"),
-    derive(Archive, Deserialize, Serialize),
-    archive(compare(PartialEq)),
-    archive_attr(derive(Clone, Copy, PartialEq, Eq, Hash, Debug))
-)]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct FixedOffset {
     local_minus_utc: i32,
 }
@@ -51,7 +41,7 @@ impl FixedOffset {
     ///
     /// ```
     /// # #[cfg(feature = "alloc")] {
-    /// use chrono::{FixedOffset, TimeZone};
+    /// use blog_format_date_time::{FixedOffset, TimeZone};
     /// let hour = 3600;
     /// let datetime =
     ///     FixedOffset::east_opt(5 * hour).unwrap().with_ymd_and_hms(2016, 11, 08, 0, 0, 0).unwrap();
@@ -61,7 +51,9 @@ impl FixedOffset {
     #[must_use]
     pub const fn east_opt(secs: i32) -> Option<FixedOffset> {
         if -86_400 < secs && secs < 86_400 {
-            Some(FixedOffset { local_minus_utc: secs })
+            Some(FixedOffset {
+                local_minus_utc: secs,
+            })
         } else {
             None
         }
@@ -86,7 +78,7 @@ impl FixedOffset {
     ///
     /// ```
     /// # #[cfg(feature = "alloc")] {
-    /// use chrono::{FixedOffset, TimeZone};
+    /// use blog_format_date_time::{FixedOffset, TimeZone};
     /// let hour = 3600;
     /// let datetime =
     ///     FixedOffset::west_opt(5 * hour).unwrap().with_ymd_and_hms(2016, 11, 08, 0, 0, 0).unwrap();
@@ -96,7 +88,9 @@ impl FixedOffset {
     #[must_use]
     pub const fn west_opt(secs: i32) -> Option<FixedOffset> {
         if -86_400 < secs && secs < 86_400 {
-            Some(FixedOffset { local_minus_utc: -secs })
+            Some(FixedOffset {
+                local_minus_utc: -secs,
+            })
         } else {
             None
         }
@@ -155,7 +149,11 @@ impl Offset for FixedOffset {
 impl fmt::Debug for FixedOffset {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let offset = self.local_minus_utc;
-        let (sign, offset) = if offset < 0 { ('-', -offset) } else { ('+', offset) };
+        let (sign, offset) = if offset < 0 {
+            ('-', -offset)
+        } else {
+            ('+', offset)
+        };
         let sec = offset.rem_euclid(60);
         let mins = offset.div_euclid(60);
         let min = mins.rem_euclid(60);
@@ -174,33 +172,6 @@ impl fmt::Display for FixedOffset {
     }
 }
 
-#[cfg(feature = "defmt")]
-impl defmt::Format for FixedOffset {
-    fn format(&self, f: defmt::Formatter) {
-        let offset = self.local_minus_utc;
-        let (sign, offset) = if offset < 0 { ('-', -offset) } else { ('+', offset) };
-        let sec = offset.rem_euclid(60);
-        let mins = offset.div_euclid(60);
-        let min = mins.rem_euclid(60);
-        let hour = mins.div_euclid(60);
-        if sec == 0 {
-            defmt::write!(f, "{}{:02}:{:02}", sign, hour, min)
-        } else {
-            defmt::write!(f, "{}{:02}:{:02}:{:02}", sign, hour, min, sec)
-        }
-    }
-}
-
-#[cfg(all(feature = "arbitrary", feature = "std"))]
-impl arbitrary::Arbitrary<'_> for FixedOffset {
-    fn arbitrary(u: &mut arbitrary::Unstructured) -> arbitrary::Result<FixedOffset> {
-        let secs = u.int_in_range(-86_399..=86_399)?;
-        let fixed_offset = FixedOffset::east_opt(secs)
-            .expect("Could not generate a valid chrono::FixedOffset. It looks like implementation of Arbitrary for FixedOffset is erroneous.");
-        Ok(fixed_offset)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::FixedOffset;
@@ -213,22 +184,34 @@ mod tests {
         // this makes everything easier!
         let offset = FixedOffset::east_opt(86399).unwrap();
         assert_eq!(
-            format!("{:?}", offset.with_ymd_and_hms(2012, 2, 29, 5, 6, 7).unwrap()),
+            format!(
+                "{:?}",
+                offset.with_ymd_and_hms(2012, 2, 29, 5, 6, 7).unwrap()
+            ),
             "2012-02-29T05:06:07+23:59:59"
         );
         let offset = FixedOffset::east_opt(-86399).unwrap();
         assert_eq!(
-            format!("{:?}", offset.with_ymd_and_hms(2012, 2, 29, 5, 6, 7).unwrap()),
+            format!(
+                "{:?}",
+                offset.with_ymd_and_hms(2012, 2, 29, 5, 6, 7).unwrap()
+            ),
             "2012-02-29T05:06:07-23:59:59"
         );
         let offset = FixedOffset::west_opt(86399).unwrap();
         assert_eq!(
-            format!("{:?}", offset.with_ymd_and_hms(2012, 3, 4, 5, 6, 7).unwrap()),
+            format!(
+                "{:?}",
+                offset.with_ymd_and_hms(2012, 3, 4, 5, 6, 7).unwrap()
+            ),
             "2012-03-04T05:06:07-23:59:59"
         );
         let offset = FixedOffset::west_opt(-86399).unwrap();
         assert_eq!(
-            format!("{:?}", offset.with_ymd_and_hms(2012, 3, 4, 5, 6, 7).unwrap()),
+            format!(
+                "{:?}",
+                offset.with_ymd_and_hms(2012, 3, 4, 5, 6, 7).unwrap()
+            ),
             "2012-03-04T05:06:07+23:59:59"
         );
     }
@@ -241,13 +224,5 @@ mod tests {
         assert_eq!(offset.local_minus_utc, -8 * 3600);
         let offset = FixedOffset::from_str("+06:30").unwrap();
         assert_eq!(offset.local_minus_utc, (6 * 3600) + 1800);
-    }
-
-    #[test]
-    #[cfg(feature = "rkyv-validation")]
-    fn test_rkyv_validation() {
-        let offset = FixedOffset::from_str("-0500").unwrap();
-        let bytes = rkyv::to_bytes::<_, 4>(&offset).unwrap();
-        assert_eq!(rkyv::from_bytes::<FixedOffset>(&bytes).unwrap(), offset);
     }
 }

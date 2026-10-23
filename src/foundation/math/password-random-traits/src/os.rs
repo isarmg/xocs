@@ -9,7 +9,7 @@
 //! Interface to the random number generator of the operating system.
 
 use crate::{impls, CryptoRng, Error, RngCore};
-use getrandom::getrandom;
+use getrandom::fill;
 
 /// A random number generator that retrieves randomness from the
 /// operating system.
@@ -43,7 +43,7 @@ use getrandom::getrandom;
 /// ```
 ///
 /// [getrandom]: https://crates.io/crates/getrandom
-#[cfg_attr(doc_cfg, doc(cfg(feature = "getrandom")))]
+#[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct OsRng;
 
@@ -65,7 +65,7 @@ impl RngCore for OsRng {
     }
 
     fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), Error> {
-        getrandom(dest)?;
+        fill(dest)?;
         Ok(())
     }
 }

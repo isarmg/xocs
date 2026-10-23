@@ -49,21 +49,12 @@
     html_logo_url = "https://raw.githubusercontent.com/smol-rs/smol/master/assets/images/logo_fullsize_transparent.png"
 )]
 
-#[cfg(not(all(loom, feature = "loom")))]
-use std::sync;
-
-#[cfg(all(loom, feature = "loom"))]
-use loom::sync;
-
 use std::cell::Cell;
 use std::fmt;
 use std::marker::PhantomData;
-use std::sync::Arc;
+use std::sync::{self, Arc};
 use std::task::{Wake, Waker};
-use std::time::Duration;
-
-#[cfg(not(all(loom, feature = "loom")))]
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use sync::atomic::AtomicUsize;
 use sync::atomic::Ordering::SeqCst;
@@ -148,7 +139,6 @@ impl Parker {
     /// // Wait for a notification, or time out after 500 ms.
     /// p.park_timeout(Duration::from_millis(500));
     /// ```
-    #[cfg(not(loom))]
     pub fn park_timeout(&self, duration: Duration) -> bool {
         self.unparker.inner.park(Some(duration))
     }
@@ -168,7 +158,6 @@ impl Parker {
     /// // Wait for a notification, or time out after 500 ms.
     /// p.park_deadline(Instant::now() + Duration::from_millis(500));
     /// ```
-    #[cfg(not(loom))]
     pub fn park_deadline(&self, instant: Instant) -> bool {
         self.unparker
             .inner
@@ -387,24 +376,13 @@ impl Inner {
                 }
             }
             Some(timeout) => {
-                #[cfg(not(loom))]
-                {
-                    // Wait with a timeout, and if we spuriously wake up or otherwise wake up from a
-                    // notification we just want to unconditionally set `state` back to `EMPTY`, either
-                    // consuming a notification or un-flagging ourselves as parked.
-                    let (_m, _result) = self.cvar.wait_timeout(m, timeout).unwrap();
-
-                    match self.state.swap(EMPTY, SeqCst) {
-                        NOTIFIED => true, // got a notification
-                        PARKED => false,  // no notification
-                        n => panic!("inconsistent park_timeout state: {}", n),
-                    }
-                }
-
-                #[cfg(loom)]
-                {
-                    let _ = timeout;
-                    panic!("park_timeout is not supported under loom");
+                // Consume a notification or clear the parked flag after the
+                // condition variable wakes, including a spurious wakeup.
+                let (_m, _result) = self.cvar.wait_timeout(m, timeout).unwrap();
+                match self.state.swap(EMPTY, SeqCst) {
+                    NOTIFIED => true,
+                    PARKED => false,
+                    n => panic!("inconsistent park_timeout state: {}", n),
                 }
             }
         }

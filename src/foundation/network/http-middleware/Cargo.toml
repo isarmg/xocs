@@ -25,105 +25,18 @@ resolver = "2"
 publish = false
 
 [features]
-add-extension = []
-async-compression = []
-catch-panic = [
-    "tracing",
-    "futures/shared-state",
-    "futures/std",
-    "futures/utilities",
-    "dep:http-body",
-    "http-body-util",
-]
-cors = []
 default = []
-follow-redirect = [
-    "futures-util",
-    "dep:http-body",
-    "url",
-    "tower/util",
-]
 fs = [
-    "dep:tokio",
-    "tokio?/fs",
-    "tokio?/io-util",
-    "futures-core",
-    "futures-util",
-    "dep:http-body",
-    "http-body-util",
-    "tokio-util/io",
-    "dep:http-range-header",
-    "mime_guess",
-    "mime",
-    "percent-encoding",
-    "httpdate",
-    "set-status",
-    "futures/alloc",
-    "futures/utilities",
+    "dep:tokio", "tokio/fs", "tokio/io-util", "dep:futures",
+    "futures/alloc", "futures/utilities", "dep:http-body", "http-body/utilities",
+    "dep:tokio-util", "dep:http-range-header", "dep:mime_guess", "dep:mime",
+    "dep:url-encoding", "dep:httpdate",
 ]
-limit = [
-    "dep:http-body",
-    "http-body-util",
-]
-map-request-body = []
-map-response-body = []
-metrics = [
-    "dep:http-body",
-    "dep:tokio",
-    "tokio?/time",
-]
-normalize-path = []
-on-early-drop = [
-    "dep:http-body",
-]
-propagate-header = []
-redirect = []
-sensitive-headers = []
-set-header = []
-set-status = []
-timeout = [
-    "dep:http-body",
-    "dep:tokio",
-    "tokio?/time",
-]
-tokio = []
-trace = [
-    "dep:http-body",
-    "tracing",
-]
-util = [
-    "tower",
-]
-validate-request = [
-    "mime",
-]
-futures-core = [
-    "dep:futures",
-]
-futures-util = [
-    "dep:futures",
-]
-http-body-util = [
-    "dep:http-body",
-]
-percent-encoding = [
-    "dep:url-encoding",
-]
-url = [
-    "dep:url-encoding",
-]
-tower = []
+trace = ["dep:http-body", "dep:tracing"]
 
 [lib]
 name = "blog_network_http_middleware"
 path = "src/lib.rs"
-
-[dependencies]
-base64 = { optional = true, path = "../../encoding/application-base-encoding",package = "blog-encoding-application-base-encoding"}
-
-[dependencies.bitflags]
-path = "../../collections/bit-set"
-package = "blog-collections-bit-set"
 
 [dependencies.bytes]
 path = "../../encoding/byte-buffer"
@@ -172,10 +85,6 @@ default-features = false
 path = "../../runtime/scheduled-io"
 package = "blog-runtime-scheduled-io"
 
-[lints.rust.unexpected_cfgs]
-level = "warn"
-check-cfg = ["cfg(feature, values(\"auth\", \"compression-br\", \"compression-deflate\", \"compression-full\", \"compression-gzip\", \"compression-zstd\", \"decompression-br\", \"decompression-deflate\", \"decompression-full\", \"decompression-gzip\", \"decompression-zstd\", \"full\", \"request-id\"))"]
-
 [dependencies.futures]
 optional = true
 default-features = false
@@ -200,7 +109,6 @@ path = "../web-address"
 package = "blog-network-web-address"
 default-features = true
 features = [
-    "parser",
     "std",
 ]
 

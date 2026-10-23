@@ -1,4 +1,3 @@
-use super::plumbing::*;
 use super::*;
 
 /// `MinLen` is an iterator that imposes a minimum length on iterator splits.

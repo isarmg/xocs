@@ -277,25 +277,6 @@ impl State {
         })
     }
 
-    cfg_taskdump! {
-        /// Transitions the state to `NOTIFIED`, unconditionally increasing the ref
-        /// count.
-        ///
-        /// Returns `true` if the notified bit was transitioned from `0` to `1`;
-        /// otherwise `false.`
-        pub(super) fn transition_to_notified_for_tracing(&self) -> bool {
-            self.fetch_update_action(|mut snapshot| {
-                if snapshot.is_notified() {
-                    (false, None)
-                } else {
-                    snapshot.set_notified();
-                    snapshot.ref_inc();
-                    (true, Some(snapshot))
-                }
-            })
-        }
-    }
-
     /// Sets the cancelled bit and transitions the state to `NOTIFIED` if idle.
     ///
     /// Returns `true` if the task needs to be submitted to the pool for

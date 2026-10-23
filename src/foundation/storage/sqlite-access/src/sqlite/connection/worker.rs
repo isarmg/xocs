@@ -3,9 +3,9 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::thread;
 
-use futures::channel::oneshot;
-use futures_intrusive::sync::{Mutex, MutexGuard};
 use crate::query_engine::sql_str::SqlStr;
+use futures::channel::oneshot;
+use tokio::sync::{Mutex, MutexGuard};
 use tracing::span::Span;
 
 use crate::query_engine::error::Error;
@@ -18,9 +18,6 @@ use crate::sqlite::connection::establish::EstablishParams;
 use crate::sqlite::connection::execute;
 use crate::sqlite::connection::ConnectionState;
 use crate::sqlite::{SqliteArguments, SqliteQueryResult, SqliteRow, SqliteStatement};
-
-#[cfg(feature = "sqlite-deserialize")]
-use crate::sqlite::connection::deserialize::{deserialize, serialize, SchemaName, SqliteOwnedBuf};
 
 // Each SQLite connection has a dedicated thread.
 
@@ -55,29 +52,12 @@ enum Command {
         query: SqlStr,
         tx: oneshot::Sender<Result<SqliteStatement, Error>>,
     },
-    #[cfg(feature = "offline")]
-    Describe {
-        query: SqlStr,
-        tx: oneshot::Sender<Result<crate::query_engine::describe::Describe<crate::sqlite::Sqlite>, Error>>,
-    },
     Execute {
         query: SqlStr,
         arguments: Option<SqliteArguments>,
         persistent: bool,
         tx: flume::Sender<Result<Either<SqliteQueryResult, SqliteRow>, Error>>,
         limit: Option<usize>,
-    },
-    #[cfg(feature = "sqlite-deserialize")]
-    Serialize {
-        schema: Option<SchemaName>,
-        tx: oneshot::Sender<Result<SqliteOwnedBuf, Error>>,
-    },
-    #[cfg(feature = "sqlite-deserialize")]
-    Deserialize {
-        schema: Option<SchemaName>,
-        data: SqliteOwnedBuf,
-        read_only: bool,
-        tx: oneshot::Sender<Result<(), Error>>,
     },
     Begin {
         tx: rendezvous_oneshot::Sender<Result<(), Error>>,
@@ -124,7 +104,7 @@ impl ConnectionWorker {
                     // note: must be fair because in `Command::UnlockDb` we unlock the mutex
                     // and then immediately try to relock it; an unfair mutex would immediately
                     // grant us the lock even if another task is waiting.
-                    conn: Mutex::new(conn, true),
+                    conn: Mutex::new(conn),
                 });
                 let mut conn = shared.conn.try_lock().unwrap();
 
@@ -155,10 +135,6 @@ impl ConnectionWorker {
                                 &conn,
                                 &shared.cached_statements_size,
                             );
-                        }
-                        #[cfg(feature = "offline")]
-                        Command::Describe { query, tx } => {
-                            tx.send(crate::sqlite::connection::describe::describe(&mut conn, query)).ok();
                         }
                         Command::Execute {
                             query,
@@ -312,14 +288,6 @@ impl ConnectionWorker {
                                 }
                             }
                         }
-                        #[cfg(feature = "sqlite-deserialize")]
-                        Command::Serialize { schema, tx } => {
-                            tx.send(serialize(&mut conn, schema)).ok();
-                        }
-                        #[cfg(feature = "sqlite-deserialize")]
-                        Command::Deserialize { schema, data, read_only, tx } => {
-                            tx.send(deserialize(&mut conn, schema, data, read_only)).ok();
-                        }
                         Command::ClearCache { tx } => {
                             conn.statements.clear();
                             update_cached_statements_size(&conn, &shared.cached_statements_size);
@@ -349,15 +317,6 @@ impl ConnectionWorker {
 
     pub(crate) async fn prepare(&mut self, query: SqlStr) -> Result<SqliteStatement, Error> {
         self.oneshot_cmd(|tx| Command::Prepare { query, tx })
-            .await?
-    }
-
-    #[cfg(feature = "offline")]
-    pub(crate) async fn describe(
-        &mut self,
-        query: SqlStr,
-    ) -> Result<crate::query_engine::describe::Describe<crate::sqlite::Sqlite>, Error> {
-        self.oneshot_cmd(|tx| Command::Describe { query, tx })
             .await?
     }
 
@@ -413,31 +372,6 @@ impl ConnectionWorker {
         self.oneshot_cmd(|tx| Command::Ping { tx }).await
     }
 
-    #[cfg(feature = "sqlite-deserialize")]
-    pub(crate) async fn deserialize(
-        &mut self,
-        schema: Option<SchemaName>,
-        data: SqliteOwnedBuf,
-        read_only: bool,
-    ) -> Result<(), Error> {
-        self.oneshot_cmd(|tx| Command::Deserialize {
-            schema,
-            data,
-            read_only,
-            tx,
-        })
-        .await?
-    }
-
-    #[cfg(feature = "sqlite-deserialize")]
-    pub(crate) async fn serialize(
-        &mut self,
-        schema: Option<SchemaName>,
-    ) -> Result<SqliteOwnedBuf, Error> {
-        self.oneshot_cmd(|tx| Command::Serialize { schema, tx })
-            .await?
-    }
-
     async fn oneshot_cmd<F, T>(&mut self, command: F) -> Result<T, Error>
     where
         F: FnOnce(oneshot::Sender<T>) -> Command,
@@ -471,17 +405,29 @@ impl ConnectionWorker {
     }
 
     pub(crate) async fn unlock_db(&mut self) -> Result<MutexGuard<'_, ConnectionState>, Error> {
-        let (guard, res) = futures::future::join(
-            // we need to join the wait queue for the lock before we send the message
-            self.shared.conn.lock(),
-            self.command_tx
-                .send_async((Command::UnlockDb, Span::current())),
-        )
-        .await;
-
-        res.map_err(|_| Error::WorkerCrashed)?;
-
-        Ok(guard)
+        // Poll the lock first and without cooperative-budget deferral, so it
+        // enters the FIFO queue before the worker can release and reacquire it.
+        let lock = std::pin::pin!(tokio::task::coop::unconstrained(self.shared.conn.lock()));
+        let send = std::pin::pin!(self
+            .command_tx
+            .send_async((Command::UnlockDb, Span::current())));
+        match futures::future::select(lock, send).await {
+            // An earlier, cancelled request may already have told the worker
+            // to yield. Once we hold its guard, no new command is needed. In
+            // particular, never hold the guard while waiting for a queue slot:
+            // the worker needs that guard before it can drain more commands.
+            futures::future::Either::Left((guard, _)) => {
+                if self.command_tx.is_disconnected() {
+                    Err(Error::WorkerCrashed)
+                } else {
+                    Ok(guard)
+                }
+            }
+            futures::future::Either::Right((res, lock)) => {
+                res.map_err(|_| Error::WorkerCrashed)?;
+                Ok(lock.await)
+            }
+        }
     }
 
     /// Send a command to the worker to shut down the processing thread.
@@ -532,6 +478,54 @@ fn prepare(conn: &mut ConnectionState, query: SqlStr) -> Result<SqliteStatement,
 
 fn update_cached_statements_size(conn: &ConnectionState, size: &AtomicUsize) {
     size.store(conn.statements.len(), Ordering::Release);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::sqlite::SqliteConnectOptions;
+    use std::task::{Context, Poll, Waker};
+
+    #[test]
+    fn unlock_db_never_holds_the_guard_while_waiting_for_a_command_queue_slot() {
+        for capacity in [0, 1] {
+            for initially_locked in [false, true] {
+                let params =
+                    EstablishParams::from_options(&SqliteConnectOptions::new().in_memory(true))
+                        .unwrap();
+                let shared = Arc::new(WorkerSharedState {
+                    transaction_depth: AtomicUsize::new(0),
+                    cached_statements_size: AtomicUsize::new(0),
+                    conn: Mutex::new(params.establish().unwrap()),
+                });
+                let (command_tx, command_rx) = flume::bounded(capacity);
+                if capacity == 1 {
+                    assert!(command_tx
+                        .try_send((Command::UnlockDb, Span::none()))
+                        .is_ok());
+                }
+                let mut worker = ConnectionWorker {
+                    command_tx,
+                    shared: Arc::clone(&shared),
+                };
+                let held = initially_locked.then(|| shared.conn.try_lock().unwrap());
+                let mut unlock = std::pin::pin!(worker.unlock_db());
+                let mut context = Context::from_waker(Waker::noop());
+                if initially_locked {
+                    assert!(unlock.as_mut().poll(&mut context).is_pending());
+                }
+                // Model the worker yielding its database after an earlier
+                // UnlockDb. No receiver can free a command queue slot until
+                // the worker gets the database guard back.
+                drop(held);
+                assert!(matches!(
+                    unlock.as_mut().poll(&mut context),
+                    Poll::Ready(Ok(_))
+                ));
+                assert_eq!(command_rx.len(), capacity);
+            }
+        }
+    }
 }
 
 // A oneshot channel where send completes only after the receiver receives the value.

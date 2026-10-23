@@ -43,142 +43,41 @@ impl Event {
         sys::event::is_writable(&self.inner)
     }
 
-    /// Returns true if the event contains error readiness.
+    /// Returns true when the Linux event contains `EPOLLERR`.
     ///
-    /// Error events occur when the socket enters an error state. In this case,
-    /// the socket will also receive a readable or writable event. Reading or
-    /// writing to the socket will result in an error.
-    ///
-    /// # Notes
-    ///
-    /// Method is available on all platforms, but not all platforms trigger the
-    /// error event.
-    ///
-    /// The table below shows what flags are checked on what OS.
-    ///
-    /// | [OS selector] | Flag(s) checked |
-    /// |---------------|-----------------|
-    /// | [epoll]       | `EPOLLERR`      |
-    /// | [kqueue]      | `EV_ERROR` and `EV_EOF` with `fflags` set to `0`. |
-    ///
-    /// [OS selector]: ../struct.Poll.html#implementation-notes
-    /// [epoll]: https://man7.org/linux/man-pages/man7/epoll.7.html
-    /// [kqueue]: https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
+    /// Read or write the socket, or inspect its pending error, to obtain the actual error.
     pub fn is_error(&self) -> bool {
         sys::event::is_error(&self.inner)
     }
 
-    /// Returns true if the event contains read closed readiness.
+    /// Returns true when the read side has closed.
     ///
-    /// # Notes
-    ///
-    /// Read closed readiness can be expected after any of the following have
-    /// occurred:
-    /// * The local stream has shutdown the read half of its socket
-    /// * The local stream has shutdown both the read half and the write half
-    ///   of its socket
-    /// * The peer stream has shutdown the write half its socket; this sends a
-    ///   `FIN` packet that has been received by the local stream
-    ///
-    /// Method is a best effort implementation. While some platforms may not
-    /// return readiness when read half is closed, it is guaranteed that
-    /// false-positives will not occur.
-    ///
-    /// The table below shows what flags are checked on what OS.
-    ///
-    /// | [OS selector] | Flag(s) checked |
-    /// |---------------|-----------------|
-    /// | [epoll]       | `EPOLLHUP`, or  |
-    /// |               | `EPOLLIN` and `EPOLLRDHUP` |
-    /// | [kqueue]      | `EV_EOF`        |
-    ///
-    /// [OS selector]: ../struct.Poll.html#implementation-notes
-    /// [epoll]: https://man7.org/linux/man-pages/man7/epoll.7.html
-    /// [kqueue]: https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
+    /// The Linux implementation checks `EPOLLHUP`, or `EPOLLIN` together with `EPOLLRDHUP`.
+    /// The I/O operation remains the source of truth for EOF or an error.
     pub fn is_read_closed(&self) -> bool {
         sys::event::is_read_closed(&self.inner)
     }
 
-    /// Returns true if the event contains write closed readiness.
+    /// Returns true when the write side has closed or failed.
     ///
-    /// # Notes
-    ///
-    /// On [epoll] this is essentially a check for `EPOLLHUP` flag as the
-    /// local stream shutting down its write half does not trigger this event.
-    ///
-    /// On [kqueue] the local stream shutting down the write half of its
-    /// socket will trigger this event.
-    ///
-    /// Method is a best effort implementation. While some platforms may not
-    /// return readiness when write half is closed, it is guaranteed that
-    /// false-positives will not occur.
-    ///
-    /// The table below shows what flags are checked on what OS.
-    ///
-    /// | [OS selector] | Flag(s) checked |
-    /// |---------------|-----------------|
-    /// | [epoll]       | `EPOLLHUP`, or  |
-    /// |               | only `EPOLLERR`, or |
-    /// |               | `EPOLLOUT` and `EPOLLERR` |
-    /// | [kqueue]      | `EV_EOF`        |
-    ///
-    /// [OS selector]: ../struct.Poll.html#implementation-notes
-    /// [epoll]: https://man7.org/linux/man-pages/man7/epoll.7.html
-    /// [kqueue]: https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
+    /// The Linux implementation checks `EPOLLHUP`, `EPOLLERR` alone, or `EPOLLOUT` together
+    /// with `EPOLLERR`. Shutting down the local write half does not itself trigger this event.
     pub fn is_write_closed(&self) -> bool {
         sys::event::is_write_closed(&self.inner)
     }
 
-    /// Returns true if the event contains priority readiness.
-    ///
-    /// # Notes
-    ///
-    /// Method is available on all platforms, but not all platforms trigger the
-    /// priority event.
-    ///
-    /// The table below shows what flags are checked on what OS.
-    ///
-    /// | [OS selector] | Flag(s) checked |
-    /// |---------------|-----------------|
-    /// | [epoll]       | `EPOLLPRI`      |
-    /// | [kqueue]      | *Not supported* |
-    ///
-    /// [OS selector]: ../struct.Poll.html#implementation-notes
-    /// [epoll]: https://man7.org/linux/man-pages/man7/epoll.7.html
-    /// [kqueue]: https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
+    /// Returns true when the Linux event contains `EPOLLPRI`.
     #[inline]
     pub fn is_priority(&self) -> bool {
         sys::event::is_priority(&self.inner)
     }
 
-    /// Returns true if the event contains AIO readiness.
-    ///
-    /// # Notes
-    ///
-    /// Method is available on all platforms, but not all platforms support AIO.
-    ///
-    /// The table below shows what flags are checked on what OS.
-    ///
-    /// | [OS selector] | Flag(s) checked |
-    /// |---------------|-----------------|
-    /// | [epoll]       | *Not supported* |
-    /// | [kqueue]<sup>1</sup> | `EVFILT_AIO` |
-    ///
-    /// 1: Only supported on DragonFly BSD, FreeBSD, iOS and macOS.
-    ///
-    /// [OS selector]: ../struct.Poll.html#implementation-notes
-    /// [epoll]: https://man7.org/linux/man-pages/man7/epoll.7.html
-    /// [kqueue]: https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
+    /// Always returns false: the Linux epoll backend does not report AIO completion events.
     pub fn is_aio(&self) -> bool {
         sys::event::is_aio(&self.inner)
     }
 
-    /// Returns true if the event contains LIO readiness.
-    ///
-    /// # Notes
-    ///
-    /// Method is available on all platforms, but only FreeBSD supports LIO. On
-    /// FreeBSD this method checks the `EVFILT_LIO` flag.
+    /// Always returns false: the Linux epoll backend does not report LIO completion events.
     pub fn is_lio(&self) -> bool {
         sys::event::is_lio(&self.inner)
     }
@@ -193,10 +92,8 @@ impl Event {
     }
 }
 
-/// When the [alternate] flag is enabled this will print platform specific
-/// details, for example the fields of the `kevent` structure on platforms that
-/// use `kqueue(2)`. Note however that the output of this implementation is
-/// **not** consider a part of the stable API.
+/// The [alternate] flag includes the raw Linux epoll event details. This debug output
+/// is intended for diagnostics and is not a serialization format.
 ///
 /// [alternate]: fmt::Formatter::alternate
 impl fmt::Debug for Event {

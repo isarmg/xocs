@@ -310,13 +310,12 @@ where
     pub(crate) fn init(&self) -> Option<InitGuard<T, C>> {
         // Load the current lifecycle state.
         let lifecycle = self.lifecycle.load(Ordering::Acquire);
-        let gen = LifecycleGen::<C>::from_packed(lifecycle).0;
         let refs = RefCount::<C>::from_packed(lifecycle);
 
         test_println!(
             "-> initialize_state; state={:?}; gen={:?}; refs={:?};",
             Lifecycle::<C>::from_packed(lifecycle),
-            gen,
+            LifecycleGen::<C>::from_packed(lifecycle).0,
             refs,
         );
 

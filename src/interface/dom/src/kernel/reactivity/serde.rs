@@ -1,5 +1,4 @@
-#[allow(deprecated)]
-use crate::reactivity::wrappers::read::{MaybeProp, MaybeSignal};
+use crate::reactivity::wrappers::read::MaybeProp;
 use crate::reactivity::{
     computed::{ArcMemo, Memo},
     owner::Storage,
@@ -75,19 +74,6 @@ impl<T: Serialize + 'static, St: Storage<T>> Serialize for ArcMemo<T, St> {
     }
 }
 
-#[allow(deprecated)]
-impl<T, St> Serialize for MaybeSignal<T, St>
-where
-    T: Clone + Send + Sync + Serialize,
-    St: Storage<SignalTypes<T, St>> + Storage<T>,
-{
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        self.with(|value| value.serialize(serializer))
-    }
-}
 
 impl<T, St> Serialize for MaybeProp<T, St>
 where
@@ -142,18 +128,6 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for ArcRwSignal<T> {
     }
 }
 
-#[allow(deprecated)]
-impl<'de, T: Deserialize<'de>, St> Deserialize<'de> for MaybeSignal<T, St>
-where
-    St: Storage<T>,
-{
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        T::deserialize(deserializer).map(MaybeSignal::Static)
-    }
-}
 
 #[allow(deprecated)]
 impl<'de, T: Deserialize<'de>> Deserialize<'de> for Signal<T>

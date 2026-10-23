@@ -36,57 +36,23 @@ path = "src/lib.rs"
 path = "../../native/target-conditions"
 package = "blog-native-target-conditions"
 
-[target.'cfg(all(any(target_os = "linux", target_os = "android"), not(any(all(target_os = "linux", target_env = ""), getrandom_backend = "custom", getrandom_backend = "linux_raw", getrandom_backend = "rdrand", getrandom_backend = "rndr"))))'.dependencies.libc]
+[target.'cfg(target_os = "linux")'.dependencies.libc]
 default-features = false
 path = "../system-abi"
 package = "blog-platform-system-abi"
 
-[target.'cfg(all(target_family = "wasm", any(target_os = "unknown", target_os = "none")))'.dependencies.wasm-bindgen]
+[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies.wasm-bindgen]
 optional = true
 default-features = false
 path = "../../wasm/browser-bridge"
 package = "blog-wasm-browser-bridge"
 
-[target.'cfg(any(target_os = "dragonfly", target_os = "freebsd", target_os = "hurd", target_os = "illumos", target_os = "cygwin", all(target_os = "horizon", target_arch = "arm")))'.dependencies.libc]
+[target.'cfg(all(target_arch = "wasm32", target_os = "unknown", target_feature = "atomics"))'.dependencies.js-sys]
+optional = true
 default-features = false
-path = "../system-abi"
-package = "blog-platform-system-abi"
+path = "../../interface/javascript-api"
+package = "blog-interface-javascript-api"
 
-[target.'cfg(any(target_os = "haiku", target_os = "redox", target_os = "nto", target_os = "aix"))'.dependencies.libc]
-default-features = false
-path = "../system-abi"
-package = "blog-platform-system-abi"
-
-[target.'cfg(any(target_os = "ios", target_os = "visionos", target_os = "watchos", target_os = "tvos"))'.dependencies.libc]
-default-features = false
-path = "../system-abi"
-package = "blog-platform-system-abi"
-
-[target.'cfg(any(target_os = "macos", target_os = "openbsd", target_os = "vita", target_os = "emscripten"))'.dependencies.libc]
-default-features = false
-path = "../system-abi"
-package = "blog-platform-system-abi"
-
-[target.'cfg(target_os = "netbsd")'.dependencies.libc]
-default-features = false
-path = "../system-abi"
-package = "blog-platform-system-abi"
-
-[target.'cfg(target_os = "solaris")'.dependencies.libc]
-default-features = false
-path = "../system-abi"
-package = "blog-platform-system-abi"
-
-[target.'cfg(target_os = "vxworks")'.dependencies.libc]
-default-features = false
-path = "../system-abi"
-package = "blog-platform-system-abi"
-
-
-[target."cfg(all(target_family = \"wasm\", any(target_os = \"unknown\", target_os = \"none\"), target_feature = \"atomics\"))".dependencies]
-js-sys = { optional = true, default-features = false, path = "../../interface/javascript-api",package = "blog-interface-javascript-api"}
-
-[target."cfg(all(target_os = \"uefi\", getrandom_backend = \"efi_rng\"))"]
 [lints.clippy]
 cast_lossless = "warn"
 cast_possible_truncation = "warn"

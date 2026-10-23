@@ -246,6 +246,9 @@
 
 #![doc(html_root_url = "https://docs.rs/cc/1.0")]
 
+#[cfg(not(all(target_os = "linux", target_arch = "x86_64", target_env = "gnu")))]
+compile_error!("the C build helper requires a Linux amd64 GNU host");
+
 use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::env;
@@ -265,86 +268,6 @@ mod parallel;
 
 mod target;
 use self::target::*;
-
-/// A helper module to looking for windows-specific tools:
-/// 1. On Windows host, probe the Windows Registry if needed;
-/// 2. On non-Windows host, check specified environment variables.
-pub mod windows_registry {
-    // Regardless of whether this should be in this crate's public API,
-    // it has been since 2015, so don't break it.
-
-    /// Attempts to find a tool within an MSVC installation using the Windows
-    /// registry as a point to search from.
-    ///
-    /// The `arch_or_target` argument is the architecture or the Rust target name
-    /// that the tool should work for (e.g. compile or link for). The supported
-    /// architecture names are:
-    /// - `"x64"` or `"x86_64"`
-    /// - `"arm64"` or `"aarch64"`
-    /// - `"arm64ec"`
-    /// - `"x86"`, `"i586"` or `"i686"`
-    /// - `"arm"` or `"thumbv7a"`
-    ///
-    /// The `tool` argument is the tool to find. Supported tools include:
-    /// - MSVC tools: `cl.exe`, `link.exe`, `lib.exe`, etc.
-    /// - `MSBuild`: `msbuild.exe`
-    /// - Visual Studio IDE: `devenv.exe`
-    /// - Clang/LLVM tools: `clang.exe`, `clang++.exe`, `clang-*.exe`, `llvm-*.exe`, `lld.exe`, etc.
-    ///
-    /// This function will return `None` if the tool could not be found, or it will
-    /// return `Some(cmd)` which represents a command that's ready to execute the
-    /// tool with the appropriate environment variables set.
-    ///
-    /// Note that this function always returns `None` for non-MSVC targets (if a
-    /// full target name was specified).
-    pub fn find(arch_or_target: &str, tool: &str) -> Option<std::process::Command> {
-        ::find_msvc_tools::find(arch_or_target, tool)
-    }
-
-    /// A version of Visual Studio
-    #[derive(Debug, PartialEq, Eq, Copy, Clone)]
-    #[non_exhaustive]
-    pub enum VsVers {
-        /// Visual Studio 12 (2013)
-        #[deprecated = "Visual Studio 12 is no longer supported. cc will never return this value."]
-        Vs12,
-        /// Visual Studio 14 (2015)
-        Vs14,
-        /// Visual Studio 15 (2017)
-        Vs15,
-        /// Visual Studio 16 (2019)
-        Vs16,
-        /// Visual Studio 17 (2022)
-        Vs17,
-        /// Visual Studio 18 (2026)
-        Vs18,
-    }
-
-    /// Find the most recent installed version of Visual Studio
-    ///
-    /// This is used by the cmake crate to figure out the correct
-    /// generator.
-    pub fn find_vs_version() -> Result<VsVers, String> {
-        ::find_msvc_tools::find_vs_version().map(|vers| match vers {
-            #[allow(deprecated)]
-            ::find_msvc_tools::VsVers::Vs12 => VsVers::Vs12,
-            ::find_msvc_tools::VsVers::Vs14 => VsVers::Vs14,
-            ::find_msvc_tools::VsVers::Vs15 => VsVers::Vs15,
-            ::find_msvc_tools::VsVers::Vs16 => VsVers::Vs16,
-            ::find_msvc_tools::VsVers::Vs17 => VsVers::Vs17,
-            ::find_msvc_tools::VsVers::Vs18 => VsVers::Vs18,
-            _ => unreachable!("unknown VS version"),
-        })
-    }
-
-    /// Similar to the `find` function above, this function will attempt the same
-    /// operation (finding a MSVC tool in a local install) but instead returns a
-    /// [`Tool`](crate::Tool) which may be introspected.
-    pub fn find_tool(arch_or_target: &str, tool: &str) -> Option<crate::Tool> {
-        ::find_msvc_tools::find_tool(arch_or_target, tool)
-            .map(|tool| crate::Tool::from_find_msvc_tools(tool, crate::EnvSnapshot::capture()))
-    }
-}
 
 mod command_helpers;
 use command_helpers::*;
@@ -2190,14 +2113,8 @@ impl Build {
         let asm_ext = AsmFileExt::from_path(&obj.src);
         let is_asm = asm_ext.is_some();
         let target = self.get_target()?;
-        let msvc = target.env == "msvc";
-
-        let is_assembler_msvc = msvc && asm_ext == Some(AsmFileExt::DotAsm);
-        let mut cmd = if is_assembler_msvc {
-            self.msvc_macro_assembler()?
-        } else {
-            compiler.to_command()
-        };
+        let is_assembler_msvc = false;
+        let mut cmd = compiler.to_command();
         let is_arm = is_arm(&target);
         command_add_output_file(
             &mut cmd,
@@ -2212,10 +2129,7 @@ impl Build {
                 is_arm,
             },
         );
-        // armasm and armasm64 don't require -c option
-        if !is_assembler_msvc || !is_arm {
-            cmd.arg("-c");
-        }
+        cmd.arg("-c");
         if self.cuda && self.cuda_file_count() > 1 {
             cmd.arg("--device-c");
         }
@@ -3228,65 +3142,6 @@ impl Build {
         supported
     }
 
-    fn msvc_macro_assembler(&self) -> Result<Command, Error> {
-        let target = self.get_target()?;
-        let tool = match target.arch {
-            "x86_64" => "ml64.exe",
-            "arm" => "armasm.exe",
-            "aarch64" | "arm64ec" => "armasm64.exe",
-            _ => "ml.exe",
-        };
-        let mut cmd = self
-            .find_msvc_tools_find(&target, tool)
-            .unwrap_or_else(|| self.cmd(tool));
-        cmd.arg("-nologo"); // undocumented, yet working with armasm[64]
-        for directory in self.include_directories.iter() {
-            cmd.arg("-I").arg(&**directory);
-        }
-        if is_arm(&target) {
-            if self.get_debug() {
-                cmd.arg("-g");
-            }
-
-            if target.arch == "arm64ec" {
-                cmd.args(["-machine", "ARM64EC"]);
-            }
-
-            for (key, value) in self.definitions.iter() {
-                cmd.arg("-PreDefine");
-                if let Some(ref value) = *value {
-                    if let Ok(i) = value.parse::<i32>() {
-                        cmd.arg(format!("{key} SETA {i}"));
-                    } else if value.starts_with('"') && value.ends_with('"') {
-                        cmd.arg(format!("{key} SETS {value}"));
-                    } else {
-                        cmd.arg(format!("{key} SETS \"{value}\""));
-                    }
-                } else {
-                    cmd.arg(format!("{} SETL {}", key, "{TRUE}"));
-                }
-            }
-        } else {
-            if self.get_debug() {
-                cmd.arg("-Zi");
-            }
-
-            for (key, value) in self.definitions.iter() {
-                if let Some(ref value) = *value {
-                    cmd.arg(format!("-D{key}={value}"));
-                } else {
-                    cmd.arg(format!("-D{key}"));
-                }
-            }
-        }
-
-        if target.arch == "x86" {
-            cmd.arg("-safeseh");
-        }
-
-        Ok(cmd)
-    }
-
     fn assemble<'a>(
         &'a self,
         lib_name: &str,
@@ -3572,12 +3427,6 @@ impl Build {
         let target = self.get_target()?;
         let raw_target = self.get_raw_target()?;
 
-        let msvc = if self.prefer_clang_cl_over_msvc {
-            "clang-cl.exe"
-        } else {
-            "cl.exe"
-        };
-
         let (env, gnu, traditional, clang) = if self.cpp {
             ("CXX", "g++", "c++", "clang++")
         } else {
@@ -3598,8 +3447,6 @@ impl Build {
         } else {
             fallback
         };
-
-        let cl_exe = self.find_msvc_tools_find_tool(&target, msvc);
 
         let tool_opt: Option<Tool> = self
             .env_tool(env)
@@ -3649,20 +3496,12 @@ impl Build {
                 } else {
                     None
                 }
-            })
-            .or_else(|| cl_exe.clone());
+            });
 
         let tool = match tool_opt {
             Some(t) => t,
             None => {
-                let compiler: PathBuf = if cfg!(windows) && target.os == "windows" {
-                    if target.env == "msvc" {
-                        msvc.into()
-                    } else {
-                        let cc = if target.abi == "llvm" { clang } else { gnu };
-                        format!("{cc}.exe").into()
-                    }
-                } else if target.os == "ios"
+                let compiler: PathBuf = if target.os == "ios"
                     || target.os == "watchos"
                     || target.os == "tvos"
                     || target.os == "visionos"
@@ -3799,27 +3638,6 @@ impl Build {
         // https://github.com/mstorsjo/llvm-mingw/blob/a1f6413e5c21fd74b64137b56167f4fba500d1d8/wrappers/clang-target-wrapper.sh#L31
         if !cfg!(windows) && target.os == "windows" && is_llvm_mingw_wrapper(&tool.path) {
             tool.has_internal_target_arg = true;
-        }
-
-        // If we found `cl.exe` in our environment, the tool we're returning is
-        // an MSVC-like tool, *and* no env vars were set then set env vars for
-        // the tool that we're returning.
-        //
-        // Env vars are needed for things like `link.exe` being put into PATH as
-        // well as header include paths sometimes. These paths are automatically
-        // included by default but if the `CC` or `CXX` env vars are set these
-        // won't be used. This'll ensure that when the env vars are used to
-        // configure for invocations like `clang-cl` we still get a "works out
-        // of the box" experience.
-        if let Some(cl_exe) = cl_exe {
-            if tool.family == (ToolFamily::Msvc { clang_cl: true })
-                && tool.env.is_empty()
-                && target.env == "msvc"
-            {
-                for (k, v) in cl_exe.env.iter() {
-                    tool.env.push((k.to_owned(), v.to_owned()));
-                }
-            }
         }
 
         if target.env == "msvc" && tool.family == ToolFamily::Gnu {
@@ -4137,47 +3955,6 @@ impl Build {
                         }
                     }
                     self.cmd(&name)
-                } else if target.env == "msvc" {
-                    // NOTE: There isn't really a ranlib on msvc, so arguably we should return
-                    // `None` somehow here. But in general, callers will already have to be aware
-                    // of not running ranlib on Windows anyway, so it feels okay to return lib.exe
-                    // here.
-
-                    let compiler = self.get_base_compiler()?;
-                    let lib = if compiler.family == (ToolFamily::Msvc { clang_cl: true }) {
-                        self.search_programs(
-                            &compiler.path,
-                            Path::new("llvm-lib"),
-                            &self.cargo_output,
-                        )
-                        .or_else(|| {
-                            // See if there is 'llvm-lib' next to 'clang-cl'
-                            if let Some(mut cmd) = self.which(&compiler.path, None) {
-                                cmd.pop();
-                                cmd.push("llvm-lib");
-                                self.which(&cmd, None)
-                            } else {
-                                None
-                            }
-                        })
-                    } else {
-                        None
-                    };
-
-                    if let Some(lib) = lib {
-                        name = lib;
-                        self.cmd(&name)
-                    } else {
-                        name = PathBuf::from("lib.exe");
-                        let mut cmd = match self.find_msvc_tools_find(&target, "lib.exe") {
-                            Some(t) => t,
-                            None => self.cmd("lib.exe"),
-                        };
-                        if target.full_arch == "arm64ec" {
-                            cmd.arg("/machine:arm64ec");
-                        }
-                        cmd
-                    }
                 } else if target.os == "illumos" {
                     // The default 'ar' on illumos uses a non-standard flags,
                     // but the OS comes bundled with a GNU-compatible variant.
@@ -4463,6 +4240,7 @@ impl Build {
     }
 
     fn get_target(&self) -> Result<TargetInfo<'_>, Error> {
+        self.get_raw_target()?;
         match &self.target {
             Some(t) if Some(OsStr::new(&**t)) != cargo_env_var_os("TARGET").as_deref() => {
                 TargetInfo::from_rustc_target(t)
@@ -4478,9 +4256,18 @@ impl Build {
     }
 
     fn get_raw_target(&self) -> Result<Cow<'_, str>, Error> {
-        match &self.target {
-            Some(t) => Ok(Cow::Borrowed(t)),
-            None => cargo_env_var("TARGET").map(Cow::Owned),
+        let target = match &self.target {
+            Some(t) => Cow::Borrowed(&**t),
+            None => Cow::Owned(cargo_env_var("TARGET")?),
+        };
+        match &*target {
+            "x86_64-unknown-linux-gnu" | "wasm32-unknown-unknown" => Ok(target),
+            _ => Err(Error::new(
+                ErrorKind::InvalidTarget,
+                format!(
+                    "unsupported C target {target}; expected Linux amd64 GNU or browser wasm32"
+                ),
+            )),
         }
     }
 
@@ -4954,33 +4741,6 @@ impl Build {
             }
         }
         None
-    }
-
-    fn find_msvc_tools_find(&self, target: &TargetInfo<'_>, tool: &str) -> Option<Command> {
-        self.find_msvc_tools_find_tool(target, tool)
-            .map(|c| c.to_command())
-    }
-
-    fn find_msvc_tools_find_tool(&self, target: &TargetInfo<'_>, tool: &str) -> Option<Tool> {
-        struct BuildEnvGetter<'s>(&'s Build);
-
-        impl ::find_msvc_tools::EnvGetter for BuildEnvGetter<'_> {
-            fn get_env(&self, name: &str) -> Option<::find_msvc_tools::Env> {
-                // TODO: Should we allow overriding these with `Build::env`?
-                // <https://github.com/rust-lang/cc-rs/issues/1688>
-                self.0
-                    .get_env(name)
-                    .cloned()
-                    .map(::find_msvc_tools::Env::Arced)
-            }
-        }
-
-        if target.env != "msvc" {
-            return None;
-        }
-
-        ::find_msvc_tools::find_tool_with_env(target.full_arch, tool, &BuildEnvGetter(self))
-            .map(|tool| Tool::from_find_msvc_tools(tool, self.env.inherited().clone()))
     }
 
     /// Compiling for WASI targets typically uses the [wasi-sdk] project and

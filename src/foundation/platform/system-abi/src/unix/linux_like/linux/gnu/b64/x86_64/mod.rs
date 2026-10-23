@@ -1,10 +1,7 @@
 //! x86_64-specific definitions for 64-bit linux-like values
 
 use crate::prelude::*;
-use crate::{
-    off64_t,
-    off_t,
-};
+use crate::{off64_t, off_t};
 
 pub type wchar_t = i32;
 pub type nlink_t = u64;
@@ -651,12 +648,5 @@ extern "C" {
     pub fn swapcontext(uocp: *mut ucontext_t, ucp: *const ucontext_t) -> c_int;
 }
 
-cfg_if! {
-    if #[cfg(target_pointer_width = "32")] {
-        mod x32;
-        pub use self::x32::*;
-    } else {
-        mod not_x32;
-        pub use self::not_x32::*;
-    }
-}
+mod not_x32;
+pub use self::not_x32::*;

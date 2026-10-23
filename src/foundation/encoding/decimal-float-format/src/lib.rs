@@ -119,8 +119,6 @@ use core::ops::RangeInclusive;
 use core::ptr;
 use core::slice;
 use core::str;
-#[cfg(feature = "no-panic")]
-use no_panic::no_panic;
 
 const BUFFER_SIZE: usize = 24;
 const NAN: &str = "NaN";
@@ -177,12 +175,9 @@ const fn umul128_hi64(x: u64, y: u64) -> u64 {
 }
 
 // Returns (x * y + c) >> 64.
-#[cfg_attr(feature = "no-panic", no_panic)]
 fn umul128_add_hi64(x: u64, y: u64, c: u64) -> u64 {
     ((u128::from(x) * u128::from(y) + u128::from(c)) >> 64) as u64
 }
-
-#[cfg_attr(feature = "no-panic", no_panic)]
 fn umul192_hi128(x_hi: u64, x_lo: u64, y: u64) -> uint128 {
     let p = umul128(x_hi, y);
     let lo = (p as u64).wrapping_add((umul128(x_lo, y) >> 64) as u64);
@@ -193,7 +188,6 @@ fn umul192_hi128(x_hi: u64, x_lo: u64, y: u64) -> uint128 {
 }
 
 // Returns x / 10 for x <= 2**62.
-#[cfg_attr(feature = "no-panic", no_panic)]
 fn div10(x: u64) -> u64 {
     debug_assert!(x < (1 << 62));
     // ceil(2**64 / 10) computed as (1 << 63) / 5 + 1 to avoid int128.
@@ -745,7 +739,6 @@ impl ExpFloatShuffleTable {
     )),
     all(test, target_endian = "little"),
 ))]
-#[cfg_attr(feature = "no-panic", no_panic)]
 fn count_trailing_nonzeros(x: u64) -> usize {
     // We count the number of bytes until there are only zeros left.
     // The code is equivalent to
@@ -777,7 +770,6 @@ static DIGITS2: Digits2 = Digits2(
 
 // Converts value in the range [0, 100) to a string. GCC generates a bit better
 // code when value is pointer-size (https://www.godbolt.org/z/5fEPMT1cc).
-#[cfg_attr(feature = "no-panic", no_panic)]
 unsafe fn digits2(value: usize) -> &'static u16 {
     debug_assert!(value < 100);
 
@@ -964,7 +956,6 @@ static STATIC_DATA: Data = Data {
 
 // Converts four numbers < 10000, one in each 32-bit lane, to BCD digits.
 #[cfg(all(target_arch = "aarch64", target_feature = "neon", not(miri)))]
-#[cfg_attr(feature = "no-panic", no_panic)]
 fn to_bcd_4x4(mut efgh_abcd_mnop_ijkl: int32x4_t, d: &Data) -> uint8x16_t {
     unsafe {
         // Compiler barrier, or clang breaks the subsequent MLA into UADDW +
@@ -994,7 +985,6 @@ fn to_bcd_4x4(mut efgh_abcd_mnop_ijkl: int32x4_t, d: &Data) -> uint8x16_t {
 
 // An optimized version for NEON by Dougall Johnson.
 #[cfg(all(target_arch = "aarch64", target_feature = "neon", not(miri)))]
-#[cfg_attr(feature = "no-panic", no_panic)]
 #[inline]
 fn to_unshuffled_digits(value: u64, d: &Data) -> uint8x16_t {
     let mut hundred_million = d.hundred_million;
@@ -1036,7 +1026,6 @@ fn to_unshuffled_digits(value: u64, d: &Data) -> uint8x16_t {
 // Converts four numbers < 10000, one in each 32-bit lane, to BCD digits.
 // Digits in each 32-bit lane will be in order for SSE2, reversed for SSE4.1.
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2", not(miri)))]
-#[cfg_attr(feature = "no-panic", no_panic)]
 fn to_bcd_4x4(y: __m128i, d: &Data) -> __m128i {
     unsafe {
         let div100 = _mm_load_si128(ptr::addr_of!(d.div100).cast::<__m128i>());
@@ -1084,7 +1073,6 @@ struct BcdResult {
     all(target_arch = "x86_64", target_feature = "sse4.1", not(miri)),
     all(target_arch = "aarch64", target_feature = "neon", not(miri)),
 )))]
-#[cfg_attr(feature = "no-panic", no_panic)]
 fn to_bcd8(abcdefgh: u64) -> BcdResult {
     #[cfg(not(all(target_arch = "x86_64", target_feature = "sse2", not(miri))))]
     let bcd = {
@@ -1139,8 +1127,6 @@ struct DecDigits<Float: FloatTraits> {
     unshuffled: Float::DecUnshuffledType,
     num_digits: usize,
 }
-
-#[cfg_attr(feature = "no-panic", no_panic)]
 #[inline]
 fn to_digits_64(value: u64, #[allow(unused_variables)] d: &Data) -> DecDigits<f64> {
     #[cfg(not(any(
@@ -1239,8 +1225,6 @@ fn to_digits_64(value: u64, #[allow(unused_variables)] d: &Data) -> DecDigits<f6
         }
     }
 }
-
-#[cfg_attr(feature = "no-panic", no_panic)]
 #[inline]
 fn to_digits_32(value: u64, #[allow(unused_variables)] d: &Data) -> DecDigits<f32> {
     #[cfg(all(target_arch = "x86_64", target_feature = "sse4.1", not(miri)))]
@@ -1299,8 +1283,6 @@ fn to_digits_32(value: u64, #[allow(unused_variables)] d: &Data) -> DecDigits<f3
         }
     }
 }
-
-#[cfg_attr(feature = "no-panic", no_panic)]
 unsafe fn write_exp_float_simd_32(
     buffer: *mut u8,
     dig: &DecDigits<f32>,
@@ -1364,7 +1346,6 @@ struct ToDecimalResult {
 // Here be 🐉s.
 // Converts a binary FP number bin_sig * 2**bin_exp to the shortest decimal
 // representation, where bin_exp = raw_exp - exp_offset.
-#[cfg_attr(feature = "no-panic", no_panic)]
 #[inline]
 fn to_decimal<Float, UInt>(bin_sig: UInt, raw_exp: i64, regular: bool, d: &Data) -> ToDecimalResult
 where
@@ -1505,7 +1486,6 @@ where
 
 /// Writes the shortest correctly rounded decimal representation of `value` to
 /// `buffer`. `buffer` should point to a buffer of size `buffer_size` or larger.
-#[cfg_attr(feature = "no-panic", no_panic)]
 unsafe fn write<Float>(value: Float, mut buffer: *mut u8) -> *mut u8
 where
     Float: FloatTraits,
@@ -1719,7 +1699,6 @@ impl Buffer {
     /// This is a cheap operation; you don't need to worry about reusing buffers
     /// for efficiency.
     #[inline]
-    #[cfg_attr(feature = "no-panic", no_panic)]
     pub fn new() -> Self {
         let bytes = [MaybeUninit::<u8>::uninit(); BUFFER_SIZE];
         Buffer { bytes }
@@ -1736,7 +1715,6 @@ impl Buffer {
     /// If your input is known to be finite, you may get better performance by
     /// calling the `format_finite` method instead of `format` to avoid the
     /// checks for special cases.
-    #[cfg_attr(feature = "no-panic", no_panic)]
     pub fn format<F: Float>(&mut self, f: F) -> &str {
         if f.is_nonfinite() {
             f.format_nonfinite()
@@ -1760,7 +1738,6 @@ impl Buffer {
     /// [`is_finite`]: f64::is_finite
     /// [`is_nan`]: f64::is_nan
     /// [`is_infinite`]: f64::is_infinite
-    #[cfg_attr(feature = "no-panic", no_panic)]
     pub fn format_finite<F: Float>(&mut self, f: F) -> &str {
         unsafe {
             let end = f.write_to_zmij_buffer(self.bytes.as_mut_ptr().cast::<u8>());
@@ -1798,7 +1775,6 @@ mod private {
         }
 
         #[cold]
-        #[cfg_attr(feature = "no-panic", inline)]
         fn format_nonfinite(self) -> &'static str {
             const MANTISSA_MASK: u32 = 0x007fffff;
             const SIGN_MASK: u32 = 0x80000000;
@@ -1811,8 +1787,6 @@ mod private {
                 crate::INFINITY
             }
         }
-
-        #[cfg_attr(feature = "no-panic", inline)]
         unsafe fn write_to_zmij_buffer(self, buffer: *mut u8) -> *mut u8 {
             unsafe { crate::write(self, buffer) }
         }
@@ -1827,7 +1801,6 @@ mod private {
         }
 
         #[cold]
-        #[cfg_attr(feature = "no-panic", inline)]
         fn format_nonfinite(self) -> &'static str {
             const MANTISSA_MASK: u64 = 0x000fffffffffffff;
             const SIGN_MASK: u64 = 0x8000000000000000;
@@ -1840,8 +1813,6 @@ mod private {
                 crate::INFINITY
             }
         }
-
-        #[cfg_attr(feature = "no-panic", inline)]
         unsafe fn write_to_zmij_buffer(self, buffer: *mut u8) -> *mut u8 {
             unsafe { crate::write(self, buffer) }
         }
@@ -1850,7 +1821,6 @@ mod private {
 
 impl Default for Buffer {
     #[inline]
-    #[cfg_attr(feature = "no-panic", no_panic)]
     fn default() -> Self {
         Buffer::new()
     }

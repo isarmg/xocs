@@ -3,7 +3,13 @@ use std::collections::HashMap;
 
 fn assert_sufficiently_different(a: u64, b: u64, tolerance: i32) {
     let (same_byte_count, same_nibble_count) = count_same_bytes_and_nibbles(a, b);
-    assert!(same_byte_count <= tolerance, "{:x} vs {:x}: {:}", a, b, same_byte_count);
+    assert!(
+        same_byte_count <= tolerance,
+        "{:x} vs {:x}: {:}",
+        a,
+        b,
+        same_byte_count
+    );
     assert!(
         same_nibble_count <= tolerance * 3,
         "{:x} vs {:x}: {:}",
@@ -50,7 +56,12 @@ fn count_same_bytes_and_nibbles(a: u64, b: u64) -> (i32, i32) {
     (same_byte_count, same_nibble_count)
 }
 
-fn gen_combinations(options: &[u32; 11], depth: u32, so_far: Vec<u32>, combinations: &mut Vec<Vec<u32>>) {
+fn gen_combinations(
+    options: &[u32; 11],
+    depth: u32,
+    so_far: Vec<u32>,
+    combinations: &mut Vec<Vec<u32>>,
+) {
     if depth == 0 {
         return;
     }
@@ -144,7 +155,7 @@ fn assert_each_byte_differs(num: u64, base: u64, alternatives: Vec<u64>) {
         changed_bits |= base ^ alternative
     }
     assert_eq!(
-        core::u64::MAX,
+        u64::MAX,
         changed_bits,
         "Bits changed: {:x} on num: {:?}. base {:x}",
         changed_bits,
@@ -300,7 +311,8 @@ fn test_padding_doesnot_collide<T: Hasher>(hasher: impl Fn() -> T) {
                     let mut long = hasher();
                     padded.push(c as char);
                     padded.hash(&mut long);
-                    let (same_bytes, same_nibbles) = count_same_bytes_and_nibbles(value, long.finish());
+                    let (same_bytes, same_nibbles) =
+                        count_same_bytes_and_nibbles(value, long.finish());
                     assert!(
                         same_bytes <= 3,
                         "string {:?} + {} bytes of {} -> {:x} vs {:x}",
@@ -338,21 +350,19 @@ fn test_length_extension<T: Hasher>(hasher: impl Fn(u128, u128) -> T) {
 }
 
 fn test_sparse<T: Hasher>(hasher: impl Fn() -> T) {
-    use smallvec::SmallVec;
-
     let mut buf = [0u8; 256];
     let mut hashes = HashMap::new();
     for idx_1 in 0..255_u8 {
         for idx_2 in idx_1 + 1..=255_u8 {
             for value_1 in [1, 2, 4, 8, 16, 32, 64, 128] {
                 for value_2 in [
-                    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 16, 17, 18, 20, 24, 31, 32, 33, 48, 64, 96, 127, 128, 129,
-                    192, 254, 255,
+                    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 16, 17, 18, 20, 24, 31, 32, 33, 48, 64,
+                    96, 127, 128, 129, 192, 254, 255,
                 ] {
                     buf[idx_1 as usize] = value_1;
                     buf[idx_2 as usize] = value_2;
                     let hash_value = hash_with(&buf, &mut hasher());
-                    let keys = hashes.entry(hash_value).or_insert(SmallVec::<[[u8; 4]; 1]>::new());
+                    let keys = hashes.entry(hash_value).or_insert(Vec::<[u8; 4]>::new());
                     keys.push([idx_1, value_1, idx_2, value_2]);
                     buf[idx_1 as usize] = 0;
                     buf[idx_2 as usize] = 0;
@@ -407,7 +417,7 @@ mod fallback_tests {
     #[test]
     fn fallback_keys_affect_every_byte() {
         //For fallback second key is not used in every hash.
-        #[cfg(all(not(specialize), folded_multiply))]
+        #[cfg(folded_multiply)]
         test_keys_affect_every_byte(0, |a, b| AHasher::new_with_keys(a ^ b, a));
         test_keys_affect_every_byte("", |a, b| AHasher::new_with_keys(a ^ b, a));
         test_keys_affect_every_byte((0, 0), |a, b| AHasher::new_with_keys(a ^ b, a));
@@ -440,9 +450,23 @@ mod fallback_tests {
 
 ///Basic sanity tests of the cypto properties of aHash.
 #[cfg(any(
-    all(any(target_arch = "x86", target_arch = "x86_64"), target_feature = "aes", not(miri)),
-    all(feature = "nightly-arm-aes", target_arch = "aarch64", target_feature = "aes", not(miri)),
-    all(feature = "nightly-arm-aes", target_arch = "arm", target_feature = "aes", not(miri)),
+    all(
+        any(target_arch = "x86", target_arch = "x86_64"),
+        target_feature = "aes",
+        not(miri)
+    ),
+    all(
+        feature = "nightly-arm-aes",
+        target_arch = "aarch64",
+        target_feature = "aes",
+        not(miri)
+    ),
+    all(
+        feature = "nightly-arm-aes",
+        target_arch = "arm",
+        target_feature = "aes",
+        not(miri)
+    ),
 ))]
 #[cfg(test)]
 mod aes_tests {
@@ -504,7 +528,6 @@ mod aes_tests {
 
     #[test]
     fn aes_keys_affect_every_byte() {
-        #[cfg(not(specialize))]
         test_keys_affect_every_byte(0, AHasher::test_with_keys);
         test_keys_affect_every_byte("", AHasher::test_with_keys);
         test_keys_affect_every_byte((0, 0), AHasher::test_with_keys);

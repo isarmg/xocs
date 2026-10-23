@@ -1,11 +1,9 @@
 use super::{
     DefaultMakeSpan, DefaultOnBodyChunk, DefaultOnEos, DefaultOnFailure, DefaultOnRequest,
-    DefaultOnResponse, GrpcMakeClassifier, HttpMakeClassifier, MakeSpan, OnBodyChunk, OnEos,
-    OnFailure, OnRequest, OnResponse, ResponseBody, ResponseFuture, TraceLayer,
+    DefaultOnResponse, HttpMakeClassifier, MakeSpan, OnBodyChunk, OnEos, OnFailure, OnRequest,
+    OnResponse, ResponseBody, ResponseFuture, TraceLayer,
 };
-use crate::classify::{
-    GrpcErrorsAsFailures, MakeClassifier, ServerErrorsAsFailures, SharedClassifier,
-};
+use crate::classify::{MakeClassifier, ServerErrorsAsFailures, SharedClassifier};
 use http::{Request, Response};
 use http_body::Body;
 use std::{
@@ -222,34 +220,6 @@ impl<S>
         Self {
             inner,
             make_classifier: SharedClassifier::new(ServerErrorsAsFailures::default()),
-            make_span: DefaultMakeSpan::new(),
-            on_request: DefaultOnRequest::default(),
-            on_response: DefaultOnResponse::default(),
-            on_body_chunk: DefaultOnBodyChunk::default(),
-            on_eos: DefaultOnEos::default(),
-            on_failure: DefaultOnFailure::default(),
-        }
-    }
-}
-
-impl<S>
-    Trace<
-        S,
-        GrpcMakeClassifier,
-        DefaultMakeSpan,
-        DefaultOnRequest,
-        DefaultOnResponse,
-        DefaultOnBodyChunk,
-        DefaultOnEos,
-        DefaultOnFailure,
-    >
-{
-    /// Create a new [`Trace`] using [`GrpcErrorsAsFailures`] which supports classifying
-    /// gRPC responses and streams based on the `grpc-status` header.
-    pub fn new_for_grpc(inner: S) -> Self {
-        Self {
-            inner,
-            make_classifier: SharedClassifier::new(GrpcErrorsAsFailures::default()),
             make_span: DefaultMakeSpan::new(),
             on_request: DefaultOnRequest::default(),
             on_response: DefaultOnResponse::default(),

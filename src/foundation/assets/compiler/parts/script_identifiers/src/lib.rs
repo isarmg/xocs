@@ -244,13 +244,14 @@
 //! In contrast to binary search or the `ucd-trie` crate, performing lookups in
 //! this data structure is straight-line code with no need for branching.
 
-#![doc(html_root_url = "https://docs.rs/unicode-id-start/1.5.0")]
 #![allow(clippy::doc_markdown, clippy::must_use_candidate)]
 
 #[rustfmt::skip]
 mod tables;
 
-use crate::script_identifiers::tables::{ASCII_CONTINUE, ASCII_START, CHUNK, LEAF, TRIE_CONTINUE, TRIE_START};
+use crate::script_identifiers::tables::{
+    ASCII_CONTINUE, ASCII_START, CHUNK, LEAF, TRIE_CONTINUE, TRIE_START,
+};
 
 /// Check ascii and unicode for id_start
 #[inline]

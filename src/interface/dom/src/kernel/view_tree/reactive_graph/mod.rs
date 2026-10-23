@@ -1,12 +1,8 @@
 use crate::reactivity::effect::RenderEffect;
 use crate::view_tree::{
-    html::attribute::{any_attribute::AnyAttribute, Attribute, AttributeValue},
-    hydration::Cursor,
+    html::attribute::{Attribute, AttributeValue},
     renderer::Rndr,
-    ssr::StreamBuilder,
-    view::{
-        add_attr::AddAnyAttr, Mountable, Position, PositionState, Render, RenderHtml, ToTemplate,
-    },
+    view::{add_attr::AddAnyAttr, DomView, Mountable, Render},
 };
 use std::sync::{Arc, Mutex};
 
@@ -21,25 +17,6 @@ mod property;
 mod style;
 
 pub use owned::*;
-
-impl<F, V> ToTemplate for F
-where
-    F: ReactiveFunction<Output = V>,
-    V: ToTemplate,
-{
-    const TEMPLATE: &'static str = V::TEMPLATE;
-
-    fn to_template(
-        buf: &mut String,
-        class: &mut String,
-        style: &mut String,
-        inner_html: &mut String,
-        position: &mut Position,
-    ) {
-        // FIXME this seems wrong
-        V::to_template(buf, class, style, inner_html, position)
-    }
-}
 
 impl<F, V> Render for F
 where
@@ -121,149 +98,13 @@ where
     }
 }
 
-impl<F, V> RenderHtml for F
+impl<F, V> DomView for F
 where
     F: ReactiveFunction<Output = V>,
-    V: RenderHtml + 'static,
+    V: DomView + 'static,
     V::State: 'static,
 {
-    type AsyncOutput = V::AsyncOutput;
     type Owned = Self;
-
-    const MIN_LENGTH: usize = 0;
-
-    fn dry_resolve(&mut self) {
-        self.invoke().dry_resolve();
-    }
-
-    async fn resolve(mut self) -> Self::AsyncOutput {
-        self.invoke().resolve().await
-    }
-
-    fn html_len(&self) -> usize {
-        V::MIN_LENGTH
-    }
-
-    fn to_html_with_buf(
-        mut self,
-        buf: &mut String,
-        position: &mut Position,
-        escape: bool,
-        mark_branches: bool,
-        extra_attrs: Vec<AnyAttribute>,
-    ) {
-        let value = self.invoke();
-        value.to_html_with_buf(buf, position, escape, mark_branches, extra_attrs)
-    }
-
-    fn to_html_async_with_buf<const OUT_OF_ORDER: bool>(
-        mut self,
-        buf: &mut StreamBuilder,
-        position: &mut Position,
-        escape: bool,
-        mark_branches: bool,
-        extra_attrs: Vec<AnyAttribute>,
-    ) where
-        Self: Sized,
-    {
-        let value = self.invoke();
-        value.to_html_async_with_buf::<OUT_OF_ORDER>(
-            buf,
-            position,
-            escape,
-            mark_branches,
-            extra_attrs,
-        );
-    }
-
-    fn hydrate<const FROM_SERVER: bool>(
-        mut self,
-        cursor: &Cursor,
-        position: &PositionState,
-    ) -> Self::State {
-        /// codegen optimisation:
-        fn prep(
-            cursor: &Cursor,
-            position: &PositionState,
-        ) -> (
-            Cursor,
-            PositionState,
-            Option<Arc<dyn crate::view_errors::ErrorHook>>,
-        ) {
-            let cursor = cursor.clone();
-            let position = position.clone();
-            let hook = crate::view_errors::get_error_hook();
-            (cursor, position, hook)
-        }
-        let (cursor, position, hook) = prep(cursor, position);
-
-        RenderEffect::new(move |prev| {
-            /// codegen optimisation:
-            fn get_guard(
-                hook: &Option<Arc<dyn crate::view_errors::ErrorHook>>,
-            ) -> Option<crate::view_errors::ResetErrorHookOnDrop> {
-                hook.as_ref()
-                    .map(|h| crate::view_errors::set_error_hook(Arc::clone(h)))
-            }
-            let _guard = get_guard(&hook);
-
-            let value = self.invoke();
-            if let Some(mut state) = prev {
-                value.rebuild(&mut state);
-                state
-            } else {
-                value.hydrate::<FROM_SERVER>(&cursor, &position)
-            }
-        })
-        .into()
-    }
-
-    async fn hydrate_async(self, cursor: &Cursor, position: &PositionState) -> Self::State {
-        /// codegen optimisation:
-        fn prep(
-            cursor: &Cursor,
-            position: &PositionState,
-        ) -> (
-            Cursor,
-            PositionState,
-            Option<Arc<dyn crate::view_errors::ErrorHook>>,
-        ) {
-            let cursor = cursor.clone();
-            let position = position.clone();
-            let hook = crate::view_errors::get_error_hook();
-            (cursor, position, hook)
-        }
-        let (cursor, position, hook) = prep(cursor, position);
-
-        let mut fun = self.into_shared();
-
-        RenderEffect::new_with_async_value(
-            {
-                let mut fun = fun.clone();
-                move |prev| {
-                    /// codegen optimisation:
-                    fn get_guard(
-                        hook: &Option<Arc<dyn crate::view_errors::ErrorHook>>,
-                    ) -> Option<crate::view_errors::ResetErrorHookOnDrop> {
-                        hook.as_ref()
-                            .map(|h| crate::view_errors::set_error_hook(Arc::clone(h)))
-                    }
-                    let _guard = get_guard(&hook);
-
-                    let value = fun.invoke();
-                    if let Some(mut state) = prev {
-                        value.rebuild(&mut state);
-                        state
-                    } else {
-                        unreachable!()
-                    }
-                }
-            },
-            async move { fun.invoke().hydrate_async(&cursor, &position).await },
-        )
-        .await
-        .into()
-    }
 
     fn into_owned(self) -> Self::Owned {
         self
@@ -273,14 +114,14 @@ where
 impl<F, V> AddAnyAttr for F
 where
     F: ReactiveFunction<Output = V>,
-    V: RenderHtml + 'static,
+    V: DomView + AddAnyAttr + 'static,
 {
     type Output<SomeNewAttr: Attribute> =
         Box<dyn FnMut() -> V::Output<SomeNewAttr::CloneableOwned> + Send>;
 
     fn add_any_attr<NewAttr: Attribute>(mut self, attr: NewAttr) -> Self::Output<NewAttr>
     where
-        Self::Output<NewAttr>: RenderHtml,
+        Self::Output<NewAttr>: DomView,
     {
         let attr = attr.into_cloneable_owned();
         Box::new(move || self.invoke().add_any_attr(attr.clone()))
@@ -367,41 +208,9 @@ where
     V: AttributeValue + 'static,
     V::State: 'static,
 {
-    type AsyncOutput = V::AsyncOutput;
     type State = RenderEffect<V::State>;
     type Cloneable = SharedReactiveFunction<V>;
     type CloneableOwned = SharedReactiveFunction<V>;
-
-    fn html_len(&self) -> usize {
-        0
-    }
-
-    fn to_html(mut self, key: &str, buf: &mut String) {
-        let value = self.invoke();
-        value.to_html(key, buf);
-    }
-
-    fn to_template(_key: &str, _buf: &mut String) {}
-
-    fn hydrate<const FROM_SERVER: bool>(
-        mut self,
-        key: &str,
-        el: &crate::view_tree::renderer::types::Element,
-    ) -> Self::State {
-        let key = Rndr::intern(key);
-        let key = key.to_owned();
-        let el = el.to_owned();
-
-        RenderEffect::new(move |prev| {
-            let value = self.invoke();
-            if let Some(mut state) = prev {
-                value.rebuild(&key, &mut state);
-                state
-            } else {
-                value.hydrate::<FROM_SERVER>(&key, &el)
-            }
-        })
-    }
 
     fn build(mut self, el: &crate::view_tree::renderer::types::Element, key: &str) -> Self::State {
         let key = Rndr::intern(key);
@@ -444,14 +253,6 @@ where
 
     fn into_cloneable_owned(self) -> Self::CloneableOwned {
         self.into_shared()
-    }
-
-    fn dry_resolve(&mut self) {
-        self.invoke();
-    }
-
-    async fn resolve(mut self) -> Self::AsyncOutput {
-        self.invoke().resolve().await
     }
 }
 
@@ -539,7 +340,7 @@ macro_rules! reactive_impl {
         #[allow(deprecated)]
         impl<$($gen),*> AddAnyAttr for $name<$($gen),*>
         where
-            $v: RenderHtml + Clone + Send + Sync + 'static,
+            $v: DomView + AddAnyAttr + Clone + Send + Sync + 'static,
             <$v as Render>::State: 'static,
             $($where_clause)*
         {
@@ -554,77 +355,14 @@ macro_rules! reactive_impl {
         }
 
         #[allow(deprecated)]
-        impl<$($gen),*> RenderHtml for $name<$($gen),*>
+        impl<$($gen),*> DomView for $name<$($gen),*>
         where
-            $v: RenderHtml + Clone + Send + Sync + 'static,
+            $v: DomView + Clone + Send + Sync + 'static,
             <$v as Render>::State: 'static,
             $($where_clause)*
         {
-            type AsyncOutput = Self;
+
             type Owned = Self;
-
-            const MIN_LENGTH: usize = 0;
-
-            fn dry_resolve(&mut self) {
-                if $dry_resolve {
-                    _ = self.get();
-                }
-            }
-
-            async fn resolve(self) -> Self::AsyncOutput {
-                self
-            }
-
-            fn html_len(&self) -> usize {
-                <$v>::MIN_LENGTH
-            }
-
-            fn to_html_with_buf(
-                self,
-                buf: &mut String,
-                position: &mut Position,
-                escape: bool,
-                mark_branches: bool,
-                extra_attrs: Vec<AnyAttribute>,
-            ) {
-                let value = self.get();
-                value.to_html_with_buf(
-                    buf,
-                    position,
-                    escape,
-                    mark_branches,
-                    extra_attrs,
-                )
-            }
-
-            fn to_html_async_with_buf<const OUT_OF_ORDER: bool>(
-                self,
-                buf: &mut StreamBuilder,
-                position: &mut Position,
-                escape: bool,
-                mark_branches: bool,
-                extra_attrs: Vec<AnyAttribute>,
-            ) where
-                Self: Sized,
-            {
-                let value = self.get();
-                value.to_html_async_with_buf::<OUT_OF_ORDER>(
-                    buf,
-                    position,
-                    escape,
-                    mark_branches,
-                    extra_attrs,
-                );
-            }
-
-            fn hydrate<const FROM_SERVER: bool>(
-                self,
-                cursor: &Cursor,
-                position: &PositionState,
-            ) -> Self::State {
-                (move || self.get())
-                    .hydrate::<FROM_SERVER>(cursor, position)
-            }
 
             fn into_owned(self) -> Self::Owned {
                 self
@@ -638,29 +376,10 @@ macro_rules! reactive_impl {
             <$v as AttributeValue>::State: 'static,
             $($where_clause)*
         {
-            type AsyncOutput = Self;
+
             type State = RenderEffect<<$v as AttributeValue>::State>;
             type Cloneable = Self;
             type CloneableOwned = Self;
-
-            fn html_len(&self) -> usize {
-                0
-            }
-
-            fn to_html(self, key: &str, buf: &mut String) {
-                let value = self.get();
-                value.to_html(key, buf);
-            }
-
-            fn to_template(_key: &str, _buf: &mut String) {}
-
-            fn hydrate<const FROM_SERVER: bool>(
-                self,
-                key: &str,
-                el: &crate::view_tree::renderer::types::Element,
-            ) -> Self::State {
-                (move || self.get()).hydrate::<FROM_SERVER>(key, el)
-            }
 
             fn build(
                 self,
@@ -682,23 +401,12 @@ macro_rules! reactive_impl {
                 self
             }
 
-            fn dry_resolve(&mut self) {
-                if $dry_resolve {
-                    _ = self.get();
-                }
-            }
-
-            async fn resolve(self) -> Self::AsyncOutput {
-                self
-            }
         }
     };
 }
 
 mod stable {
     use super::RenderEffectState;
-    #[allow(deprecated)]
-    use crate::reactivity::wrappers::read::MaybeSignal;
     use crate::reactivity::{
         computed::{ArcMemo, Memo},
         effect::RenderEffect,
@@ -708,10 +416,8 @@ mod stable {
         wrappers::read::{ArcSignal, MaybeProp, Signal, SignalTypes},
     };
     use crate::view_tree::{
-        html::attribute::{any_attribute::AnyAttribute, Attribute, AttributeValue},
-        hydration::Cursor,
-        ssr::StreamBuilder,
-        view::{add_attr::AddAnyAttr, Mountable, Position, PositionState, Render, RenderHtml},
+        html::attribute::{Attribute, AttributeValue},
+        view::{add_attr::AddAnyAttr, DomView, Mountable, Render},
     };
 
     reactive_impl!(
@@ -751,15 +457,6 @@ mod stable {
         S: Send + Sync + 'static,
     );
     reactive_impl!(
-        MaybeSignal,
-        <V, S>,
-        V,
-        true,
-        MaybeSignal<V, S>: Get<Value = V>,
-        S: Storage<V> + Storage<Option<V>>,
-        S: Send + Sync + 'static,
-    );
-    reactive_impl!(
         MaybeProp,
         <V, S>,
         Option<V>,
@@ -773,154 +470,3 @@ mod stable {
     reactive_impl!(ArcMemo, <V>, V, true, ArcMemo<V>: Get<Value = V>);
     reactive_impl!(ArcSignal, <V>, V, true, ArcSignal<V>: Get<Value = V>);
 }
-
-#[cfg(any())]
-mod reactive_stores {
-    use super::RenderEffectState;
-    #[allow(deprecated)]
-    use crate::reactivity::{effect::RenderEffect, owner::Storage, traits::Get};
-    use crate::view_tree::{
-        html::attribute::{any_attribute::AnyAttribute, Attribute, AttributeValue},
-        hydration::Cursor,
-        ssr::StreamBuilder,
-        view::{add_attr::AddAnyAttr, Mountable, Position, PositionState, Render, RenderHtml},
-    };
-    use reactive_stores::{
-        ArcField, ArcStore, AtIndex, AtKeyed, DerefedField, Field, KeyedSubfield, Store,
-        StoreField, Subfield,
-    };
-    use std::ops::{Deref, DerefMut, Index, IndexMut};
-
-    reactive_impl!(
-        Subfield,
-        <Inner, Prev, V>,
-        V,
-        false,
-        Subfield<Inner, Prev, V>: Get<Value = V>,
-        Prev: Send + Sync + 'static,
-        Inner: Send + Sync + Clone + 'static,
-    );
-
-    reactive_impl!(
-        AtKeyed,
-        <Inner, Prev, K, V>,
-        V,
-        false,
-        AtKeyed<Inner, Prev, K, V>: Get<Value = V>,
-        Prev: Send + Sync + 'static,
-        Inner: Send + Sync + Clone + 'static,
-        K: Send + Sync + std::fmt::Debug + Clone + 'static,
-        for<'a> &'a V: IntoIterator,
-    );
-
-    reactive_impl!(
-        KeyedSubfield,
-        <Inner, Prev, K, V>,
-        V,
-        false,
-        KeyedSubfield<Inner, Prev, K, V>: Get<Value = V>,
-        Prev: Send + Sync + 'static,
-        Inner: Send + Sync + Clone + 'static,
-        K: Send + Sync + std::fmt::Debug + Clone + 'static,
-        for<'a> &'a V: IntoIterator,
-    );
-
-    reactive_impl!(
-        DerefedField,
-        <S>,
-        <S::Value as Deref>::Target,
-        false,
-        S: Clone + StoreField + Send + Sync + 'static,
-        <S as StoreField>::Value: Deref + DerefMut
-    );
-
-    reactive_impl!(
-        AtIndex,
-        <Inner, Prev>,
-        <Prev as Index<usize>>::Output,
-        false,
-        AtIndex<Inner, Prev>: Get<Value = Prev::Output>,
-        Prev: Send + Sync + IndexMut<usize> + 'static,
-        Inner: Send + Sync + Clone + 'static,
-    );
-    reactive_impl!(
-        Store,
-        <V, S>,
-        V,
-        false,
-        Store<V, S>: Get<Value = V>,
-        S: Storage<V> + Storage<Option<V>>,
-        S: Send + Sync + 'static,
-    );
-    reactive_impl!(
-        Field,
-        <V, S>,
-        V,
-        false,
-        Field<V, S>: Get<Value = V>,
-        S: Storage<V> + Storage<Option<V>>,
-        S: Send + Sync + 'static,
-    );
-    reactive_impl!(ArcStore, <V>, V, false, ArcStore<V>: Get<Value = V>);
-    reactive_impl!(ArcField, <V>, V, false, ArcField<V>: Get<Value = V>);
-}
-
-/*
-#[cfg(test)]
-mod tests {
-    use crate::{
-        html::element::{button, main, HtmlElement},
-        renderer::mock_dom::MockDom,
-        view::Render,
-    };
-    use leptos_reactive::{create_runtime, RwSignal, SignalGet, SignalSet};
-
-    #[test]
-    fn create_dynamic_element() {
-        let rt = create_runtime();
-        let count = RwSignal::new(0);
-        let app: HtmlElement<_, _, _, MockDom> =
-            button((), move || count.get().to_string());
-        let el = app.build();
-        assert_eq!(el.el.to_debug_html(), "<button>0</button>");
-        rt.dispose();
-    }
-
-    #[test]
-    fn update_dynamic_element() {
-        let rt = create_runtime();
-        let count = RwSignal::new(0);
-        let app: HtmlElement<_, _, _, MockDom> =
-            button((), move || count.get().to_string());
-        let el = app.build();
-        assert_eq!(el.el.to_debug_html(), "<button>0</button>");
-        count.set(1);
-        assert_eq!(el.el.to_debug_html(), "<button>1</button>");
-        rt.dispose();
-    }
-
-    #[test]
-    fn update_dynamic_element_among_siblings() {
-        let rt = create_runtime();
-        let count = RwSignal::new(0);
-        let app: HtmlElement<_, _, _, MockDom> = main(
-            (),
-            button(
-                (),
-                ("Hello, my ", move || count.get().to_string(), " friends."),
-            ),
-        );
-        let el = app.build();
-        assert_eq!(
-            el.el.to_debug_html(),
-            "<main><button>Hello, my 0 friends.</button></main>"
-        );
-        count.set(42);
-        assert_eq!(
-            el.el.to_debug_html(),
-            "<main><button>Hello, my 42 friends.</button></main>"
-        );
-        rt.dispose();
-    }
-}
- */

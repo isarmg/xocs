@@ -18,9 +18,6 @@ cfg_if::cfg_if! {
     }
 }
 
-#[cfg(feature = "atomic-polyfill")]
-use portable_atomic as atomic;
-#[cfg(not(feature = "atomic-polyfill"))]
 use core::sync::atomic;
 
 use alloc::boxed::Box;
@@ -44,66 +41,23 @@ pub(crate) const PI2: [u64; 4] = [
     0x3f84_d5b5_b547_0917,
 ];
 
-cfg_if::cfg_if! {
-    if #[cfg(all(feature = "compile-time-rng", any(test, fuzzing)))] {
-        #[inline]
-        fn get_fixed_seeds() -> &'static [[u64; 4]; 2] {
-            use const_random::const_random;
+#[cfg(feature = "runtime-rng")]
+#[inline]
+fn get_fixed_seeds() -> &'static [[u64; 4]; 2] {
+    use crate::convert::Convert;
 
-            const RAND: [[u64; 4]; 2] = [
-                [
-                    const_random!(u64),
-                    const_random!(u64),
-                    const_random!(u64),
-                    const_random!(u64),
-                ], [
-                    const_random!(u64),
-                    const_random!(u64),
-                    const_random!(u64),
-                    const_random!(u64),
-                ]
-            ];
-            &RAND
-        }
-    } else if #[cfg(all(feature = "runtime-rng", not(fuzzing)))] {
-        #[inline]
-        fn get_fixed_seeds() -> &'static [[u64; 4]; 2] {
-            use crate::convert::Convert;
+    static SEEDS: OnceBox<[[u64; 4]; 2]> = OnceBox::new();
+    SEEDS.get_or_init(|| {
+        let mut result = [0u8; 64];
+        getrandom::fill(&mut result).expect("system entropy failed");
+        Box::new(result.convert())
+    })
+}
 
-            static SEEDS: OnceBox<[[u64; 4]; 2]> = OnceBox::new();
-
-            SEEDS.get_or_init(|| {
-                let mut result: [u8; 64] = [0; 64];
-                getrandom::fill(&mut result).expect("getrandom::fill() failed.");
-                Box::new(result.convert())
-            })
-        }
-    } else if #[cfg(feature = "compile-time-rng")] {
-        #[inline]
-        fn get_fixed_seeds() -> &'static [[u64; 4]; 2] {
-            use const_random::const_random;
-
-            const RAND: [[u64; 4]; 2] = [
-                [
-                    const_random!(u64),
-                    const_random!(u64),
-                    const_random!(u64),
-                    const_random!(u64),
-                ], [
-                    const_random!(u64),
-                    const_random!(u64),
-                    const_random!(u64),
-                    const_random!(u64),
-                ]
-            ];
-            &RAND
-        }
-    } else {
-        #[inline]
-        fn get_fixed_seeds() -> &'static [[u64; 4]; 2] {
-            &[PI, PI2]
-        }
-    }
+#[cfg(not(feature = "runtime-rng"))]
+#[inline]
+fn get_fixed_seeds() -> &'static [[u64; 4]; 2] {
+    &[PI, PI2]
 }
 
 cfg_if::cfg_if! {
@@ -119,9 +73,7 @@ cfg_if::cfg_if! {
 /// If [set_random_source] aHash will default to the best available source of randomness.
 /// In order this is:
 /// 1. OS provided random number generator (available if the `runtime-rng` flag is enabled which it is by default) - This should be very strong.
-/// 2. Strong compile time random numbers used to permute a static "counter". (available if `compile-time-rng` is enabled.
-/// __Enabling this is recommended if `runtime-rng` is not possible__)
-/// 3. A static counter that adds the memory address of each [RandomState] created permuted with fixed constants.
+/// 2. A static counter that adds the memory address of each [RandomState] created permuted with fixed constants.
 /// (Similar to above but with fixed keys) - This is the weakest option. The strength of this heavily depends on whether or not ASLR is enabled.
 /// (Rust enables ASLR by default)
 pub trait RandomSource {
@@ -364,10 +316,9 @@ impl RandomState {
 ///
 /// This is the same as [RandomState::new()]
 ///
-/// NOTE: For safety this trait impl is only available available if either of the flags `runtime-rng` (on by default) or
-/// `compile-time-rng` are enabled. This is to prevent weakly keyed maps from being accidentally created. Instead one of
-/// constructors for [RandomState] must be used.
-#[cfg(any(feature = "compile-time-rng", feature = "runtime-rng", feature = "no-rng"))]
+/// This implementation requires runtime entropy or explicit opt-in to fixed seeds
+/// through `no-rng`. Callers can also construct [RandomState] with explicit seeds.
+#[cfg(any(feature = "runtime-rng", feature = "no-rng"))]
 impl Default for RandomState {
     #[inline]
     fn default() -> Self {
@@ -413,78 +364,6 @@ impl BuildHasher for RandomState {
     fn build_hasher(&self) -> AHasher {
         AHasher::from_random_state(self)
     }
-
-    /// Calculates the hash of a single value. This provides a more convenient (and faster) way to obtain a hash:
-    /// For example:
-    #[cfg_attr(
-        feature = "std",
-        doc = r##" # Examples
-```
-    use std::hash::BuildHasher;
-    use ahash::RandomState;
-
-    let hash_builder = RandomState::new();
-    let hash = hash_builder.hash_one("Some Data");
-```
-    "##
-    )]
-    /// This is similar to:
-    #[cfg_attr(
-        feature = "std",
-        doc = r##" # Examples
-```
-    use std::hash::{BuildHasher, Hash, Hasher};
-    use ahash::RandomState;
-
-    let hash_builder = RandomState::new();
-    let mut hasher = hash_builder.build_hasher();
-    "Some Data".hash(&mut hasher);
-    let hash = hasher.finish();
-```
-    "##
-    )]
-    /// (Note that these two ways to get a hash may not produce the same value for the same data)
-    ///
-    /// This is intended as a convenience for code which *consumes* hashes, such
-    /// as the implementation of a hash table or in unit tests that check
-    /// whether a custom [`Hash`] implementation behaves as expected.
-    ///
-    /// This must not be used in any code which *creates* hashes, such as in an
-    /// implementation of [`Hash`].  The way to create a combined hash of
-    /// multiple values is to call [`Hash::hash`] multiple times using the same
-    /// [`Hasher`], not to call this method repeatedly and combine the results.
-    #[cfg(specialize)]
-    #[inline]
-    fn hash_one<T: Hash>(&self, x: T) -> u64 {
-        RandomState::hash_one(self, x)
-    }
-}
-
-#[cfg(specialize)]
-impl RandomState {
-    #[inline]
-    pub(crate) fn hash_as_u64<T: Hash + ?Sized>(&self, value: &T) -> u64 {
-        let mut hasher = AHasherU64 {
-            buffer: self.k1,
-            pad: self.k0,
-        };
-        value.hash(&mut hasher);
-        hasher.finish()
-    }
-
-    #[inline]
-    pub(crate) fn hash_as_fixed_length<T: Hash + ?Sized>(&self, value: &T) -> u64 {
-        let mut hasher = AHasherFixed(self.build_hasher());
-        value.hash(&mut hasher);
-        hasher.finish()
-    }
-
-    #[inline]
-    pub(crate) fn hash_as_str<T: Hash + ?Sized>(&self, value: &T) -> u64 {
-        let mut hasher = AHasherStr(self.build_hasher());
-        value.hash(&mut hasher);
-        hasher.finish()
-    }
 }
 
 #[cfg(test)]
@@ -498,19 +377,13 @@ mod test {
         assert_ne!(a.build_hasher().finish(), b.build_hasher().finish());
     }
 
-    #[cfg(all(feature = "runtime-rng", not(all(feature = "compile-time-rng", test))))]
+    #[cfg(feature = "runtime-rng")]
     #[test]
     fn test_not_pi() {
         assert_ne!(PI, get_fixed_seeds()[0]);
     }
 
-    #[cfg(all(feature = "compile-time-rng", any(not(feature = "runtime-rng"), test)))]
-    #[test]
-    fn test_not_pi_const() {
-        assert_ne!(PI, get_fixed_seeds()[0]);
-    }
-
-    #[cfg(all(not(feature = "runtime-rng"), not(feature = "compile-time-rng")))]
+    #[cfg(not(feature = "runtime-rng"))]
     #[test]
     fn test_pi() {
         assert_eq!(PI, get_fixed_seeds()[0]);

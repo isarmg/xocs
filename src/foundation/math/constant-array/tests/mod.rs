@@ -553,15 +553,6 @@ mod allocating {
     }
 }
 
-#[cfg(feature = "arbitrary")]
-#[test]
-fn arbitrary() {
-    use arbitrary::{Arbitrary, Unstructured};
-    let mut unstructured = Unstructured::new(EXAMPLE_SLICE);
-    let array = Array::<u8, U4>::arbitrary(&mut unstructured).unwrap();
-    assert_eq!(array.as_slice(), &[1, 2, 3, 4]);
-}
-
 #[cfg(feature = "zerocopy")]
 #[test]
 #[allow(unused)]
@@ -570,14 +561,4 @@ fn zerocopy_traits() {
     struct Check<T: IntoBytes + FromBytes + Unaligned + Immutable + KnownLayout>(T);
     let ok: Check<Array<u8, U5>> = Check(Array([1, 2, 3, 4, 5]));
     // let not_unaligned:  Check::<Array<u16, U5>> = Check(Array([1, 2, 3, 4, 5]));
-}
-
-#[cfg(feature = "zeroize")]
-#[test]
-fn zeroize_array() {
-    use zeroize::Zeroize;
-
-    let mut array: Array<u8, U3> = Array([1, 2, 3]);
-    array.zeroize();
-    assert_eq!(&array, &[0, 0, 0]);
 }

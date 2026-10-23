@@ -21,7 +21,7 @@ use std::fmt;
 #[cfg_attr(not(feature = "os-poll"), doc = "```ignore")]
 /// # use std::error::Error;
 /// # fn main() -> Result<(), Box<dyn Error>> {
-/// use mio::{Events, Poll};
+/// use blog_runtime_io_poller::{Events, Poll};
 /// use std::time::Duration;
 ///
 /// let mut events = Events::with_capacity(1024);
@@ -56,7 +56,7 @@ pub struct Events {
 #[cfg_attr(not(feature = "os-poll"), doc = "```ignore")]
 /// # use std::error::Error;
 /// # fn main() -> Result<(), Box<dyn Error>> {
-/// use mio::{Events, Poll};
+/// use blog_runtime_io_poller::{Events, Poll};
 /// use std::time::Duration;
 ///
 /// let mut events = Events::with_capacity(1024);
@@ -84,7 +84,7 @@ impl Events {
     /// # Examples
     ///
     /// ```
-    /// use mio::Events;
+    /// use blog_runtime_io_poller::Events;
     ///
     /// let events = Events::with_capacity(1024);
     /// assert_eq!(1024, events.capacity());
@@ -98,7 +98,7 @@ impl Events {
     /// Returns the number of `Event` values that `self` can hold.
     ///
     /// ```
-    /// use mio::Events;
+    /// use blog_runtime_io_poller::Events;
     ///
     /// let events = Events::with_capacity(1024);
     /// assert_eq!(1024, events.capacity());
@@ -112,7 +112,7 @@ impl Events {
     /// # Examples
     ///
     /// ```
-    /// use mio::Events;
+    /// use blog_runtime_io_poller::Events;
     ///
     /// let events = Events::with_capacity(1024);
     /// assert!(events.is_empty());
@@ -129,7 +129,7 @@ impl Events {
     #[cfg_attr(not(feature = "os-poll"), doc = "```ignore")]
     /// # use std::error::Error;
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use mio::{Events, Poll};
+    /// use blog_runtime_io_poller::{Events, Poll};
     /// use std::time::Duration;
     ///
     /// let mut events = Events::with_capacity(1024);
@@ -165,7 +165,7 @@ impl Events {
     #[cfg_attr(not(feature = "os-poll"), doc = "```ignore")]
     /// # use std::error::Error;
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use mio::{Events, Poll};
+    /// use blog_runtime_io_poller::{Events, Poll};
     /// use std::time::Duration;
     ///
     /// let mut events = Events::with_capacity(1024);

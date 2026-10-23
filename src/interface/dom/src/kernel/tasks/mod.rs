@@ -68,18 +68,6 @@ thread_local! {
 #[inline(never)]
 fn no_op_poll() {}
 
-#[cfg(any())]
-#[cold]
-#[inline(never)]
-fn no_op_spawn(_: PinnedFuture<()>) {
-    #[cfg(debug_assertions)]
-    eprintln!(
-        "Warning: Executor::spawn called, but no global 'spawn' function is \
-         configured (perhaps only spawn_local is supported, e.g., on wasm \
-         without threading?)."
-    );
-}
-
 // Wasm panics if you spawn without an executor
 
 #[cold]
@@ -211,29 +199,6 @@ impl Executor {
 }
 
 impl Executor {
-    /// Globally sets the [`tokio`] runtime as the executor used to spawn tasks.
-    ///
-    /// Returns `Err(_)` if a global executor has already been set.
-    ///
-    /// Requires the `tokio` feature to be activated on this crate.
-    #[cfg(any())]
-    #[cfg_attr(docsrs, doc(cfg(any())))]
-    pub fn init_tokio() -> Result<(), ExecutorError> {
-        let executor_impl = ExecutorFns {
-            spawn: |fut| {
-                tokio::spawn(fut);
-            },
-            spawn_local: |fut| {
-                tokio::task::spawn_local(fut);
-            },
-            // Tokio doesn't have an explicit global poll function like LocalPool::run_until_stalled
-            poll_local: no_op_poll,
-        };
-        EXECUTOR_FNS
-            .set(executor_impl)
-            .map_err(|_| ExecutorError::AlreadySet)
-    }
-
     /// Globally sets the [`wasm-bindgen-futures`] runtime as the executor used to spawn tasks.
     ///
     /// Returns `Err(_)` if a global executor has already been set.
@@ -248,132 +213,6 @@ impl Executor {
                 wasm_bindgen_futures::spawn_local(fut);
             },
             poll_local: no_op_poll,
-        };
-        EXECUTOR_FNS
-            .set(executor_impl)
-            .map_err(|_| ExecutorError::AlreadySet)
-    }
-
-    /// Globally sets the [`glib`] runtime as the executor used to spawn tasks.
-    ///
-    /// Returns `Err(_)` if a global executor has already been set.
-    ///
-    /// Requires the `glib` feature to be activated on this crate.
-    #[cfg(any())]
-    #[cfg_attr(docsrs, doc(cfg(any())))]
-    pub fn init_glib() -> Result<(), ExecutorError> {
-        let executor_impl = ExecutorFns {
-            spawn: |fut| {
-                let main_context = glib::MainContext::default();
-                main_context.spawn(fut);
-            },
-            spawn_local: |fut| {
-                let main_context = glib::MainContext::default();
-                main_context.spawn_local(fut);
-            },
-            // Glib needs event loop integration, explicit polling isn't the standard model here.
-            poll_local: no_op_poll,
-        };
-        EXECUTOR_FNS
-            .set(executor_impl)
-            .map_err(|_| ExecutorError::AlreadySet)
-    }
-
-    /// Globally sets the [`futures`] executor as the executor used to spawn tasks,
-    /// lazily creating a thread pool to spawn tasks into.
-    ///
-    /// Returns `Err(_)` if a global executor has already been set.
-    ///
-    /// Requires the `futures-executor` feature to be activated on this crate.
-    #[cfg(any())]
-    #[cfg_attr(docsrs, doc(cfg(any())))]
-    pub fn init_futures_executor() -> Result<(), ExecutorError> {
-        use futures::{
-            executor::{LocalPool, LocalSpawner, ThreadPool},
-            task::{LocalSpawnExt, SpawnExt},
-        };
-        use std::cell::RefCell;
-
-        // Keep the lazy-init ThreadPool and thread-local LocalPool for spawn_local impl
-        static THREAD_POOL: OnceLock<ThreadPool> = OnceLock::new();
-        thread_local! {
-            static LOCAL_POOL: RefCell<LocalPool> = RefCell::new(LocalPool::new());
-            // SPAWNER is derived from LOCAL_POOL, keep it for efficiency inside the closure
-            static SPAWNER: LocalSpawner = LOCAL_POOL.with(|pool| pool.borrow().spawner());
-        }
-
-        fn get_thread_pool() -> &'static ThreadPool {
-            THREAD_POOL.get_or_init(|| {
-                ThreadPool::new().expect("could not create futures executor ThreadPool")
-            })
-        }
-
-        let executor_impl = ExecutorFns {
-            spawn: |fut| {
-                get_thread_pool()
-                    .spawn(fut)
-                    .expect("failed to spawn future on ThreadPool");
-            },
-            spawn_local: |fut| {
-                // Use the thread_local SPAWNER derived from LOCAL_POOL
-                SPAWNER.with(|spawner| {
-                    spawner
-                        .spawn_local(fut)
-                        .expect("failed to spawn local future");
-                });
-            },
-            poll_local: || {
-                // Use the thread_local LOCAL_POOL
-                LOCAL_POOL.with(|pool| {
-                    // Use try_borrow_mut to prevent panic during re-entrant calls
-                    if let Ok(mut pool) = pool.try_borrow_mut() {
-                        pool.run_until_stalled();
-                    }
-                    // If already borrowed, we're likely in a nested poll, so do nothing.
-                });
-            },
-        };
-
-        EXECUTOR_FNS
-            .set(executor_impl)
-            .map_err(|_| ExecutorError::AlreadySet)
-    }
-
-    /// Globally sets the [`async_executor`] executor as the executor used to spawn tasks,
-    /// lazily creating a thread pool to spawn tasks into.
-    ///
-    /// Returns `Err(_)` if a global executor has already been set.
-    ///
-    /// Requires the `async-executor` feature to be activated on this crate.
-    #[cfg(any())]
-    #[cfg_attr(docsrs, doc(cfg(any())))]
-    pub fn init_async_executor() -> Result<(), ExecutorError> {
-        use async_executor::{Executor as AsyncExecutor, LocalExecutor};
-
-        // Keep the lazy-init global Executor and thread-local LocalExecutor for spawn_local impl
-        static ASYNC_EXECUTOR: OnceLock<AsyncExecutor<'static>> = OnceLock::new();
-        thread_local! {
-            static LOCAL_EXECUTOR_POOL: LocalExecutor<'static> = const { LocalExecutor::new() };
-        }
-
-        fn get_async_executor() -> &'static AsyncExecutor<'static> {
-            ASYNC_EXECUTOR.get_or_init(AsyncExecutor::new)
-        }
-
-        let executor_impl = ExecutorFns {
-            spawn: |fut| {
-                get_async_executor().spawn(fut).detach();
-            },
-            spawn_local: |fut| {
-                LOCAL_EXECUTOR_POOL.with(|pool| pool.spawn(fut).detach());
-            },
-            poll_local: || {
-                LOCAL_EXECUTOR_POOL.with(|pool| {
-                    // try_tick polls the local executor without blocking
-                    // This prevents issues if called recursively or from within a task.
-                    pool.try_tick();
-                });
-            },
         };
         EXECUTOR_FNS
             .set(executor_impl)
@@ -469,19 +308,9 @@ fn test_object_safety(_: Box<dyn CustomExecutor + Send + Sync>) {} // Added Send
 #[inline(never)]
 #[track_caller]
 fn handle_uninitialized_spawn(_fut: PinnedFuture<()>) {
-    let caller = std::panic::Location::caller();
-    #[cfg(any())]
-    {
-        tracing::error!(
-            target: "any_spawner",
-            spawn_caller=%caller,
-            "Executor::spawn called before a global executor was initialized. Task dropped."
-        );
-        // Drop the future implicitly after logging
-        drop(_fut);
-    }
     #[cfg(debug_assertions)]
     {
+        let caller = std::panic::Location::caller();
         panic!(
             "At {caller}, tried to spawn a Future with Executor::spawn() \
              before a global executor was initialized."
@@ -499,19 +328,9 @@ fn handle_uninitialized_spawn(_fut: PinnedFuture<()>) {
 #[inline(never)]
 #[track_caller]
 fn handle_uninitialized_spawn_local(_fut: PinnedLocalFuture<()>) {
-    let caller = std::panic::Location::caller();
-    #[cfg(any())]
-    {
-        tracing::error!(
-            target: "any_spawner",
-            spawn_caller=%caller,
-            "Executor::spawn_local called before a global executor was initialized. \
-            Task likely dropped or panicked."
-        );
-        // Fall through to panic or no-op depending on build/target
-    }
     #[cfg(debug_assertions)]
     {
+        let caller = std::panic::Location::caller();
         panic!(
             "At {caller}, tried to spawn a Future with \
              Executor::spawn_local() before a global executor was initialized."

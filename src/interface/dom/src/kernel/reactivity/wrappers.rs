@@ -14,13 +14,7 @@ pub mod read {
         unwrap_signal,
     };
     use crate::thread_bound::SendWrapper;
-    use std::{
-        borrow::Borrow,
-        fmt::Display,
-        ops::Deref,
-        panic::Location,
-        sync::{Arc, RwLock},
-    };
+    use std::{borrow::Borrow, fmt::Display, ops::Deref, panic::Location, sync::Arc};
 
     /// Possibilities for the inner type of a [`Signal`].
     pub enum SignalTypes<T, S = SyncStorage>
@@ -176,14 +170,7 @@ pub mod read {
         /// ```
         #[track_caller]
         pub fn derive(derived_signal: impl Fn() -> T + Send + Sync + 'static) -> Self {
-            #[cfg(any())]
-            let span = ::tracing::Span::current();
-
-            let derived_signal = move || {
-                #[cfg(any())]
-                let _guard = span.enter();
-                derived_signal()
-            };
+            let derived_signal = move || derived_signal();
 
             Self {
                 inner: SignalTypes::DerivedSignal(Arc::new(derived_signal)),
@@ -583,14 +570,7 @@ pub mod read {
         /// ```
         #[track_caller]
         pub fn derive(derived_signal: impl Fn() -> T + Send + Sync + 'static) -> Self {
-            #[cfg(any())]
-            let span = ::tracing::Span::current();
-
-            let derived_signal = move || {
-                #[cfg(any())]
-                let _guard = span.enter();
-                derived_signal()
-            };
+            let derived_signal = move || derived_signal();
 
             Self {
                 inner: ArenaItem::new_with_storage(SignalTypes::DerivedSignal(Arc::new(
@@ -620,14 +600,8 @@ pub mod read {
         #[track_caller]
         pub fn derive_local(derived_signal: impl Fn() -> T + 'static) -> Self {
             let derived_signal = SendWrapper::new(derived_signal);
-            #[cfg(any())]
-            let span = ::tracing::Span::current();
 
-            let derived_signal = move || {
-                #[cfg(any())]
-                let _guard = span.enter();
-                derived_signal()
-            };
+            let derived_signal = move || derived_signal();
 
             Self {
                 inner: ArenaItem::new_local(SignalTypes::DerivedSignal(Arc::new(derived_signal))),
@@ -1223,62 +1197,6 @@ pub mod read {
         }
     }
 
-    #[allow(deprecated)]
-    impl<T> From<MaybeSignal<T>> for Signal<T>
-    where
-        T: Send + Sync + 'static,
-    {
-        #[track_caller]
-        fn from(value: MaybeSignal<T>) -> Self {
-            match value {
-                MaybeSignal::Static(value) => Signal::stored(value),
-                MaybeSignal::Dynamic(signal) => signal,
-            }
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<T> From<MaybeSignal<T, LocalStorage>> for Signal<T, LocalStorage>
-    where
-        T: Send + Sync + 'static,
-    {
-        #[track_caller]
-        fn from(value: MaybeSignal<T, LocalStorage>) -> Self {
-            match value {
-                MaybeSignal::Static(value) => Signal::stored_local(value),
-                MaybeSignal::Dynamic(signal) => signal,
-            }
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<T> From<MaybeSignal<T>> for Signal<Option<T>>
-    where
-        T: Clone + Send + Sync + 'static,
-    {
-        #[track_caller]
-        fn from(value: MaybeSignal<T>) -> Self {
-            match value {
-                MaybeSignal::Static(value) => Signal::stored(Some(value)),
-                MaybeSignal::Dynamic(signal) => Signal::derive(move || Some(signal.get())),
-            }
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<T> From<MaybeSignal<T, LocalStorage>> for Signal<Option<T>, LocalStorage>
-    where
-        T: Clone + Send + Sync + 'static,
-    {
-        #[track_caller]
-        fn from(value: MaybeSignal<T, LocalStorage>) -> Self {
-            match value {
-                MaybeSignal::Static(value) => Signal::stored_local(Some(value)),
-                MaybeSignal::Dynamic(signal) => Signal::derive_local(move || Some(signal.get())),
-            }
-        }
-    }
-
     impl<T> From<MaybeProp<T>> for Option<Signal<Option<T>>>
     where
         T: Send + Sync + 'static,
@@ -1296,291 +1214,6 @@ pub mod read {
         #[track_caller]
         fn from(value: MaybeProp<T, LocalStorage>) -> Self {
             value.0
-        }
-    }
-
-    /// A wrapper for a value that is *either* `T` or [`Signal<T>`].
-    ///
-    /// This allows you to create APIs that take either a reactive or a non-reactive value
-    /// of the same type. This is especially useful for component properties.
-    ///
-    /// ```
-    /// # use blog_dom::reactivity::signal::*; let owner = blog_dom::reactivity::owner::Owner::new(); owner.set();
-    /// # use blog_dom::reactivity::wrappers::read::MaybeSignal;
-    /// # use blog_dom::reactivity::computed::Memo;
-    /// # use blog_dom::reactivity::prelude::*;
-    /// let (count, set_count) = signal(2);
-    /// let double_count = MaybeSignal::derive(move || count.get() * 2);
-    /// let memoized_double_count = Memo::new(move |_| count.get() * 2);
-    /// let static_value = 5;
-    ///
-    /// // this function takes either a reactive or non-reactive value
-    /// fn above_3(arg: &MaybeSignal<i32>) -> bool {
-    ///     // ✅ calling the signal clones and returns the value
-    ///     //    it is a shorthand for arg.get()
-    ///     arg.get() > 3
-    /// }
-    ///
-    /// assert_eq!(above_3(&static_value.into()), true);
-    /// assert_eq!(above_3(&count.into()), false);
-    /// assert_eq!(above_3(&double_count), true);
-    /// assert_eq!(above_3(&memoized_double_count.into()), true);
-    /// ```
-    #[derive(Debug, PartialEq, Eq)]
-    #[deprecated(
-        since = "0.7.0-rc3",
-        note = "`MaybeSignal<T>` is deprecated in favour of `Signal<T>` which \
-                is `Copy`, now has a more efficient From<T> implementation \
-                and other benefits in 0.7."
-    )]
-    pub enum MaybeSignal<T, S = SyncStorage>
-    where
-        T: 'static,
-        S: Storage<T>,
-    {
-        /// An unchanging value of type `T`.
-        Static(T),
-        /// A reactive signal that contains a value of type `T`.
-        Dynamic(Signal<T, S>),
-    }
-
-    #[allow(deprecated)]
-    impl<T: Clone, S> Clone for MaybeSignal<T, S>
-    where
-        S: Storage<T>,
-    {
-        fn clone(&self) -> Self {
-            match self {
-                Self::Static(item) => Self::Static(item.clone()),
-                Self::Dynamic(signal) => Self::Dynamic(*signal),
-            }
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<T: Copy, S> Copy for MaybeSignal<T, S> where S: Storage<T> {}
-
-    #[allow(deprecated)]
-    impl<T: Default, S> Default for MaybeSignal<T, S>
-    where
-        S: Storage<T>,
-    {
-        fn default() -> Self {
-            Self::Static(Default::default())
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<T, S> DefinedAt for MaybeSignal<T, S>
-    where
-        S: Storage<T>,
-    {
-        fn defined_at(&self) -> Option<&'static Location<'static>> {
-            // TODO this could be improved, but would require moving from an enum to a struct here.
-            // Probably not worth it for relatively small benefits.
-            None
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<T, S> Track for MaybeSignal<T, S>
-    where
-        S: Storage<T> + Storage<SignalTypes<T, S>>,
-    {
-        fn track(&self) {
-            match self {
-                Self::Static(_) => {}
-                Self::Dynamic(signal) => signal.track(),
-            }
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<T, S> ReadUntracked for MaybeSignal<T, S>
-    where
-        T: Clone,
-        S: Storage<SignalTypes<T, S>> + Storage<T>,
-    {
-        type Value = ReadGuard<T, SignalReadGuard<T, S>>;
-
-        fn try_read_untracked(&self) -> Option<Self::Value> {
-            match self {
-                Self::Static(t) => Some(ReadGuard::new(SignalReadGuard::Owned(t.clone()))),
-                Self::Dynamic(s) => s.try_read_untracked(),
-            }
-        }
-
-        fn custom_try_read(&self) -> Option<Option<Self::Value>> {
-            match self {
-                Self::Static(_) => None,
-                Self::Dynamic(s) => s.custom_try_read(),
-            }
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<T> MaybeSignal<T>
-    where
-        T: Send + Sync,
-    {
-        /// Wraps a derived signal, i.e., any computation that accesses one or more
-        /// reactive signals.
-        pub fn derive(derived_signal: impl Fn() -> T + Send + Sync + 'static) -> Self {
-            Self::Dynamic(Signal::derive(derived_signal))
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<T> MaybeSignal<T, LocalStorage> {
-        /// Wraps a derived signal, i.e., any computation that accesses one or more
-        /// reactive signals.
-        pub fn derive_local(derived_signal: impl Fn() -> T + 'static) -> Self {
-            Self::Dynamic(Signal::derive_local(derived_signal))
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<T> From<T> for MaybeSignal<T, SyncStorage>
-    where
-        SyncStorage: Storage<T>,
-    {
-        fn from(value: T) -> Self {
-            Self::Static(value)
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<T> FromLocal<T> for MaybeSignal<T, LocalStorage>
-    where
-        LocalStorage: Storage<T>,
-    {
-        fn from_local(value: T) -> Self {
-            Self::Static(value)
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<T> From<ReadSignal<T>> for MaybeSignal<T>
-    where
-        T: Send + Sync,
-    {
-        fn from(value: ReadSignal<T>) -> Self {
-            Self::Dynamic(value.into())
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<T> From<ReadSignal<T, LocalStorage>> for MaybeSignal<T, LocalStorage> {
-        fn from(value: ReadSignal<T, LocalStorage>) -> Self {
-            Self::Dynamic(value.into())
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<T> From<RwSignal<T>> for MaybeSignal<T>
-    where
-        T: Send + Sync,
-    {
-        fn from(value: RwSignal<T>) -> Self {
-            Self::Dynamic(value.into())
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<T> From<RwSignal<T, LocalStorage>> for MaybeSignal<T, LocalStorage> {
-        fn from(value: RwSignal<T, LocalStorage>) -> Self {
-            Self::Dynamic(value.into())
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<T> From<Memo<T>> for MaybeSignal<T>
-    where
-        T: Send + Sync,
-    {
-        fn from(value: Memo<T>) -> Self {
-            Self::Dynamic(value.into())
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<T> From<Memo<T, LocalStorage>> for MaybeSignal<T, LocalStorage> {
-        fn from(value: Memo<T, LocalStorage>) -> Self {
-            Self::Dynamic(value.into())
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<T> From<ArcReadSignal<T>> for MaybeSignal<T>
-    where
-        T: Send + Sync,
-    {
-        fn from(value: ArcReadSignal<T>) -> Self {
-            ReadSignal::from(value).into()
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<T> FromLocal<ArcReadSignal<T>> for MaybeSignal<T, LocalStorage> {
-        fn from_local(value: ArcReadSignal<T>) -> Self {
-            ReadSignal::from_local(value).into()
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<T> From<ArcRwSignal<T>> for MaybeSignal<T>
-    where
-        T: Send + Sync + 'static,
-    {
-        fn from(value: ArcRwSignal<T>) -> Self {
-            RwSignal::from(value).into()
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<T> FromLocal<ArcRwSignal<T>> for MaybeSignal<T, LocalStorage>
-    where
-        T: 'static,
-    {
-        fn from_local(value: ArcRwSignal<T>) -> Self {
-            RwSignal::from_local(value).into()
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<T> From<ArcMemo<T>> for MaybeSignal<T>
-    where
-        T: Send + Sync,
-    {
-        fn from(value: ArcMemo<T>) -> Self {
-            Memo::from(value).into()
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<T> FromLocal<ArcMemo<T, LocalStorage>> for MaybeSignal<T, LocalStorage> {
-        fn from_local(value: ArcMemo<T, LocalStorage>) -> Self {
-            Memo::from_local(value).into()
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<T, S> From<Signal<T, S>> for MaybeSignal<T, S>
-    where
-        S: Storage<T>,
-    {
-        fn from(value: Signal<T, S>) -> Self {
-            Self::Dynamic(value)
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<S> From<&str> for MaybeSignal<String, S>
-    where
-        S: Storage<String> + Storage<Arc<RwLock<String>>>,
-    {
-        fn from(value: &str) -> Self {
-            Self::Static(value.to_string())
         }
     }
 
@@ -1715,28 +1348,6 @@ pub mod read {
         }
     }
 
-    #[allow(deprecated)]
-    impl<T> From<MaybeSignal<Option<T>>> for MaybeProp<T>
-    where
-        T: Send + Sync,
-        SyncStorage: Storage<Option<T>>,
-    {
-        fn from(value: MaybeSignal<Option<T>>) -> Self {
-            Self(Some(value.into()))
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<T> From<Option<MaybeSignal<Option<T>>>> for MaybeProp<T>
-    where
-        T: Send + Sync,
-        SyncStorage: Storage<Option<T>>,
-    {
-        fn from(value: Option<MaybeSignal<Option<T>>>) -> Self {
-            Self(value.map(Into::into))
-        }
-    }
-
     impl<T> From<ReadSignal<Option<T>>> for MaybeProp<T>
     where
         T: Send + Sync,
@@ -1833,26 +1444,6 @@ pub mod read {
     impl<T> FromLocal<Option<T>> for MaybeProp<T, LocalStorage> {
         fn from_local(value: Option<T>) -> Self {
             Self(Some(Signal::stored_local(value)))
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<T> From<MaybeSignal<Option<T>, LocalStorage>> for MaybeProp<T, LocalStorage>
-    where
-        T: Send + Sync,
-    {
-        fn from(value: MaybeSignal<Option<T>, LocalStorage>) -> Self {
-            Self(Some(value.into()))
-        }
-    }
-
-    #[allow(deprecated)]
-    impl<T> From<Option<MaybeSignal<Option<T>, LocalStorage>>> for MaybeProp<T, LocalStorage>
-    where
-        T: Send + Sync,
-    {
-        fn from(value: Option<MaybeSignal<Option<T>, LocalStorage>>) -> Self {
-            Self(value.map(Into::into))
         }
     }
 

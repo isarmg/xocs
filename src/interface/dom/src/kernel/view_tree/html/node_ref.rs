@@ -59,33 +59,9 @@ where
 
     crate::view_tree::renderer::types::Element: PartialEq,
 {
-    const MIN_LENGTH: usize = 0;
-    type AsyncOutput = Self;
     type State = crate::view_tree::renderer::types::Element;
     type Cloneable = Self;
     type CloneableOwned = Self;
-
-    #[inline(always)]
-    fn html_len(&self) -> usize {
-        0
-    }
-
-    fn to_html(
-        self,
-        _buf: &mut String,
-        _class: &mut String,
-        _style: &mut String,
-        _inner_html: &mut String,
-    ) {
-    }
-
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        el: &crate::view_tree::renderer::types::Element,
-    ) -> Self::State {
-        self.container.load(el);
-        el.to_owned()
-    }
 
     fn build(self, el: &crate::view_tree::renderer::types::Element) -> Self::State {
         self.container.load(el);
@@ -101,12 +77,6 @@ where
     }
 
     fn into_cloneable_owned(self) -> Self::Cloneable {
-        self
-    }
-
-    fn dry_resolve(&mut self) {}
-
-    async fn resolve(self) -> Self::AsyncOutput {
         self
     }
 

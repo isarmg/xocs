@@ -14,10 +14,6 @@ use std::num::NonZeroU64;
 
 mod metrics;
 
-cfg_taskdump! {
-    mod taskdump;
-}
-
 #[cfg(all(tokio_unstable, feature = "time"))]
 use crate::loom::sync::atomic::{AtomicBool, Ordering::SeqCst};
 

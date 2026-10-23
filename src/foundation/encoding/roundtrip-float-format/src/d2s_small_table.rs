@@ -96,7 +96,6 @@ pub static DOUBLE_POW5_TABLE: [u64; 26] = [
 ];
 
 // Computes 5^i in the form required by Ryū.
-#[cfg_attr(feature = "no-panic", inline)]
 pub unsafe fn compute_pow5(i: u32) -> (u64, u64) {
     let base = i / DOUBLE_POW5_TABLE.len() as u32;
     let base2 = base * DOUBLE_POW5_TABLE.len() as u32;
@@ -119,7 +118,6 @@ pub unsafe fn compute_pow5(i: u32) -> (u64, u64) {
 }
 
 // Computes 5^-i in the form required by Ryū.
-#[cfg_attr(feature = "no-panic", inline)]
 pub unsafe fn compute_inv_pow5(i: u32) -> (u64, u64) {
     let base = (i + DOUBLE_POW5_TABLE.len() as u32 - 1) / DOUBLE_POW5_TABLE.len() as u32;
     let base2 = base * DOUBLE_POW5_TABLE.len() as u32;

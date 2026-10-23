@@ -48,10 +48,6 @@ pub enum Error {
     #[error("error communicating with database: {0}")]
     Io(#[from] io::Error),
 
-    /// Error occurred while attempting to establish a TLS connection.
-    #[error("error occurred while attempting to establish a TLS connection: {0}")]
-    Tls(#[source] BoxDynError),
-
     /// Unexpected or invalid data encountered while communicating with the database.
     ///
     /// This should indicate there is a programming error in a SQLx driver or there
@@ -62,10 +58,6 @@ pub enum Error {
     /// No rows returned by a query that expected to return at least one row.
     #[error("no rows returned by a query that expected to return at least one row")]
     RowNotFound,
-
-    /// Type in query doesn't exist. Likely due to typo or missing user type.
-    #[error("type named {type_name} not found")]
-    TypeNotFound { type_name: String },
 
     /// Column index was out of bounds.
     #[error("column index out of bounds: the len is {len}, but the index is {index}")]
@@ -92,10 +84,6 @@ pub enum Error {
     #[error("error occurred while decoding: {0}")]
     Decode(#[source] BoxDynError),
 
-    /// Error occurred within the `Any` driver mapping to/from the native driver.
-    #[error("error in Any driver mapping: {0}")]
-    AnyDriverError(#[source] BoxDynError),
-
     /// A [`Pool::acquire`] timed out due to connections not becoming available or
     /// because another task encountered too many errors while trying to open a new connection.
     ///
@@ -119,12 +107,6 @@ pub enum Error {
 
     #[error("got unexpected connection status after attempting to begin transaction")]
     BeginFailed,
-
-    // Not returned in normal operation.
-    /// Error occurred while reading configuration file
-    #[doc(hidden)]
-    #[error("error reading configuration file: {0}")]
-    ConfigFile(#[from] crate::query_engine::config::ConfigError),
 }
 
 impl StdError for Box<dyn DatabaseError> {}
@@ -160,10 +142,6 @@ impl Error {
     #[inline]
     pub fn config(err: impl StdError + Send + Sync + 'static) -> Self {
         Error::Configuration(err.into())
-    }
-
-    pub(crate) fn tls(err: impl Into<Box<dyn StdError + Send + Sync + 'static>>) -> Self {
-        Error::Tls(err.into())
     }
 
     #[doc(hidden)]

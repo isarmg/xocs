@@ -1,10 +1,8 @@
 use super::{
     DefaultMakeSpan, DefaultOnBodyChunk, DefaultOnEos, DefaultOnFailure, DefaultOnRequest,
-    DefaultOnResponse, GrpcMakeClassifier, HttpMakeClassifier, Trace,
+    DefaultOnResponse, HttpMakeClassifier, Trace,
 };
-use crate::classify::{
-    GrpcErrorsAsFailures, MakeClassifier, ServerErrorsAsFailures, SharedClassifier,
-};
+use crate::classify::{MakeClassifier, ServerErrorsAsFailures, SharedClassifier};
 use tower::Layer;
 
 /// [`Layer`] that adds high level [tracing] to a [`Service`].
@@ -182,22 +180,6 @@ impl TraceLayer<HttpMakeClassifier> {
     pub fn new_for_http() -> Self {
         Self {
             make_classifier: SharedClassifier::new(ServerErrorsAsFailures::default()),
-            make_span: DefaultMakeSpan::new(),
-            on_response: DefaultOnResponse::default(),
-            on_request: DefaultOnRequest::default(),
-            on_body_chunk: DefaultOnBodyChunk::default(),
-            on_eos: DefaultOnEos::default(),
-            on_failure: DefaultOnFailure::default(),
-        }
-    }
-}
-
-impl TraceLayer<GrpcMakeClassifier> {
-    /// Create a new [`TraceLayer`] using [`GrpcErrorsAsFailures`] which supports classifying
-    /// gRPC responses and streams based on the `grpc-status` header.
-    pub fn new_for_grpc() -> Self {
-        Self {
-            make_classifier: SharedClassifier::new(GrpcErrorsAsFailures::default()),
             make_span: DefaultMakeSpan::new(),
             on_response: DefaultOnResponse::default(),
             on_request: DefaultOnRequest::default(),

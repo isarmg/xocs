@@ -106,10 +106,7 @@ pub(super) enum User {
     #[cfg(all(any(feature = "client", feature = "server"), feature = "http1"))]
     Body,
     /// The user aborted writing of the outgoing body.
-    #[cfg(any(
-        all(feature = "http1", any(feature = "client", feature = "server")),
-        feature = "ffi"
-    ))]
+    #[cfg(all(feature = "http1", any(feature = "client", feature = "server")))]
     BodyWriteAborted,
 
     /// Error from future of user's Service.
@@ -136,10 +133,6 @@ pub(super) enum User {
     /// The dispatch task is gone.
     #[cfg(all(feature = "client", feature = "http1"))]
     DispatchGone,
-
-    /// User aborted in an FFI callback.
-    #[cfg(feature = "ffi")]
-    AbortedByCallback,
 }
 
 // Sentinel type to indicate the error was caused by a timeout.
@@ -251,16 +244,10 @@ impl Error {
     /// outgoing body before it completes, for example by dropping the
     /// body sender.
     pub fn is_body_write_aborted(&self) -> bool {
-        #[cfg(not(any(
-            all(feature = "http1", any(feature = "client", feature = "server")),
-            feature = "ffi"
-        )))]
+        #[cfg(not(all(feature = "http1", any(feature = "client", feature = "server"))))]
         return false;
 
-        #[cfg(any(
-            all(feature = "http1", any(feature = "client", feature = "server")),
-            feature = "ffi"
-        ))]
+        #[cfg(all(feature = "http1", any(feature = "client", feature = "server")))]
         matches!(self.inner.kind, Kind::User(User::BodyWriteAborted))
     }
 
@@ -300,7 +287,7 @@ impl Error {
         self
     }
 
-    #[cfg(any(all(feature = "http1", feature = "server"), feature = "ffi"))]
+    #[cfg(all(feature = "http1", feature = "server"))]
     pub(super) fn kind(&self) -> &Kind {
         &self.inner.kind
     }
@@ -362,10 +349,7 @@ impl Error {
         Error::new(Kind::BodyWrite).with(cause)
     }
 
-    #[cfg(any(
-        all(feature = "http1", any(feature = "client", feature = "server")),
-        feature = "ffi"
-    ))]
+    #[cfg(all(feature = "http1", any(feature = "client", feature = "server")))]
     pub(super) fn new_body_write_aborted() -> Error {
         Error::new(Kind::User(User::BodyWriteAborted))
     }
@@ -413,11 +397,6 @@ impl Error {
     #[cfg(all(any(feature = "client", feature = "server"), feature = "http1"))]
     pub(super) fn new_shutdown(cause: std::io::Error) -> Error {
         Error::new(Kind::Shutdown).with(cause)
-    }
-
-    #[cfg(feature = "ffi")]
-    pub(super) fn new_user_aborted_by_callback() -> Error {
-        Error::new_user(User::AbortedByCallback)
     }
 
     #[cfg(all(feature = "client", feature = "http1"))]
@@ -477,10 +456,7 @@ impl Error {
 
             #[cfg(all(any(feature = "client", feature = "server"), feature = "http1"))]
             Kind::User(User::Body) => "error from user's Body stream",
-            #[cfg(any(
-                all(feature = "http1", any(feature = "client", feature = "server")),
-                feature = "ffi"
-            ))]
+            #[cfg(all(feature = "http1", any(feature = "client", feature = "server")))]
             Kind::User(User::BodyWriteAborted) => "user body write aborted",
 
             #[cfg(all(any(feature = "client", feature = "server"), feature = "http1"))]
@@ -498,8 +474,6 @@ impl Error {
             Kind::User(User::ManualUpgrade) => "upgrade expected but low level API in use",
             #[cfg(all(feature = "client", feature = "http1"))]
             Kind::User(User::DispatchGone) => "dispatch task is gone",
-            #[cfg(feature = "ffi")]
-            Kind::User(User::AbortedByCallback) => "operation aborted by an application callback",
         }
     }
 }

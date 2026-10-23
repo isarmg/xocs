@@ -134,18 +134,15 @@
 //!   concurrent use-cases, while `slab` should be preferred in single-threaded
 //!   use-cases.
 //!
-//! [`slab`]: https://crates.io/crates/loom
+//! [`slab`]: https://crates.io/crates/slab
 //!
 //! # Safety and Correctness
 //!
-//! Most implementations of lock-free data structures in Rust require some
-//! amount of unsafe code, and this crate is not an exception. In order to catch
-//! potential bugs in this unsafe code, we make use of [`loom`], a
-//! permutation-testing tool for concurrent Rust programs. All `unsafe` blocks
-//! this crate occur in accesses to `loom` `UnsafeCell`s. This means that when
-//! those accesses occur in this crate's tests, `loom` will assert that they are
-//! valid under the C11 memory model across multiple permutations of concurrent
-//! executions of those tests.
+//! This maintained implementation uses standard-library atomics and synchronization.
+//! Its upstream source used Loom model tests; the original source and test material
+//! remain in the repository's immutable provenance archives. Those upstream model
+//! tests are not executed by this package. Maintained tests exercise real threads,
+//! deferred destruction, cross-thread removal, and generation invalidation.
 //!
 //! In order to guard against the [ABA problem][aba], this crate makes use of
 //! _generational indices_. Each slot in the slab tracks a generation counter
@@ -162,7 +159,6 @@
 //! generation counter wrap around to the same value, it is good to be fairly
 //! generous when configuring the allocation of index bits.
 //!
-//! [`loom`]: https://crates.io/crates/loom
 //! [aba]: https://en.wikipedia.org/wiki/ABA_problem
 //! [`Slab::insert`]: struct.Slab.html#method.insert
 //!

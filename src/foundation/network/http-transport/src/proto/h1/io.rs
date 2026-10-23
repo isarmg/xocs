@@ -190,8 +190,6 @@ where
                     h1_max_headers: parse_ctx.h1_max_headers,
                     h1_max_header_size: parse_ctx.h1_max_header_size,
                     preserve_header_case: parse_ctx.preserve_header_case,
-                    #[cfg(feature = "ffi")]
-                    preserve_header_order: parse_ctx.preserve_header_order,
                     h09_responses: parse_ctx.h09_responses,
                     #[cfg(feature = "client")]
                     on_informational: parse_ctx.on_informational,

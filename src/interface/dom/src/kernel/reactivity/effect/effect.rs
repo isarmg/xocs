@@ -8,9 +8,11 @@ use crate::reactivity::{
 };
 use crate::tasks::Executor;
 use futures::StreamExt;
+#[cfg(debug_assertions)]
+use std::sync::atomic::AtomicBool;
 use std::{
     mem,
-    sync::{atomic::AtomicBool, Arc, RwLock},
+    sync::{Arc, RwLock},
 };
 
 /// Effects run a certain chunk of code whenever the signals they depend on change.
@@ -70,22 +72,17 @@ use std::{
 /// 1. **Scheduling**: Effects run after synchronous work, on the next “tick” of the reactive
 ///    system. This makes them suitable for “on mount” actions: they will fire immediately after
 ///    DOM rendering.
-/// 2. By default, effects do not run unless the `effects` feature is enabled. If you are using
-///    this with a web framework, this generally means that effects **do not run on the server**.
-///    and you can call browser-specific APIs within the effect function without causing issues.
-///    If you need an effect to run on the server, use [`Effect::new_isomorphic`].
+/// 2. Effects run on the browser executor or the native executor used by tests.
 #[derive(Debug, Clone, Copy)]
 pub struct Effect<S> {
-    inner: Option<ArenaItem<StoredEffect, S>>,
+    inner: ArenaItem<StoredEffect, S>,
 }
 
 type StoredEffect = Option<Arc<RwLock<EffectInner>>>;
 
 impl<S> Dispose for Effect<S> {
     fn dispose(self) {
-        if let Some(inner) = self.inner {
-            inner.dispose()
-        }
+        self.inner.dispose()
     }
 }
 
@@ -143,10 +140,7 @@ where
 {
     /// Stops this effect before it is disposed.
     pub fn stop(self) {
-        if let Some(inner) = self
-            .inner
-            .and_then(|this| this.try_update_value(|inner| inner.take()))
-        {
+        if let Some(inner) = self.inner.try_update_value(|inner| inner.take()) {
             drop(inner);
         }
     }
@@ -163,7 +157,7 @@ impl Effect<LocalStorage> {
     where
         T: 'static,
     {
-        let inner = cfg!(all()).then(|| {
+        let inner = {
             let (mut rx, owner, inner) = effect_base();
             let value = Arc::new(RwLock::new(None::<T>));
             let mut first_run = true;
@@ -193,7 +187,7 @@ impl Effect<LocalStorage> {
             });
 
             ArenaItem::new_with_storage(Some(inner))
-        });
+        };
 
         Self { inner }
     }
@@ -310,7 +304,7 @@ impl Effect<LocalStorage> {
         D: 'static,
         T: 'static,
     {
-        let inner = cfg!(all()).then(|| {
+        let inner = {
             let (mut rx, owner, inner) = effect_base();
             let mut first_run = true;
             let dep_value = Arc::new(RwLock::new(None::<D>));
@@ -355,7 +349,7 @@ impl Effect<LocalStorage> {
             });
 
             ArenaItem::new_with_storage(Some(inner))
-        });
+        };
 
         Self { inner }
     }
@@ -367,22 +361,7 @@ impl Effect<SyncStorage> {
     ///
     /// This spawns a task that can be run on any thread. For an effect that will be spawned on
     /// the current thread, use [`new`](Effect::new).
-    pub fn new_sync<T, M>(fun: impl EffectFunction<T, M> + Send + Sync + 'static) -> Self
-    where
-        T: Send + Sync + 'static,
-    {
-        if !cfg!(all()) {
-            return Self { inner: None };
-        }
-
-        Self::new_isomorphic(fun)
-    }
-
-    /// Creates a new effect, which runs once on the next “tick”, and then runs again when reactive values
-    /// that are read inside it change.
-    ///
-    /// This will run whether the `effects` feature is enabled or not.
-    pub fn new_isomorphic<T, M>(mut fun: impl EffectFunction<T, M> + Send + Sync + 'static) -> Self
+    pub fn new_sync<T, M>(mut fun: impl EffectFunction<T, M> + Send + Sync + 'static) -> Self
     where
         T: Send + Sync + 'static,
     {
@@ -416,7 +395,7 @@ impl Effect<SyncStorage> {
         crate::reactivity::spawn(task);
 
         Self {
-            inner: Some(ArenaItem::new_with_storage(Some(inner))),
+            inner: ArenaItem::new_with_storage(Some(inner)),
         }
     }
 
@@ -435,7 +414,7 @@ impl Effect<SyncStorage> {
         let dep_value = Arc::new(RwLock::new(None::<D>));
         let watch_value = Arc::new(RwLock::new(None::<T>));
 
-        let inner = cfg!(all()).then(|| {
+        let inner = {
             crate::reactivity::spawn({
                 let dep_value = Arc::clone(&dep_value);
                 let watch_value = Arc::clone(&watch_value);
@@ -475,7 +454,7 @@ impl Effect<SyncStorage> {
             });
 
             ArenaItem::new_with_storage(Some(inner))
-        });
+        };
 
         Self { inner }
     }
@@ -487,42 +466,8 @@ where
 {
     fn to_any_subscriber(&self) -> AnySubscriber {
         self.inner
-            .and_then(|inner| {
-                inner
-                    .try_with_value(|inner| inner.as_ref().map(|inner| inner.to_any_subscriber()))
-                    .flatten()
-            })
+            .try_with_value(|inner| inner.as_ref().map(|inner| inner.to_any_subscriber()))
+            .flatten()
             .expect("tried to set effect that has been stopped")
     }
-}
-
-/// Creates an [`Effect`].
-#[inline(always)]
-#[track_caller]
-#[deprecated = "This function is being removed to conform to Rust idioms. \
-                Please use `Effect::new()` instead."]
-pub fn create_effect<T>(fun: impl FnMut(Option<T>) -> T + 'static) -> Effect<LocalStorage>
-where
-    T: 'static,
-{
-    Effect::new(fun)
-}
-
-/// Creates an [`Effect`], equivalent to [Effect::watch].
-#[inline(always)]
-#[track_caller]
-#[deprecated = "This function is being removed to conform to Rust idioms. \
-                Please use `Effect::watch()` instead."]
-pub fn watch<W, T>(
-    deps: impl Fn() -> W + 'static,
-    callback: impl Fn(&W, Option<&W>, Option<T>) -> T + Clone + 'static,
-    immediate: bool,
-) -> impl Fn() + Clone
-where
-    W: Clone + 'static,
-    T: 'static,
-{
-    let watch = Effect::watch(deps, callback, immediate);
-
-    move || watch.stop()
 }

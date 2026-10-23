@@ -15,7 +15,6 @@ macro_rules! emit_error {
     };
 }
 
-mod case;
 mod fmt;
 
 #[cfg(feature = "regex")]
@@ -60,27 +59,7 @@ pub fn format(input: TokenStream) -> TokenStream {
     m.eval()
 }
 
-/// Converts a string literal to a specified case.
-#[proc_macro]
-pub fn convert_case(input: TokenStream) -> TokenStream {
-    use crate::case::ConvertCase;
-    let m = parse_macro_input!(input as ConvertCase);
-    m.eval()
-}
-
 // -----------------------------------------------------------------------------
-
-/// Returns a compile-time verified header name string literal.
-#[cfg(feature = "http")]
-#[proc_macro]
-pub fn verified_header_name(input: TokenStream) -> TokenStream {
-    use http::header::HeaderName;
-
-    direct_convert(input, |s: &LitStr| {
-        let s = s.value();
-        HeaderName::from_lowercase(s.as_bytes()).map(|_| s)
-    })
-}
 
 // -----------------------------------------------------------------------------
 

@@ -1,7 +1,6 @@
 use crate::view_tree::renderer::Rndr;
 use std::{
     borrow::Cow,
-    future::Future,
     net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
     num::{
         NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroIsize, NonZeroU128,
@@ -35,9 +34,6 @@ pub trait AttributeValue: Send {
     /// The state that should be retained between building and rebuilding.
     type State;
 
-    /// The type once all async data have loaded.
-    type AsyncOutput: AttributeValue;
-
     /// A version of the value that can be cloned. This can be the same type, or a
     /// reference-counted type. Generally speaking, this does *not* need to refer to the same data,
     /// but should behave in the same way. So for example, making an event handler cloneable should
@@ -51,23 +47,6 @@ pub trait AttributeValue: Send {
     /// cloneable type has worse performance than the cloneable type, so they are separate.
     type CloneableOwned: AttributeValue + Clone + 'static;
 
-    /// An approximation of the actual length of this attribute in HTML.
-    fn html_len(&self) -> usize;
-
-    /// Renders the attribute value to HTML.
-    fn to_html(self, key: &str, buf: &mut String);
-
-    /// Renders the attribute value to HTML for a `<template>`.
-    fn to_template(key: &str, buf: &mut String);
-
-    /// Adds interactivity as necessary, given DOM nodes that were created from HTML that has
-    /// either been rendered on the server, or cloned for a `<template>`.
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        key: &str,
-        el: &crate::view_tree::renderer::types::Element,
-    ) -> Self::State;
-
     /// Adds this attribute to the element during client-side rendering.
     fn build(self, el: &crate::view_tree::renderer::types::Element, key: &str) -> Self::State;
 
@@ -79,36 +58,13 @@ pub trait AttributeValue: Send {
 
     /// Converts this attributes into an equivalent that can be cloned and is `'static`.
     fn into_cloneable_owned(self) -> Self::CloneableOwned;
-
-    /// “Runs” the attribute without other side effects. For primitive types, this is a no-op. For
-    /// reactive types, this can be used to gather data about reactivity or about asynchronous data
-    /// that needs to be loaded.
-    fn dry_resolve(&mut self);
-
-    /// “Resolves” this into a form that is not waiting for any asynchronous data.
-    fn resolve(self) -> impl Future<Output = Self::AsyncOutput> + Send;
 }
 
 impl AttributeValue for () {
     type State = ();
-    type AsyncOutput = ();
+
     type Cloneable = ();
     type CloneableOwned = ();
-
-    fn html_len(&self) -> usize {
-        0
-    }
-
-    fn to_html(self, _key: &str, _buf: &mut String) {}
-
-    fn to_template(_key: &str, _buf: &mut String) {}
-
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        _key: &str,
-        _el: &crate::view_tree::renderer::types::Element,
-    ) {
-    }
 
     fn build(self, _el: &crate::view_tree::renderer::types::Element, _key: &str) -> Self::State {}
 
@@ -121,44 +77,13 @@ impl AttributeValue for () {
     fn into_cloneable_owned(self) -> Self::CloneableOwned {
         self
     }
-
-    fn dry_resolve(&mut self) {}
-
-    async fn resolve(self) {}
 }
 
 impl<'a> AttributeValue for &'a str {
     type State = (crate::view_tree::renderer::types::Element, &'a str);
-    type AsyncOutput = &'a str;
+
     type Cloneable = &'a str;
     type CloneableOwned = Arc<str>;
-
-    fn html_len(&self) -> usize {
-        self.len()
-    }
-
-    fn to_html(self, key: &str, buf: &mut String) {
-        buf.push(' ');
-        buf.push_str(key);
-        buf.push_str("=\"");
-        buf.push_str(&escape_attr(self));
-        buf.push('"');
-    }
-
-    fn to_template(_key: &str, _buf: &mut String) {}
-
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        key: &str,
-        el: &crate::view_tree::renderer::types::Element,
-    ) -> Self::State {
-        // if we're actually hydrating from SSRed HTML, we don't need to set the attribute
-        // if we're hydrating from a CSR-cloned <template>, we do need to set non-StaticAttr attributes
-        if !FROM_SERVER {
-            Rndr::set_attribute(el, key, self);
-        }
-        (el.clone(), self)
-    }
 
     fn build(self, el: &crate::view_tree::renderer::types::Element, key: &str) -> Self::State {
         Rndr::set_attribute(el, key, self);
@@ -180,46 +105,13 @@ impl<'a> AttributeValue for &'a str {
     fn into_cloneable_owned(self) -> Self::CloneableOwned {
         self.into()
     }
-
-    fn dry_resolve(&mut self) {}
-
-    async fn resolve(self) -> Self::AsyncOutput {
-        self
-    }
 }
 
 impl<'a> AttributeValue for Cow<'a, str> {
     type State = (crate::view_tree::renderer::types::Element, Self);
-    type AsyncOutput = Self;
+
     type Cloneable = Arc<str>;
     type CloneableOwned = Arc<str>;
-
-    fn html_len(&self) -> usize {
-        self.len()
-    }
-
-    fn to_html(self, key: &str, buf: &mut String) {
-        buf.push(' ');
-        buf.push_str(key);
-        buf.push_str("=\"");
-        buf.push_str(&escape_attr(&self));
-        buf.push('"');
-    }
-
-    fn to_template(_key: &str, _buf: &mut String) {}
-
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        key: &str,
-        el: &crate::view_tree::renderer::types::Element,
-    ) -> Self::State {
-        // if we're actually hydrating from SSRed HTML, we don't need to set the attribute
-        // if we're hydrating from a CSR-cloned <template>, we do need to set non-StaticAttr attributes
-        if !FROM_SERVER {
-            Rndr::set_attribute(el, key, &self);
-        }
-        (el.clone(), self)
-    }
 
     fn build(self, el: &crate::view_tree::renderer::types::Element, key: &str) -> Self::State {
         Rndr::set_attribute(el, key, &self);
@@ -241,89 +133,12 @@ impl<'a> AttributeValue for Cow<'a, str> {
     fn into_cloneable_owned(self) -> Self::CloneableOwned {
         self.into()
     }
-
-    fn dry_resolve(&mut self) {}
-
-    async fn resolve(self) -> Self::AsyncOutput {
-        self
-    }
-}
-
-#[cfg(any())]
-impl<const V: &'static str> AttributeValue for crate::view_tree::view::static_types::Static<V> {
-    type AsyncOutput = Self;
-    type State = ();
-    type Cloneable = Self;
-    type CloneableOwned = Self;
-
-    fn html_len(&self) -> usize {
-        V.len()
-    }
-
-    fn to_html(self, key: &str, buf: &mut String) {
-        <&str as AttributeValue>::to_html(V, key, buf);
-    }
-
-    fn to_template(key: &str, buf: &mut String) {
-        buf.push(' ');
-        buf.push_str(key);
-        buf.push_str("=\"");
-        buf.push_str(V);
-        buf.push('"');
-    }
-
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        _key: &str,
-        _el: &crate::view_tree::renderer::types::Element,
-    ) -> Self::State {
-    }
-
-    fn build(self, el: &crate::view_tree::renderer::types::Element, key: &str) -> Self::State {
-        <&str as AttributeValue>::build(V, el, key);
-    }
-
-    fn rebuild(self, _key: &str, _state: &mut Self::State) {}
-
-    fn into_cloneable(self) -> Self::Cloneable {
-        self
-    }
-
-    fn into_cloneable_owned(self) -> Self::CloneableOwned {
-        self
-    }
-
-    fn dry_resolve(&mut self) {}
-
-    async fn resolve(self) -> Self::AsyncOutput {
-        self
-    }
 }
 
 impl<'a> AttributeValue for &'a String {
-    type AsyncOutput = Self;
     type State = (crate::view_tree::renderer::types::Element, &'a String);
     type Cloneable = Self;
     type CloneableOwned = Arc<str>;
-
-    fn html_len(&self) -> usize {
-        self.len()
-    }
-
-    fn to_html(self, key: &str, buf: &mut String) {
-        <&str as AttributeValue>::to_html(self.as_str(), key, buf);
-    }
-
-    fn to_template(_key: &str, _buf: &mut String) {}
-
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        key: &str,
-        el: &crate::view_tree::renderer::types::Element,
-    ) -> Self::State {
-        let (el, _) = <&str as AttributeValue>::hydrate::<FROM_SERVER>(self.as_str(), key, el);
-        (el, self)
-    }
 
     fn build(self, el: &crate::view_tree::renderer::types::Element, key: &str) -> Self::State {
         Rndr::set_attribute(el, key, self);
@@ -345,39 +160,13 @@ impl<'a> AttributeValue for &'a String {
     fn into_cloneable_owned(self) -> Self::CloneableOwned {
         self.as_str().into()
     }
-
-    fn dry_resolve(&mut self) {}
-
-    async fn resolve(self) -> Self::AsyncOutput {
-        self
-    }
 }
 
 impl AttributeValue for String {
-    type AsyncOutput = Self;
     type State = (crate::view_tree::renderer::types::Element, String);
     type Cloneable = Arc<str>;
     type CloneableOwned = Arc<str>;
 
-    fn html_len(&self) -> usize {
-        self.len()
-    }
-
-    fn to_html(self, key: &str, buf: &mut String) {
-        <&str as AttributeValue>::to_html(self.as_str(), key, buf);
-    }
-
-    fn to_template(_key: &str, _buf: &mut String) {}
-
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        key: &str,
-        el: &crate::view_tree::renderer::types::Element,
-    ) -> Self::State {
-        let (el, _) = <&str as AttributeValue>::hydrate::<FROM_SERVER>(self.as_str(), key, el);
-        (el, self)
-    }
-
     fn build(self, el: &crate::view_tree::renderer::types::Element, key: &str) -> Self::State {
         Rndr::set_attribute(el, key, &self);
         (el.clone(), self)
@@ -397,39 +186,13 @@ impl AttributeValue for String {
 
     fn into_cloneable_owned(self) -> Self::CloneableOwned {
         self.into()
-    }
-
-    fn dry_resolve(&mut self) {}
-
-    async fn resolve(self) -> Self::AsyncOutput {
-        self
     }
 }
 
 impl AttributeValue for Arc<str> {
-    type AsyncOutput = Self;
     type State = (crate::view_tree::renderer::types::Element, Arc<str>);
     type Cloneable = Arc<str>;
     type CloneableOwned = Arc<str>;
-
-    fn html_len(&self) -> usize {
-        self.len()
-    }
-
-    fn to_html(self, key: &str, buf: &mut String) {
-        <&str as AttributeValue>::to_html(self.as_ref(), key, buf);
-    }
-
-    fn to_template(_key: &str, _buf: &mut String) {}
-
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        key: &str,
-        el: &crate::view_tree::renderer::types::Element,
-    ) -> Self::State {
-        let (el, _) = <&str as AttributeValue>::hydrate::<FROM_SERVER>(self.as_ref(), key, el);
-        (el, self)
-    }
 
     fn build(self, el: &crate::view_tree::renderer::types::Element, key: &str) -> Self::State {
         Rndr::set_attribute(el, key, &self);
@@ -449,48 +212,15 @@ impl AttributeValue for Arc<str> {
     }
 
     fn into_cloneable_owned(self) -> Self::CloneableOwned {
-        self
-    }
-
-    fn dry_resolve(&mut self) {}
-
-    async fn resolve(self) -> Self::AsyncOutput {
         self
     }
 }
 // TODO impl AttributeValue for Rc<str> and Arc<str> too
 
 impl AttributeValue for bool {
-    type AsyncOutput = Self;
     type State = (crate::view_tree::renderer::types::Element, bool);
     type Cloneable = Self;
     type CloneableOwned = Self;
-
-    fn html_len(&self) -> usize {
-        0
-    }
-
-    fn to_html(self, key: &str, buf: &mut String) {
-        if self {
-            buf.push(' ');
-            buf.push_str(key);
-        }
-    }
-
-    fn to_template(_key: &str, _buf: &mut String) {}
-
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        key: &str,
-        el: &crate::view_tree::renderer::types::Element,
-    ) -> Self::State {
-        // if we're actually hydrating from SSRed HTML, we don't need to set the attribute
-        // if we're hydrating from a CSR-cloned <template>, we do need to set non-StaticAttr attributes
-        if !FROM_SERVER {
-            Rndr::set_attribute(el, key, "");
-        }
-        (el.clone(), self)
-    }
 
     fn build(self, el: &crate::view_tree::renderer::types::Element, key: &str) -> Self::State {
         if self {
@@ -518,46 +248,15 @@ impl AttributeValue for bool {
     fn into_cloneable_owned(self) -> Self::CloneableOwned {
         self
     }
-
-    fn dry_resolve(&mut self) {}
-
-    async fn resolve(self) -> Self::AsyncOutput {
-        self
-    }
 }
 
 impl<V> AttributeValue for Option<V>
 where
     V: AttributeValue,
 {
-    type AsyncOutput = Option<V::AsyncOutput>;
     type State = (crate::view_tree::renderer::types::Element, Option<V::State>);
     type Cloneable = Option<V::Cloneable>;
     type CloneableOwned = Option<V::CloneableOwned>;
-
-    fn html_len(&self) -> usize {
-        match self {
-            Some(i) => i.html_len(),
-            None => 0,
-        }
-    }
-
-    fn to_html(self, key: &str, buf: &mut String) {
-        if let Some(v) = self {
-            v.to_html(key, buf);
-        }
-    }
-
-    fn to_template(_key: &str, _buf: &mut String) {}
-
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        key: &str,
-        el: &crate::view_tree::renderer::types::Element,
-    ) -> Self::State {
-        let state = self.map(|v| v.hydrate::<FROM_SERVER>(key, el));
-        (el.clone(), state)
-    }
 
     fn build(self, el: &crate::view_tree::renderer::types::Element, key: &str) -> Self::State {
         let el = el.clone();
@@ -589,59 +288,17 @@ where
     fn into_cloneable_owned(self) -> Self::CloneableOwned {
         self.map(|value| value.into_cloneable_owned())
     }
-
-    fn dry_resolve(&mut self) {
-        if let Some(inner) = self.as_mut() {
-            inner.dry_resolve();
-        }
-    }
-
-    async fn resolve(self) -> Self::AsyncOutput {
-        match self {
-            None => None,
-            Some(inner) => Some(inner.resolve().await),
-        }
-    }
-}
-
-pub(crate) fn escape_attr(value: &str) -> Cow<'_, str> {
-    crate::html_escaping::encode_double_quoted_attribute(value)
 }
 
 macro_rules! render_primitive {
   ($($child_type:ty),* $(,)?) => {
       $(
         impl AttributeValue for $child_type
-        where
-
         {
-            type AsyncOutput = $child_type;
+
             type State = (crate::view_tree::renderer::types::Element, $child_type);
             type Cloneable = Self;
             type CloneableOwned = Self;
-
-            fn html_len(&self) -> usize {
-                0
-            }
-
-            fn to_html(self, key: &str, buf: &mut String) {
-                <String as AttributeValue>::to_html(self.to_string(), key, buf);
-            }
-
-            fn to_template(_key: &str, _buf: &mut String) {}
-
-            fn hydrate<const FROM_SERVER: bool>(
-                self,
-                key: &str,
-                el: &crate::view_tree::renderer::types::Element,
-            ) -> Self::State {
-                // if we're actually hydrating from SSRed HTML, we don't need to set the attribute
-                // if we're hydrating from a CSR-cloned <template>, we do need to set non-StaticAttr attributes
-                if !FROM_SERVER {
-                    Rndr::set_attribute(el, key, &self.to_string());
-                }
-                (el.clone(), self)
-            }
 
             fn build(self, el: &crate::view_tree::renderer::types::Element, key: &str) -> Self::State {
                 Rndr::set_attribute(el, key, &self.to_string());
@@ -664,12 +321,6 @@ macro_rules! render_primitive {
                 self
             }
 
-            fn dry_resolve(&mut self) {
-            }
-
-            async fn resolve(self) -> Self::AsyncOutput {
-                self
-            }
         }
       )*
   }

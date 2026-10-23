@@ -233,8 +233,4 @@ mod int;
 mod json;
 mod str;
 mod text;
-#[cfg(feature = "time")]
-mod time;
 mod uint;
-#[cfg(feature = "uuid")]
-mod uuid;

@@ -1,13 +1,7 @@
-//! Allows rendering user interfaces based on a statically-typed view tree.
+//! A statically typed CSR view tree backed by browser DOM operations.
 //!
-//! This view tree is generic over rendering backends, and agnostic about reactivity/change
-//! detection.
+//! Rendering is independent of reactivity; reactive adapters retain state between updates.
 
-// this is specifically used for `unsized_const_params` below
-// this allows us to use const generic &'static str for static text nodes and attributes
-#![allow(incomplete_features)]
-// support for const generic &'static str has now moved back and forth between
-// these two features a couple times; we'll just enable both
 #![deny(missing_docs)]
 
 /// Commonly-used traits.
@@ -28,11 +22,11 @@ pub mod prelude {
             element::{ElementChild, ElementExt, InnerHtmlAttribute},
             node_ref::NodeRefAttribute,
         },
-        renderer::{dom::Dom, Renderer},
+        renderer::dom::Dom,
         view::{
             add_attr::AddAnyAttr,
             any_view::{AnyView, IntoAny, IntoMaybeErased},
-            IntoRender, Mountable, Render, RenderHtml,
+            DomView, IntoRender, Mountable, Render,
         },
     };
 }
@@ -44,26 +38,16 @@ use web_sys::Node;
 pub mod dom;
 /// Types for building a statically-typed HTML view tree.
 pub mod html;
-/// Supports adding interactivity to HTML.
-pub mod hydration;
 /// Types for MathML.
 pub mod mathml;
-/// Defines various backends that can render views.
+/// Browser DOM operations and event listener lifetimes.
 pub mod renderer;
-/// Rendering views to HTML.
-pub mod ssr;
 /// Types for SVG.
 pub mod svg;
 /// Core logic for manipulating views.
 pub mod view;
 
 pub use crate::alternatives as either;
-#[cfg(any())]
-#[doc(hidden)]
-pub use wasm_bindgen;
-#[cfg(any())]
-#[doc(hidden)]
-pub use web_sys;
 
 /// View implementations for the `oco_ref` crate (cheaply-cloned string types).
 pub mod oco;
@@ -102,7 +86,7 @@ impl<T> UnwrapOrDebug for Result<T, JsValue> {
         }
         #[cfg(not(any(debug_assertions, leptos_debuginfo)))]
         {
-            _ = self;
+            let _ = (self, el, name);
         }
     }
 
@@ -125,6 +109,7 @@ impl<T> UnwrapOrDebug for Result<T, JsValue> {
         }
         #[cfg(not(any(debug_assertions, leptos_debuginfo)))]
         {
+            let _ = (el, name);
             self.ok()
         }
     }

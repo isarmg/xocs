@@ -1,21 +1,21 @@
-use super::RenderHtml;
+use super::DomView;
 use crate::view_tree::html::attribute::Attribute;
 
 /// Allows adding a new attribute to some type, before it is rendered.
 /// This takes place at compile time as part of the builder syntax for creating a statically typed
 /// view tree.
 ///
-/// Normally, this is used to add an attribute to an HTML element. But it is required to be
-/// implemented for all types that implement [`RenderHtml`], so that attributes can be spread onto
-/// other structures like the return type of a component.
+/// HTML elements and typed composite views implement this capability. Rendering a [`DomView`]
+/// does not require it: attributes must be composed while the receiving view is still typed,
+/// before converting it into an erased view.
 pub trait AddAnyAttr {
     /// The new type once the attribute has been added.
-    type Output<SomeNewAttr: Attribute>: RenderHtml;
+    type Output<SomeNewAttr: Attribute>: DomView;
 
     /// Adds an attribute to the view.
     fn add_any_attr<NewAttr: Attribute>(self, attr: NewAttr) -> Self::Output<NewAttr>
     where
-        Self::Output<NewAttr>: RenderHtml;
+        Self::Output<NewAttr>: DomView;
 }
 
 /// Declares that spreading attributes onto a particular type has no effect.

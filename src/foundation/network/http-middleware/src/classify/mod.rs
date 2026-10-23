@@ -3,14 +3,10 @@
 use http::{HeaderMap, Request, Response, StatusCode};
 use std::{convert::Infallible, fmt, marker::PhantomData};
 
-pub(crate) mod grpc_errors_as_failures;
 mod map_failure_class;
 mod status_in_range_is_error;
 
 pub use self::{
-    grpc_errors_as_failures::{
-        GrpcCode, GrpcEosErrorsAsFailures, GrpcErrorsAsFailures, GrpcFailureClass,
-    },
     map_failure_class::MapFailureClass,
     status_in_range_is_error::{StatusInRangeAsFailures, StatusInRangeFailureClass},
 };

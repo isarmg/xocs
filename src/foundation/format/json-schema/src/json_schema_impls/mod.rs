@@ -58,17 +58,11 @@ mod atomic;
 #[cfg(feature = "std")]
 mod ffi;
 
-#[cfg(feature = "arrayvec07")]
-mod arrayvec07;
-
 #[cfg(feature = "bytes1")]
 mod bytes1;
 
 #[cfg(feature = "chrono04")]
 mod chrono04;
-
-#[cfg(any(feature = "rust_decimal1", feature = "bigdecimal04"))]
-mod decimal;
 
 #[cfg(feature = "either1")]
 mod either1;
@@ -76,23 +70,11 @@ mod either1;
 #[cfg(feature = "indexmap2")]
 mod indexmap2;
 
-#[cfg(feature = "jiff02")]
-mod jiff02;
-
 #[cfg(feature = "semver1")]
 mod semver1;
 
 #[cfg(feature = "smallvec1")]
 forward_impl!((<A: smallvec1::Array> crate::JsonSchema for smallvec1::SmallVec<A> where A::Item: crate::JsonSchema) => alloc::vec::Vec<A::Item>);
 
-#[cfg(feature = "smol_str02")]
-forward_impl!(smol_str02::SmolStr => alloc::string::String);
-
-#[cfg(feature = "smol_str03")]
-forward_impl!(smol_str03::SmolStr => alloc::string::String);
-
 #[cfg(feature = "url2")]
 mod url2;
-
-#[cfg(feature = "uuid1")]
-mod uuid1;

@@ -36,11 +36,6 @@ impl<T: 'static> Inject<T> {
     }
 
     // Kind of annoying to have to include the cfg here
-    #[cfg(feature = "taskdump")]
-    pub(crate) fn is_closed(&self) -> bool {
-        let synced = self.synced.lock();
-        self.shared.is_closed(&synced)
-    }
 
     /// Closes the injection queue, returns `true` if the queue is open when the
     /// transition is made.

@@ -86,20 +86,6 @@ impl fmt::Debug for Sha256VarCore {
     }
 }
 
-impl Drop for Sha256VarCore {
-    fn drop(&mut self) {
-        #[cfg(feature = "zeroize")]
-        {
-            use digest::zeroize::Zeroize;
-            self.state.zeroize();
-            self.block_len.zeroize();
-        }
-    }
-}
-
-#[cfg(feature = "zeroize")]
-impl digest::zeroize::ZeroizeOnDrop for Sha256VarCore {}
-
 impl SerializableState for Sha256VarCore {
     type SerializedStateSize = U40;
 
@@ -204,19 +190,6 @@ impl fmt::Debug for Sha512VarCore {
         f.write_str("Sha512VarCore { ... }")
     }
 }
-
-impl Drop for Sha512VarCore {
-    fn drop(&mut self) {
-        #[cfg(feature = "zeroize")]
-        {
-            use digest::zeroize::Zeroize;
-            self.state.zeroize();
-            self.block_len.zeroize();
-        }
-    }
-}
-#[cfg(feature = "zeroize")]
-impl digest::zeroize::ZeroizeOnDrop for Sha512VarCore {}
 
 impl SerializableState for Sha512VarCore {
     type SerializedStateSize = U80;

@@ -6,8 +6,8 @@ use std::{
 use bytes::Bytes;
 use futures::TryStream;
 use http::HeaderMap;
-use http_body::Frame;
 use http_body::BodyExt;
+use http_body::Frame;
 use pin_project_lite::pin_project;
 use sync_wrapper::SyncWrapper;
 use tower::BoxError;

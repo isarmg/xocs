@@ -16,17 +16,8 @@ use crate::view_tree::{
     },
     prelude::AddAnyAttr,
     renderer::{types::Element, RemoveEventHandler},
-    view::{Position, ToTemplate},
 };
 use wasm_bindgen::JsValue;
-#[cfg(any())]
-use {
-    crate::reactivity::owner::Storage,
-    reactive_stores::{
-        ArcField, AtIndex, AtKeyed, DerefedField, Field, KeyedSubfield, StoreField, Subfield,
-    },
-    std::ops::{Deref, DerefMut, IndexMut},
-};
 
 /// `group` attribute used for radio inputs with `bind`.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -37,7 +28,7 @@ impl AttributeKey for Group {
 }
 
 /// Adds a two-way binding to the element, which adds an attribute and an event listener to the
-/// element when the element is created or hydrated.
+/// element when the element is created.
 pub trait BindAttribute<Key, Sig, T>
 where
     Key: AttributeKey,
@@ -48,7 +39,7 @@ where
     type Output;
 
     /// Adds a two-way binding to the element, which adds an attribute and an event listener to the
-    /// element when the element is created or hydrated.
+    /// element when the element is created.
     ///
     /// Example:
     ///
@@ -96,7 +87,7 @@ where
 }
 
 /// Adds a two-way binding to the element, which adds an attribute and an event listener to the
-/// element when the element is created or hydrated.
+/// element when the element is created.
 #[inline(always)]
 pub fn bind<Key, Sig, T>(
     key: Key,
@@ -157,7 +148,7 @@ where
     Element: ChangeEvent + GetValue<T>,
 {
     /// Attaches the event listener that updates the signal value to the element.
-    pub fn attach(self, el: &Element) -> RemoveEventHandler<Element> {
+    pub fn attach(self, el: &Element) -> RemoveEventHandler {
         el.attach_change_event::<T, W>(Key::KEY, self.write_signal.clone())
     }
 
@@ -195,38 +186,13 @@ where
     W: Set<Value = T> + Clone + Send + 'static,
     Element: ChangeEvent + GetValue<T>,
 {
-    const MIN_LENGTH: usize = 0;
-
     type State = (
         <Signal<BoolOrT<T>> as IntoProperty>::State,
-        (Element, Option<RemoveEventHandler<Element>>),
+        (Element, Option<RemoveEventHandler>),
     );
-    type AsyncOutput = Self;
+
     type Cloneable = Bind<Key, T, R, W>;
     type CloneableOwned = Bind<Key, T, R, W>;
-
-    fn html_len(&self) -> usize {
-        0
-    }
-
-    fn to_html(
-        self,
-        _buf: &mut String,
-        _class: &mut String,
-        _style: &mut String,
-        _inner_html: &mut String,
-    ) {
-    }
-
-    #[inline(always)]
-    fn hydrate<const FROM_SERVER: bool>(self, el: &Element) -> Self::State {
-        let signal = self.read_signal(el);
-        let attr_state = prop(self.key(), signal).hydrate::<FROM_SERVER>(el);
-
-        let cleanup = self.attach(el);
-
-        (attr_state, (el.clone(), Some(cleanup)))
-    }
 
     #[inline(always)]
     fn build(self, el: &Element) -> Self::State {
@@ -261,12 +227,6 @@ where
         self
     }
 
-    fn dry_resolve(&mut self) {}
-
-    async fn resolve(self) -> Self::AsyncOutput {
-        self
-    }
-
     fn keys(&self) -> Vec<NamedAttributeKey> {
         vec![]
     }
@@ -285,24 +245,6 @@ where
 
     fn add_any_attr<NewAttr: Attribute>(self, new_attr: NewAttr) -> Self::Output<NewAttr> {
         next_attr_combine!(self, new_attr)
-    }
-}
-
-impl<Key, T, R, W> ToTemplate for Bind<Key, T, R, W>
-where
-    Key: AttributeKey,
-    T: FromEventTarget + AttributeValue + 'static,
-    R: Get<Value = T> + Clone + 'static,
-    W: Set<Value = T> + Clone,
-{
-    #[inline(always)]
-    fn to_template(
-        _buf: &mut String,
-        _class: &mut String,
-        _style: &mut String,
-        _inner_html: &mut String,
-        _position: &mut Position,
-    ) {
     }
 }
 
@@ -348,100 +290,6 @@ where
     }
 }
 
-#[cfg(any())]
-impl<Inner, Prev, T> IntoSplitSignal for Subfield<Inner, Prev, T>
-where
-    Self: Get<Value = T> + Set<Value = T> + Clone,
-{
-    type Value = T;
-    type Read = Self;
-    type Write = Self;
-
-    fn into_split_signal(self) -> (Self::Read, Self::Write) {
-        (self.clone(), self.clone())
-    }
-}
-
-#[cfg(any())]
-impl<T, S> IntoSplitSignal for Field<T, S>
-where
-    Self: Get<Value = T> + Set<Value = T> + Clone,
-    S: Storage<ArcField<T>>,
-{
-    type Value = T;
-    type Read = Self;
-    type Write = Self;
-
-    fn into_split_signal(self) -> (Self::Read, Self::Write) {
-        (self, self)
-    }
-}
-
-#[cfg(any())]
-impl<Inner, Prev, K, T> IntoSplitSignal for KeyedSubfield<Inner, Prev, K, T>
-where
-    Self: Get<Value = T> + Set<Value = T> + Clone,
-    for<'a> &'a T: IntoIterator,
-{
-    type Value = T;
-    type Read = Self;
-    type Write = Self;
-
-    fn into_split_signal(self) -> (Self::Read, Self::Write) {
-        (self.clone(), self.clone())
-    }
-}
-
-#[cfg(any())]
-impl<Inner, Prev, K, T> IntoSplitSignal for AtKeyed<Inner, Prev, K, T>
-where
-    Self: Get<Value = T> + Set<Value = T> + Clone,
-    for<'a> &'a T: IntoIterator,
-{
-    type Value = T;
-    type Read = Self;
-    type Write = Self;
-
-    fn into_split_signal(self) -> (Self::Read, Self::Write) {
-        (self.clone(), self.clone())
-    }
-}
-
-#[cfg(any())]
-impl<Inner, Prev> IntoSplitSignal for AtIndex<Inner, Prev>
-where
-    Prev: Send + Sync + IndexMut<usize> + 'static,
-    Inner: Send + Sync + Clone + 'static,
-    Self: Get<Value = Prev::Output> + Set<Value = Prev::Output> + Clone,
-    Prev::Output: Sized,
-{
-    type Value = Prev::Output;
-    type Read = Self;
-    type Write = Self;
-
-    fn into_split_signal(self) -> (Self::Read, Self::Write) {
-        (self.clone(), self.clone())
-    }
-}
-
-#[cfg(any())]
-impl<S> IntoSplitSignal for DerefedField<S>
-where
-    Self:
-        Get<Value = <S::Value as Deref>::Target> + Set<Value = <S::Value as Deref>::Target> + Clone,
-    S: Clone + StoreField + Send + Sync + 'static,
-    <S as StoreField>::Value: Deref + DerefMut,
-    <S::Value as Deref>::Target: Sized,
-{
-    type Value = <S::Value as Deref>::Target;
-    type Read = Self;
-    type Write = Self;
-
-    fn into_split_signal(self) -> (Self::Read, Self::Write) {
-        (self.clone(), self.clone())
-    }
-}
-
 /// Returns self from an event target.
 pub trait FromEventTarget {
     /// Returns self from an event target.
@@ -465,7 +313,7 @@ impl FromEventTarget for String {
 /// - `<input type="checkbox">`, `<input type="radio">` and `<select>` use the `change` event;
 pub trait ChangeEvent {
     /// Attaches the appropriate change event listener to the element.
-    fn attach_change_event<T, W>(&self, key: &str, write_signal: W) -> RemoveEventHandler<Self>
+    fn attach_change_event<T, W>(&self, key: &str, write_signal: W) -> RemoveEventHandler
     where
         T: FromEventTarget + AttributeValue + 'static,
         W: Set<Value = T> + 'static,
@@ -473,7 +321,7 @@ pub trait ChangeEvent {
 }
 
 impl ChangeEvent for web_sys::Element {
-    fn attach_change_event<T, W>(&self, key: &str, write_signal: W) -> RemoveEventHandler<Self>
+    fn attach_change_event<T, W>(&self, key: &str, write_signal: W) -> RemoveEventHandler
     where
         T: FromEventTarget + AttributeValue + 'static,
         W: Set<Value = T> + 'static,
@@ -537,19 +385,6 @@ where
     type State = (Element, JsValue);
     type Cloneable = Self;
     type CloneableOwned = Self;
-
-    fn hydrate<const FROM_SERVER: bool>(self, el: &Element, key: &str) -> Self::State {
-        match self.clone() {
-            Self::T(s) => {
-                s.hydrate::<FROM_SERVER>(el, key);
-            }
-            Self::Bool(b) => {
-                <bool as IntoProperty>::hydrate::<FROM_SERVER>(b, el, key);
-            }
-        };
-
-        (el.clone(), self.into())
-    }
 
     fn build(self, el: &Element, key: &str) -> Self::State {
         match self.clone() {

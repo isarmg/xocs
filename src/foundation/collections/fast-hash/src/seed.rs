@@ -146,7 +146,7 @@ mod global {
         // no dependencies.
         let mut seed = 0;
         let stack_ptr = &seed as *const _;
-        let func_ptr = generate_global_seed;
+        let func_ptr = generate_global_seed as *const ();
         let static_ptr = &GLOBAL_SEED_STORAGE as *const _;
         seed = mix(seed, stack_ptr as usize as u64);
         seed = mix(seed, func_ptr as usize as u64);

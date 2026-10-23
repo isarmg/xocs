@@ -1223,11 +1223,6 @@ impl NotifiedProject<'_> {
                     return Poll::Pending;
                 }
                 State::Waiting => {
-                    #[cfg(feature = "taskdump")]
-                    if let Some(ctx) = ctx.as_mut() {
-                        std::task::ready!(crate::trace::trace_leaf(ctx));
-                    }
-
                     if waiter.notification.load(Acquire).is_some() {
                         // Safety: waiter is already unlinked and will not be shared again,
                         // so we have an exclusive access to `waker`.
@@ -1317,10 +1312,6 @@ impl NotifiedProject<'_> {
                     drop(old_waker);
                 }
                 State::Done => {
-                    #[cfg(feature = "taskdump")]
-                    if let Some(ctx) = ctx.as_mut() {
-                        std::task::ready!(crate::trace::trace_leaf(ctx));
-                    }
                     return Poll::Ready(());
                 }
             }

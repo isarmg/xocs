@@ -1,10 +1,7 @@
 use core::fmt;
 
-#[cfg(any(feature = "rkyv", feature = "rkyv-16", feature = "rkyv-32", feature = "rkyv-64"))]
-use rkyv::{Archive, Deserialize, Serialize};
-
-use crate::OutOfRange;
 use crate::naive::NaiveDate;
+use crate::OutOfRange;
 
 /// The month of the year.
 ///
@@ -13,7 +10,7 @@ use crate::naive::NaiveDate;
 ///
 /// It is possible to convert from a date to a month independently
 /// ```
-/// use chrono::prelude::*;
+/// use blog_format_date_time::prelude::*;
 /// let date = Utc.with_ymd_and_hms(2019, 10, 28, 9, 10, 11).unwrap();
 /// // `2019-10-28T09:10:11Z`
 /// let month = Month::try_from(u8::try_from(date.month()).unwrap()).ok();
@@ -21,7 +18,7 @@ use crate::naive::NaiveDate;
 /// ```
 /// Or from a Month to an integer usable by dates
 /// ```
-/// # use chrono::prelude::*;
+/// # use blog_format_date_time::prelude::*;
 /// let month = Month::January;
 /// let dt = Utc.with_ymd_and_hms(2019, month.number_from_month(), 28, 9, 10, 11).unwrap();
 /// assert_eq!((dt.year(), dt.month(), dt.day()), (2019, 1, 28));
@@ -30,15 +27,6 @@ use crate::naive::NaiveDate;
 /// Can be Serialized/Deserialized with serde
 // Actual implementation is zero-indexed, API intended as 1-indexed for more intuitive behavior.
 #[derive(PartialEq, Eq, Copy, Clone, Debug, Hash, PartialOrd, Ord)]
-#[cfg_attr(
-    any(feature = "rkyv", feature = "rkyv-16", feature = "rkyv-32", feature = "rkyv-64"),
-    derive(Archive, Deserialize, Serialize),
-    archive(compare(PartialEq, PartialOrd)),
-    archive_attr(derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash))
-)]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-#[cfg_attr(all(feature = "arbitrary", feature = "std"), derive(arbitrary::Arbitrary))]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Month {
     /// January
     January = 0,
@@ -142,7 +130,7 @@ impl Month {
     /// Get the name of the month
     ///
     /// ```
-    /// use chrono::Month;
+    /// use blog_format_date_time::Month;
     ///
     /// assert_eq!(Month::January.name(), "January")
     /// ```
@@ -248,8 +236,6 @@ impl num_traits::FromPrimitive for Month {
 
 /// A duration in calendar months
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
-#[cfg_attr(all(feature = "arbitrary", feature = "std"), derive(arbitrary::Arbitrary))]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct Months(pub(crate) u32);
 
 impl Months {
@@ -289,13 +275,6 @@ impl fmt::Debug for ParseMonthError {
     }
 }
 
-#[cfg(feature = "defmt")]
-impl defmt::Format for ParseMonthError {
-    fn format(&self, fmt: defmt::Formatter) {
-        defmt::write!(fmt, "ParseMonthError {{ .. }}")
-    }
-}
-
 #[cfg(feature = "serde")]
 mod month_serde {
     use super::Month;
@@ -325,7 +304,9 @@ mod month_serde {
         where
             E: de::Error,
         {
-            value.parse().map_err(|_| E::custom("short (3-letter) or full month names expected"))
+            value
+                .parse()
+                .map_err(|_| E::custom("short (3-letter) or full month names expected"))
         }
     }
 
@@ -355,7 +336,9 @@ mod tests {
         assert_eq!(Month::try_from(date.month() as u8), Ok(Month::October));
 
         let month = Month::January;
-        let dt = Utc.with_ymd_and_hms(2019, month.number_from_month(), 28, 9, 10, 11).unwrap();
+        let dt = Utc
+            .with_ymd_and_hms(2019, month.number_from_month(), 28, 9, 10, 11)
+            .unwrap();
         assert_eq!((dt.year(), dt.month(), dt.day()), (2019, 1, 28));
     }
 
@@ -376,7 +359,9 @@ mod tests {
         assert_eq!(Month::from_u32(date.month()), Some(Month::October));
 
         let month = Month::January;
-        let dt = Utc.with_ymd_and_hms(2019, month.number_from_month(), 28, 9, 10, 11).unwrap();
+        let dt = Utc
+            .with_ymd_and_hms(2019, month.number_from_month(), 28, 9, 10, 11)
+            .unwrap();
         assert_eq!((dt.year(), dt.month(), dt.day()), (2019, 1, 28));
     }
 
@@ -407,8 +392,8 @@ mod tests {
     #[test]
     #[cfg(feature = "serde")]
     fn test_serde_serialize() {
-        use Month::*;
         use serde_json::to_string;
+        use Month::*;
 
         let cases: Vec<(Month, &str)> = vec![
             (January, "\"January\""),
@@ -434,8 +419,8 @@ mod tests {
     #[test]
     #[cfg(feature = "serde")]
     fn test_serde_deserialize() {
-        use Month::*;
         use serde_json::from_str;
+        use Month::*;
 
         let cases: Vec<(&str, Month)> = vec![
             ("\"january\"", January),
@@ -459,20 +444,17 @@ mod tests {
             assert_eq!(month, expected_month);
         }
 
-        let errors: Vec<&str> =
-            vec!["\"not a month\"", "\"ja\"", "\"Dece\"", "Dec", "\"Augustin\""];
+        let errors: Vec<&str> = vec![
+            "\"not a month\"",
+            "\"ja\"",
+            "\"Dece\"",
+            "Dec",
+            "\"Augustin\"",
+        ];
 
         for string in errors {
             from_str::<Month>(string).unwrap_err();
         }
-    }
-
-    #[test]
-    #[cfg(feature = "rkyv-validation")]
-    fn test_rkyv_validation() {
-        let month = Month::January;
-        let bytes = rkyv::to_bytes::<_, 1>(&month).unwrap();
-        assert_eq!(rkyv::from_bytes::<Month>(&bytes).unwrap(), month);
     }
 
     #[test]

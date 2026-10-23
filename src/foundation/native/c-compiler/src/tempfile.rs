@@ -1,6 +1,3 @@
-#![cfg_attr(target_family = "wasm", allow(unused))]
-
-#[cfg(any(all(unix, not(target_os = "wasi")), windows))]
 use std::os;
 
 use std::{
@@ -10,9 +7,6 @@ use std::{
     io,
     path::{Path, PathBuf},
 };
-
-#[cfg(not(any(unix, target_family = "wasm", windows, target_os = "motor")))]
-compile_error!("Your system is not supported since cc cannot create named tempfile");
 
 fn rand() -> u64 {
     RandomState::new().build_hasher().finish()
@@ -27,14 +21,7 @@ fn create_named(path: &Path) -> io::Result<File> {
 
     open_options.read(true).write(true).create_new(true);
 
-    #[cfg(all(unix, not(target_os = "wasi")))]
     <OpenOptions as os::unix::fs::OpenOptionsExt>::mode(&mut open_options, 0o600);
-
-    #[cfg(windows)]
-    <OpenOptions as os::windows::fs::OpenOptionsExt>::custom_flags(
-        &mut open_options,
-        ::find_msvc_tools::windows_sys::FILE_ATTRIBUTE_TEMPORARY,
-    );
 
     open_options.open(path)
 }

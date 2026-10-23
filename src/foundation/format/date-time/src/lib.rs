@@ -1,4 +1,8 @@
-//! # Chrono: Date and Time for Rust
+//! # Maintained date and time support
+//!
+//! This package derives from Chrono and serves this repository's Linux AMD64 GNU/glibc
+//! and browser WASM consumers. It uses the workspace Rust toolchain and is maintained
+//! for the current product APIs.
 //!
 //! Chrono aims to provide all functionality needed to do correct operations on dates and times in
 //! the [proleptic Gregorian calendar]:
@@ -11,51 +15,27 @@
 //! * The [`Local`] timezone works with the current timezone of the OS.
 //! * Types and operations are implemented to be reasonably efficient.
 //!
-//! Timezone data is not shipped with chrono by default to limit binary sizes. Use the companion
-//! crate [Chrono-TZ] or [`tzfile`] for full timezone support.
+//! Timezone data is read from the Linux host or the browser; no timezone database is bundled.
+//! Linux local-time conversion parses timezone transitions in Rust. Browser local-time conversion
+//! uses JavaScript `Date`, with the ambiguity limitations described by [`MappedLocalTime`].
 //!
 //! [proleptic Gregorian calendar]: https://en.wikipedia.org/wiki/Proleptic_Gregorian_calendar
-//! [Chrono-TZ]: https://crates.io/crates/chrono-tz
-//! [`tzfile`]: https://crates.io/crates/tzfile
 //!
 //! ### Features
 //!
-//! Chrono supports various runtime environments and operating systems, and has several features
-//! that may be enabled or disabled.
+//! The default features are `clock`, `std`, and `wasmbind`:
 //!
-//! Default features:
+//! - `alloc`: Enables allocation-dependent formatting; included by `std`.
+//! - `std`: Enables standard-library integration.
+//! - `now`: Enables reading the system time; included by `clock` and enables `std`.
+//! - `clock`: Enables the system local timezone ([`Local`]).
+//! - `wasmbind`: Uses the JavaScript Date API on browser WASM.
+//! - `serde`: Optional serialization through the repository's data-model package.
+//! - `core-error`: Enables error trait implementations when `std` is disabled.
 //!
-//! - `alloc`: Enable features that depend on allocation (primarily string formatting).
-//! - `std`: Enables functionality that depends on the standard library. This is a superset of
-//!   `alloc` and adds interoperation with standard library types and traits.
-//! - `clock`: Enables reading the local timezone (`Local`). This is a superset of `now`.
-//! - `now`: Enables reading the system time (`now`).
-//! - `wasmbind`: Interface with the JS Date API for the `wasm32` target.
-//!
-//! Optional features:
-//!
-//! - `serde`: Enable serialization/deserialization via [serde].
-//! - `rkyv`: Deprecated, use the `rkyv-*` features.
-//! - `rkyv-16`: Enable serialization/deserialization via [rkyv],
-//!   using 16-bit integers for integral `*size` types.
-//! - `rkyv-32`: Enable serialization/deserialization via [rkyv],
-//!   using 32-bit integers for integral `*size` types.
-//! - `rkyv-64`: Enable serialization/deserialization via [rkyv],
-//!   using 64-bit integers for integral `*size` types.
-//! - `rkyv-validation`: Enable rkyv validation support using `bytecheck`.
-//! - `arbitrary`: Construct arbitrary instances of a type with the Arbitrary crate.
-//! - `unstable-locales`: Enable localization. This adds various methods with a `_localized` suffix.
-//!   The implementation and API may change or even be removed in a patch release. Feedback welcome.
-//! - `oldtime`: This feature no longer has any effect; it used to offer compatibility with the
-//!   `time` 0.1 crate.
-//!
-//! Note: The `rkyv{,-16,-32,-64}` features are mutually exclusive.
-//!
-//! See the [cargo docs] for examples of specifying features.
-//!
-//! [serde]: https://github.com/serde-rs/serde
-//! [rkyv]: https://github.com/rkyv/rkyv
-//! [cargo docs]: https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#choosing-features
+//! The manifest also retains `__internal_bench` for internal benchmarks. These switches do not
+//! expand the product's supported target set. Formatting uses built-in English month and weekday
+//! names; localized formatting and the upstream rkyv, arbitrary, and oldtime features are absent.
 //!
 //! ## Overview
 //!
@@ -65,9 +45,7 @@
 //! duration represented as seconds and nanoseconds, and does not represent "nominal" components
 //! such as days or months.
 //!
-//! The [`TimeDelta`] type was previously named `Duration` (and is still available as a type alias
-//! with that name). A notable difference with the similar [`core::time::Duration`] is that it is a
-//! signed value instead of unsigned.
+//! Unlike [`core::time::Duration`], [`TimeDelta`] represents signed durations.
 //!
 //! Chrono currently only supports a small number of operations with [`core::time::Duration`].
 //! You can convert between both types with the [`TimeDelta::from_std`] and [`TimeDelta::to_std`]
@@ -103,7 +81,7 @@
 //!
 //! ```
 //! # #[cfg(feature = "now")] {
-//! use chrono::prelude::*;
+//! use blog_format_date_time::prelude::*;
 //!
 //! let utc: DateTime<Utc> = Utc::now(); // e.g. `2014-11-28T12:45:59.324310806Z`
 //! # let _ = utc;
@@ -112,7 +90,7 @@
 //!
 //! ```
 //! # #[cfg(feature = "clock")] {
-//! use chrono::prelude::*;
+//! use blog_format_date_time::prelude::*;
 //!
 //! let local: DateTime<Local> = Local::now(); // e.g. `2014-11-28T21:45:59.324310806+09:00`
 //! # let _ = local;
@@ -124,8 +102,8 @@
 //! methods.
 //!
 //! ```
-//! use chrono::offset::MappedLocalTime;
-//! use chrono::prelude::*;
+//! use blog_format_date_time::offset::MappedLocalTime;
+//! use blog_format_date_time::prelude::*;
 //!
 //! # fn doctest() -> Option<()> {
 //!
@@ -202,8 +180,8 @@
 //! The following illustrates most supported operations to the date and time:
 //!
 //! ```rust
-//! use chrono::prelude::*;
-//! use chrono::TimeDelta;
+//! use blog_format_date_time::prelude::*;
+//! use blog_format_date_time::TimeDelta;
 //!
 //! // assume this returned `2014-11-28T21:45:59.324310806+09:00`:
 //! let dt = FixedOffset::east_opt(9 * 3600)
@@ -271,29 +249,14 @@
 //! Chrono also provides [`to_rfc2822`](DateTime::to_rfc2822) and
 //! [`to_rfc3339`](DateTime::to_rfc3339) methods for well-known formats.
 //!
-//! Chrono now also provides date formatting in almost any language without the help of an
-//! additional C library. This functionality is under the feature `unstable-locales`:
-//!
-//! ```toml
-//! chrono = { version = "0.4", features = ["unstable-locales"] }
-//! ```
-//!
-//! The `unstable-locales` feature requires and implies at least the `alloc` feature.
+//! Month and weekday names use the built-in English tables.
 //!
 //! ```rust
-//! # #[allow(unused_imports)]
-//! use chrono::prelude::*;
-//!
-//! # #[cfg(all(feature = "unstable-locales", feature = "alloc"))]
-//! # fn test() {
+//! # #[cfg(feature = "alloc")] {
+//! use blog_format_date_time::prelude::*;
 //! let dt = Utc.with_ymd_and_hms(2014, 11, 28, 12, 0, 9).unwrap();
 //! assert_eq!(dt.format("%Y-%m-%d %H:%M:%S").to_string(), "2014-11-28 12:00:09");
 //! assert_eq!(dt.format("%a %b %e %T %Y").to_string(), "Fri Nov 28 12:00:09 2014");
-//! assert_eq!(
-//!     dt.format_localized("%A %e %B %Y, %T", Locale::fr_BE).to_string(),
-//!     "vendredi 28 novembre 2014, 12:00:09"
-//! );
-//!
 //! assert_eq!(dt.format("%a %b %e %T %Y").to_string(), dt.format("%c").to_string());
 //! assert_eq!(dt.to_string(), "2014-11-28 12:00:09 UTC");
 //! assert_eq!(dt.to_rfc2822(), "Fri, 28 Nov 2014 12:00:09 +0000");
@@ -307,11 +270,6 @@
 //!     .unwrap()
 //!     .and_utc();
 //! assert_eq!(format!("{:?}", dt_nano), "2014-11-28T12:00:09.000000001Z");
-//! # }
-//! # #[cfg(not(all(feature = "unstable-locales", feature = "alloc")))]
-//! # fn test() {}
-//! # if cfg!(all(feature = "unstable-locales", feature = "alloc")) {
-//! #    test();
 //! # }
 //! ```
 //!
@@ -331,7 +289,7 @@
 //! More detailed control over the parsing process is available via [`format`](mod@format) module.
 //!
 //! ```rust
-//! use chrono::prelude::*;
+//! use blog_format_date_time::prelude::*;
 //!
 //! let dt = Utc.with_ymd_and_hms(2014, 11, 28, 12, 0, 9).unwrap();
 //! let fixed_dt = dt.with_timezone(&FixedOffset::east_opt(9 * 3600).unwrap());
@@ -377,7 +335,7 @@
 //! ```
 //! # #[cfg(feature = "alloc")] {
 //! // We need the trait in scope to use Utc::timestamp().
-//! use chrono::{DateTime, Utc};
+//! use blog_format_date_time::{DateTime, Utc};
 //!
 //! // Construct a datetime from epoch:
 //! let dt: DateTime<Utc> = DateTime::from_timestamp_secs(1_500_000_000).unwrap();
@@ -410,97 +368,20 @@
 //! * Leap seconds can be represented, but Chrono does not fully support them.
 //!   See [Leap Second Handling](NaiveTime#leap-second-handling).
 //!
-//! ## Rust version requirements
+//! ## Maintenance and platform scope
 //!
-//! The Minimum Supported Rust Version (MSRV) is currently **Rust 1.61.0**.
+//! Build with the toolchain pinned in the workspace (`rust-toolchain.toml`). Historical upstream
+//! MSRV and release-compatibility policies do not describe this maintained package.
 //!
-//! The MSRV is explicitly tested in CI. It may be bumped in minor releases, but this is not done
-//! lightly.
+//! Prefer [`TimeDelta`], [`DateTime`], and checked constructors in consumers. Inherited aliases
+//! and deprecated methods may still exist, but are not a promise of compatibility with old
+//! versions or external Chrono extensions. The original source and documentation remain in the
+//! repository's provenance archives and `docs/upstream/chrono-0.4.45`.
 //!
-//! ## Relation between chrono and time 0.1
-//!
-//! Rust first had a `time` module added to `std` in its 0.7 release. It later moved to
-//! `libextra`, and then to a `libtime` library shipped alongside the standard library. In 2014
-//! work on chrono started in order to provide a full-featured date and time library in Rust.
-//! Some improvements from chrono made it into the standard library; notably, `chrono::Duration`
-//! was included as `std::time::Duration` ([rust#15934]) in 2014.
-//!
-//! In preparation of Rust 1.0 at the end of 2014 `libtime` was moved out of the Rust distro and
-//! into the `time` crate to eventually be redesigned ([rust#18832], [rust#18858]), like the
-//! `num` and `rand` crates. Of course chrono kept its dependency on this `time` crate. `time`
-//! started re-exporting `std::time::Duration` during this period. Later, the standard library was
-//! changed to have a more limited unsigned `Duration` type ([rust#24920], [RFC 1040]), while the
-//! `time` crate kept the full functionality with `time::Duration`. `time::Duration` had been a
-//! part of chrono's public API.
-//!
-//! By 2016 `time` 0.1 lived under the `rust-lang-deprecated` organisation and was not actively
-//! maintained ([time#136]). chrono absorbed the platform functionality and `Duration` type of the
-//! `time` crate in [chrono#478] (the work started in [chrono#286]). In order to preserve
-//! compatibility with downstream crates depending on `time` and `chrono` sharing a `Duration`
-//! type, chrono kept depending on time 0.1. chrono offered the option to opt out of the `time`
-//! dependency by disabling the `oldtime` feature (swapping it out for an effectively similar
-//! chrono type). In 2019, @jhpratt took over maintenance on the `time` crate and released what
-//! amounts to a new crate as `time` 0.2.
-//!
-//! [rust#15934]: https://github.com/rust-lang/rust/pull/15934
-//! [rust#18832]: https://github.com/rust-lang/rust/pull/18832#issuecomment-62448221
-//! [rust#18858]: https://github.com/rust-lang/rust/pull/18858
-//! [rust#24920]: https://github.com/rust-lang/rust/pull/24920
-//! [RFC 1040]: https://rust-lang.github.io/rfcs/1040-duration-reform.html
-//! [time#136]: https://github.com/time-rs/time/issues/136
-//! [chrono#286]: https://github.com/chronotope/chrono/pull/286
-//! [chrono#478]: https://github.com/chronotope/chrono/pull/478
-//!
-//! ## Security advisories
-//!
-//! In November of 2020 [CVE-2020-26235] and [RUSTSEC-2020-0071] were opened against the `time` crate.
-//! @quininer had found that calls to `localtime_r` may be unsound ([chrono#499]). Eventually, almost
-//! a year later, this was also made into a security advisory against chrono as [RUSTSEC-2020-0159],
-//! which had platform code similar to `time`.
-//!
-//! On Unix-like systems a process is given a timezone id or description via the `TZ` environment
-//! variable. We need this timezone data to calculate the current local time from a value that is
-//! in UTC, such as the time from the system clock. `time` 0.1 and chrono used the POSIX function
-//! `localtime_r` to do the conversion to local time, which reads the `TZ` variable.
-//!
-//! Rust assumes the environment to be writable and uses locks to access it from multiple threads.
-//! Some other programming languages and libraries use similar locking strategies, but these are
-//! typically not shared across languages. More importantly, POSIX declares modifying the
-//! environment in a multi-threaded process as unsafe, and `getenv` in libc can't be changed to
-//! take a lock because it returns a pointer to the data (see [rust#27970] for more discussion).
-//!
-//! Since version 4.20 chrono no longer uses `localtime_r`, instead using Rust code to query the
-//! timezone (from the `TZ` variable or via `iana-time-zone` as a fallback) and work with data
-//! from the system timezone database directly. The code for this was forked from the [tz-rs crate]
-//! by @x-hgg-x. As such, chrono now respects the Rust lock when reading the `TZ` environment
-//! variable. In general, code should avoid modifying the environment.
-//!
-//! [CVE-2020-26235]: https://nvd.nist.gov/vuln/detail/CVE-2020-26235
-//! [RUSTSEC-2020-0071]: https://rustsec.org/advisories/RUSTSEC-2020-0071
-//! [chrono#499]: https://github.com/chronotope/chrono/pull/499
-//! [RUSTSEC-2020-0159]: https://rustsec.org/advisories/RUSTSEC-2020-0159.html
-//! [rust#27970]: https://github.com/rust-lang/rust/issues/27970
-//! [chrono#677]: https://github.com/chronotope/chrono/pull/677
-//! [tz-rs crate]: https://crates.io/crates/tz-rs
-//!
-//! ## Removing time 0.1
-//!
-//! Because time 0.1 has been unmaintained for years, however, the security advisory mentioned
-//! above has not been addressed. While chrono maintainers were careful not to break backwards
-//! compatibility with the `time::Duration` type, there has been a long stream of issues from
-//! users inquiring about the time 0.1 dependency with the vulnerability. We investigated the
-//! potential breakage of removing the time 0.1 dependency in [chrono#1095] using a crater-like
-//! experiment and determined that the potential for breaking (public) dependencies is very low.
-//! We reached out to those few crates that did still depend on compatibility with time 0.1.
-//!
-//! As such, for chrono 0.4.30 we have decided to swap out the time 0.1 `Duration` implementation
-//! for a local one that will offer a strict superset of the existing API going forward. This
-//! will prevent most downstream users from being affected by the security vulnerability in time
-//! 0.1 while minimizing the ecosystem impact of semver-incompatible version churn.
-//!
-//! [chrono#1095]: https://github.com/chronotope/chrono/pull/1095
+//! On Linux, [`Local`] reads `TZ` and system timezone data through Rust implementations rather
+//! than calling `localtime_r`. If local timezone discovery fails, it falls back to UTC.
 
-#![doc(html_root_url = "https://docs.rs/chrono/latest/", test(attr(deny(warnings))))]
+#![doc(test(attr(deny(warnings))))]
 #![warn(unreachable_pub)]
 #![warn(clippy::tests_outside_test_module)]
 #![cfg_attr(not(any(feature = "std", test)), no_std)]
@@ -520,7 +401,7 @@ pub type Duration = TimeDelta;
 
 use core::fmt;
 
-/// A convenience module appropriate for glob imports (`use chrono::prelude::*;`).
+/// A convenience module appropriate for glob imports (`use blog_format_date_time::prelude::*;`).
 pub mod prelude {
     #[allow(deprecated)]
     pub use crate::Date;
@@ -639,28 +520,6 @@ pub mod serde {
     }
 }
 
-/// Zero-copy serialization/deserialization with rkyv.
-///
-/// This module re-exports the `Archived*` versions of chrono's types.
-#[cfg(any(feature = "rkyv", feature = "rkyv-16", feature = "rkyv-32", feature = "rkyv-64"))]
-pub mod rkyv {
-    pub use crate::datetime::ArchivedDateTime;
-    pub use crate::month::ArchivedMonth;
-    pub use crate::naive::date::ArchivedNaiveDate;
-    pub use crate::naive::datetime::ArchivedNaiveDateTime;
-    pub use crate::naive::isoweek::ArchivedIsoWeek;
-    pub use crate::naive::time::ArchivedNaiveTime;
-    pub use crate::offset::fixed::ArchivedFixedOffset;
-    #[cfg(feature = "clock")]
-    pub use crate::offset::local::ArchivedLocal;
-    pub use crate::offset::utc::ArchivedUtc;
-    pub use crate::time_delta::ArchivedTimeDelta;
-    pub use crate::weekday::ArchivedWeekday;
-
-    /// Alias of [`ArchivedTimeDelta`]
-    pub type ArchivedDuration = ArchivedTimeDelta;
-}
-
 /// Out of range error type used in various converting APIs
 #[derive(Clone, Copy, Hash, PartialEq, Eq)]
 pub struct OutOfRange {
@@ -682,13 +541,6 @@ impl fmt::Display for OutOfRange {
 impl fmt::Debug for OutOfRange {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "out of range")
-    }
-}
-
-#[cfg(feature = "defmt")]
-impl defmt::Format for OutOfRange {
-    fn format(&self, fmt: defmt::Formatter) {
-        defmt::write!(fmt, "out of range");
     }
 }
 

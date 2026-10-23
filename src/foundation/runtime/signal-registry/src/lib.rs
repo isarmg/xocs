@@ -72,10 +72,6 @@ use std::io::Error;
 use std::mem;
 use std::ptr;
 use std::sync::atomic::{AtomicPtr, Ordering};
-// Once::new is now a const-fn. But it is not stable in all the rustc versions we want to support
-// yet.
-#[allow(deprecated)]
-use std::sync::ONCE_INIT;
 use std::sync::{Arc, Once};
 
 use errno::Errno;
@@ -309,8 +305,7 @@ struct GlobalData {
 }
 
 static GLOBAL_DATA: AtomicPtr<GlobalData> = AtomicPtr::new(ptr::null_mut());
-#[allow(deprecated)]
-static GLOBAL_INIT: Once = ONCE_INIT;
+static GLOBAL_INIT: Once = Once::new();
 
 impl GlobalData {
     fn get() -> &'static Self {

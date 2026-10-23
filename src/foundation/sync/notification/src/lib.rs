@@ -67,19 +67,10 @@
 //! - The `std` feature (enabled by default) enables the use of the Rust standard library. Disable it for `no_std`
 //!   support.
 //!
-//! - The `critical-section` feature enables usage of the [`critical-section`] crate to enable a
-//!   more efficient implementation of `event-listener` for `no_std` platforms.
+//! Without `std`, the internal list uses a spinlock. Prefer the default mutex
+//! implementation where `std` is available; spinning under contention can be
+//! [dangerous].
 //!
-//! - The `portable-atomic` feature enables the use of the [`portable-atomic`] crate to provide
-//!   atomic operations on platforms that don't support them.
-//!
-//! In production environments, at least one of `std` or `critical-section` should be
-//! enabled. This ensures that the internal locking mechanism has a critical section of some
-//! kind to fall back on. Otherwise, it falls back to a spinlock implementation. This
-//! implementation is [dangerous] to rely on.
-//!
-//! [`critical-section`]: https://crates.io/crates/critical-section
-//! [`portable-atomic`]: https://crates.io/crates/portable-atomic
 //! [dangerous]: https://matklad.github.io/2020/01/02/spinlocks-considered-harmful.html
 
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -122,9 +113,6 @@ use {
 use sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
 use sync::Arc;
 
-#[cfg(not(loom))]
-use sync::WithMut;
-
 use notify::NotificationPrivate;
 pub use notify::{IntoNotification, Notification};
 
@@ -137,9 +125,7 @@ struct Inner<T> {
 
     /// Inner queue of event listeners.
     ///
-    /// On `std` platforms, this is an intrusive linked list. On `no_std` platforms, this is a
-    /// more traditional `Vec` of listeners, with an atomic queue used as a backup for high
-    /// contention.
+    /// The intrusive list is protected by a mutex with `std`, and a spinlock without it.
     list: sys::List<T>,
 }
 
@@ -234,16 +220,9 @@ impl<T> Event<T> {
     ///
     /// let event = Event::<usize>::with_tag();
     /// ```
-    #[cfg(all(feature = "std", not(loom)))]
+    #[cfg(feature = "std")]
     #[inline]
     pub const fn with_tag() -> Self {
-        Self {
-            inner: AtomicPtr::new(ptr::null_mut()),
-        }
-    }
-    #[cfg(all(feature = "std", loom))]
-    #[inline]
-    pub fn with_tag() -> Self {
         Self {
             inner: AtomicPtr::new(ptr::null_mut()),
         }
@@ -555,16 +534,7 @@ impl Event<()> {
     /// let event = Event::new();
     /// ```
     #[inline]
-    #[cfg(not(loom))]
     pub const fn new() -> Self {
-        Self {
-            inner: AtomicPtr::new(ptr::null_mut()),
-        }
-    }
-
-    #[inline]
-    #[cfg(loom)]
-    pub fn new() -> Self {
         Self {
             inner: AtomicPtr::new(ptr::null_mut()),
         }
@@ -729,14 +699,15 @@ impl Event<()> {
 impl<T> Drop for Event<T> {
     #[inline]
     fn drop(&mut self) {
-        self.inner.with_mut(|&mut inner| {
-            // If the state pointer has been initialized, drop it.
-            if !inner.is_null() {
-                unsafe {
-                    drop(Arc::from_raw(inner));
-                }
+        let inner = *self.inner.get_mut();
+        // If the state pointer has been initialized, drop it.
+        if !inner.is_null() {
+            // SAFETY: the event owns this Arc reference and cannot be accessed
+            // concurrently through the exclusive reference used to drop it.
+            unsafe {
+                drop(Arc::from_raw(inner));
             }
-        })
+        }
     }
 }
 
@@ -1142,12 +1113,6 @@ impl<T, B: Borrow<Inner<T>> + Unpin> InnerListener<T, B> {
             match deadline {
                 None => parker.park(),
 
-                #[cfg(loom)]
-                Some(_deadline) => {
-                    panic!("parking does not support timeouts under loom");
-                }
-
-                #[cfg(not(loom))]
                 Some(deadline) => {
                     // Make sure we're not timed out already.
                     let now = Instant::now();
@@ -1359,89 +1324,15 @@ const NEVER_INSERTED_PANIC: &str = "\
 EventListener was not inserted into the linked list, make sure you're not polling \
 EventListener/listener! after it has finished";
 
-#[cfg(not(loom))]
-/// Synchronization primitive implementation.
+/// Synchronization primitives shared by the mutex and spinlock implementations.
 mod sync {
-    #[cfg(not(feature = "portable-atomic"))]
     pub(super) use alloc::sync::Arc;
-    #[cfg(not(feature = "portable-atomic"))]
-    pub(super) use core::sync::atomic;
+    pub(super) use core::{cell, sync::atomic};
 
-    #[cfg(feature = "portable-atomic")]
-    pub(super) use portable_atomic_crate as atomic;
-    #[cfg(feature = "portable-atomic")]
-    pub(super) use portable_atomic_util::Arc;
-
-    #[allow(unused)]
-    #[cfg(all(feature = "std", not(feature = "critical-section"), not(loom)))]
+    #[cfg(feature = "std")]
     pub(super) use std::sync::{Mutex, MutexGuard};
-    #[cfg(all(feature = "std", not(target_family = "wasm"), not(loom)))]
+    #[cfg(all(feature = "std", not(target_family = "wasm")))]
     pub(super) use std::thread_local;
-
-    pub(super) trait WithMut {
-        type Output;
-
-        fn with_mut<F, R>(&mut self, f: F) -> R
-        where
-            F: FnOnce(&mut Self::Output) -> R;
-    }
-
-    impl<T> WithMut for atomic::AtomicPtr<T> {
-        type Output = *mut T;
-
-        #[inline]
-        fn with_mut<F, R>(&mut self, f: F) -> R
-        where
-            F: FnOnce(&mut Self::Output) -> R,
-        {
-            f(self.get_mut())
-        }
-    }
-
-    pub(crate) mod cell {
-        pub(crate) use core::cell::Cell;
-
-        /// This newtype around *mut T exists for interoperability with loom::cell::ConstPtr,
-        /// which works as a guard and performs additional logic to track access scope.
-        pub(crate) struct ConstPtr<T>(*mut T);
-        impl<T> ConstPtr<T> {
-            pub(crate) unsafe fn deref(&self) -> &T {
-                &*self.0
-            }
-
-            #[allow(unused)] // std code does not need this
-            pub(crate) unsafe fn deref_mut(&mut self) -> &mut T {
-                &mut *self.0
-            }
-        }
-
-        /// This UnsafeCell wrapper exists for interoperability with loom::cell::UnsafeCell, and
-        /// only contains the interface that is needed for this crate.
-        #[derive(Debug, Default)]
-        pub(crate) struct UnsafeCell<T>(core::cell::UnsafeCell<T>);
-
-        impl<T> UnsafeCell<T> {
-            pub(crate) fn new(data: T) -> UnsafeCell<T> {
-                UnsafeCell(core::cell::UnsafeCell::new(data))
-            }
-
-            pub(crate) fn get(&self) -> ConstPtr<T> {
-                ConstPtr(self.0.get())
-            }
-
-            #[allow(dead_code)] // no_std does not need this
-            pub(crate) fn into_inner(self) -> T {
-                self.0.into_inner()
-            }
-        }
-    }
-}
-
-#[cfg(loom)]
-/// Synchronization primitive implementation.
-mod sync {
-    pub(super) use loom::sync::{atomic, Arc, Mutex, MutexGuard};
-    pub(super) use loom::{cell, thread_local};
 }
 
 fn __test_send_and_sync() {

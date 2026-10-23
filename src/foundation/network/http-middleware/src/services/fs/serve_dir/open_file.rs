@@ -151,23 +151,10 @@ pub(super) async fn open_file(
 }
 
 fn is_invalid_filename_error(err: &io::Error) -> bool {
-    // Only applies to NULL bytes
-    if err.kind() == ErrorKind::InvalidInput {
-        return true;
-    }
-
-    // FIXME: Remove when MSRV >= 1.87.
-    // `io::ErrorKind::InvalidFilename` is stabilized in v1.87
-    #[cfg(windows)]
-    if let Some(raw_err) = err.raw_os_error() {
-        // https://github.com/rust-lang/rust/blob/70e2b4a4d197f154bed0eb3dcb5cac6a948ff3a3/library/std/src/sys/pal/windows/mod.rs
-        // Lines 81 and 115
-        if (raw_err == 123) || (raw_err == 161) || (raw_err == 206) {
-            return true;
-        }
-    }
-
-    false
+    matches!(
+        err.kind(),
+        ErrorKind::InvalidInput | ErrorKind::InvalidFilename
+    )
 }
 
 fn check_modified_headers(
@@ -349,7 +336,7 @@ fn append_slash_on_path(uri: Uri) -> Result<Uri, OpenFileOutput> {
     };
 
     uri_builder.build().map_err(|_err| {
-        #[cfg(feature = "tracing")]
+        #[cfg(feature = "trace")]
         tracing::error!(err = ?_err, "redirect uri failed to build");
 
         OpenFileOutput::InvalidRedirectUri

@@ -279,10 +279,6 @@ where
     }
 }
 
-#[deprecated(note = "Use `ChunkBy` instead", since = "0.13.0")]
-/// See [`ChunkBy`](crate::iterators::structs::ChunkBy).
-pub type GroupBy<K, I, F> = ChunkBy<K, I, F>;
-
 /// `ChunkBy` is the storage for the lazy grouping operation.
 ///
 /// If the groups are consumed in their original order, or if each

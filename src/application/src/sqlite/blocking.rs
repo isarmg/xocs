@@ -34,6 +34,16 @@ mod tests {
                     .journal_mode(SqliteJournalMode::Wal),
             )
             .await?;
+            // The worker must yield its database mutex to a caller that is
+            // polled by futures::executor, without depending on a Tokio task.
+            connection
+                .lock_handle()
+                .await?
+                .create_collation("direct_order", str::cmp)?;
+            let ordered: bool = sqlx::query_scalar("SELECT 'a' < 'b' COLLATE direct_order")
+                .fetch_one(&mut connection)
+                .await?;
+            assert!(ordered);
             sqlx::raw_sql("CREATE TABLE items(value INTEGER NOT NULL);INSERT INTO items VALUES(7)")
                 .execute(&mut connection)
                 .await?;

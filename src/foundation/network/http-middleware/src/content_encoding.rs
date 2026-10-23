@@ -10,13 +10,9 @@ pub(crate) trait SupportedEncodings: Copy {
 pub(crate) enum Encoding {
     #[allow(dead_code)]
     Identity,
-    #[cfg(any(feature = "fs", feature = "compression-deflate"))]
     Deflate,
-    #[cfg(any(feature = "fs", feature = "compression-gzip"))]
     Gzip,
-    #[cfg(any(feature = "fs", feature = "compression-br"))]
     Brotli,
-    #[cfg(any(feature = "fs", feature = "compression-zstd"))]
     Zstd,
 }
 
@@ -24,13 +20,9 @@ impl Encoding {
     #[allow(dead_code)]
     fn to_str(self) -> &'static str {
         match self {
-            #[cfg(any(feature = "fs", feature = "compression-gzip"))]
             Encoding::Gzip => "gzip",
-            #[cfg(any(feature = "fs", feature = "compression-deflate"))]
             Encoding::Deflate => "deflate",
-            #[cfg(any(feature = "fs", feature = "compression-br"))]
             Encoding::Brotli => "br",
-            #[cfg(any(feature = "fs", feature = "compression-zstd"))]
             Encoding::Zstd => "zstd",
             Encoding::Identity => "identity",
         }
@@ -52,32 +44,21 @@ impl Encoding {
         http::HeaderValue::from_static(self.to_str())
     }
 
-    #[cfg(any(
-        feature = "compression-gzip",
-        feature = "compression-br",
-        feature = "compression-deflate",
-        feature = "compression-zstd",
-        feature = "fs",
-    ))]
     fn parse(s: &str, _supported_encoding: impl SupportedEncodings) -> Option<Encoding> {
-        #[cfg(any(feature = "fs", feature = "compression-gzip"))]
         if (s.eq_ignore_ascii_case("gzip") || s.eq_ignore_ascii_case("x-gzip"))
             && _supported_encoding.gzip()
         {
             return Some(Encoding::Gzip);
         }
 
-        #[cfg(any(feature = "fs", feature = "compression-deflate"))]
         if s.eq_ignore_ascii_case("deflate") && _supported_encoding.deflate() {
             return Some(Encoding::Deflate);
         }
 
-        #[cfg(any(feature = "fs", feature = "compression-br"))]
         if s.eq_ignore_ascii_case("br") && _supported_encoding.br() {
             return Some(Encoding::Brotli);
         }
 
-        #[cfg(any(feature = "fs", feature = "compression-zstd"))]
         if s.eq_ignore_ascii_case("zstd") && _supported_encoding.zstd() {
             return Some(Encoding::Zstd);
         }
@@ -89,12 +70,7 @@ impl Encoding {
         None
     }
 
-    #[cfg(any(
-        feature = "compression-gzip",
-        feature = "compression-br",
-        feature = "compression-zstd",
-        feature = "compression-deflate",
-    ))]
+    #[cfg(test)]
     // based on https://github.com/http-rs/accept-encoding
     pub(crate) fn from_headers(
         headers: &http::HeaderMap,
@@ -104,13 +80,6 @@ impl Encoding {
             .unwrap_or(Encoding::Identity)
     }
 
-    #[cfg(any(
-        feature = "compression-gzip",
-        feature = "compression-br",
-        feature = "compression-zstd",
-        feature = "compression-deflate",
-        feature = "fs",
-    ))]
     pub(crate) fn preferred_encoding(
         accepted_encodings: impl Iterator<Item = (Encoding, QValue)>,
     ) -> Option<Self> {
@@ -123,23 +92,9 @@ impl Encoding {
 
 // Allowed q-values are numbers between 0 and 1 with at most 3 digits in the fractional part. They
 // are presented here as an unsigned integer between 0 and 1000.
-#[cfg(any(
-    feature = "compression-gzip",
-    feature = "compression-br",
-    feature = "compression-zstd",
-    feature = "compression-deflate",
-    feature = "fs",
-))]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct QValue(u16);
 
-#[cfg(any(
-    feature = "compression-gzip",
-    feature = "compression-br",
-    feature = "compression-zstd",
-    feature = "compression-deflate",
-    feature = "fs",
-))]
 impl QValue {
     #[inline]
     pub(crate) fn one() -> Self {
@@ -205,13 +160,6 @@ impl QValue {
     }
 }
 
-#[cfg(any(
-    feature = "compression-gzip",
-    feature = "compression-br",
-    feature = "compression-zstd",
-    feature = "compression-deflate",
-    feature = "fs",
-))]
 // based on https://github.com/http-rs/accept-encoding
 pub(crate) fn encodings<'a>(
     headers: &'a http::HeaderMap,
@@ -240,13 +188,7 @@ pub(crate) fn encodings<'a>(
         })
 }
 
-#[cfg(all(
-    test,
-    feature = "compression-gzip",
-    feature = "compression-deflate",
-    feature = "compression-br",
-    feature = "compression-zstd",
-))]
+#[cfg(test)]
 mod tests {
     use super::*;
 

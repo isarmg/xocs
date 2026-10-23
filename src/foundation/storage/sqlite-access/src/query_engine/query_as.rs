@@ -1,6 +1,5 @@
 use std::marker::PhantomData;
 
-use either::Either;
 use futures::stream::BoxStream;
 use futures::{StreamExt, TryStreamExt};
 
@@ -10,7 +9,9 @@ use crate::query_engine::encode::Encode;
 use crate::query_engine::error::{BoxDynError, Error};
 use crate::query_engine::executor::{Execute, Executor};
 use crate::query_engine::from_row::FromRow;
-use crate::query_engine::query::{query, query_statement, query_statement_with, query_with_result, Query};
+use crate::query_engine::query::{
+    query, query_statement, query_statement_with, query_with_result, Query,
+};
 use crate::query_engine::sql_str::{SqlSafeStr, SqlStr};
 use crate::query_engine::types::Type;
 
@@ -101,30 +102,6 @@ where
             .boxed()
     }
 
-    /// Execute multiple queries and return the generated results as a stream
-    /// from each query, in a stream.
-    #[deprecated = "Only the SQLite driver supports multiple statements in one prepared statement and that behavior is deprecated. Use `sqlx::raw_sql()` instead. See https://github.com/launchbadge/sqlx/issues/3108 for discussion."]
-    pub fn fetch_many<'e, 'c: 'e, E>(
-        self,
-        executor: E,
-    ) -> BoxStream<'e, Result<Either<DB::QueryResult, O>, Error>>
-    where
-        'q: 'e,
-        E: 'e + Executor<'c, Database = DB>,
-        DB: 'e,
-        O: 'e,
-        A: 'e,
-    {
-        executor
-            .fetch_many(self.inner)
-            .map(|v| match v {
-                Ok(Either::Right(row)) => O::from_row(&row).map(Either::Right),
-                Ok(Either::Left(v)) => Ok(Either::Left(v)),
-                Err(e) => Err(e),
-            })
-            .boxed()
-    }
-
     /// Execute the query and return all the resulting rows collected into a [`Vec`].
     ///
     /// ### Note: beware result set size.
@@ -212,7 +189,6 @@ where
 ///
 /// The `FromRow` implementation will check [`Type::compatible()`] for each column to ensure a compatible type mapping
 /// is used. If an incompatible mapping is detected, an error is returned.
-/// To statically assert compatible types at compile time, see the `query!()` family of macros.
 ///
 /// **NOTE**: `SELECT *` is not recommended with this approach because the ordering of returned columns may be different
 /// than expected, especially when using joins.
@@ -280,7 +256,6 @@ where
 ///
 /// The derived `FromRow` implementation will check [`Type::compatible()`] for each column to ensure a compatible type
 /// mapping is used. If an incompatible mapping is detected, an error is returned.
-/// To statically assert compatible types at compile time, see the `query!()` family of macros.
 ///
 /// An error will also be returned if an expected column is missing from the result set.
 ///

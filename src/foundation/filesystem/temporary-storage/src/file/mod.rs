@@ -5,12 +5,7 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::mem;
 use std::ops::Deref;
-#[cfg(target_os = "wasi")]
 use std::os::fd::{AsFd, AsRawFd, BorrowedFd, RawFd};
-#[cfg(unix)] // we don't use std::os::fd because that's not available on rust 1.63.
-use std::os::unix::io::{AsFd, AsRawFd, BorrowedFd, RawFd};
-#[cfg(windows)]
-use std::os::windows::io::{AsHandle, AsRawHandle, BorrowedHandle, RawHandle};
 use std::path::{Path, PathBuf};
 
 use crate::env;
@@ -323,35 +318,6 @@ impl TempPath {
     /// a temporary file-path into a non-temporary file-path, prefer [`TempPath::keep`].
     pub fn disable_cleanup(&mut self, disable_cleanup: bool) {
         self.disable_cleanup = disable_cleanup
-    }
-
-    /// Create a new TempPath from an existing path. This can be done even if no file exists at the
-    /// given path.
-    ///
-    /// This is mostly useful for interacting with libraries and external components that provide
-    /// files to be consumed or expect a path with no existing file to be given.
-    ///
-    /// When passed a relative path, this function first tries to make it absolute (relative to the
-    /// current directory). If this fails, this function uses the relative path as-is.
-    ///
-    /// **DEPRECATED:** Use [`TempPath::try_from_path`] instead to handle the case where looking up
-    /// the current directory fails.
-    #[deprecated = "use TempPath::try_from_path"]
-    pub fn from_path(path: impl Into<PathBuf>) -> Self {
-        let mut path = path.into();
-        // Best effort to resolve a relative path. If we fail, we keep the path as-is to
-        // preserve backwards compatibility.
-        //
-        // Ignore empty paths entirely. There's nothing we can do about them.
-        if path != Path::new("") && !path.is_absolute() {
-            if let Ok(cur_dir) = std::env::current_dir() {
-                path = cur_dir.join(path);
-            }
-        }
-        Self {
-            path: path.into_boxed_path(),
-            disable_cleanup: false,
-        }
     }
 
     /// Create a new TempPath from an existing path. This can be done even if no file exists at the
@@ -1076,34 +1042,16 @@ impl Seek for &NamedTempFile<File> {
     }
 }
 
-#[cfg(any(unix, target_os = "wasi"))]
 impl<F: AsFd> AsFd for NamedTempFile<F> {
     fn as_fd(&self) -> BorrowedFd<'_> {
         self.as_file().as_fd()
     }
 }
 
-#[cfg(any(unix, target_os = "wasi"))]
 impl<F: AsRawFd> AsRawFd for NamedTempFile<F> {
     #[inline]
     fn as_raw_fd(&self) -> RawFd {
         self.as_file().as_raw_fd()
-    }
-}
-
-#[cfg(windows)]
-impl<F: AsHandle> AsHandle for NamedTempFile<F> {
-    #[inline]
-    fn as_handle(&self) -> BorrowedHandle<'_> {
-        self.as_file().as_handle()
-    }
-}
-
-#[cfg(windows)]
-impl<F: AsRawHandle> AsRawHandle for NamedTempFile<F> {
-    #[inline]
-    fn as_raw_handle(&self) -> RawHandle {
-        self.as_file().as_raw_handle()
     }
 }
 

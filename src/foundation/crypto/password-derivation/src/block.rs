@@ -7,9 +7,6 @@ use core::{
     slice,
 };
 
-#[cfg(feature = "zeroize")]
-use zeroize::Zeroize;
-
 const TRUNC: u64 = u32::MAX as u64;
 
 #[rustfmt::skip]
@@ -145,12 +142,5 @@ impl BitXorAssign<&Block> for Block {
         for (dst, src) in self.0.iter_mut().zip(rhs.0.iter()) {
             *dst ^= src;
         }
-    }
-}
-
-#[cfg(feature = "zeroize")]
-impl Zeroize for Block {
-    fn zeroize(&mut self) {
-        self.0.zeroize();
     }
 }

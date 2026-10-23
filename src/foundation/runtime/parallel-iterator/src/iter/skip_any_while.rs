@@ -1,4 +1,3 @@
-use super::plumbing::*;
 use super::*;
 use std::fmt;
 use std::sync::atomic::{AtomicBool, Ordering};

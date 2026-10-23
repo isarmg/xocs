@@ -4,7 +4,6 @@ use crate::view_tree::{
         maybe_next_attr_erasure_macros::next_attr_combine, Attribute, NamedAttributeKey,
     },
     renderer::{CastFrom, RemoveEventHandler, Rndr},
-    view::{Position, ToTemplate},
 };
 use std::{
     borrow::Cow,
@@ -112,7 +111,7 @@ where
         event,
 
         owner: crate::reactivity::owner::Owner::current().unwrap_or_default(),
-        cb: (!cfg!(any())).then(|| SendWrapper::new(cb)),
+        cb: SendWrapper::new(cb),
     }
 }
 
@@ -135,7 +134,7 @@ pub struct On<E, F> {
     event: E,
 
     owner: crate::reactivity::owner::Owner,
-    cb: Option<SendWrapper<F>>,
+    cb: SendWrapper<F>,
 }
 
 impl<E, F> Clone for On<E, F>
@@ -161,49 +160,19 @@ where
     E::EventType: From<crate::view_tree::renderer::types::Event>,
 {
     /// Attaches the event listener to the element.
-    pub fn attach(
-        self,
-        el: &crate::view_tree::renderer::types::Element,
-    ) -> RemoveEventHandler<crate::view_tree::renderer::types::Element> {
-        fn attach_inner(
-            el: &crate::view_tree::renderer::types::Element,
-            cb: Box<dyn FnMut(crate::view_tree::renderer::types::Event)>,
-            name: Cow<'static, str>,
-            // TODO investigate: does passing this as an option
-            // (rather than, say, having a const DELEGATED: bool)
-            // add to binary size?
-            delegation_key: Option<Cow<'static, str>>,
-        ) -> RemoveEventHandler<crate::view_tree::renderer::types::Element> {
-            match delegation_key {
-                None => Rndr::add_event_listener(el, &name, cb),
-                Some(key) => Rndr::add_event_listener_delegated(el, name, key, cb),
-            }
-        }
-
-        let mut cb = self.cb.expect(super::FEATURE_CONFLICT_DIAGNOSTIC).take();
-
-        #[cfg(any())]
-        let span = tracing::Span::current();
+    pub fn attach(self, el: &crate::view_tree::renderer::types::Element) -> RemoveEventHandler {
+        let mut cb = self.cb.take();
 
         let cb = Box::new(move |ev: crate::view_tree::renderer::types::Event| {
             #[cfg(debug_assertions)]
             let _rx_guard = crate::reactivity::diagnostics::SpecialNonReactiveZone::enter();
-            #[cfg(any())]
-            let _tracing_guard = span.enter();
 
             let ev = E::EventType::from(ev);
 
             self.owner.with(|| cb.invoke(ev));
-            #[cfg(any())]
-            cb.invoke(ev);
         }) as Box<dyn FnMut(crate::view_tree::renderer::types::Event)>;
 
-        attach_inner(
-            el,
-            cb,
-            self.event.name(),
-            (E::BUBBLES && cfg!(any())).then(|| self.event.event_delegation_key()),
-        )
+        Rndr::add_event_listener(el, &self.event.name(), cb)
     }
 
     /// Attaches the event listener to the element as a listener that is triggered during the capture phase,
@@ -211,31 +180,24 @@ where
     pub fn attach_capture(
         self,
         el: &crate::view_tree::renderer::types::Element,
-    ) -> RemoveEventHandler<crate::view_tree::renderer::types::Element> {
+    ) -> RemoveEventHandler {
         fn attach_inner(
             el: &crate::view_tree::renderer::types::Element,
             cb: Box<dyn FnMut(crate::view_tree::renderer::types::Event)>,
             name: Cow<'static, str>,
-        ) -> RemoveEventHandler<crate::view_tree::renderer::types::Element> {
+        ) -> RemoveEventHandler {
             Rndr::add_event_listener_use_capture(el, &name, cb)
         }
 
-        let mut cb = self.cb.expect(super::FEATURE_CONFLICT_DIAGNOSTIC).take();
-
-        #[cfg(any())]
-        let span = tracing::Span::current();
+        let mut cb = self.cb.take();
 
         let cb = Box::new(move |ev: crate::view_tree::renderer::types::Event| {
             #[cfg(debug_assertions)]
             let _rx_guard = crate::reactivity::diagnostics::SpecialNonReactiveZone::enter();
-            #[cfg(any())]
-            let _tracing_guard = span.enter();
 
             let ev = E::EventType::from(ev);
 
             self.owner.with(|| cb.invoke(ev));
-            #[cfg(any())]
-            cb.invoke(ev);
         }) as Box<dyn FnMut(crate::view_tree::renderer::types::Event)>;
 
         attach_inner(el, cb, self.event.name())
@@ -259,43 +221,13 @@ where
 
     E::EventType: From<crate::view_tree::renderer::types::Event>,
 {
-    const MIN_LENGTH: usize = 0;
-    type AsyncOutput = Self;
     // a function that can be called once to remove the event listener
     type State = (
         crate::view_tree::renderer::types::Element,
-        Option<RemoveEventHandler<crate::view_tree::renderer::types::Element>>,
+        Option<RemoveEventHandler>,
     );
     type Cloneable = On<E, SharedEventCallback<E::EventType>>;
     type CloneableOwned = On<E, SharedEventCallback<E::EventType>>;
-
-    #[inline(always)]
-    fn html_len(&self) -> usize {
-        0
-    }
-
-    #[inline(always)]
-    fn to_html(
-        self,
-        _buf: &mut String,
-        _class: &mut String,
-        _style: &mut String,
-        _inner_html: &mut String,
-    ) {
-    }
-
-    #[inline(always)]
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        el: &crate::view_tree::renderer::types::Element,
-    ) -> Self::State {
-        let cleanup = if E::CAPTURE {
-            self.attach_capture(el)
-        } else {
-            self.attach(el)
-        };
-        (el.clone(), Some(cleanup))
-    }
 
     #[inline(always)]
     fn build(self, el: &crate::view_tree::renderer::types::Element) -> Self::State {
@@ -324,7 +256,7 @@ where
 
     fn into_cloneable(self) -> Self::Cloneable {
         On {
-            cb: self.cb.map(|cb| SendWrapper::new(cb.take().into_shared())),
+            cb: SendWrapper::new(self.cb.take().into_shared()),
 
             owner: self.owner,
             event: self.event,
@@ -333,17 +265,11 @@ where
 
     fn into_cloneable_owned(self) -> Self::CloneableOwned {
         On {
-            cb: self.cb.map(|cb| SendWrapper::new(cb.take().into_shared())),
+            cb: SendWrapper::new(self.cb.take().into_shared()),
 
             owner: self.owner,
             event: self.event,
         }
-    }
-
-    fn dry_resolve(&mut self) {}
-
-    async fn resolve(self) -> Self::AsyncOutput {
-        self
     }
 
     fn keys(&self) -> Vec<NamedAttributeKey> {
@@ -366,45 +292,16 @@ where
     }
 }
 
-impl<E, F> ToTemplate for On<E, F> {
-    #[inline(always)]
-    fn to_template(
-        _buf: &mut String,
-        _class: &mut String,
-        _style: &mut String,
-        _inner_html: &mut String,
-        _position: &mut Position,
-    ) {
-    }
-}
-
 /// A trait for converting types into [web_sys events](web_sys).
 pub trait EventDescriptor: Clone {
     /// The [`web_sys`] event type, such as [`web_sys::MouseEvent`].
     type EventType: FromWasmAbi;
-
-    /// Indicates if this event bubbles. For example, `click` bubbles,
-    /// but `focus` does not.
-    ///
-    /// If this is true, then the event will be delegated globally if the `delegation`
-    /// feature is enabled. Otherwise, event listeners will be directly attached to the element.
-    const BUBBLES: bool;
 
     /// Indicates if this event should be handled during the capture phase.
     const CAPTURE: bool = false;
 
     /// The name of the event, such as `click` or `mouseover`.
     fn name(&self) -> Cow<'static, str>;
-
-    /// The key used for event delegation.
-    fn event_delegation_key(&self) -> Cow<'static, str>;
-
-    /// Return the options for this type. This is only used when you create a [`Custom`] event
-    /// handler.
-    #[inline(always)]
-    fn options(&self) -> Option<&web_sys::AddEventListenerOptions> {
-        None
-    }
 }
 
 /// A wrapper that tells the framework to handle an event during the capture phase.
@@ -422,14 +319,9 @@ impl<E: EventDescriptor> EventDescriptor for Capture<E> {
     type EventType = E::EventType;
 
     const CAPTURE: bool = true;
-    const BUBBLES: bool = E::BUBBLES;
 
     fn name(&self) -> Cow<'static, str> {
         self.inner.name()
-    }
-
-    fn event_delegation_key(&self) -> Cow<'static, str> {
-        self.inner.event_delegation_key()
     }
 }
 
@@ -437,7 +329,6 @@ impl<E: EventDescriptor> EventDescriptor for Capture<E> {
 #[derive(Debug)]
 pub struct Custom<E: FromWasmAbi = web_sys::Event> {
     name: Cow<'static, str>,
-    options: Option<SendWrapper<web_sys::AddEventListenerOptions>>,
     _event_type: PhantomData<fn() -> E>,
 }
 
@@ -445,7 +336,6 @@ impl<E: FromWasmAbi> Clone for Custom<E> {
     fn clone(&self) -> Self {
         Self {
             name: self.name.clone(),
-            options: self.options.clone(),
             _event_type: PhantomData,
         }
     }
@@ -457,17 +347,6 @@ impl<E: FromWasmAbi> EventDescriptor for Custom<E> {
     fn name(&self) -> Cow<'static, str> {
         self.name.clone()
     }
-
-    fn event_delegation_key(&self) -> Cow<'static, str> {
-        format!("$$${}", self.name).into()
-    }
-
-    const BUBBLES: bool = false;
-
-    #[inline(always)]
-    fn options(&self) -> Option<&web_sys::AddEventListenerOptions> {
-        self.options.as_deref()
-    }
 }
 
 impl<E: FromWasmAbi> Custom<E> {
@@ -477,41 +356,13 @@ impl<E: FromWasmAbi> Custom<E> {
     pub fn new(name: impl Into<Cow<'static, str>>) -> Self {
         Self {
             name: name.into(),
-            options: None,
             _event_type: PhantomData,
         }
-    }
-
-    /// Modify the [`AddEventListenerOptions`] used for this event listener.
-    ///
-    /// ```rust
-    /// # use blog_dom::view_tree::prelude::*;
-    /// # use blog_dom::view_tree::html;
-    /// # use blog_dom::view_tree::html::event as ev;
-    /// # fn custom_event() -> impl Render {
-    /// let mut non_passive_wheel = ev::Custom::new("wheel");
-    /// non_passive_wheel.options_mut().set_passive(false);
-    ///
-    /// let canvas =
-    ///     html::element::canvas().on(non_passive_wheel, |e: ev::WheelEvent| {
-    ///         // handle event
-    ///     });
-    /// # canvas
-    /// # }
-    /// ```
-    ///
-    /// [`AddEventListenerOptions`]: web_sys::AddEventListenerOptions
-    pub fn options_mut(&mut self) -> &mut web_sys::AddEventListenerOptions {
-        // It is valid to construct a `SendWrapper` here because
-        // its inner data will only be accessed in the browser's main thread.
-        self.options
-            .get_or_insert_with(|| SendWrapper::new(web_sys::AddEventListenerOptions::new()))
     }
 }
 
 macro_rules! generate_event_types {
   {$(
-    $( #[$does_not_bubble:ident] )?
     $( $event:ident )+ : $web_event:ident
   ),* $(,)?} => {
     blog_component_macros::paste! {
@@ -529,62 +380,39 @@ macro_rules! generate_event_types {
             stringify!([< $($event)+ >]).into()
           }
 
-          #[inline(always)]
-          fn event_delegation_key(&self) -> Cow<'static, str> {
-            concat!("$$$", stringify!([< $($event)+ >])).into()
-          }
-
-          const BUBBLES: bool = true $(&& generate_event_types!($does_not_bubble))?;
         }
       )*
     }
   };
 
-  (does_not_bubble) => { false }
 }
 
 generate_event_types! {
   // =========================================================
   // WindowEventHandlersEventMap
   // =========================================================
-  #[does_not_bubble]
   after print: Event,
-  #[does_not_bubble]
   before print: Event,
-  #[does_not_bubble]
   before unload: BeforeUnloadEvent,
-  #[does_not_bubble]
   gamepad connected: GamepadEvent,
-  #[does_not_bubble]
   gamepad disconnected: GamepadEvent,
   hash change: HashChangeEvent,
-  #[does_not_bubble]
   language change: Event,
-  #[does_not_bubble]
   message: MessageEvent,
-  #[does_not_bubble]
   message error: MessageEvent,
-  #[does_not_bubble]
   offline: Event,
-  #[does_not_bubble]
   online: Event,
-  #[does_not_bubble]
   page hide: PageTransitionEvent,
-  #[does_not_bubble]
   page show: PageTransitionEvent,
   pop state: PopStateEvent,
   rejection handled: PromiseRejectionEvent,
-  #[does_not_bubble]
   storage: StorageEvent,
-  #[does_not_bubble]
   unhandled rejection: PromiseRejectionEvent,
-  #[does_not_bubble]
   unload: Event,
 
   // =========================================================
   // GlobalEventHandlersEventMap
   // =========================================================
-  #[does_not_bubble]
   abort: UiEvent,
   animation cancel: AnimationEvent,
   animation end: AnimationEvent,
@@ -593,21 +421,16 @@ generate_event_types! {
   aux click: MouseEvent,
   before input: InputEvent,
   before toggle: Event, // web_sys does not include `ToggleEvent`
-  #[does_not_bubble]
   blur: FocusEvent,
-  #[does_not_bubble]
   can play: Event,
-  #[does_not_bubble]
   can play through: Event,
   change: Event,
   click: MouseEvent,
-  #[does_not_bubble]
   close: Event,
   composition end: CompositionEvent,
   composition start: CompositionEvent,
   composition update: CompositionEvent,
   context menu: MouseEvent,
-  #[does_not_bubble]
   cue change: Event,
   dbl click: MouseEvent,
   drag: DragEvent,
@@ -617,92 +440,60 @@ generate_event_types! {
   drag over: DragEvent,
   drag start: DragEvent,
   drop: DragEvent,
-  #[does_not_bubble]
   duration change: Event,
-  #[does_not_bubble]
   emptied: Event,
-  #[does_not_bubble]
   ended: Event,
-  #[does_not_bubble]
   error: ErrorEvent,
-  #[does_not_bubble]
   focus: FocusEvent,
-  #[does_not_bubble]
   focus in: FocusEvent,
-  #[does_not_bubble]
   focus out: FocusEvent,
   form data: Event, // web_sys does not include `FormDataEvent`
-  #[does_not_bubble]
   got pointer capture: PointerEvent,
   input: Event,
-  #[does_not_bubble]
   invalid: Event,
   key down: KeyboardEvent,
   key press: KeyboardEvent,
   key up: KeyboardEvent,
-  #[does_not_bubble]
   load: Event,
-  #[does_not_bubble]
   loaded data: Event,
-  #[does_not_bubble]
   loaded metadata: Event,
-  #[does_not_bubble]
   load start: Event,
   lost pointer capture: PointerEvent,
   mouse down: MouseEvent,
-  #[does_not_bubble]
   mouse enter: MouseEvent,
-  #[does_not_bubble]
   mouse leave: MouseEvent,
   mouse move: MouseEvent,
   mouse out: MouseEvent,
   mouse over: MouseEvent,
   mouse up: MouseEvent,
-  #[does_not_bubble]
   pause: Event,
-  #[does_not_bubble]
   play: Event,
-  #[does_not_bubble]
   playing: Event,
   pointer cancel: PointerEvent,
   pointer down: PointerEvent,
-  #[does_not_bubble]
   pointer enter: PointerEvent,
-  #[does_not_bubble]
   pointer leave: PointerEvent,
   pointer move: PointerEvent,
   pointer out: PointerEvent,
   pointer over: PointerEvent,
   pointer up: PointerEvent,
-  #[does_not_bubble]
   progress: ProgressEvent,
-  #[does_not_bubble]
   rate change: Event,
   reset: Event,
-  #[does_not_bubble]
   resize: UiEvent,
-  #[does_not_bubble]
   scroll: Event,
-  #[does_not_bubble]
   scroll end: Event,
   security policy violation: SecurityPolicyViolationEvent,
-  #[does_not_bubble]
   seeked: Event,
-  #[does_not_bubble]
   seeking: Event,
   select: Event,
-  #[does_not_bubble]
   selection change: Event,
   select start: Event,
   slot change: Event,
-  #[does_not_bubble]
   stalled: Event,
   submit: SubmitEvent,
-  #[does_not_bubble]
   suspend: Event,
-  #[does_not_bubble]
   time update: Event,
-  #[does_not_bubble]
   toggle: Event,
   touch cancel: TouchEvent,
   touch end: TouchEvent,
@@ -712,9 +503,7 @@ generate_event_types! {
   transition end: TransitionEvent,
   transition run: TransitionEvent,
   transition start: TransitionEvent,
-  #[does_not_bubble]
   volume change: Event,
-  #[does_not_bubble]
   waiting: Event,
   webkit animation end: Event,
   webkit animation iteration: Event,
@@ -726,11 +515,8 @@ generate_event_types! {
   // WindowEventMap
   // =========================================================
   D O M Content Loaded: Event, // Hack for correct casing
-  #[does_not_bubble]
   device motion: DeviceMotionEvent,
-  #[does_not_bubble]
   device orientation: DeviceOrientationEvent,
-  #[does_not_bubble]
   orientation change: Event,
 
   // =========================================================
@@ -747,7 +533,6 @@ generate_event_types! {
   fullscreen error: Event,
   pointer lock change: Event,
   pointer lock error: Event,
-  #[does_not_bubble]
   ready state change: Event,
   visibility change: Event,
 }

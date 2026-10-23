@@ -26,5 +26,3 @@ publish = false
 [lib]
 name = "blog_sync_thread_wait"
 path = "src/lib.rs"
-
-[target."cfg(loom)"]

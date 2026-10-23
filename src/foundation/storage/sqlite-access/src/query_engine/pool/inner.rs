@@ -15,9 +15,9 @@ use std::sync::atomic::{AtomicBool, AtomicU32, AtomicUsize, Ordering};
 use std::sync::{Arc, RwLock};
 use std::task::Poll;
 
+use crate::private_tracing_dynamic_event;
 use crate::query_engine::logger::private_level_filter_to_trace_level;
 use crate::query_engine::pool::options::PoolConnectionMetadata;
-use crate::private_tracing_dynamic_event;
 use futures::FutureExt;
 use std::time::{Duration, Instant};
 use tracing::Level;
@@ -226,7 +226,7 @@ impl<DB: Database> PoolInner<DB> {
     ) -> Result<DecrementSizeGuard<DB>, AsyncSemaphoreReleaser<'a>> {
         let result = self
             .size
-            .fetch_update(Ordering::AcqRel, Ordering::Acquire, |size| {
+            .try_update(Ordering::AcqRel, Ordering::Acquire, |size| {
                 if self.is_closed() {
                     return None;
                 }

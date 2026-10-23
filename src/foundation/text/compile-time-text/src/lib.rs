@@ -46,19 +46,12 @@ mod utf8;
 #[doc(hidden)]
 pub mod __proc {
     mod case;
-    pub use self::case::*;
 
     mod fmt;
     pub use self::fmt::*;
 
     mod str;
     pub use self::str::*;
-
-    #[cfg(feature = "verify-http")]
-    item_group! {
-        mod verify_http;
-        pub use self::verify_http::*;
-    }
 
     #[cfg(feature = "verify-regex")]
     item_group! {

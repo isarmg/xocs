@@ -13,11 +13,10 @@ use {
 pub fn create_named(
     path: &Path,
     open_options: &mut OpenOptions,
-    #[cfg_attr(target_os = "wasi", allow(unused))] permissions: Option<&std::fs::Permissions>,
+    permissions: Option<&std::fs::Permissions>,
 ) -> io::Result<File> {
     open_options.read(true).write(true).create_new(true);
 
-    #[cfg(not(target_os = "wasi"))]
     {
         use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
         open_options.mode(permissions.map(|p| p.mode()).unwrap_or(0o600));
@@ -43,7 +42,6 @@ fn create_unlinked(path: &Path) -> io::Result<File> {
     Ok(f)
 }
 
-#[cfg(target_os = "linux")]
 pub fn create(dir: &Path) -> io::Result<File> {
     use rustix::{fs::OFlags, io::Errno};
     use std::os::unix::fs::OpenOptionsExt;
@@ -61,11 +59,6 @@ pub fn create(dir: &Path) -> io::Result<File> {
                 _ => Err(e),
             }
         })
-}
-
-#[cfg(not(target_os = "linux"))]
-pub fn create(dir: &Path) -> io::Result<File> {
-    create_unix(dir)
 }
 
 fn create_unix(dir: &Path) -> io::Result<File> {
@@ -95,18 +88,7 @@ pub fn persist(old_path: &Path, new_path: &Path, overwrite: bool) -> io::Result<
     if overwrite {
         rename(old_path, new_path)?;
     } else {
-        // On Linux, apple and redox operating systems, use `renameat_with` to avoid overwriting an
-        // existing name, if the kernel and the filesystem support it.
-        #[cfg(any(
-            target_os = "android",
-            target_os = "linux",
-            target_os = "macos",
-            target_os = "ios",
-            target_os = "tvos",
-            target_os = "visionos",
-            target_os = "watchos",
-            target_os = "redox",
-        ))]
+        // Try atomic no-replace rename when the kernel and filesystem support it.
         {
             use rustix::fs::{renameat_with, RenameFlags, CWD};
             use rustix::io::Errno;

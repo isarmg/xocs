@@ -127,6 +127,10 @@ class PackageIntegrity(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(value)
             path.chmod(0o644)
+        # Package directory modes are a contract, independent of the caller's umask.
+        for directory in root.rglob("*"):
+            if directory.is_dir():
+                directory.chmod(0o755)
         self.package.write_manifest(root, identity, 'candidate', build_identity['source_tree_sha256'], dirty)
 
     def test_content_mode_extra_file_and_links_fail_closed(self):
@@ -241,7 +245,9 @@ class PackageIntegrity(unittest.TestCase):
             target.mkdir()
             link = root / 'link'
             link.symlink_to(target)
-            with self.assertRaises(OSError):
+            # An unprivileged fixture can fail the root-ownership check before
+            # reaching the symlink; both paths must reject it.
+            with self.assertRaises((OSError, ValueError)):
                 self.package.trusted_directory(link)
             if os.geteuid() == 0:
                 writable.chmod(0o755)

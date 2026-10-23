@@ -3,7 +3,6 @@ use crate::query_engine::pool::PoolConnection;
 use std::ops::{Deref, DerefMut};
 
 pub enum MaybePoolConnection<'c, DB: Database> {
-    #[allow(dead_code)]
     Connection(&'c mut DB::Connection),
     PoolConnection(PoolConnection<DB>),
 }

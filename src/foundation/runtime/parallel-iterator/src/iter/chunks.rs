@@ -1,4 +1,3 @@
-use super::plumbing::*;
 use super::*;
 
 /// `Chunks` is an iterator that groups elements of an underlying iterator.

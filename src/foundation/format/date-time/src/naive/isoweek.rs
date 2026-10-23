@@ -7,9 +7,6 @@ use core::fmt;
 
 use super::internals::YearFlags;
 
-#[cfg(any(feature = "rkyv", feature = "rkyv-16", feature = "rkyv-32", feature = "rkyv-64"))]
-use rkyv::{Archive, Deserialize, Serialize};
-
 /// ISO 8601 week.
 ///
 /// This type, combined with [`Weekday`](../enum.Weekday.html),
@@ -17,13 +14,6 @@ use rkyv::{Archive, Deserialize, Serialize};
 /// One can retrieve this type from the existing [`Datelike`](../trait.Datelike.html) types
 /// via the [`Datelike::iso_week`](../trait.Datelike.html#tymethod.iso_week) method.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
-#[cfg_attr(
-    any(feature = "rkyv", feature = "rkyv-16", feature = "rkyv-32", feature = "rkyv-64"),
-    derive(Archive, Deserialize, Serialize),
-    archive(compare(PartialEq, PartialOrd)),
-    archive_attr(derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash))
-)]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct IsoWeek {
     // Note that this allows for larger year range than `NaiveDate`.
     // This is crucial because we have an edge case for the first and last week supported,
@@ -54,7 +44,9 @@ impl IsoWeek {
             }
         };
         let flags = YearFlags::from_year(year);
-        IsoWeek { ywf: (year << 10) | (week << 4) as i32 | i32::from(flags.0) }
+        IsoWeek {
+            ywf: (year << 10) | (week << 4) as i32 | i32::from(flags.0),
+        }
     }
 
     /// Returns the year number for this ISO week.
@@ -62,7 +54,7 @@ impl IsoWeek {
     /// # Example
     ///
     /// ```
-    /// use chrono::{Datelike, NaiveDate, Weekday};
+    /// use blog_format_date_time::{Datelike, NaiveDate, Weekday};
     ///
     /// let d = NaiveDate::from_isoywd_opt(2015, 1, Weekday::Mon).unwrap();
     /// assert_eq!(d.iso_week().year(), 2015);
@@ -72,7 +64,7 @@ impl IsoWeek {
     /// Continuing the example...
     ///
     /// ```
-    /// # use chrono::{NaiveDate, Datelike, Weekday};
+    /// # use blog_format_date_time::{NaiveDate, Datelike, Weekday};
     /// # let d = NaiveDate::from_isoywd_opt(2015, 1, Weekday::Mon).unwrap();
     /// assert_eq!(d.year(), 2014);
     /// assert_eq!(d, NaiveDate::from_ymd_opt(2014, 12, 29).unwrap());
@@ -89,7 +81,7 @@ impl IsoWeek {
     /// # Example
     ///
     /// ```
-    /// use chrono::{Datelike, NaiveDate, Weekday};
+    /// use blog_format_date_time::{Datelike, NaiveDate, Weekday};
     ///
     /// let d = NaiveDate::from_isoywd_opt(2015, 15, Weekday::Mon).unwrap();
     /// assert_eq!(d.iso_week().week(), 15);
@@ -106,7 +98,7 @@ impl IsoWeek {
     /// # Example
     ///
     /// ```
-    /// use chrono::{Datelike, NaiveDate, Weekday};
+    /// use blog_format_date_time::{Datelike, NaiveDate, Weekday};
     ///
     /// let d = NaiveDate::from_isoywd_opt(2015, 15, Weekday::Mon).unwrap();
     /// assert_eq!(d.iso_week().week0(), 14);
@@ -124,7 +116,7 @@ impl IsoWeek {
 /// # Example
 ///
 /// ```
-/// use chrono::{Datelike, NaiveDate};
+/// use blog_format_date_time::{Datelike, NaiveDate};
 ///
 /// assert_eq!(
 ///     format!("{:?}", NaiveDate::from_ymd_opt(2015, 9, 5).unwrap().iso_week()),
@@ -140,7 +132,7 @@ impl IsoWeek {
 /// ISO 8601 requires an explicit sign for years before 1 BCE or after 9999 CE.
 ///
 /// ```
-/// # use chrono::{NaiveDate, Datelike};
+/// # use blog_format_date_time::{NaiveDate, Datelike};
 /// assert_eq!(format!("{:?}", NaiveDate::from_ymd_opt(0, 1, 2).unwrap().iso_week()), "-0001-W52");
 /// assert_eq!(
 ///     format!("{:?}", NaiveDate::from_ymd_opt(10000, 12, 31).unwrap().iso_week()),
@@ -160,27 +152,10 @@ impl fmt::Debug for IsoWeek {
     }
 }
 
-#[cfg(feature = "defmt")]
-impl defmt::Format for IsoWeek {
-    fn format(&self, fmt: defmt::Formatter) {
-        let year = self.year();
-        let week = self.week();
-        if (0..=9999).contains(&year) {
-            defmt::write!(fmt, "{:04}-W{:02}", year, week)
-        } else {
-            // ISO 8601 requires the explicit sign for out-of-range years
-            let sign = ['+', '-'][(year < 0) as usize];
-            defmt::write!(fmt, "{}{:05}-W{:02}", sign, year.abs(), week)
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    #[cfg(feature = "rkyv-validation")]
-    use super::IsoWeek;
-    use crate::Datelike;
     use crate::naive::date::{self, NaiveDate};
+    use crate::Datelike;
 
     #[test]
     fn test_iso_week_extremes() {
@@ -191,13 +166,19 @@ mod tests {
         assert_eq!(minweek.week(), 1);
         assert_eq!(minweek.week0(), 0);
         #[cfg(feature = "alloc")]
-        assert_eq!(format!("{minweek:?}"), NaiveDate::MIN.format("%G-W%V").to_string());
+        assert_eq!(
+            format!("{minweek:?}"),
+            NaiveDate::MIN.format("%G-W%V").to_string()
+        );
 
         assert_eq!(maxweek.year(), date::MAX_YEAR + 1);
         assert_eq!(maxweek.week(), 1);
         assert_eq!(maxweek.week0(), 0);
         #[cfg(feature = "alloc")]
-        assert_eq!(format!("{maxweek:?}"), NaiveDate::MAX.format("%G-W%V").to_string());
+        assert_eq!(
+            format!("{maxweek:?}"),
+            NaiveDate::MAX.format("%G-W%V").to_string()
+        );
     }
 
     #[test]
@@ -232,17 +213,5 @@ mod tests {
 
         assert!(monday.iso_week() >= friday.iso_week());
         assert!(monday.iso_week() <= friday.iso_week());
-    }
-
-    #[test]
-    #[cfg(feature = "rkyv-validation")]
-    fn test_rkyv_validation() {
-        let minweek = NaiveDate::MIN.iso_week();
-        let bytes = rkyv::to_bytes::<_, 4>(&minweek).unwrap();
-        assert_eq!(rkyv::from_bytes::<IsoWeek>(&bytes).unwrap(), minweek);
-
-        let maxweek = NaiveDate::MAX.iso_week();
-        let bytes = rkyv::to_bytes::<_, 4>(&maxweek).unwrap();
-        assert_eq!(rkyv::from_bytes::<IsoWeek>(&bytes).unwrap(), maxweek);
     }
 }

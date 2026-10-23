@@ -17,7 +17,7 @@ macro_rules! next_attr_combine {
         }
         #[cfg(erase_components)]
         {
-            use $crate::view_tree::html::attribute::any_attribute::IntoAnyAttribute;
+            use crate::view_tree::html::attribute::any_attribute::IntoAnyAttribute;
             vec![$self.into_any_attr(), $next_attr.into_any_attr()]
         }
     }};

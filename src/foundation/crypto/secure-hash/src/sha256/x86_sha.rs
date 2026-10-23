@@ -1,12 +1,10 @@
-//! SHA-256 `x86`/`x86_64` backend
+//! SHA-256 `x86_64` backend
 
 #![allow(clippy::many_single_char_names, unsafe_op_in_unsafe_fn)]
 
-#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
-compile_error!("x86-sha backend can be used only on x86 and x86_64 target arches");
+#[cfg(not(target_arch = "x86_64"))]
+compile_error!("x86-sha backend can be used only on x86_64 targets");
 
-#[cfg(target_arch = "x86")]
-use core::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
 use core::arch::x86_64::*;
 

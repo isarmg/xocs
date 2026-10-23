@@ -4,7 +4,7 @@
 //! argument, so the resulting code may be easier to read.
 
 use std::fmt::Display;
-use std::iter::{self, Zip};
+use std::iter;
 
 type VecIntoIter<T> = alloc::vec::IntoIter<T>;
 
@@ -101,34 +101,6 @@ where
     I::IntoIter: DoubleEndedIterator,
 {
     iterable.into_iter().rev()
-}
-
-/// Converts the arguments to iterators and zips them.
-///
-/// [`IntoIterator`] enabled version of [`Iterator::zip`].
-///
-/// ## Example
-///
-/// ```
-/// use blog_dom::iterators::zip;
-///
-/// let mut result: Vec<(i32, char)> = Vec::new();
-///
-/// for (a, b) in zip(&[1, 2, 3, 4, 5], &['a', 'b', 'c']) {
-///     result.push((*a, *b));
-/// }
-/// assert_eq!(result, vec![(1, 'a'),(2, 'b'),(3, 'c')]);
-/// ```
-#[deprecated(
-    note = "Use [std::iter::zip](https://doc.rust-lang.org/std/iter/fn.zip.html) instead",
-    since = "0.10.4"
-)]
-pub fn zip<I, J>(i: I, j: J) -> Zip<I::IntoIter, J::IntoIter>
-where
-    I: IntoIterator,
-    J: IntoIterator,
-{
-    i.into_iter().zip(j)
 }
 
 /// Takes two iterables and creates a new iterator over both in sequence.

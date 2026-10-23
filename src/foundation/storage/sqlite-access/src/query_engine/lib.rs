@@ -1,26 +1,8 @@
-//! Core of SQLx, the rust SQL toolkit.
-//!
-//! ### Note: Semver Exempt API
-//! The API of this crate is not meant for general use and does *not* follow Semantic Versioning.
-//! The only crate that follows Semantic Versioning in the project is the `sqlx` crate itself.
-//! If you are building a custom SQLx driver, you should pin an exact version for `sqlx-core` to
-//! avoid breakages:
-//!
-//! ```toml
-//! sqlx-core = { version = "=0.6.2" }
-//! ```
-//!
-//! And then make releases in lockstep with `sqlx-core`. We recommend all driver crates, in-tree
-//! or otherwise, use the same version numbers as `sqlx-core` to avoid confusion.
+//! Query execution, transactions and pooling for the maintained SQLite driver.
 
-#![warn(future_incompatible, rust_2018_idioms)]
 #![allow(clippy::needless_doctest_main, clippy::type_complexity)]
-// The only unsafe code in SQLx is that necessary to interact with native APIs like with SQLite,
-// and that can live in its own separate driver crate.
+// Native SQLite FFI stays in the sqlite module; the query engine is safe Rust.
 #![forbid(unsafe_code)]
-// Allows an API be documented as only available in some specific platforms.
-// <https://doc.rust-lang.org/unstable-book/language-features/doc-cfg.html>
-#![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[macro_use]
 pub mod ext;
@@ -62,13 +44,9 @@ pub mod statement;
 
 pub mod common;
 pub mod database;
-pub mod describe;
 pub mod executor;
 pub mod from_row;
-pub mod fs;
-pub mod io;
 pub mod logger;
-pub mod net;
 pub mod query_as;
 pub mod query_builder;
 pub mod query_scalar;
@@ -78,40 +56,13 @@ pub mod raw_sql;
 pub mod row;
 pub mod rt;
 pub mod sync;
-pub mod type_checking;
 pub mod type_info;
 pub mod value;
 
-#[cfg(feature = "any")]
-pub mod any;
-
-// Implements test support with automatic DB management.
-
-pub mod config;
-
 pub use error::{Error, Result};
 
-pub use either::Either;
-pub use hashbrown::{HashMap, hash_map};
-pub use indexmap::IndexMap;
-pub use url_encoding::percent;
-pub use smallvec::SmallVec;
-pub use url_encoding::address::{self, Url};
-
 pub use bytes;
-
-/// Helper module to get drivers compiling again that used to be in this crate,
-/// to avoid having to replace tons of `use crate::query_engine::<...>` imports.
-///
-/// This module can be glob-imported and should not clash with any modules a driver
-/// would want to implement itself.
-pub mod driver_prelude {
-    pub use crate::query_engine::{
-        acquire, common, decode, describe, encode, executor, ext, from_row, fs, io, logger, net,
-        pool, query, query_as, query_builder, query_scalar, rt, sync,
-    };
-
-    pub use crate::query_engine::error::{Error, Result};
-    pub use crate::query_engine::{HashMap, hash_map};
-    pub use either::Either;
-}
+pub use either::Either;
+pub use hashbrown::HashMap;
+pub use indexmap::IndexMap;
+pub use smallvec::SmallVec;

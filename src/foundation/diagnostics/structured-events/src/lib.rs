@@ -922,9 +922,7 @@ pub mod collector;
 /// Interoperability with unstructured log records.
 #[cfg(feature = "log-bridge")]
 pub mod log_bridge;
-/// Incremental pattern matching for event field filters.
-#[cfg(any())]
-pub mod pattern;
+
 /// Core instrumentation types and dispatch primitives.
 pub mod primitives;
 

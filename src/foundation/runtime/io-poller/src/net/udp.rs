@@ -40,8 +40,8 @@ use crate::{event, sys, Interest, Registry, Token};
 /// // SENDER -> sends a message.
 /// // ECHOER -> listens and prints the message received.
 ///
-/// use mio::net::UdpSocket;
-/// use mio::{Events, Interest, Poll, Token};
+/// use blog_runtime_io_poller::net::UdpSocket;
+/// use blog_runtime_io_poller::{Events, Interest, Poll, Token};
 /// use std::time::Duration;
 ///
 /// const SENDER: Token = Token(0);
@@ -106,7 +106,7 @@ impl UdpSocket {
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use mio::net::UdpSocket;
+    /// use blog_runtime_io_poller::net::UdpSocket;
     ///
     /// // We must bind it to an open address.
     /// let socket = match UdpSocket::bind("127.0.0.1:0".parse()?) {
@@ -156,7 +156,7 @@ impl UdpSocket {
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use mio::net::UdpSocket;
+    /// use blog_runtime_io_poller::net::UdpSocket;
     ///
     /// let addr = "127.0.0.1:0".parse()?;
     /// let socket = UdpSocket::bind(addr)?;
@@ -177,7 +177,7 @@ impl UdpSocket {
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use mio::net::UdpSocket;
+    /// use blog_runtime_io_poller::net::UdpSocket;
     ///
     /// let addr = "127.0.0.1:0".parse()?;
     /// let peer_addr = "127.0.0.1:11100".parse()?;
@@ -202,7 +202,7 @@ impl UdpSocket {
     /// ```no_run
     /// # use std::error::Error;
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use mio::net::UdpSocket;
+    /// use blog_runtime_io_poller::net::UdpSocket;
     ///
     /// let socket = UdpSocket::bind("127.0.0.1:0".parse()?)?;
     ///
@@ -224,11 +224,9 @@ impl UdpSocket {
     ///
     /// # Notes
     ///
-    /// On Windows, if the data is larger than the buffer specified, the buffer
-    /// is filled with the first part of the data, and recv_from returns the error
-    /// WSAEMSGSIZE(10040). The excess data is lost.
-    /// Make sure to always use a sufficiently large buffer to hold the
-    /// maximum UDP packet size, which can be up to 65536 bytes in size.
+    /// Linux copies at most the buffer length and returns the number of bytes copied.
+    /// Use a buffer large enough for the application's maximum datagram size.
+    /// Bytes that do not fit are discarded.
     ///
     /// # Examples
     ///
@@ -236,7 +234,7 @@ impl UdpSocket {
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use mio::net::UdpSocket;
+    /// use blog_runtime_io_poller::net::UdpSocket;
     ///
     /// let socket = UdpSocket::bind("127.0.0.1:0".parse()?)?;
     ///
@@ -260,11 +258,9 @@ impl UdpSocket {
     ///
     /// # Notes
     ///
-    /// On Windows, if the data is larger than the buffer specified, the buffer
-    /// is filled with the first part of the data, and peek_from returns the error
-    /// WSAEMSGSIZE(10040). The excess data is lost.
-    /// Make sure to always use a sufficiently large buffer to hold the
-    /// maximum UDP packet size, which can be up to 65536 bytes in size.
+    /// Linux copies at most the buffer length and returns the number of bytes copied.
+    /// Use a buffer large enough for the application's maximum datagram size.
+    /// The full datagram remains queued for a subsequent receive.
     ///
     /// # Examples
     ///
@@ -272,7 +268,7 @@ impl UdpSocket {
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use mio::net::UdpSocket;
+    /// use blog_runtime_io_poller::net::UdpSocket;
     ///
     /// let socket = UdpSocket::bind("127.0.0.1:0".parse()?)?;
     ///
@@ -301,11 +297,9 @@ impl UdpSocket {
     ///
     /// # Notes
     ///
-    /// On Windows, if the data is larger than the buffer specified, the buffer
-    /// is filled with the first part of the data, and recv returns the error
-    /// WSAEMSGSIZE(10040). The excess data is lost.
-    /// Make sure to always use a sufficiently large buffer to hold the
-    /// maximum UDP packet size, which can be up to 65536 bytes in size.
+    /// Linux copies at most the buffer length and returns the number of bytes copied.
+    /// Use a buffer large enough for the application's maximum datagram size.
+    /// Bytes that do not fit are discarded.
     pub fn recv(&self, buf: &mut [u8]) -> io::Result<usize> {
         self.inner.do_io(|inner| inner.recv(buf))
     }
@@ -315,11 +309,9 @@ impl UdpSocket {
     ///
     /// # Notes
     ///
-    /// On Windows, if the data is larger than the buffer specified, the buffer
-    /// is filled with the first part of the data, and peek returns the error
-    /// WSAEMSGSIZE(10040). The excess data is lost.
-    /// Make sure to always use a sufficiently large buffer to hold the
-    /// maximum UDP packet size, which can be up to 65536 bytes in size.
+    /// Linux copies at most the buffer length and returns the number of bytes copied.
+    /// Use a buffer large enough for the application's maximum datagram size.
+    /// The full datagram remains queued for a subsequent receive.
     pub fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
         self.inner.do_io(|inner| inner.peek(buf))
     }
@@ -347,9 +339,7 @@ impl UdpSocket {
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// # // WASI does not yet support broadcast.
-    /// # if cfg!(target_os = "wasi") { return Ok(()) }
-    /// use mio::net::UdpSocket;
+    /// use blog_runtime_io_poller::net::UdpSocket;
     ///
     /// let broadcast_socket = UdpSocket::bind("127.0.0.1:0".parse()?)?;
     /// if broadcast_socket.broadcast()? == false {
@@ -379,9 +369,7 @@ impl UdpSocket {
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// # // WASI does not yet support broadcast.
-    /// # if cfg!(target_os = "wasi") { return Ok(()) }
-    /// use mio::net::UdpSocket;
+    /// use blog_runtime_io_poller::net::UdpSocket;
     ///
     /// let broadcast_socket = UdpSocket::bind("127.0.0.1:0".parse()?)?;
     /// assert_eq!(broadcast_socket.broadcast()?, false);
@@ -462,7 +450,7 @@ impl UdpSocket {
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use mio::net::UdpSocket;
+    /// use blog_runtime_io_poller::net::UdpSocket;
     ///
     /// let socket = UdpSocket::bind("127.0.0.1:0".parse()?)?;
     /// if socket.ttl()? < 255 {
@@ -491,7 +479,7 @@ impl UdpSocket {
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
-    /// use mio::net::UdpSocket;
+    /// use blog_runtime_io_poller::net::UdpSocket;
     ///
     /// let socket = UdpSocket::bind("127.0.0.1:0".parse()?)?;
     /// socket.set_ttl(255)?;
@@ -577,17 +565,13 @@ impl UdpSocket {
     ///
     /// # Examples
     ///
-    #[cfg_attr(unix, doc = "```no_run")]
-    #[cfg_attr(windows, doc = "```ignore")]
+    /// ```no_run
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use std::io;
-    /// #[cfg(any(unix, target_os = "wasi"))]
     /// use std::os::fd::AsRawFd;
-    /// #[cfg(windows)]
-    /// use std::os::windows::io::AsRawSocket;
-    /// use mio::net::UdpSocket;
+    /// use blog_runtime_io_poller::net::UdpSocket;
     ///
     /// let address = "127.0.0.1:8080".parse().unwrap();
     /// let dgram = UdpSocket::bind(address)?;
@@ -599,10 +583,7 @@ impl UdpSocket {
     /// let mut buf = [0; 512];
     /// let n = dgram.try_io(|| {
     ///     let buf_ptr = &mut buf as *mut _ as *mut _;
-    ///     #[cfg(unix)]
     ///     let res = unsafe { libc::recv(dgram.as_raw_fd(), buf_ptr, buf.len(), 0) };
-    ///     #[cfg(windows)]
-    ///     let res = unsafe { libc::recvfrom(dgram.as_raw_socket() as usize, buf_ptr, buf.len() as i32, 0, std::ptr::null_mut(), std::ptr::null_mut()) };
     ///     if res != -1 {
     ///         Ok(res as usize)
     ///     } else {

@@ -206,7 +206,7 @@ impl<T: ?Sized, R: RelaxStrategy> RwLock<T, R> {
     /// }
     /// ```
     #[inline]
-    pub fn read(&self) -> RwLockReadGuard<T> {
+    pub fn read(&self) -> RwLockReadGuard<'_, T> {
         loop {
             match self.try_read() {
                 Some(guard) => return guard,
@@ -234,7 +234,7 @@ impl<T: ?Sized, R: RelaxStrategy> RwLock<T, R> {
     /// }
     /// ```
     #[inline]
-    pub fn write(&self) -> RwLockWriteGuard<T, R> {
+    pub fn write(&self) -> RwLockWriteGuard<'_, T, R> {
         loop {
             match self.try_write_internal(false) {
                 Some(guard) => return guard,
@@ -246,7 +246,7 @@ impl<T: ?Sized, R: RelaxStrategy> RwLock<T, R> {
     /// Obtain a readable lock guard that can later be upgraded to a writable lock guard.
     /// Upgrades can be done through the [`RwLockUpgradableGuard::upgrade`](RwLockUpgradableGuard::upgrade) method.
     #[inline]
-    pub fn upgradeable_read(&self) -> RwLockUpgradableGuard<T, R> {
+    pub fn upgradeable_read(&self) -> RwLockUpgradableGuard<'_, T, R> {
         loop {
             match self.try_upgradeable_read() {
                 Some(guard) => return guard,
@@ -260,7 +260,7 @@ impl<T: ?Sized, R> RwLock<T, R> {
     // Acquire a read lock, returning the new lock value.
     fn acquire_reader(&self) -> usize {
         // An arbitrary cap that allows us to catch overflows long before they happen
-        const MAX_READERS: usize = core::usize::MAX / READER / 2;
+        const MAX_READERS: usize = usize::MAX / READER / 2;
 
         let value = self.lock.fetch_add(READER, Ordering::Acquire);
 
@@ -295,7 +295,7 @@ impl<T: ?Sized, R> RwLock<T, R> {
     /// }
     /// ```
     #[inline]
-    pub fn try_read(&self) -> Option<RwLockReadGuard<T>> {
+    pub fn try_read(&self) -> Option<RwLockReadGuard<'_, T>> {
         let value = self.acquire_reader();
 
         // We check the UPGRADED bit here so that new readers are prevented when an UPGRADED lock is held.
@@ -364,7 +364,7 @@ impl<T: ?Sized, R> RwLock<T, R> {
     }
 
     #[inline(always)]
-    fn try_write_internal(&self, strong: bool) -> Option<RwLockWriteGuard<T, R>> {
+    fn try_write_internal(&self, strong: bool) -> Option<RwLockWriteGuard<'_, T, R>> {
         if compare_exchange(
             &self.lock,
             0,
@@ -405,13 +405,13 @@ impl<T: ?Sized, R> RwLock<T, R> {
     /// }
     /// ```
     #[inline]
-    pub fn try_write(&self) -> Option<RwLockWriteGuard<T, R>> {
+    pub fn try_write(&self) -> Option<RwLockWriteGuard<'_, T, R>> {
         self.try_write_internal(true)
     }
 
     /// Tries to obtain an upgradeable lock guard.
     #[inline]
-    pub fn try_upgradeable_read(&self) -> Option<RwLockUpgradableGuard<T, R>> {
+    pub fn try_upgradeable_read(&self) -> Option<RwLockUpgradableGuard<'_, T, R>> {
         if self.lock.fetch_or(UPGRADED, Ordering::Acquire) & (WRITER | UPGRADED) == 0 {
             Some(RwLockUpgradableGuard {
                 phantom: PhantomData,
@@ -910,27 +910,6 @@ unsafe impl<R: RelaxStrategy> parking_lot::api::RawRwLockDowngrade for RwLock<()
             phantom: PhantomData,
         };
         core::mem::forget(tmp_guard.downgrade());
-    }
-}
-
-#[cfg(feature = "lock_api1")]
-unsafe impl lock_api::RawRwLockUpgradeDowngrade for RwLock<()> {
-    unsafe fn downgrade_upgradable(&self) {
-        let tmp_guard = RwLockUpgradableGuard {
-            inner: self,
-            data: &(),
-            phantom: PhantomData,
-        };
-        core::mem::forget(tmp_guard.downgrade());
-    }
-
-    unsafe fn downgrade_to_upgradable(&self) {
-        let tmp_guard = RwLockWriteGuard {
-            inner: self,
-            data: &mut (),
-            phantom: PhantomData,
-        };
-        core::mem::forget(tmp_guard.downgrade_to_upgradeable());
     }
 }
 

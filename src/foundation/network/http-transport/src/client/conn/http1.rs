@@ -133,8 +133,6 @@ pub struct Builder {
     h1_preserve_header_case: bool,
     h1_max_headers: Option<usize>,
     h1_max_header_size: Option<usize>,
-    #[cfg(feature = "ffi")]
-    h1_preserve_header_order: bool,
     h1_read_buf_exact_size: Option<usize>,
     h1_max_buf_size: Option<usize>,
 }
@@ -355,8 +353,6 @@ impl Builder {
             h1_preserve_header_case: false,
             h1_max_headers: None,
             h1_max_header_size: None,
-            #[cfg(feature = "ffi")]
-            h1_preserve_header_order: false,
             h1_max_buf_size: None,
         }
     }
@@ -518,19 +514,6 @@ impl Builder {
         self
     }
 
-    /// Set whether to support preserving original header order.
-    ///
-    /// Currently, this will record the order in which headers are received, and store this
-    /// ordering in a private extension on the `Response`. It will also look for and use
-    /// such an extension in any provided `Request`.
-    ///
-    /// Default is false.
-    #[cfg(feature = "ffi")]
-    pub fn preserve_header_order(&mut self, enabled: bool) -> &mut Builder {
-        self.h1_preserve_header_order = enabled;
-        self
-    }
-
     /// Sets the exact size of the read buffer to *always* use.
     ///
     /// Note that setting this option unsets the `max_buf_size` option.
@@ -608,11 +591,6 @@ impl Builder {
             if let Some(max_header_size) = opts.h1_max_header_size {
                 conn.set_http1_max_header_size(max_header_size);
             }
-            #[cfg(feature = "ffi")]
-            if opts.h1_preserve_header_order {
-                conn.set_preserve_header_order();
-            }
-
             if opts.h09_responses {
                 conn.set_h09_responses();
             }

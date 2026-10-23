@@ -90,12 +90,6 @@ impl ModuleExports {
         })
     }
 
-    #[doc(hidden)]
-    #[deprecated(note = "Use `ModuleExports::delete` instead")]
-    pub fn remove_root(&mut self, id: ExportId) {
-        self.delete(id);
-    }
-
     /// Get a reference to a function export given its function id.
     pub fn get_exported_func(&self, f: FunctionId) -> Option<&Export> {
         self.iter().find(|e| match e.item {

@@ -2,7 +2,6 @@ use super::{ReactiveFunction, SharedReactiveFunction};
 use crate::reactivity::effect::RenderEffect;
 use crate::view_tree::{html::property::IntoProperty, renderer::Rndr};
 
-// These do update during hydration because properties don't exist in the DOM
 impl<F, V> IntoProperty for F
 where
     F: ReactiveFunction<Output = V>,
@@ -12,26 +11,6 @@ where
     type State = RenderEffect<V::State>;
     type Cloneable = SharedReactiveFunction<V>;
     type CloneableOwned = SharedReactiveFunction<V>;
-
-    fn hydrate<const FROM_SERVER: bool>(
-        mut self,
-        el: &crate::view_tree::renderer::types::Element,
-        key: &str,
-    ) -> Self::State {
-        let key = Rndr::intern(key);
-        let key = key.to_owned();
-        let el = el.to_owned();
-
-        RenderEffect::new(move |prev| {
-            let value = self.invoke();
-            if let Some(mut state) = prev {
-                value.rebuild(&mut state, &key);
-                state
-            } else {
-                value.hydrate::<FROM_SERVER>(&el, &key)
-            }
-        })
-    }
 
     fn build(mut self, el: &crate::view_tree::renderer::types::Element, key: &str) -> Self::State {
         let key = Rndr::intern(key);
@@ -89,14 +68,6 @@ macro_rules! property_reactive {
             type Cloneable = Self;
             type CloneableOwned = Self;
 
-            fn hydrate<const FROM_SERVER: bool>(
-                self,
-                el: &crate::view_tree::renderer::types::Element,
-                key: &str,
-            ) -> Self::State {
-                (move || self.get()).hydrate::<FROM_SERVER>(el, key)
-            }
-
             fn build(
                 self,
                 el: &crate::view_tree::renderer::types::Element,
@@ -121,8 +92,6 @@ macro_rules! property_reactive {
 }
 
 mod stable {
-    #[allow(deprecated)]
-    use crate::reactivity::wrappers::read::MaybeSignal;
     use crate::reactivity::{
         computed::{ArcMemo, Memo},
         effect::RenderEffect,
@@ -165,94 +134,8 @@ mod stable {
         S: Storage<V> + Storage<Option<V>>,
         S: Send + Sync + 'static,
     );
-    property_reactive!(
-        MaybeSignal,
-        <V, S>,
-        V,
-        MaybeSignal<V, S>: Get<Value = V>,
-        S: Storage<V> + Storage<Option<V>>,
-        S: Send + Sync + 'static,
-    );
     property_reactive!(ArcRwSignal, <V>, V, ArcRwSignal<V>: Get<Value = V>);
     property_reactive!(ArcReadSignal, <V>, V, ArcReadSignal<V>: Get<Value = V>);
     property_reactive!(ArcMemo, <V>, V, ArcMemo<V>: Get<Value = V>);
     property_reactive!(ArcSignal, <V>, V, ArcSignal<V>: Get<Value = V>);
-}
-
-#[cfg(any())]
-mod reactive_stores {
-    #[allow(deprecated)]
-    use crate::reactivity::{effect::RenderEffect, owner::Storage, traits::Get};
-    use crate::view_tree::html::property::IntoProperty;
-    use reactive_stores::{
-        ArcField, ArcStore, AtIndex, AtKeyed, DerefedField, Field, KeyedSubfield, Store,
-        StoreField, Subfield,
-    };
-    use std::ops::{Deref, DerefMut, Index, IndexMut};
-
-    property_reactive!(
-        Subfield,
-        <Inner, Prev, V>,
-        V,
-        Subfield<Inner, Prev, V>: Get<Value = V>,
-        Prev: Send + Sync + 'static,
-        Inner: Send + Sync + Clone + 'static,
-    );
-
-    property_reactive!(
-        AtKeyed,
-        <Inner, Prev, K, V>,
-        V,
-        AtKeyed<Inner, Prev, K, V>: Get<Value = V>,
-        Prev: Send + Sync + 'static,
-        Inner: Send + Sync + Clone + 'static,
-        K: Send + Sync + std::fmt::Debug + Clone + 'static,
-        for<'a> &'a V: IntoIterator,
-    );
-
-    property_reactive!(
-        KeyedSubfield,
-        <Inner, Prev, K, V>,
-        V,
-        KeyedSubfield<Inner, Prev, K, V>: Get<Value = V>,
-        Prev: Send + Sync + 'static,
-        Inner: Send + Sync + Clone + 'static,
-        K: Send + Sync + std::fmt::Debug + Clone + 'static,
-        for<'a> &'a V: IntoIterator,
-    );
-
-    property_reactive!(
-        DerefedField,
-        <S>,
-        <S::Value as Deref>::Target,
-        S: Clone + StoreField + Send + Sync + 'static,
-        <S as StoreField>::Value: Deref + DerefMut
-    );
-
-    property_reactive!(
-        AtIndex,
-        <Inner, Prev>,
-        <Prev as Index<usize>>::Output,
-        AtIndex<Inner, Prev>: Get<Value = Prev::Output>,
-        Prev: Send + Sync + IndexMut<usize> + 'static,
-        Inner: Send + Sync + Clone + 'static,
-    );
-    property_reactive!(
-        Store,
-        <V, S>,
-        V,
-        Store<V, S>: Get<Value = V>,
-        S: Storage<V> + Storage<Option<V>>,
-        S: Send + Sync + 'static,
-    );
-    property_reactive!(
-        Field,
-        <V, S>,
-        V,
-        Field<V, S>: Get<Value = V>,
-        S: Storage<V> + Storage<Option<V>>,
-        S: Send + Sync + 'static,
-    );
-    property_reactive!(ArcStore, <V>, V, ArcStore<V>: Get<Value = V>);
-    property_reactive!(ArcField, <V>, V, ArcField<V>: Get<Value = V>);
 }

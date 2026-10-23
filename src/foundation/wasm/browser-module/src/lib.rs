@@ -1,6 +1,5 @@
 use anyhow::{bail, Context, Error};
 use std::collections::{hash_map::Entry, BTreeMap, HashMap, HashSet};
-use std::env;
 use std::fs;
 use std::mem;
 use std::path::{Path, PathBuf};
@@ -98,9 +97,6 @@ pub enum EncodeInto {
 
 impl Bindgen {
     pub fn new() -> Bindgen {
-        let externref =
-            env::var("WASM_BINDGEN_ANYREF").is_ok() || env::var("WASM_BINDGEN_EXTERNREF").is_ok();
-        let multi_value = env::var("WASM_BINDGEN_MULTI_VALUE").is_ok();
         Bindgen {
             input: Input::None,
             out_name: None,
@@ -118,8 +114,8 @@ impl Bindgen {
             remove_name_section: false,
             remove_producers_section: false,
             emit_start: true,
-            externref,
-            multi_value,
+            externref: false,
+            multi_value: false,
             encode_into: EncodeInto::Test,
             omit_default_module_path: true,
             ts_typed_array_buffers: false,
@@ -136,12 +132,6 @@ impl Bindgen {
 
     pub fn out_name(&mut self, name: &str) -> &mut Bindgen {
         self.out_name = Some(name.to_string());
-        self
-    }
-
-    #[deprecated = "automatically detected via `-Ctarget-feature=+reference-types`"]
-    pub fn reference_types(&mut self, enable: bool) -> &mut Bindgen {
-        self.externref = enable;
         self
     }
 
@@ -391,14 +381,16 @@ impl Bindgen {
             && matches!(self.mode, OutputMode::Emscripten);
 
         // Enable reference type transformations if the module is already using it.
-        if let Ok(true) = wasm_conventions::target_feature(&module, "reference-types") {
-            self.externref = true;
-        }
+        self.externref = matches!(
+            wasm_conventions::target_feature(&module, "reference-types"),
+            Ok(true)
+        );
 
         // Enable multivalue transformations if the module is already using it.
-        if let Ok(true) = wasm_conventions::target_feature(&module, "multivalue") {
-            self.multi_value = true;
-        }
+        self.multi_value = matches!(
+            wasm_conventions::target_feature(&module, "multivalue"),
+            Ok(true)
+        );
 
         // Check that no exported symbol is called "default" if we target web.
         if matches!(self.mode, OutputMode::Web)

@@ -38,8 +38,9 @@ pub struct Zip<T> {
 /// ```
 /// [`izip!()`]: crate::izip
 pub fn multizip<T, U>(t: U) -> Zip<T>
-    where Zip<T>: From<U>,
-          Zip<T>: Iterator,
+where
+    Zip<T>: From<U>,
+    Zip<T>: Iterator,
 {
     Zip::from(t)
 }
@@ -82,7 +83,7 @@ macro_rules! impl_zip_iter {
 
             fn size_hint(&self) -> (usize, Option<usize>)
             {
-                let sh = (::std::usize::MAX, None);
+                let sh = (usize::MAX, None);
                 let ($(ref $B,)*) = self.t;
                 $(
                     let sh = size_hint::min($B.size_hint(), sh);

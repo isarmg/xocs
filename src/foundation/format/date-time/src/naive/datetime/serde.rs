@@ -56,9 +56,9 @@ impl<'de> de::Deserialize<'de> for NaiveDateTime {
 /// # Example:
 ///
 /// ```rust
-/// # use chrono::{NaiveDate, NaiveDateTime};
+/// # use blog_format_date_time::{NaiveDate, NaiveDateTime};
 /// # use serde_derive::{Deserialize, Serialize};
-/// use chrono::naive::serde::ts_nanoseconds;
+/// use blog_format_date_time::naive::serde::ts_nanoseconds;
 /// #[derive(Deserialize, Serialize)]
 /// struct S {
 ///     #[serde(with = "ts_nanoseconds")]
@@ -99,9 +99,9 @@ pub mod ts_nanoseconds {
     /// # Example:
     ///
     /// ```rust
-    /// # use chrono::{NaiveDate, NaiveDateTime};
+    /// # use blog_format_date_time::{NaiveDate, NaiveDateTime};
     /// # use serde_derive::Serialize;
-    /// use chrono::naive::serde::ts_nanoseconds::serialize as to_nano_ts;
+    /// use blog_format_date_time::naive::serde::ts_nanoseconds::serialize as to_nano_ts;
     /// #[derive(Serialize)]
     /// struct S {
     ///     #[serde(serialize_with = "to_nano_ts")]
@@ -122,9 +122,13 @@ pub mod ts_nanoseconds {
     where
         S: ser::Serializer,
     {
-        serializer.serialize_i64(dt.and_utc().timestamp_nanos_opt().ok_or(ser::Error::custom(
-            "value out of range for a timestamp with nanosecond precision",
-        ))?)
+        serializer.serialize_i64(
+            dt.and_utc()
+                .timestamp_nanos_opt()
+                .ok_or(ser::Error::custom(
+                    "value out of range for a timestamp with nanosecond precision",
+                ))?,
+        )
     }
 
     /// Deserialize a `NaiveDateTime` from a nanoseconds timestamp
@@ -134,9 +138,9 @@ pub mod ts_nanoseconds {
     /// # Example:
     ///
     /// ```rust
-    /// # use chrono::{DateTime, NaiveDateTime};
+    /// # use blog_format_date_time::{DateTime, NaiveDateTime};
     /// # use serde_derive::Deserialize;
-    /// use chrono::naive::serde::ts_nanoseconds::deserialize as from_nano_ts;
+    /// use blog_format_date_time::naive::serde::ts_nanoseconds::deserialize as from_nano_ts;
     /// #[derive(Debug, PartialEq, Deserialize)]
     /// struct S {
     ///     #[serde(deserialize_with = "from_nano_ts")]
@@ -184,9 +188,12 @@ pub mod ts_nanoseconds {
         where
             E: de::Error,
         {
-            DateTime::from_timestamp((value / 1_000_000_000) as i64, (value % 1_000_000_000) as u32)
-                .map(|dt| dt.naive_utc())
-                .ok_or_else(|| invalid_ts(value))
+            DateTime::from_timestamp(
+                (value / 1_000_000_000) as i64,
+                (value % 1_000_000_000) as u32,
+            )
+            .map(|dt| dt.naive_utc())
+            .ok_or_else(|| invalid_ts(value))
         }
     }
 }
@@ -198,9 +205,9 @@ pub mod ts_nanoseconds {
 /// # Example:
 ///
 /// ```rust
-/// # use chrono::naive::{NaiveDate, NaiveDateTime};
+/// # use blog_format_date_time::naive::{NaiveDate, NaiveDateTime};
 /// # use serde_derive::{Deserialize, Serialize};
-/// use chrono::naive::serde::ts_nanoseconds_option;
+/// use blog_format_date_time::naive::serde::ts_nanoseconds_option;
 /// #[derive(Deserialize, Serialize)]
 /// struct S {
 ///     #[serde(with = "ts_nanoseconds_option")]
@@ -243,9 +250,9 @@ pub mod ts_nanoseconds_option {
     /// # Example:
     ///
     /// ```rust
-    /// # use chrono::naive::{NaiveDate, NaiveDateTime};
+    /// # use blog_format_date_time::naive::{NaiveDate, NaiveDateTime};
     /// # use serde_derive::Serialize;
-    /// use chrono::naive::serde::ts_nanoseconds_option::serialize as to_nano_tsopt;
+    /// use blog_format_date_time::naive::serde::ts_nanoseconds_option::serialize as to_nano_tsopt;
     /// #[derive(Serialize)]
     /// struct S {
     ///     #[serde(serialize_with = "to_nano_tsopt")]
@@ -283,9 +290,9 @@ pub mod ts_nanoseconds_option {
     /// # Example:
     ///
     /// ```rust
-    /// # use chrono::{DateTime, NaiveDateTime};
+    /// # use blog_format_date_time::{DateTime, NaiveDateTime};
     /// # use serde_derive::Deserialize;
-    /// use chrono::naive::serde::ts_nanoseconds_option::deserialize as from_nano_tsopt;
+    /// use blog_format_date_time::naive::serde::ts_nanoseconds_option::deserialize as from_nano_tsopt;
     /// #[derive(Debug, PartialEq, Deserialize)]
     /// struct S {
     ///     #[serde(deserialize_with = "from_nano_tsopt")]
@@ -348,9 +355,9 @@ pub mod ts_nanoseconds_option {
 /// # Example:
 ///
 /// ```rust
-/// # use chrono::{NaiveDate, NaiveDateTime};
+/// # use blog_format_date_time::{NaiveDate, NaiveDateTime};
 /// # use serde_derive::{Deserialize, Serialize};
-/// use chrono::naive::serde::ts_microseconds;
+/// use blog_format_date_time::naive::serde::ts_microseconds;
 /// #[derive(Deserialize, Serialize)]
 /// struct S {
 ///     #[serde(with = "ts_microseconds")]
@@ -383,9 +390,9 @@ pub mod ts_microseconds {
     /// # Example:
     ///
     /// ```rust
-    /// # use chrono::{NaiveDate, NaiveDateTime};
+    /// # use blog_format_date_time::{NaiveDate, NaiveDateTime};
     /// # use serde_derive::Serialize;
-    /// use chrono::naive::serde::ts_microseconds::serialize as to_micro_ts;
+    /// use blog_format_date_time::naive::serde::ts_microseconds::serialize as to_micro_ts;
     /// #[derive(Serialize)]
     /// struct S {
     ///     #[serde(serialize_with = "to_micro_ts")]
@@ -416,9 +423,9 @@ pub mod ts_microseconds {
     /// # Example:
     ///
     /// ```rust
-    /// # use chrono::{DateTime, NaiveDateTime};
+    /// # use blog_format_date_time::{DateTime, NaiveDateTime};
     /// # use serde_derive::Deserialize;
-    /// use chrono::naive::serde::ts_microseconds::deserialize as from_micro_ts;
+    /// use blog_format_date_time::naive::serde::ts_microseconds::deserialize as from_micro_ts;
     /// #[derive(Debug, PartialEq, Deserialize)]
     /// struct S {
     ///     #[serde(deserialize_with = "from_micro_ts")]
@@ -480,9 +487,9 @@ pub mod ts_microseconds {
 /// # Example:
 ///
 /// ```rust
-/// # use chrono::naive::{NaiveDate, NaiveDateTime};
+/// # use blog_format_date_time::naive::{NaiveDate, NaiveDateTime};
 /// # use serde_derive::{Deserialize, Serialize};
-/// use chrono::naive::serde::ts_microseconds_option;
+/// use blog_format_date_time::naive::serde::ts_microseconds_option;
 /// #[derive(Deserialize, Serialize)]
 /// struct S {
 ///     #[serde(with = "ts_microseconds_option")]
@@ -517,9 +524,9 @@ pub mod ts_microseconds_option {
     /// # Example:
     ///
     /// ```rust
-    /// # use chrono::naive::{NaiveDate, NaiveDateTime};
+    /// # use blog_format_date_time::naive::{NaiveDate, NaiveDateTime};
     /// # use serde_derive::Serialize;
-    /// use chrono::naive::serde::ts_microseconds_option::serialize as to_micro_tsopt;
+    /// use blog_format_date_time::naive::serde::ts_microseconds_option::serialize as to_micro_tsopt;
     /// #[derive(Serialize)]
     /// struct S {
     ///     #[serde(serialize_with = "to_micro_tsopt")]
@@ -555,9 +562,9 @@ pub mod ts_microseconds_option {
     /// # Example:
     ///
     /// ```rust
-    /// # use chrono::{DateTime, NaiveDateTime};
+    /// # use blog_format_date_time::{DateTime, NaiveDateTime};
     /// # use serde_derive::Deserialize;
-    /// use chrono::naive::serde::ts_microseconds_option::deserialize as from_micro_tsopt;
+    /// use blog_format_date_time::naive::serde::ts_microseconds_option::deserialize as from_micro_tsopt;
     /// #[derive(Debug, PartialEq, Deserialize)]
     /// struct S {
     ///     #[serde(deserialize_with = "from_micro_tsopt")]
@@ -620,9 +627,9 @@ pub mod ts_microseconds_option {
 /// # Example:
 ///
 /// ```rust
-/// # use chrono::{NaiveDate, NaiveDateTime};
+/// # use blog_format_date_time::{NaiveDate, NaiveDateTime};
 /// # use serde_derive::{Deserialize, Serialize};
-/// use chrono::naive::serde::ts_milliseconds;
+/// use blog_format_date_time::naive::serde::ts_milliseconds;
 /// #[derive(Deserialize, Serialize)]
 /// struct S {
 ///     #[serde(with = "ts_milliseconds")]
@@ -653,9 +660,9 @@ pub mod ts_milliseconds {
     /// # Example:
     ///
     /// ```rust
-    /// # use chrono::{NaiveDate, NaiveDateTime};
+    /// # use blog_format_date_time::{NaiveDate, NaiveDateTime};
     /// # use serde_derive::Serialize;
-    /// use chrono::naive::serde::ts_milliseconds::serialize as to_milli_ts;
+    /// use blog_format_date_time::naive::serde::ts_milliseconds::serialize as to_milli_ts;
     /// #[derive(Serialize)]
     /// struct S {
     ///     #[serde(serialize_with = "to_milli_ts")]
@@ -686,9 +693,9 @@ pub mod ts_milliseconds {
     /// # Example:
     ///
     /// ```rust
-    /// # use chrono::{DateTime, NaiveDateTime};
+    /// # use blog_format_date_time::{DateTime, NaiveDateTime};
     /// # use serde_derive::Deserialize;
-    /// use chrono::naive::serde::ts_milliseconds::deserialize as from_milli_ts;
+    /// use blog_format_date_time::naive::serde::ts_milliseconds::deserialize as from_milli_ts;
     /// #[derive(Debug, PartialEq, Deserialize)]
     /// struct S {
     ///     #[serde(deserialize_with = "from_milli_ts")]
@@ -747,9 +754,9 @@ pub mod ts_milliseconds {
 /// # Example:
 ///
 /// ```rust
-/// # use chrono::naive::{NaiveDate, NaiveDateTime};
+/// # use blog_format_date_time::naive::{NaiveDate, NaiveDateTime};
 /// # use serde_derive::{Deserialize, Serialize};
-/// use chrono::naive::serde::ts_milliseconds_option;
+/// use blog_format_date_time::naive::serde::ts_milliseconds_option;
 /// #[derive(Deserialize, Serialize)]
 /// struct S {
 ///     #[serde(with = "ts_milliseconds_option")]
@@ -781,9 +788,9 @@ pub mod ts_milliseconds_option {
     /// # Example:
     ///
     /// ```rust
-    /// # use chrono::naive::{NaiveDate, NaiveDateTime};
+    /// # use blog_format_date_time::naive::{NaiveDate, NaiveDateTime};
     /// # use serde_derive::Serialize;
-    /// use chrono::naive::serde::ts_milliseconds_option::serialize as to_milli_tsopt;
+    /// use blog_format_date_time::naive::serde::ts_milliseconds_option::serialize as to_milli_tsopt;
     /// #[derive(Serialize)]
     /// struct S {
     ///     #[serde(serialize_with = "to_milli_tsopt")]
@@ -819,9 +826,9 @@ pub mod ts_milliseconds_option {
     /// # Example:
     ///
     /// ```rust
-    /// # use chrono::{DateTime, NaiveDateTime};
+    /// # use blog_format_date_time::{DateTime, NaiveDateTime};
     /// # use serde_derive::Deserialize;
-    /// use chrono::naive::serde::ts_milliseconds_option::deserialize as from_milli_tsopt;
+    /// use blog_format_date_time::naive::serde::ts_milliseconds_option::deserialize as from_milli_tsopt;
     /// #[derive(Debug, PartialEq, Deserialize)]
     /// struct S {
     ///     #[serde(deserialize_with = "from_milli_tsopt")]
@@ -884,9 +891,9 @@ pub mod ts_milliseconds_option {
 /// # Example:
 ///
 /// ```rust
-/// # use chrono::{NaiveDate, NaiveDateTime};
+/// # use blog_format_date_time::{NaiveDate, NaiveDateTime};
 /// # use serde_derive::{Deserialize, Serialize};
-/// use chrono::naive::serde::ts_seconds;
+/// use blog_format_date_time::naive::serde::ts_seconds;
 /// #[derive(Deserialize, Serialize)]
 /// struct S {
 ///     #[serde(with = "ts_seconds")]
@@ -916,9 +923,9 @@ pub mod ts_seconds {
     /// # Example:
     ///
     /// ```rust
-    /// # use chrono::{NaiveDate, NaiveDateTime};
+    /// # use blog_format_date_time::{NaiveDate, NaiveDateTime};
     /// # use serde_derive::Serialize;
-    /// use chrono::naive::serde::ts_seconds::serialize as to_ts;
+    /// use blog_format_date_time::naive::serde::ts_seconds::serialize as to_ts;
     /// #[derive(Serialize)]
     /// struct S {
     ///     #[serde(serialize_with = "to_ts")]
@@ -945,9 +952,9 @@ pub mod ts_seconds {
     /// # Example:
     ///
     /// ```rust
-    /// # use chrono::{DateTime, NaiveDateTime};
+    /// # use blog_format_date_time::{DateTime, NaiveDateTime};
     /// # use serde_derive::Deserialize;
-    /// use chrono::naive::serde::ts_seconds::deserialize as from_ts;
+    /// use blog_format_date_time::naive::serde::ts_seconds::deserialize as from_ts;
     /// #[derive(Debug, PartialEq, Deserialize)]
     /// struct S {
     ///     #[serde(deserialize_with = "from_ts")]
@@ -1006,9 +1013,9 @@ pub mod ts_seconds {
 /// # Example:
 ///
 /// ```rust
-/// # use chrono::naive::{NaiveDate, NaiveDateTime};
+/// # use blog_format_date_time::naive::{NaiveDate, NaiveDateTime};
 /// # use serde_derive::{Deserialize, Serialize};
-/// use chrono::naive::serde::ts_seconds_option;
+/// use blog_format_date_time::naive::serde::ts_seconds_option;
 /// #[derive(Deserialize, Serialize)]
 /// struct S {
 ///     #[serde(with = "ts_seconds_option")]
@@ -1038,9 +1045,9 @@ pub mod ts_seconds_option {
     /// # Example:
     ///
     /// ```rust
-    /// # use chrono::naive::{NaiveDate, NaiveDateTime};
+    /// # use blog_format_date_time::naive::{NaiveDate, NaiveDateTime};
     /// # use serde_derive::Serialize;
-    /// use chrono::naive::serde::ts_seconds_option::serialize as to_tsopt;
+    /// use blog_format_date_time::naive::serde::ts_seconds_option::serialize as to_tsopt;
     /// #[derive(Serialize)]
     /// struct S {
     ///     #[serde(serialize_with = "to_tsopt")]
@@ -1070,9 +1077,9 @@ pub mod ts_seconds_option {
     /// # Example:
     ///
     /// ```rust
-    /// # use chrono::{DateTime, NaiveDateTime};
+    /// # use blog_format_date_time::{DateTime, NaiveDateTime};
     /// # use serde_derive::Deserialize;
-    /// use chrono::naive::serde::ts_seconds_option::deserialize as from_tsopt;
+    /// use blog_format_date_time::naive::serde::ts_seconds_option::deserialize as from_tsopt;
     /// #[derive(Debug, PartialEq, Deserialize)]
     /// struct S {
     ///     #[serde(deserialize_with = "from_tsopt")]
@@ -1148,7 +1155,10 @@ mod tests {
         );
         assert_eq!(
             serde_json::to_string(
-                &NaiveDate::from_ymd_opt(2014, 7, 24).unwrap().and_hms_opt(12, 34, 6).unwrap()
+                &NaiveDate::from_ymd_opt(2014, 7, 24)
+                    .unwrap()
+                    .and_hms_opt(12, 34, 6)
+                    .unwrap()
             )
             .ok(),
             Some(r#""2014-07-24T12:34:06""#.into())
@@ -1179,7 +1189,9 @@ mod tests {
         );
         assert_eq!(
             serde_json::to_string(
-                &NaiveDate::MAX.and_hms_nano_opt(23, 59, 59, 1_999_999_999).unwrap()
+                &NaiveDate::MAX
+                    .and_hms_nano_opt(23, 59, 59, 1_999_999_999)
+                    .unwrap()
             )
             .ok(),
             Some(r#""+262142-12-31T23:59:60.999999999""#.into())
@@ -1210,7 +1222,12 @@ mod tests {
         );
         assert_eq!(
             from_str(r#""2014-07-24T12:34:06""#).ok(),
-            Some(NaiveDate::from_ymd_opt(2014, 7, 24).unwrap().and_hms_opt(12, 34, 6).unwrap())
+            Some(
+                NaiveDate::from_ymd_opt(2014, 7, 24)
+                    .unwrap()
+                    .and_hms_opt(12, 34, 6)
+                    .unwrap()
+            )
         );
         assert_eq!(
             from_str(r#""0000-01-01T00:00:60""#).ok(),
@@ -1245,11 +1262,19 @@ mod tests {
         );
         assert_eq!(
             from_str(r#""+262142-12-31T23:59:60.999999999""#).ok(),
-            Some(NaiveDate::MAX.and_hms_nano_opt(23, 59, 59, 1_999_999_999).unwrap())
+            Some(
+                NaiveDate::MAX
+                    .and_hms_nano_opt(23, 59, 59, 1_999_999_999)
+                    .unwrap()
+            )
         );
         assert_eq!(
             from_str(r#""+262142-12-31T23:59:60.9999999999997""#).ok(), // excess digits are ignored
-            Some(NaiveDate::MAX.and_hms_nano_opt(23, 59, 59, 1_999_999_999).unwrap())
+            Some(
+                NaiveDate::MAX
+                    .and_hms_nano_opt(23, 59, 59, 1_999_999_999)
+                    .unwrap()
+            )
         );
 
         // bad formats
@@ -1278,8 +1303,10 @@ mod tests {
     // it is not self-describing.
     #[test]
     fn test_serde_bincode() {
-        let dt =
-            NaiveDate::from_ymd_opt(2016, 7, 8).unwrap().and_hms_milli_opt(9, 10, 48, 90).unwrap();
+        let dt = NaiveDate::from_ymd_opt(2016, 7, 8)
+            .unwrap()
+            .and_hms_milli_opt(9, 10, 48, 90)
+            .unwrap();
         let encoded = serialize(&dt).unwrap();
         let decoded: NaiveDateTime = deserialize(&encoded).unwrap();
         assert_eq!(dt, decoded);
@@ -1294,8 +1321,10 @@ mod tests {
             two: Option<DateTime<Utc>>,
         }
 
-        let expected =
-            Test { one: Some(1), two: Some(Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap()) };
+        let expected = Test {
+            one: Some(1),
+            two: Some(Utc.with_ymd_and_hms(1970, 1, 1, 0, 1, 1).unwrap()),
+        };
         let bytes: Vec<u8> = serialize(&expected).unwrap();
         let actual = deserialize::<Test>(&(bytes)).unwrap();
 

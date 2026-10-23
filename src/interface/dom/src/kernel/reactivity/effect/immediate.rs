@@ -48,16 +48,12 @@ use std::{
 /// ## Notes
 ///
 /// 1. **Scheduling**: Effects run immediately, as soon as any tracked signal changes.
-/// 2. By default, effects do not run unless the `effects` feature is enabled. If you are using
-///    this with a web framework, this generally means that effects **do not run on the server**.
-///    and you can call browser-specific APIs within the effect function without causing issues.
-///    If you need an effect to run on the server, use [`ImmediateEffect::new_isomorphic`].
 #[derive(Debug, Clone)]
 pub struct ImmediateEffect {
     inner: StoredEffect,
 }
 
-type StoredEffect = Option<Arc<RwLock<inner::EffectInner>>>;
+type StoredEffect = Arc<RwLock<inner::EffectInner>>;
 
 impl Dispose for ImmediateEffect {
     fn dispose(self) {}
@@ -72,15 +68,11 @@ impl ImmediateEffect {
     #[track_caller]
     #[must_use]
     pub fn new(fun: impl Fn() + Send + Sync + 'static) -> Self {
-        if !cfg!(all()) {
-            return Self { inner: None };
-        }
-
         let inner = inner::EffectInner::new(fun);
 
         inner.update_if_necessary();
 
-        Self { inner: Some(inner) }
+        Self { inner }
     }
     /// Creates a new effect which runs immediately, then again as soon as any tracked signal changes.
     /// (Unless [batch] is used.)
@@ -119,31 +111,17 @@ impl ImmediateEffect {
 
         on_cleanup(move || effect.dispose());
     }
-
-    /// Creates a new effect which runs immediately, then again as soon as any tracked signal changes.
-    ///
-    /// This will run whether the `effects` feature is enabled or not.
-    #[track_caller]
-    #[must_use]
-    pub fn new_isomorphic(fun: impl Fn() + Send + Sync + 'static) -> Self {
-        let inner = inner::EffectInner::new(fun);
-
-        inner.update_if_necessary();
-
-        Self { inner: Some(inner) }
-    }
 }
 
 impl ToAnySubscriber for ImmediateEffect {
     fn to_any_subscriber(&self) -> AnySubscriber {
-        const MSG: &str = "tried to set effect that has been stopped";
-        self.inner.as_ref().expect(MSG).to_any_subscriber()
+        self.inner.to_any_subscriber()
     }
 }
 
 impl DefinedAt for ImmediateEffect {
     fn defined_at(&self) -> Option<&'static Location<'static>> {
-        self.inner.as_ref()?.read().or_poisoned().defined_at()
+        self.inner.read().or_poisoned().defined_at()
     }
 }
 

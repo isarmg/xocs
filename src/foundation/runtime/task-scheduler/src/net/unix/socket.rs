@@ -124,7 +124,6 @@ impl UnixSocket {
         #[cfg(any(
             target_os = "android",
             target_os = "dragonfly",
-            target_os = "freebsd",
             target_os = "fuchsia",
             target_os = "illumos",
             target_os = "linux",
@@ -136,7 +135,6 @@ impl UnixSocket {
         #[cfg(not(any(
             target_os = "android",
             target_os = "dragonfly",
-            target_os = "freebsd",
             target_os = "fuchsia",
             target_os = "illumos",
             target_os = "linux",

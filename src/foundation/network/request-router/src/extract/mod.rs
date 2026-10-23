@@ -20,9 +20,6 @@ pub use crate::kernel::extract::{
     OptionalFromRequestParts, Request,
 };
 
-#[cfg(any())]
-pub use axum_macros::{FromRef, FromRequest, FromRequestParts};
-
 #[doc(inline)]
 pub use self::{
     nested_path::NestedPath,

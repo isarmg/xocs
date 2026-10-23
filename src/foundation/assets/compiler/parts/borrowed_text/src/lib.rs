@@ -1,8 +1,3 @@
-// Disable no_std in doctests on stable Rust.
-// See https://github.com/RReverser/cow-utils-rs/pull/1#issuecomment-586973518.
-#![cfg_attr(any(not(doctest), any()), no_std)]
-#![cfg_attr(any(), feature(pattern))]
-
 extern crate alloc as std;
 
 use std::{
@@ -14,10 +9,8 @@ use std::{
 /// normally provided directly by [`std::str::pattern::Pattern`]
 /// (which is currently unstable).
 ///
-/// On stable Rust it's implemented on the same standard types as
-/// [`std::str::pattern::Pattern`], but on nightly you can enable
-/// a `"nightly"` feature and any custom types implementing
-/// [`std::str::pattern::Pattern`] will be supported as well.
+/// Implementations may provide custom matches. Replacement validates their
+/// byte ranges against the source string before slicing it.
 pub trait Pattern<'s> {
     /// This will always be [`std::str::MatchIndices<'s,
     /// Self>`](std::str::MatchIndices) but we can't spell it out because it
@@ -41,7 +34,6 @@ macro_rules! impl_pattern {
 	};
 }
 
-#[cfg(not(any()))]
 const _: () = {
     impl_pattern!(char);
     impl_pattern!(&str);
@@ -50,9 +42,6 @@ const _: () = {
     impl_pattern!(&&str);
     impl_pattern!(F where F: FnMut(char) -> bool);
 };
-
-#[cfg(any())]
-impl_pattern!(P where P: std::str::pattern::Pattern<'s>);
 
 /// Some [`str`] methods perform destructive transformations and so
 /// return [`String`] even when no modification is necessary.
@@ -82,7 +71,7 @@ pub trait CowUtils<'s> {
     fn cow_to_uppercase(self) -> Self::Output;
 }
 
-unsafe fn cow_replace<'s>(
+fn cow_replace<'s>(
     src: &'s str,
     match_indices: impl Iterator<Item = (usize, &'s str)>,
     to: &str,
@@ -90,13 +79,13 @@ unsafe fn cow_replace<'s>(
     let mut result = Cow::default();
     let mut last_start = 0;
     for (index, matched) in match_indices {
-        result += src.get_unchecked(last_start..index);
+        result += &src[last_start..index];
         if !to.is_empty() {
             result.to_mut().push_str(to);
         }
         last_start = index + matched.len();
     }
-    result += src.get_unchecked(last_start..);
+    result += &src[last_start..];
     result
 }
 
@@ -116,7 +105,7 @@ impl<'s> CowUtils<'s> for &'s str {
     /// assert_matches!("$a$b$".cow_replace("$", ""), Cow::Owned(s) if s == "ab");
     /// ```
     fn cow_replace(self, pattern: impl Pattern<'s>, to: &str) -> Self::Output {
-        unsafe { cow_replace(self, pattern.match_indices_in(self), to) }
+        cow_replace(self, pattern.match_indices_in(self), to)
     }
 
     /// This is similar to [`str::replacen`](https://doc.rust-lang.org/std/primitive.str.html#method.replacen), but returns
@@ -133,7 +122,7 @@ impl<'s> CowUtils<'s> for &'s str {
     /// assert_matches!("abc".cow_replacen("b", "d", 1), Cow::Owned(s) if s == "adc");
     /// ```
     fn cow_replacen(self, pattern: impl Pattern<'s>, to: &str, count: usize) -> Self::Output {
-        unsafe { cow_replace(self, pattern.match_indices_in(self).take(count), to) }
+        cow_replace(self, pattern.match_indices_in(self).take(count), to)
     }
 
     /// This is similar to [`str::to_ascii_lowercase`](https://doc.rust-lang.org/std/primitive.str.html#method.to_ascii_lowercase), but returns

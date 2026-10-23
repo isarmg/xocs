@@ -53,10 +53,7 @@ pub fn create_helper<R>(
         //    Re-seeding the randomness won't help here.
         // 2. We're failing to create random files for some other reason. This shouldn't be the case
         //    given that we're checking error kinds, but it could happen.
-        #[cfg(all(
-            feature = "getrandom",
-            any(windows, unix, target_os = "redox", target_os = "wasi")
-        ))]
+        #[cfg(feature = "getrandom")]
         if i == 3 {
             if let Ok(seed) = getrandom::u64() {
                 rng.seed(seed);

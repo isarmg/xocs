@@ -1,7 +1,7 @@
 extern crate rayon;
 
-use self::rayon::iter::plumbing::{Consumer, UnindexedConsumer};
 use self::rayon::iter::plumbing::ProducerCallback;
+use self::rayon::iter::plumbing::{Consumer, UnindexedConsumer};
 use self::rayon::prelude::*;
 use super::*;
 
@@ -15,7 +15,7 @@ where
     /// # Features
     ///
     /// This API requires the `rayon` feature of this crate to be enabled.
-    pub fn par_iter(&self) -> ParIter<T, A>
+    pub fn par_iter(&self) -> ParIter<'_, T, A>
     where
         T: Sync,
         A::Id: Send,
@@ -33,7 +33,7 @@ where
     /// # Features
     ///
     /// This API requires the `rayon` feature of this crate to be enabled.
-    pub fn par_iter_mut(&mut self) -> ParIterMut<T, A>
+    pub fn par_iter_mut(&mut self) -> ParIterMut<'_, T, A>
     where
         T: Send + Sync,
         A::Id: Send,
@@ -72,7 +72,8 @@ where
         C: UnindexedConsumer<Self::Item>,
     {
         let arena_id = self.arena_id;
-        self.iter.map(|(i, item)| (A::new_id(arena_id, i), item))
+        self.iter
+            .map(|(i, item)| (A::new_id(arena_id, i), item))
             .drive_unindexed(consumer)
     }
 
@@ -92,7 +93,8 @@ where
         C: Consumer<Self::Item>,
     {
         let arena_id = self.arena_id;
-        self.iter.map(|(i, item)| (A::new_id(arena_id, i), item))
+        self.iter
+            .map(|(i, item)| (A::new_id(arena_id, i), item))
             .drive(consumer)
     }
 
@@ -105,15 +107,17 @@ where
         CB: ProducerCallback<Self::Item>,
     {
         let arena_id = self.arena_id;
-        self.iter.map(|(i, item)| (A::new_id(arena_id, i), item))
+        self.iter
+            .map(|(i, item)| (A::new_id(arena_id, i), item))
             .with_producer(callback)
     }
 }
 
 impl<'data, T, A> IntoParallelIterator for &'data Arena<T, A>
-    where A: ArenaBehavior,
-          A::Id: Send,
-          T: Sync,
+where
+    A: ArenaBehavior,
+    A::Id: Send,
+    T: Sync,
 {
     type Item = (A::Id, &'data T);
     type Iter = ParIter<'data, T, A>;
@@ -149,7 +153,8 @@ where
         C: UnindexedConsumer<Self::Item>,
     {
         let arena_id = self.arena_id;
-        self.iter.map(|(i, item)| (A::new_id(arena_id, i), item))
+        self.iter
+            .map(|(i, item)| (A::new_id(arena_id, i), item))
             .drive_unindexed(consumer)
     }
 
@@ -169,7 +174,8 @@ where
         C: Consumer<Self::Item>,
     {
         let arena_id = self.arena_id;
-        self.iter.map(|(i, item)| (A::new_id(arena_id, i), item))
+        self.iter
+            .map(|(i, item)| (A::new_id(arena_id, i), item))
             .drive(consumer)
     }
 
@@ -182,15 +188,17 @@ where
         CB: ProducerCallback<Self::Item>,
     {
         let arena_id = self.arena_id;
-        self.iter.map(|(i, item)| (A::new_id(arena_id, i), item))
+        self.iter
+            .map(|(i, item)| (A::new_id(arena_id, i), item))
             .with_producer(callback)
     }
 }
 
 impl<'data, T, A> IntoParallelIterator for &'data mut Arena<T, A>
-    where A: ArenaBehavior,
-          A::Id: Send,
-          T: Send + Sync,
+where
+    A: ArenaBehavior,
+    A::Id: Send,
+    T: Send + Sync,
 {
     type Item = (A::Id, &'data mut T);
     type Iter = ParIterMut<'data, T, A>;
@@ -226,7 +234,8 @@ where
         C: UnindexedConsumer<Self::Item>,
     {
         let arena_id = self.arena_id;
-        self.iter.map(|(i, item)| (A::new_id(arena_id, i), item))
+        self.iter
+            .map(|(i, item)| (A::new_id(arena_id, i), item))
             .drive_unindexed(consumer)
     }
 
@@ -246,7 +255,8 @@ where
         C: Consumer<Self::Item>,
     {
         let arena_id = self.arena_id;
-        self.iter.map(|(i, item)| (A::new_id(arena_id, i), item))
+        self.iter
+            .map(|(i, item)| (A::new_id(arena_id, i), item))
             .drive(consumer)
     }
 
@@ -259,15 +269,17 @@ where
         CB: ProducerCallback<Self::Item>,
     {
         let arena_id = self.arena_id;
-        self.iter.map(|(i, item)| (A::new_id(arena_id, i), item))
+        self.iter
+            .map(|(i, item)| (A::new_id(arena_id, i), item))
             .with_producer(callback)
     }
 }
 
 impl<T, A> IntoParallelIterator for Arena<T, A>
-    where A: ArenaBehavior,
-          A::Id: Send,
-          T: Send,
+where
+    A: ArenaBehavior,
+    A::Id: Send,
+    T: Send,
 {
     type Item = (A::Id, T);
     type Iter = IntoParIter<T, A>;

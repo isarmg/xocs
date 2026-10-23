@@ -133,7 +133,6 @@ macro_rules! impl_from {
                 }
             }
 
-            #[cfg(relaxed_coherence)]
             impl<T> From<GenericArray<T, $ty>> for [T; $n] {
                 #[inline(always)]
                 fn from(sel: GenericArray<T, $ty>) -> [T; $n] {
@@ -152,14 +151,6 @@ macro_rules! impl_from {
                 #[inline]
                 fn from(slice: &mut [T; $n]) -> &mut GenericArray<T, $ty> {
                     unsafe { &mut *(slice.as_mut_ptr() as *mut GenericArray<T, $ty>) }
-                }
-            }
-
-            #[cfg(not(relaxed_coherence))]
-            impl<T> Into<[T; $n]> for GenericArray<T, $ty> {
-                #[inline(always)]
-                fn into(self) -> [T; $n] {
-                    unsafe { $crate::transmute(self) }
                 }
             }
 

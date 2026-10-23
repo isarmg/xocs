@@ -1,13 +1,6 @@
-use super::{Mountable, Position, PositionState, Render, RenderHtml};
-use crate::view_tree::{
-    html::attribute::any_attribute::AnyAttribute,
-    hydration::Cursor,
-    no_attrs,
-    renderer::{CastFrom, Rndr},
-    view::ToTemplate,
-};
+use super::{DomView, Mountable, Render};
+use crate::view_tree::{no_attrs, renderer::Rndr};
 use std::{
-    fmt::Write,
     net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
     num::{
         NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroIsize, NonZeroU128,
@@ -49,7 +42,6 @@ macro_rules! render_primitive {
 			impl Render for $child_type {
 				type State = [<$child_type:camel State>];
 
-
 				fn build(self) -> Self::State {
 					let node = Rndr::create_text_node(&self.to_string());
 					[<$child_type:camel State>](node, self)
@@ -66,90 +58,16 @@ macro_rules! render_primitive {
 
             no_attrs!($child_type);
 
-			impl RenderHtml for $child_type
+			impl DomView for $child_type
 			{
-				type AsyncOutput = Self;
+
 				type Owned = Self;
-
-				const MIN_LENGTH: usize = 0;
-
-                fn dry_resolve(&mut self) {}
-
-                async fn resolve(self) -> Self::AsyncOutput {
-                    self
-                }
-
-				fn to_html_with_buf(self, buf: &mut String, position: &mut Position, escape: bool, _mark_branches: bool, _extra_attrs: Vec<AnyAttribute>) {
-					// add a comment node to separate from previous sibling, if any
-					if matches!(position, Position::NextChildAfterText) {
-						buf.push_str("<!>")
-					}
-					// `$escape` is `true` only for types whose `Display` output can
-					// contain HTML-significant characters (e.g. `char`). Numeric
-					// primitives emit a syntactic subset of HTML text and are written
-					// directly to avoid an intermediate allocation.
-					if $escape {
-						if escape {
-							buf.push_str(&crate::html_escaping::encode_text(&self.to_string()));
-						} else {
-							_ = write!(buf, "{}", self);
-						}
-					} else {
-						_ = write!(buf, "{}", self);
-					}
-					*position = Position::NextChildAfterText;
-				}
-
-				fn hydrate<const FROM_SERVER: bool>(
-					self,
-					cursor: &Cursor,
-					position: &PositionState,
-				) -> Self::State {
-					if position.get() == Position::FirstChild {
-						cursor.child();
-					} else {
-						cursor.sibling();
-					}
-
-					// separating placeholder marker comes before text node
-					if matches!(position.get(), Position::NextChildAfterText) {
-						cursor.sibling();
-					}
-
-					let node = cursor.current();
-					let node = crate::view_tree::renderer::types::Text::cast_from(node.clone())
-						.unwrap_or_else(|| crate::view_tree::hydration::failed_to_cast_text_node(node));
-
-					if !FROM_SERVER {
-						Rndr::set_text(&node, &self.to_string());
-					}
-					position.set(Position::NextChildAfterText);
-
-					[<$child_type:camel State>](node, self)
-				}
 
 				fn into_owned(self) -> Self::Owned {
 					self
 				}
 			}
 
-			impl<'a> ToTemplate for $child_type {
-				const TEMPLATE: &'static str = " <!>";
-
-				fn to_template(
-					buf: &mut String,
-					_class: &mut String,
-					_style: &mut String,
-					_inner_html: &mut String,
-					position: &mut Position,
-				) {
-					if matches!(*position, Position::NextChildAfterText) {
-						buf.push_str("<!>")
-					}
-					buf.push(' ');
-					*position = Position::NextChildAfterText;
-				}
-			}
 		}
     )*
   };

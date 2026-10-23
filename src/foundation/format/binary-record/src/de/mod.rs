@@ -69,19 +69,6 @@ where
     Ok((t, deserializer.finalize()?))
 }
 
-/// Deserialize a message of type `T` from a [`embedded_io`](crate::eio::embedded_io)::[`Read`](crate::eio::Read).
-#[cfg(any(feature = "embedded-io-04", feature = "embedded-io-06"))]
-pub fn from_eio<'a, T, R>(val: (R, &'a mut [u8])) -> Result<(T, (R, &'a mut [u8]))>
-where
-    T: Deserialize<'a>,
-    R: crate::eio::Read + 'a,
-{
-    let flavor = flavors::io::eio::EIOReader::new(val.0, val.1);
-    let mut deserializer = Deserializer::from_flavor(flavor);
-    let t = T::deserialize(&mut deserializer)?;
-    Ok((t, deserializer.finalize()?))
-}
-
 /// Deserialize a message of type `T` from a [`std::io::Read`].
 #[cfg(feature = "use-std")]
 pub fn from_io<'a, T, R>(val: (R, &'a mut [u8])) -> Result<(T, (R, &'a mut [u8]))>
@@ -287,9 +274,7 @@ mod test_heapless {
         let output: Vec<u8, { 1 + varint_max::<u64>() }> =
             to_vec(&DataEnum::Bim(u64::MAX)).unwrap();
         assert_eq!(
-            &[
-                0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01
-            ],
+            &[0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01],
             output.deref()
         );
 
@@ -457,9 +442,7 @@ mod test_heapless {
         .unwrap();
 
         assert_eq!(
-            &[
-                0x04, 0x01, 0x10, 0x02, 0x20, 0x05, b'h', b'E', b'l', b'L', b'o',
-            ],
+            &[0x04, 0x01, 0x10, 0x02, 0x20, 0x05, b'h', b'E', b'l', b'L', b'o',],
             output.deref()
         );
 

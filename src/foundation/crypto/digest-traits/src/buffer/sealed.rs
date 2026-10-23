@@ -10,10 +10,7 @@ type Block<N> = MaybeUninit<Array<u8, N>>;
 
 /// Sealed trait for buffer kinds.
 pub trait Sealed {
-    #[cfg(not(feature = "zeroize"))]
     type Pos: Default + Clone;
-    #[cfg(feature = "zeroize")]
-    type Pos: Default + Clone + zeroize::Zeroize;
 
     type Overhead: ArraySize;
 

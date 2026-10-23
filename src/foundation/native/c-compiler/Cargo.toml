@@ -35,10 +35,6 @@ jobserver = []
 name = "blog_native_c_compiler"
 path = "src/lib.rs"
 
-[dependencies.find-msvc-tools]
-path = "../windows-compiler"
-package = "blog-native-windows-compiler"
-
 [dependencies.shlex]
 path = "../../text/shell-words"
 package = "blog-text-shell-words"

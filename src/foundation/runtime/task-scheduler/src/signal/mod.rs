@@ -54,7 +54,6 @@ pub use ctrl_c::ctrl_c;
 pub(crate) mod registry;
 
 pub mod unix;
-pub mod windows;
 
 mod reusable_box;
 use self::reusable_box::ReusableBoxFuture;

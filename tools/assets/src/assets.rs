@@ -230,14 +230,14 @@ struct CssUrls<'a> {
     linker: &'a mut Linker,
     source: &'a Path,
 }
-impl<'i> compiler::style_optimizer::visitor::Visitor<'i> for CssUrls<'_> {
+impl<'i> style_compiler::style_optimizer::visitor::Visitor<'i> for CssUrls<'_> {
     type Error = anyhow::Error;
-    fn visit_types(&self) -> compiler::style_optimizer::visitor::VisitTypes {
-        compiler::style_optimizer::visitor::VisitTypes::URLS
+    fn visit_types(&self) -> style_compiler::style_optimizer::visitor::VisitTypes {
+        style_compiler::style_optimizer::visitor::VisitTypes::URLS
     }
     fn visit_url(
         &mut self,
-        url: &mut compiler::style_optimizer::values::url::Url<'i>,
+        url: &mut style_compiler::style_optimizer::values::url::Url<'i>,
     ) -> Result<()> {
         let value = url.url.to_string();
         if value.starts_with('#') {
@@ -569,7 +569,7 @@ impl Linker {
     }
 
     fn stylesheet(&mut self, source: &Path) -> Result<String> {
-        use compiler::style_optimizer::{
+        use style_compiler::style_optimizer::{
             rules::CssRule,
             stylesheet::{ParserOptions, PrinterOptions, StyleSheet},
             visitor::Visit,
@@ -618,7 +618,7 @@ impl Linker {
             source,
         })?;
         sheet
-            .minify(compiler::style_optimizer::stylesheet::MinifyOptions::default())
+            .minify(style_compiler::style_optimizer::stylesheet::MinifyOptions::default())
             .map_err(|e| anyhow::anyhow!("CSS minify error: {e}"))?;
         let code = sheet
             .to_css(PrinterOptions {
@@ -1007,7 +1007,7 @@ mod tests {
 
     #[test]
     fn css_compiler_keeps_values_while_minifying_and_rejects_invalid_colors() {
-        use compiler::style_optimizer::{
+        use style_compiler::style_optimizer::{
             printer::PrinterOptions,
             stylesheet::{MinifyOptions, ParserOptions, StyleSheet},
         };
@@ -1030,9 +1030,9 @@ mod tests {
         assert!(code.contains("./keep.svg"), "{code}");
         StyleSheet::parse(&code, ParserOptions::default()).unwrap();
         // Stylesheets preserve unparsed declarations; strict value parsing rejects invalid colors.
-        use compiler::style_optimizer::{traits::Parse, values::color::CssColor};
-        let mut input = compiler::style_parser::ParserInput::new("rgb(1,,2)");
-        let mut parser = compiler::style_parser::Parser::new(&mut input);
+        use style_compiler::style_optimizer::{traits::Parse, values::color::CssColor};
+        let mut input = style_compiler::style_parser::ParserInput::new("rgb(1,,2)");
+        let mut parser = style_compiler::style_parser::Parser::new(&mut input);
         assert!(CssColor::parse(&mut parser).is_err());
     }
 

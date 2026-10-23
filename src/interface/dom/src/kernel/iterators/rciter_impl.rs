@@ -23,7 +23,7 @@ pub struct RcIter<I> {
 ///
 /// ```
 /// use blog_dom::iterators::rciter;
-/// use blog_dom::iterators::zip;
+/// use std::iter::zip;
 ///
 /// // In this example a range iterator is created and we iterate it using
 /// // three separate handles (two of them given to zip).

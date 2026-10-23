@@ -2573,7 +2573,7 @@ where
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (usize::max_value(), None)
+        (usize::MAX, None)
     }
 }
 
@@ -2779,7 +2779,7 @@ impl<T: Clone, E> FallibleIterator for Repeat<T, E> {
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (usize::max_value(), None)
+        (usize::MAX, None)
     }
 }
 

@@ -498,10 +498,7 @@ pub trait VisitMut {
         visit_nested_meta_mut(self, i);
     }
     #[cfg(any(feature = "derive", feature = "full"))]
-    fn visit_parenthesized_generic_arguments_mut(
-        &mut self,
-        i: &mut ParenthesizedGenericArguments,
-    ) {
+    fn visit_parenthesized_generic_arguments_mut(&mut self, i: &mut ParenthesizedGenericArguments) {
         visit_parenthesized_generic_arguments_mut(self, i);
     }
     #[cfg(feature = "full")]
@@ -790,8 +787,7 @@ where
 pub fn visit_angle_bracketed_generic_arguments_mut<V>(
     v: &mut V,
     node: &mut AngleBracketedGenericArguments,
-)
-where
+) where
     V: VisitMut + ?Sized,
 {
     if let Some(it) = &mut node.colon2_token {
@@ -1214,8 +1210,6 @@ where
         Expr::Yield(_binding_0) => {
             full!(v.visit_expr_yield_mut(_binding_0));
         }
-        #[cfg(syn_no_non_exhaustive)]
-        _ => unreachable!(),
     }
 }
 #[cfg(feature = "full")]
@@ -1903,8 +1897,6 @@ where
         ForeignItem::Verbatim(_binding_0) => {
             skip!(_binding_0);
         }
-        #[cfg(syn_no_non_exhaustive)]
-        _ => unreachable!(),
     }
 }
 #[cfg(feature = "full")]
@@ -2068,8 +2060,6 @@ where
         ImplItem::Verbatim(_binding_0) => {
             skip!(_binding_0);
         }
-        #[cfg(syn_no_non_exhaustive)]
-        _ => unreachable!(),
     }
 }
 #[cfg(feature = "full")]
@@ -2204,8 +2194,6 @@ where
         Item::Verbatim(_binding_0) => {
             skip!(_binding_0);
         }
-        #[cfg(syn_no_non_exhaustive)]
-        _ => unreachable!(),
     }
 }
 #[cfg(feature = "full")]
@@ -2583,27 +2571,33 @@ where
 pub fn visit_lit_byte_mut<V>(v: &mut V, node: &mut LitByte)
 where
     V: VisitMut + ?Sized,
-{}
+{
+}
 pub fn visit_lit_byte_str_mut<V>(v: &mut V, node: &mut LitByteStr)
 where
     V: VisitMut + ?Sized,
-{}
+{
+}
 pub fn visit_lit_char_mut<V>(v: &mut V, node: &mut LitChar)
 where
     V: VisitMut + ?Sized,
-{}
+{
+}
 pub fn visit_lit_float_mut<V>(v: &mut V, node: &mut LitFloat)
 where
     V: VisitMut + ?Sized,
-{}
+{
+}
 pub fn visit_lit_int_mut<V>(v: &mut V, node: &mut LitInt)
 where
     V: VisitMut + ?Sized,
-{}
+{
+}
 pub fn visit_lit_str_mut<V>(v: &mut V, node: &mut LitStr)
 where
     V: VisitMut + ?Sized,
-{}
+{
+}
 #[cfg(feature = "full")]
 pub fn visit_local_mut<V>(v: &mut V, node: &mut Local)
 where
@@ -2736,8 +2730,7 @@ where
 pub fn visit_parenthesized_generic_arguments_mut<V>(
     v: &mut V,
     node: &mut ParenthesizedGenericArguments,
-)
-where
+) where
     V: VisitMut + ?Sized,
 {
     tokens_helper(v, &mut node.paren_token.span);
@@ -2804,8 +2797,6 @@ where
         Pat::Wild(_binding_0) => {
             v.visit_pat_wild_mut(_binding_0);
         }
-        #[cfg(syn_no_non_exhaustive)]
-        _ => unreachable!(),
     }
 }
 #[cfg(feature = "full")]
@@ -3191,7 +3182,8 @@ where
 pub fn visit_span_mut<V>(v: &mut V, node: &mut Span)
 where
     V: VisitMut + ?Sized,
-{}
+{
+}
 #[cfg(feature = "full")]
 pub fn visit_stmt_mut<V>(v: &mut V, node: &mut Stmt)
 where
@@ -3260,8 +3252,6 @@ where
         TraitItem::Verbatim(_binding_0) => {
             skip!(_binding_0);
         }
-        #[cfg(syn_no_non_exhaustive)]
-        _ => unreachable!(),
     }
 }
 #[cfg(feature = "full")]
@@ -3389,8 +3379,6 @@ where
         Type::Verbatim(_binding_0) => {
             skip!(_binding_0);
         }
-        #[cfg(syn_no_non_exhaustive)]
-        _ => unreachable!(),
     }
 }
 #[cfg(any(feature = "derive", feature = "full"))]

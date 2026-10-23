@@ -1,13 +1,11 @@
-#![cfg_attr(feature = "debug", allow(clippy::std_instead_of_core))]
-
-#[cfg(feature = "debug")]
-mod internals;
-
 use crate::error::ParserError;
 use crate::stream::Stream;
 use crate::Parser;
 
-/// Trace the execution of the parser
+/// Preserve a named parser boundary without runtime tracing.
+///
+/// This product uses structured parse errors through [`Parser::context`];
+/// terminal trace rendering is outside its maintained parser contract.
 ///
 /// Note that [`Parser::context`] also provides high level trace information.
 ///
@@ -34,34 +32,19 @@ use crate::Parser;
 /// assert!(short_alpha.parse_peek(b"ed").is_err());
 /// assert!(short_alpha.parse_peek(b"12345").is_err());
 /// ```
-#[cfg_attr(not(feature = "debug"), allow(unused_variables))]
-#[cfg_attr(not(feature = "debug"), allow(unused_mut))]
-#[cfg_attr(not(feature = "debug"), inline(always))]
+#[inline(always)]
 pub fn trace<I: Stream, O, E: ParserError<I>>(
-    name: impl core::fmt::Display,
+    _name: impl core::fmt::Display,
     parser: impl Parser<I, O, E>,
 ) -> impl Parser<I, O, E> {
-    #[cfg(feature = "debug")]
-    {
-        internals::Trace::new(parser, name)
-    }
-    #[cfg(not(feature = "debug"))]
-    {
-        parser
-    }
+    parser
 }
 
-#[cfg_attr(not(feature = "debug"), allow(unused_variables))]
+#[inline(always)]
 pub(crate) fn trace_result<T, I: Stream, E: ParserError<I>>(
-    name: impl core::fmt::Display,
-    res: &Result<T, E>,
+    _name: impl core::fmt::Display,
+    _result: &Result<T, E>,
 ) {
-    #[cfg(feature = "debug")]
-    {
-        let depth = internals::Depth::existing();
-        let severity = internals::Severity::with_result(res);
-        internals::result(*depth, &name, severity);
-    }
 }
 
 pub(crate) struct DisplayDebug<D>(pub(crate) D);
@@ -70,27 +53,4 @@ impl<D: core::fmt::Debug> core::fmt::Display for DisplayDebug<D> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{:?}", self.0)
     }
-}
-
-#[test]
-#[cfg(feature = "std")]
-#[cfg_attr(miri, ignore)]
-#[cfg(unix)]
-#[cfg(feature = "debug")]
-fn example() {
-    use term_transcript::{test::TestConfig, ShellOptions};
-
-    let path = snapbox::cmd::compile_example("string", ["--features=debug"]).unwrap();
-
-    let current_dir = path.parent().unwrap();
-    let cmd = path.file_name().unwrap();
-    // HACK: term_transcript doesn't allow non-UTF8 paths
-    let cmd = format!("./{}", cmd.to_string_lossy());
-
-    TestConfig::new(
-        ShellOptions::default()
-            .with_current_dir(current_dir)
-            .with_env("CLICOLOR_FORCE", "1"),
-    )
-    .test("assets/trace.svg", [format!(r#"{cmd} '"abc"'"#).as_str()]);
 }

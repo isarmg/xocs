@@ -54,7 +54,6 @@ will only require minor version bumps, but will need significant justification.
 */
 
 #![forbid(missing_docs)]
-#![cfg_attr(not(all()), no_std)]
 
 /// An error type returned when a checked integral type conversion fails (mimics [std::num::TryFromIntError])
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -144,7 +143,8 @@ macro_rules! nonmax {
             /// primitive type.
             #[inline]
             pub const unsafe fn new_unchecked(value: $primitive) -> Self {
-                let inner = core::num::$non_zero::new_unchecked(value ^ $primitive::MAX);
+                // SAFETY: excluding MAX makes the XOR value nonzero.
+                let inner = unsafe { core::num::$non_zero::new_unchecked(value ^ $primitive::MAX) };
                 Self(inner)
             }
 

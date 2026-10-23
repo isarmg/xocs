@@ -10,10 +10,7 @@ use std::ops;
 const READABLE: usize = 0b0001;
 const WRITABLE: usize = 0b0010;
 // The following are not available on all platforms.
-#[cfg(target_os = "freebsd")]
-const AIO: usize = 0b0100;
-#[cfg(target_os = "freebsd")]
-const LIO: usize = 0b1000;
+
 #[cfg(any(target_os = "linux", target_os = "android"))]
 const PRIORITY: usize = 0b0001_0000;
 // error is available on all platforms, but behavior is platform-specific
@@ -31,23 +28,6 @@ pub struct Interest(usize);
 impl Interest {
     // The non-FreeBSD definitions in this block are active only when
     // building documentation.
-    cfg_aio! {
-        /// Interest for POSIX AIO.
-        #[cfg(target_os = "freebsd")]
-        pub const AIO: Interest = Interest(AIO);
-
-        /// Interest for POSIX AIO.
-        #[cfg(not(target_os = "freebsd"))]
-        pub const AIO: Interest = Interest(READABLE);
-
-        /// Interest for POSIX AIO `lio_listio` events.
-        #[cfg(target_os = "freebsd")]
-        pub const LIO: Interest = Interest(LIO);
-
-        /// Interest for POSIX AIO `lio_listio` events.
-        #[cfg(not(target_os = "freebsd"))]
-        pub const LIO: Interest = Interest(READABLE);
-    }
 
     /// Interest in all readable events.
     ///
@@ -119,16 +99,6 @@ impl Interest {
     /// ```
     pub const fn is_error(self) -> bool {
         self.0 & ERROR != 0
-    }
-
-    #[cfg(target_os = "freebsd")]
-    const fn is_aio(self) -> bool {
-        self.0 & AIO != 0
-    }
-
-    #[cfg(target_os = "freebsd")]
-    const fn is_lio(self) -> bool {
-        self.0 & LIO != 0
     }
 
     /// Returns true if the value includes priority interest.
@@ -227,16 +197,6 @@ impl Interest {
             mio_add(&mut mio, mio::Interest::PRIORITY);
         }
 
-        #[cfg(target_os = "freebsd")]
-        if self.is_aio() {
-            mio_add(&mut mio, mio::Interest::AIO);
-        }
-
-        #[cfg(target_os = "freebsd")]
-        if self.is_lio() {
-            mio_add(&mut mio, mio::Interest::LIO);
-        }
-
         if self.is_error() {
             // There is no error interest in mio, because error events are always reported.
             // But mio interests cannot be empty and an interest is needed just for the registration.
@@ -309,24 +269,6 @@ impl fmt::Debug for Interest {
                 write!(fmt, " | ")?;
             }
             write!(fmt, "PRIORITY")?;
-            separator = true;
-        }
-
-        #[cfg(target_os = "freebsd")]
-        if self.is_aio() {
-            if separator {
-                write!(fmt, " | ")?;
-            }
-            write!(fmt, "AIO")?;
-            separator = true;
-        }
-
-        #[cfg(target_os = "freebsd")]
-        if self.is_lio() {
-            if separator {
-                write!(fmt, " | ")?;
-            }
-            write!(fmt, "LIO")?;
             separator = true;
         }
 

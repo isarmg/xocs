@@ -11,7 +11,7 @@
 
 [package]
 edition = "2018"
-rust-version = "1.42.0"
+rust-version = "1.99"
 name = "blog-collections-concurrent-slab"
 description = "concurrent slab"
 license = "MIT"
@@ -27,5 +27,3 @@ package = "blog-sync-lazy-global"
 
 [badges.maintenance]
 status = "experimental"
-
-[target."cfg(loom)"]

@@ -1,6 +1,6 @@
 # 从源码开发运行
 
-准备 Rust 1.99.0（含 rustfmt、Clippy）、`wasm32-unknown-unknown` 目标和 Linux 原生编译环境。根 Cargo.toml 是虚拟 workspace，只有根 Cargo.lock；服务端包位于 `src/server`，浏览器应用在 `src/browser`，本地 UI 在 `src/interface`，构建器 `blog-assets` 在 `tools/assets`，浏览器 WASM 绑定生成已整合到该工具。所有 Rust 依赖通过本仓库路径解析，默认离线，不需要相邻项目、预装 wasm-bindgen CLI 或注册表源码缓存。工具链、目标标准库和原生依赖不属于这份 Rust 源码闭包。
+准备 Rust 1.99.0（含 rustfmt、Clippy）、`wasm32-unknown-unknown` 目标和 AMD64 Linux GNU/glibc 原生编译环境（含 C 编译器）。所有项目入口直接检查 HOST/TARGET；原生只支持 `x86_64-unknown-linux-gnu`，浏览器使用 `wasm32-unknown-unknown`。根 Cargo.toml 是虚拟 workspace，只有根 Cargo.lock；服务端包位于 `src/server`，浏览器应用在 `src/browser`，本地 UI 在 `src/interface`，构建器 `blog-assets` 在 `tools/assets`，浏览器 WASM 绑定生成已整合到该工具。所有 Rust 依赖通过本仓库路径解析，默认离线，不需要相邻项目、预装 wasm-bindgen CLI 或注册表源码缓存。工具链、目标标准库和原生依赖不属于这份 Rust 源码闭包。
 
 ```sh
 python3 tools/rust-sources/manage.py verify --metadata
@@ -28,6 +28,8 @@ unset blog_password
 
 验证按支持的入口分开运行：默认成员是服务端、`blog-application` 与 setup；Web 应用使用 WASM 目标，构建器和 domain 合同使用原生目标。不能用跨目标 `--workspace --all-features` 联合替代这些实际配置。
 
+`blog-assets` 的 Rust 测试会调用 PATH 中的 Node 26.7.0，执行实际生成的 JavaScript/WASM 初始化契约；没有 Node 时明确失败。该测试不需要 npm 依赖或浏览器安装。
+
 ```sh
 cargo +1.99.0 fmt -p blog -p blog-application -p blog-setup -p blog-assets -p blog-browser -p blog-browser-domain-tests -p blog-interface -p blog-dom -p blog-component-macros -- --check
 cargo +1.99.0 clippy --locked --offline --all-targets -- -D warnings
@@ -39,6 +41,8 @@ bash scripts/test-maintained.sh
 cargo +1.99.0 run --locked --offline -p blog-assets -- test --product-root . --offline
 bash scripts/smoke.sh
 ```
+
+`scripts/test-maintained.sh` 注册实际基础实现与消费者回归，包含并发 panic、密码熵源、加密向量、编译器字符串边界和 Linux 时区。哈希库原有的数千万输入统计质量扫测不在常规 CI；保留的上游测试材料不等于已支持的测试入口。日期 JSON 和时区通过 `blog` 的 `date_time_contracts` 验证，不恢复未使用的上游 bincode 测试依赖。
 
 浏览器测试另需 Node 26.7.0、npm 锁定依赖和浏览器执行环境：
 

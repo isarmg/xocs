@@ -1,17 +1,15 @@
+use crate::query_engine::sql_str::SqlStr;
+use crate::query_engine::{Either, HashMap};
 use crate::sqlite::column::ColumnIndex;
 use crate::sqlite::error::Error;
 use crate::sqlite::ext::ustr::UStr;
 use crate::sqlite::{Sqlite, SqliteArguments, SqliteColumn, SqliteTypeInfo};
-use crate::query_engine::sql_str::SqlStr;
-use crate::query_engine::{Either, HashMap};
 use std::sync::Arc;
 
 pub(crate) use crate::query_engine::statement::*;
 
 mod handle;
 
-#[cfg(feature = "sqlite-unlock-notify")]
-pub(super) mod unlock_notify;
 mod r#virtual;
 
 pub(crate) use handle::StatementHandle;

@@ -3,6 +3,7 @@ name = "blog-browser"
 edition = "2024"
 publish = false
 description = "浏览器 CSR 博客界面"
+build = "../../tools/assets/src/platform_contract.rs"
 
 [lib]
 crate-type = ["cdylib", "rlib"]

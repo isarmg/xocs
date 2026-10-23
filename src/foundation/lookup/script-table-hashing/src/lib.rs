@@ -353,30 +353,6 @@ impl<'b, 'a: 'b, S: ?Sized + 'a> PhfBorrow<unicase::Ascii<&'b S>> for unicase::A
     }
 }
 
-#[cfg(feature = "uncased")]
-impl PhfHash for uncased::UncasedStr {
-    #[inline]
-    fn phf_hash<H: Hasher>(&self, state: &mut H) {
-        self.hash(state)
-    }
-}
-
-#[cfg(feature = "uncased")]
-impl FmtConst for uncased::UncasedStr {
-    fn fmt_const(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("UncasedStr::new(")?;
-        self.as_str().fmt_const(f)?;
-        f.write_str(")")
-    }
-}
-
-#[cfg(feature = "uncased")]
-impl PhfBorrow<uncased::UncasedStr> for &uncased::UncasedStr {
-    fn borrow(&self) -> &uncased::UncasedStr {
-        self
-    }
-}
-
 macro_rules! integer_impl (
     ($t:ty) => (
         impl PhfHash for $t {

@@ -75,8 +75,6 @@ pub(crate) struct ParseContext<'ctx> {
     h1_max_headers: Option<usize>,
     h1_max_header_size: Option<usize>,
     preserve_header_case: bool,
-    #[cfg(feature = "ffi")]
-    preserve_header_order: bool,
     h09_responses: bool,
     #[cfg(feature = "client")]
     on_informational: &'ctx mut Option<crate::ext::OnInformational>,

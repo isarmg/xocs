@@ -1,9 +1,8 @@
-use crate::query_engine::column::{Column, ColumnIndex};
+use crate::query_engine::column::ColumnIndex;
 use crate::query_engine::database::Database;
 use crate::query_engine::decode::Decode;
 use crate::query_engine::error::{mismatched_types, Error};
 
-use crate::query_engine::type_checking::TypeChecking;
 use crate::query_engine::type_info::TypeInfo;
 use crate::query_engine::types::Type;
 use crate::query_engine::value::ValueRef;
@@ -12,7 +11,7 @@ use crate::query_engine::value::ValueRef;
 ///
 /// [`FromRow`]: crate::query_engine::row::FromRow
 /// [`Query::fetch`]: crate::query_engine::query::Query::fetch
-pub trait Row: Unpin + Send + Sync + 'static {
+pub trait Row: Unpin + Send + 'static {
     type Database: Database<Row = Self>;
 
     /// Returns `true` if this row has no columns.
@@ -176,33 +175,4 @@ pub trait Row: Unpin + Send + Sync + 'static {
     fn try_get_raw<I>(&self, index: I) -> Result<<Self::Database as Database>::ValueRef<'_>, Error>
     where
         I: ColumnIndex<Self>;
-}
-
-pub fn debug_row<R>(row: &R, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
-where
-    R: Row,
-    usize: ColumnIndex<R>,
-    <R as Row>::Database: TypeChecking,
-{
-    write!(f, "{} ", std::any::type_name::<R>())?;
-
-    let mut debug_map = f.debug_map();
-
-    for column in row.columns().iter() {
-        match row.try_get_raw(column.ordinal()) {
-            Ok(value) => {
-                debug_map.entry(
-                    &column.name(),
-                    &<R as Row>::Database::fmt_value_debug(
-                        &<<R as Row>::Database as Database>::ValueRef::to_owned(&value),
-                    ),
-                );
-            }
-            Err(error) => {
-                debug_map.entry(&column.name(), &format!("decode error: {error:?}"));
-            }
-        }
-    }
-
-    debug_map.finish()
 }

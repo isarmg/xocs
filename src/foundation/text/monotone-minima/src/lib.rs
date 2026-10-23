@@ -132,19 +132,13 @@
 
 #![no_std]
 #![doc(html_root_url = "https://docs.rs/smawk/0.3.3")]
-// The s! macro from ndarray uses unsafe internally, so we can only
-// forbid unsafe code when building with the default features.
-#![cfg_attr(not(feature = "ndarray"), forbid(unsafe_code))]
+#![forbid(unsafe_code)]
 
 extern crate alloc;
 use alloc::vec;
 use alloc::vec::Vec;
 
-#[cfg(feature = "ndarray")]
-pub mod brute_force;
 pub mod monge;
-#[cfg(feature = "ndarray")]
-pub mod recursive;
 
 /// Minimal matrix trait for two-dimensional arrays.
 ///
@@ -152,9 +146,6 @@ pub mod recursive;
 /// numeric matrix. You can query the size of the matrix and access
 /// elements. Modeled after [`ndarray::Array2`] from the [ndarray
 /// crate](https://crates.io/crates/ndarray).
-///
-/// Enable the `ndarray` Cargo feature if you want to use it with
-/// `ndarray::Array2`.
 pub trait Matrix<T: Copy> {
     /// Return the number of rows.
     fn nrows(&self) -> usize;
@@ -167,9 +158,7 @@ pub trait Matrix<T: Copy> {
 /// Simple and inefficient matrix representation used for doctest
 /// examples and simple unit tests.
 ///
-/// You should prefer implementing it yourself, or you can enable the
-/// `ndarray` Cargo feature and use the provided implementation for
-/// [`ndarray::Array2`].
+/// Implement `Matrix` directly for efficient access to another representation.
 impl<T: Copy> Matrix<T> for Vec<Vec<T>> {
     fn nrows(&self) -> usize {
         self.len()
@@ -179,26 +168,6 @@ impl<T: Copy> Matrix<T> for Vec<Vec<T>> {
     }
     fn index(&self, row: usize, column: usize) -> T {
         self[row][column]
-    }
-}
-
-/// Adapting [`ndarray::Array2`] to the `Matrix` trait.
-///
-/// **Note: this implementation is only available if you enable the
-/// `ndarray` Cargo feature.**
-#[cfg(feature = "ndarray")]
-impl<T: Copy> Matrix<T> for ndarray::Array2<T> {
-    #[inline]
-    fn nrows(&self) -> usize {
-        self.nrows()
-    }
-    #[inline]
-    fn ncols(&self) -> usize {
-        self.ncols()
-    }
-    #[inline]
-    fn index(&self, row: usize, column: usize) -> T {
-        self[[row, column]]
     }
 }
 
@@ -461,9 +430,7 @@ pub fn online_column_minima<T: Copy + PartialOrd, M: Fn(&[(usize, T)], usize, us
 
     // Shorthand for evaluating the matrix.
     macro_rules! m {
-        ($i:expr, $j:expr) => {{
-            matrix(&result[..finished + 1], $i, $j)
-        }};
+        ($i:expr, $j:expr) => {{ matrix(&result[..finished + 1], $i, $j) }};
     }
 
     let (mut rows_scratch, mut cols_scratch) = scratchpads_empty(size, size);

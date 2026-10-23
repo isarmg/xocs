@@ -102,7 +102,7 @@ impl UnixStream {
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use std::io;
     /// use std::os::fd::AsRawFd;
-    /// use mio::net::UnixStream;
+    /// use blog_runtime_io_poller::net::UnixStream;
     ///
     /// let (stream1, stream2) = UnixStream::pair()?;
     ///

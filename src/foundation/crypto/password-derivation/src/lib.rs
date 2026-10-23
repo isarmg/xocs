@@ -120,9 +120,6 @@ use core::fmt;
 #[cfg(all(feature = "alloc", feature = "password-hash"))]
 use password_hash::{Decimal, Ident, ParamsString, Salt};
 
-#[cfg(feature = "zeroize")]
-use zeroize::Zeroize;
-
 /// Maximum password length in bytes.
 pub const MAX_PWD_LEN: usize = 0xFFFFFFFF;
 
@@ -144,7 +141,7 @@ pub(crate) const SYNC_POINTS: usize = 4;
 /// To generate reference block positions
 const ADDRESSES_IN_BLOCK: usize = 128;
 
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+#[cfg(target_arch = "x86_64")]
 cpufeatures::new!(avx2_cpuid, "avx2");
 
 /// Argon2 context.
@@ -169,7 +166,7 @@ pub struct Argon2<'key> {
     /// Key array
     secret: Option<&'key [u8]>,
 
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    #[cfg(target_arch = "x86_64")]
     cpu_feat_avx2: avx2_cpuid::InitToken,
 }
 
@@ -197,7 +194,7 @@ impl<'key> Argon2<'key> {
             version,
             params,
             secret: None,
-            #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+            #[cfg(target_arch = "x86_64")]
             cpu_feat_avx2: avx2_cpuid::init(),
         }
     }
@@ -218,7 +215,7 @@ impl<'key> Argon2<'key> {
             version,
             params,
             secret: Some(secret),
-            #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+            #[cfg(target_arch = "x86_64")]
             cpu_feat_avx2: avx2_cpuid::init(),
         })
     }
@@ -318,9 +315,6 @@ impl<'key> Argon2<'key> {
                 block.load(&hash);
             }
         }
-
-        #[cfg(feature = "zeroize")]
-        initial_hash.zeroize();
 
         // Run passes on blocks
         for pass in 0..iterations {
@@ -457,7 +451,7 @@ impl<'key> Argon2<'key> {
     }
 
     fn compress(&self, rhs: &Block, lhs: &Block) -> Block {
-        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+        #[cfg(target_arch = "x86_64")]
         {
             /// Enable AVX2 optimizations.
             #[target_feature(enable = "avx2")]
@@ -497,12 +491,6 @@ impl<'key> Argon2<'key> {
         }
 
         blake2b_long(&[&blockhash_bytes], out)?;
-
-        #[cfg(feature = "zeroize")]
-        {
-            blockhash.zeroize();
-            blockhash_bytes.zeroize();
-        }
 
         Ok(())
     }
@@ -621,7 +609,7 @@ impl PasswordHasher for Argon2<'_> {
             algorithm,
             version,
             params,
-            #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+            #[cfg(target_arch = "x86_64")]
             cpu_feat_avx2: self.cpu_feat_avx2,
         }
         .hash_password(password, salt)

@@ -1,10 +1,9 @@
-use crate::sqlite::{SqliteConnectOptions, SqliteConnection};
-use log::LevelFilter;
-use crate::query_engine::config;
 use crate::query_engine::connection::ConnectOptions;
 use crate::query_engine::error::Error;
 use crate::query_engine::executor::Executor;
 use crate::query_engine::sql_str::AssertSqlSafe;
+use crate::sqlite::{SqliteConnectOptions, SqliteConnection};
+use log::LevelFilter;
 use std::fmt::Write;
 use std::str::FromStr;
 use std::time::Duration;
@@ -57,13 +56,6 @@ impl ConnectOptions for SqliteConnectOptions {
     fn log_slow_statements(mut self, level: LevelFilter, duration: Duration) -> Self {
         self.log_settings.log_slow_statements(level, duration);
         self
-    }
-
-    fn __unstable_apply_driver_config(
-        self,
-        config: &config::drivers::Config,
-    ) -> crate::sqlite::Result<Self> {
-        self.apply_driver_config(&config.sqlite)
     }
 }
 

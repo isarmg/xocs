@@ -1981,13 +1981,12 @@ impl UdpSocket {
     #[cfg(any(
         target_os = "android",
         target_os = "dragonfly",
-        target_os = "freebsd",
         target_os = "fuchsia",
         target_os = "linux",
         target_os = "macos",
         target_os = "netbsd",
         target_os = "openbsd",
-        target_os = "cygwin",
+        target_os = "cygwin"
     ))]
     #[cfg_attr(
         docsrs,
@@ -2019,13 +2018,12 @@ impl UdpSocket {
     #[cfg(any(
         target_os = "android",
         target_os = "dragonfly",
-        target_os = "freebsd",
         target_os = "fuchsia",
         target_os = "linux",
         target_os = "macos",
         target_os = "netbsd",
         target_os = "openbsd",
-        target_os = "cygwin",
+        target_os = "cygwin"
     ))]
     #[cfg_attr(
         docsrs,

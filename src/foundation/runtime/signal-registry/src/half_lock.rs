@@ -32,7 +32,6 @@
 //! enough in practice in case someone wants to get inspired (but do make your own check through
 //! them anyway).
 
-use std::isize;
 use std::marker::PhantomData;
 use std::ops::Deref;
 use std::sync::atomic::{self, AtomicPtr, AtomicUsize, Ordering};

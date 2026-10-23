@@ -1,4 +1,3 @@
-use super::plumbing::*;
 use super::*;
 
 /// `InterleaveShortest` is an iterator that works similarly to

@@ -4,12 +4,12 @@ use std::ptr::NonNull;
 use std::slice;
 use std::str;
 
+use crate::query_engine::type_info::TypeInfo;
+pub(crate) use crate::query_engine::value::{Value, ValueRef};
 use libsqlite3_sys::{
     sqlite3_value, sqlite3_value_blob, sqlite3_value_bytes, sqlite3_value_double,
     sqlite3_value_dup, sqlite3_value_free, sqlite3_value_int64, sqlite3_value_type,
 };
-use crate::query_engine::type_info::TypeInfo;
-pub(crate) use crate::query_engine::value::{Value, ValueRef};
 
 use crate::sqlite::type_info::DataType;
 use crate::sqlite::{Sqlite, SqliteError, SqliteTypeInfo};
@@ -57,7 +57,7 @@ pub struct SqliteValue(ValueHandle);
 ///
 /// # Note: Decoding is Stateful
 /// See [`SqliteValue`] for details.
-pub struct SqliteValueRef<'r>(Cow<'r, ValueHandle>);
+pub struct SqliteValueRef<'r>(&'r ValueHandle);
 
 impl SqliteValue {
     // SAFETY: The sqlite3_value must be non-null and SQLite must not free it. It will be freed on drop.
@@ -128,7 +128,7 @@ impl<'r> SqliteValueRef<'r> {
     /// Returns an error if the call returns a null pointer, indicating that
     /// SQLite was unable to allocate the additional memory required.
     ///
-    /// Non-panicking version of [`Self::try_to_owned()`].
+    /// Non-panicking version of [`ValueRef::to_owned()`].
     ///
     /// [`sqlite3_value_dup()`]: https://www.sqlite.org/c3ref/value_dup.html
     pub fn try_to_owned(&self) -> Result<SqliteValue, SqliteError> {
@@ -136,18 +136,7 @@ impl<'r> SqliteValueRef<'r> {
     }
 
     pub(crate) fn value(value: &'r SqliteValue) -> Self {
-        Self(Cow::Borrowed(&value.0))
-    }
-
-    /// # Safety
-    /// The supplied sqlite3_value must not be null and SQLite must free it.
-    /// It will not be freed on drop.
-    /// The lifetime on this struct should tie it to whatever scope it's valid for before SQLite frees it.
-    #[allow(unused)]
-    pub(crate) unsafe fn borrowed(value: *mut sqlite3_value) -> Self {
-        debug_assert!(!value.is_null());
-        let handle = ValueHandle::temporary(NonNull::new_unchecked(value));
-        Self(Cow::Owned(handle))
+        Self(&value.0)
     }
 
     // NOTE: `int()` is deliberately omitted because it will silently truncate a wider value,
@@ -225,7 +214,6 @@ pub(crate) struct ValueHandle {
     column_type: Option<SqliteTypeInfo>,
     // Note: `std::cell` version
     borrowed_blob: OnceCell<Blob>,
-    free_on_drop: bool,
 }
 
 struct Blob {
@@ -237,13 +225,11 @@ struct Blob {
 #[error("given `SqliteValue` was previously decoded as BLOB or TEXT; `SqliteValue::reset_borrow()` must be called first")]
 pub(crate) struct BorrowedBlobError;
 
-// SAFE: only protected value objects are stored in SqliteValue
+// SAFETY: each handle owns a deep copy from sqlite3_value_dup(), detached
+// from its connection (db = NULL). Moving transfers exclusive ownership of
+// this storage. The OnceCell intentionally keeps shared access !Sync because
+// sqlite3_value_* conversions and the borrow cache can mutate that storage.
 unsafe impl Send for ValueHandle {}
-
-// SAFETY: the `sqlite3_value_*()` methods reserve the right to be stateful,
-// which means method calls aren't thread-safe without mutual exclusion.
-//
-// impl !Sync for ValueHandle {}
 
 impl ValueHandle {
     /// # Safety
@@ -260,17 +246,7 @@ impl ValueHandle {
             value,
             column_type,
             borrowed_blob: OnceCell::new(),
-            free_on_drop: true,
         })
-    }
-
-    fn temporary(value: NonNull<sqlite3_value>) -> Self {
-        Self {
-            value,
-            column_type: None,
-            borrowed_blob: OnceCell::new(),
-            free_on_drop: false,
-        }
     }
 
     fn try_dup(&self) -> Result<Self, SqliteError> {
@@ -313,19 +289,10 @@ impl ValueHandle {
     }
 }
 
-impl Clone for ValueHandle {
-    fn clone(&self) -> Self {
-        self.try_dup().unwrap()
-    }
-}
-
 impl Drop for ValueHandle {
     fn drop(&mut self) {
-        if self.free_on_drop {
-            unsafe {
-                sqlite3_value_free(self.value.as_ptr());
-            }
-        }
+        // Every handle owns a value allocated by sqlite3_value_dup().
+        unsafe { sqlite3_value_free(self.value.as_ptr()) };
     }
 }
 

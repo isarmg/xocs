@@ -20,18 +20,12 @@ pub mod browser_helpers;
 /// Browser kernel implementation: browser panic.
 #[path = "kernel/browser_panic/mod.rs"]
 pub mod browser_panic;
-/// Browser kernel implementation: constant text.
-#[path = "kernel/constant_text/mod.rs"]
-pub mod constant_text;
 /// Browser kernel implementation: erased value.
 #[path = "kernel/erased_value/mod.rs"]
 pub mod erased_value;
 /// Browser kernel implementation: events.
 #[path = "kernel/events/mod.rs"]
 pub mod events;
-/// Browser kernel implementation: html escaping.
-#[path = "kernel/html_escaping/mod.rs"]
-pub mod html_escaping;
 /// Browser kernel implementation: iterators.
 #[path = "kernel/iterators/mod.rs"]
 pub mod iterators;

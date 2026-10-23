@@ -37,9 +37,6 @@ all = []
 name = "blog_platform_socket_options"
 path = "src/lib.rs"
 
-[target.'cfg(any(unix, target_os = "wasi"))'.dependencies.libc]
+[dependencies.libc]
 path = "../system-abi"
 package = "blog-platform-system-abi"
-
-
-[target."cfg(windows)"]

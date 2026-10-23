@@ -1,5 +1,5 @@
 //! Local development uses Axum's HTTP implementation and a bounded, streaming
-//! reqwest proxy. Credentials, Host and Origin are forwarded without rewriting.
+//! HTTP/1 proxy. Credentials, Host and Origin are forwarded without rewriting.
 use crate::{Options, assets::Config, inventory};
 use anyhow::{Context, Result, ensure};
 use axum::{
@@ -18,40 +18,15 @@ use std::{
 };
 use tokio::sync::RwLock;
 
+mod proxy;
+
 #[derive(Clone)]
 struct App {
     dist: PathBuf,
     base: String,
     proxies: Vec<(String, String)>,
-    client: reqwest::Client,
+    client: proxy::Client,
     status: Arc<RwLock<Value>>,
-}
-
-fn hop_header(name: &str) -> bool {
-    matches!(
-        name,
-        "connection"
-            | "keep-alive"
-            | "proxy-authenticate"
-            | "proxy-authorization"
-            | "te"
-            | "trailer"
-            | "transfer-encoding"
-            | "upgrade"
-    )
-}
-
-fn connection_headers(headers: &HeaderMap) -> Vec<String> {
-    headers
-        .get_all(header::CONNECTION)
-        .iter()
-        .filter_map(|v| v.to_str().ok())
-        .flat_map(|v| {
-            v.split(',')
-                .map(|part| part.trim().to_ascii_lowercase())
-                .collect::<Vec<_>>()
-        })
-        .collect()
 }
 
 fn gzip(headers: &HeaderMap) -> bool {
@@ -160,26 +135,7 @@ async fn respond(app: App, request: Request) -> Result<Response> {
         } else {
             format!("{target}{suffix}")
         };
-        let excluded = connection_headers(request.headers());
-        let (parts, body) = request.into_parts();
-        let mut upstream = app.client.request(parts.method, url);
-        for (name, value) in &parts.headers {
-            if !hop_header(name.as_str()) && !excluded.contains(&name.as_str().to_owned()) {
-                upstream = upstream.header(name, value);
-            }
-        }
-        let result = upstream
-            .body(reqwest::Body::wrap_stream(body.into_data_stream()))
-            .send()
-            .await?;
-        let excluded = connection_headers(result.headers());
-        let mut response = Response::builder().status(result.status());
-        for (name, value) in result.headers() {
-            if !hop_header(name.as_str()) && !excluded.contains(&name.as_str().to_owned()) {
-                response = response.header(name, value);
-            }
-        }
-        return Ok(response.body(Body::from_stream(result.bytes_stream()))?);
+        return app.client.forward(request, url.parse()?).await;
     }
     if request.method() != Method::GET && request.method() != Method::HEAD {
         return Ok(Response::builder()
@@ -315,7 +271,7 @@ pub async fn serve(
             prefix.starts_with('/') && !prefix.contains(['?', '#']),
             "Proxy prefix must be an absolute path"
         );
-        let url = reqwest::Url::parse(target)?;
+        let url = url_encoding::address::Url::parse(target)?;
         ensure!(
             url.scheme() == "http"
                 && url.host_str().is_some_and(|host| host == "localhost"
@@ -368,10 +324,7 @@ pub async fn serve(
         base: config.web.base,
         proxies,
         status,
-        client: reqwest::Client::builder()
-            .redirect(reqwest::redirect::Policy::none())
-            .timeout(Duration::from_secs(300))
-            .build()?,
+        client: proxy::Client::new(Duration::from_secs(300)),
     };
     let listener = tokio::net::TcpListener::bind(bind).await?;
     println!(
@@ -408,7 +361,7 @@ mod tests {
             dist: dir.path().into(),
             base: "/".into(),
             proxies: Vec::new(),
-            client: reqwest::Client::new(),
+            client: proxy::Client::new(Duration::from_secs(300)),
             status: Arc::new(RwLock::new(json!({}))),
         };
         let router = Router::new().fallback(handler).with_state(app);

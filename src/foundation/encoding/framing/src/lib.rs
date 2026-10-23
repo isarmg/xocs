@@ -23,8 +23,6 @@
 //!
 //! ### Optional features
 //!
-//! - [`defmt`](https://docs.rs/defmt/latest/defmt/): Adds `defmt::Format` derives on some data
-//!   structures and error types.
 //! - [`serde`](https://serde.rs/): Adds `serde` derives on some data structures and error types.
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]

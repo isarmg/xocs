@@ -1,12 +1,7 @@
-use super::{add_attr::AddAnyAttr, Mountable, Position, PositionState, Render, RenderHtml};
+use super::{add_attr::AddAnyAttr, DomView, Mountable, Render};
 use crate::alternatives::Either;
 use crate::iterators::Itertools;
-use crate::view_tree::{
-    html::attribute::{any_attribute::AnyAttribute, Attribute},
-    hydration::Cursor,
-    renderer::Rndr,
-    ssr::StreamBuilder,
-};
+use crate::view_tree::{html::attribute::Attribute, renderer::Rndr};
 
 /// Retained view state for an `Option`.
 pub type OptionState<T> = Either<<T as Render>::State, <() as Render>::State>;
@@ -42,103 +37,20 @@ where
 
     fn add_any_attr<NewAttr: Attribute>(self, attr: NewAttr) -> Self::Output<NewAttr>
     where
-        Self::Output<NewAttr>: RenderHtml,
+        Self::Output<NewAttr>: DomView,
     {
         self.map(|n| n.add_any_attr(attr))
     }
 }
 
-impl<T> RenderHtml for Option<T>
+impl<T> DomView for Option<T>
 where
-    T: RenderHtml,
+    T: DomView,
 {
-    type AsyncOutput = Option<T::AsyncOutput>;
     type Owned = Option<T::Owned>;
 
-    const MIN_LENGTH: usize = T::MIN_LENGTH;
-
-    fn dry_resolve(&mut self) {
-        if let Some(inner) = self.as_mut() {
-            inner.dry_resolve();
-        }
-    }
-
-    async fn resolve(self) -> Self::AsyncOutput {
-        match self {
-            None => None,
-            Some(value) => Some(value.resolve().await),
-        }
-    }
-
-    fn html_len(&self) -> usize {
-        match self {
-            Some(i) => i.html_len() + 3,
-            None => 3,
-        }
-    }
-
-    fn to_html_with_buf(
-        self,
-        buf: &mut String,
-        position: &mut Position,
-        escape: bool,
-        mark_branches: bool,
-        extra_attrs: Vec<AnyAttribute>,
-    ) {
-        match self {
-            Some(value) => Either::Left(value),
-            None => Either::Right(()),
-        }
-        .to_html_with_buf(buf, position, escape, mark_branches, extra_attrs)
-    }
-
-    fn to_html_async_with_buf<const OUT_OF_ORDER: bool>(
-        self,
-        buf: &mut StreamBuilder,
-        position: &mut Position,
-        escape: bool,
-        mark_branches: bool,
-        extra_attrs: Vec<AnyAttribute>,
-    ) where
-        Self: Sized,
-    {
-        match self {
-            Some(value) => Either::Left(value),
-            None => Either::Right(()),
-        }
-        .to_html_async_with_buf::<OUT_OF_ORDER>(
-            buf,
-            position,
-            escape,
-            mark_branches,
-            extra_attrs,
-        )
-    }
-
-    #[track_caller]
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        cursor: &Cursor,
-        position: &PositionState,
-    ) -> Self::State {
-        match self {
-            Some(value) => Either::Left(value),
-            None => Either::Right(()),
-        }
-        .hydrate::<FROM_SERVER>(cursor, position)
-    }
-
-    async fn hydrate_async(self, cursor: &Cursor, position: &PositionState) -> Self::State {
-        match self {
-            Some(value) => Either::Left(value),
-            None => Either::Right(()),
-        }
-        .hydrate_async(cursor, position)
-        .await
-    }
-
     fn into_owned(self) -> Self::Owned {
-        self.map(RenderHtml::into_owned)
+        self.map(DomView::into_owned)
     }
 }
 
@@ -255,7 +167,7 @@ where
 
     fn add_any_attr<NewAttr: Attribute>(self, attr: NewAttr) -> Self::Output<NewAttr>
     where
-        Self::Output<NewAttr>: RenderHtml,
+        Self::Output<NewAttr>: DomView,
     {
         let attr = attr.into_cloneable();
         self.into_iter()
@@ -264,126 +176,15 @@ where
     }
 }
 
-impl<T> RenderHtml for Vec<T>
+impl<T> DomView for Vec<T>
 where
-    T: RenderHtml,
+    T: DomView,
 {
-    type AsyncOutput = Vec<T::AsyncOutput>;
     type Owned = Vec<T::Owned>;
-
-    const MIN_LENGTH: usize = 0;
-
-    fn dry_resolve(&mut self) {
-        for inner in self.iter_mut() {
-            inner.dry_resolve();
-        }
-    }
-
-    async fn resolve(self) -> Self::AsyncOutput {
-        futures::future::join_all(self.into_iter().map(T::resolve))
-            .await
-            .into_iter()
-            .collect()
-    }
-
-    fn html_len(&self) -> usize {
-        self.iter().map(|n| n.html_len()).sum::<usize>() + 3
-    }
-
-    fn to_html_with_buf(
-        self,
-        buf: &mut String,
-        position: &mut Position,
-        escape: bool,
-        mark_branches: bool,
-        extra_attrs: Vec<AnyAttribute>,
-    ) {
-        let mut children = self.into_iter();
-        if let Some(first) = children.next() {
-            first.to_html_with_buf(buf, position, escape, mark_branches, extra_attrs.clone());
-        }
-        for child in children {
-            child.to_html_with_buf(
-                buf,
-                position,
-                escape,
-                mark_branches,
-                // each child will have the extra attributes applied
-                extra_attrs.clone(),
-            );
-        }
-        if escape {
-            buf.push_str("<!>");
-            *position = Position::NextChild;
-        }
-    }
-
-    fn to_html_async_with_buf<const OUT_OF_ORDER: bool>(
-        self,
-        buf: &mut StreamBuilder,
-        position: &mut Position,
-        escape: bool,
-        mark_branches: bool,
-        extra_attrs: Vec<AnyAttribute>,
-    ) where
-        Self: Sized,
-    {
-        let mut children = self.into_iter();
-        if let Some(first) = children.next() {
-            first.to_html_async_with_buf::<OUT_OF_ORDER>(
-                buf,
-                position,
-                escape,
-                mark_branches,
-                extra_attrs.clone(),
-            );
-        }
-        for child in children {
-            child.to_html_async_with_buf::<OUT_OF_ORDER>(
-                buf,
-                position,
-                escape,
-                mark_branches,
-                extra_attrs.clone(),
-            );
-        }
-        if escape {
-            buf.push_sync("<!>");
-            *position = Position::NextChild;
-        }
-    }
-
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        cursor: &Cursor,
-        position: &PositionState,
-    ) -> Self::State {
-        let states = self
-            .into_iter()
-            .map(|child| child.hydrate::<FROM_SERVER>(cursor, position))
-            .collect();
-
-        let marker = cursor.next_placeholder(position);
-        position.set(Position::NextChild);
-
-        VecState { states, marker }
-    }
-
-    async fn hydrate_async(self, cursor: &Cursor, position: &PositionState) -> Self::State {
-        let mut states = Vec::with_capacity(self.len());
-        for child in self {
-            states.push(child.hydrate_async(cursor, position).await);
-        }
-
-        let marker = cursor.next_placeholder(position);
-        position.set(Position::NextChild);
-
-        VecState { states, marker }
-    }
 
     fn into_owned(self) -> Self::Owned {
         self.into_iter()
-            .map(RenderHtml::into_owned)
+            .map(DomView::into_owned)
             .collect::<Vec<_>>()
     }
 }
@@ -536,7 +337,7 @@ where
 
     fn add_any_attr<NewAttr: Attribute>(self, attr: NewAttr) -> Self::Output<NewAttr>
     where
-        Self::Output<NewAttr>: RenderHtml,
+        Self::Output<NewAttr>: DomView,
     {
         let attr = attr.into_cloneable();
         self.0
@@ -547,108 +348,16 @@ where
     }
 }
 
-impl<T> RenderHtml for StaticVec<T>
+impl<T> DomView for StaticVec<T>
 where
-    T: RenderHtml,
+    T: DomView,
 {
-    type AsyncOutput = StaticVec<T::AsyncOutput>;
     type Owned = StaticVec<T::Owned>;
-
-    const MIN_LENGTH: usize = 0;
-
-    fn dry_resolve(&mut self) {
-        for inner in self.0.iter_mut() {
-            inner.dry_resolve();
-        }
-    }
-
-    async fn resolve(self) -> Self::AsyncOutput {
-        futures::future::join_all(self.0.into_iter().map(T::resolve))
-            .await
-            .into_iter()
-            .collect::<Vec<_>>()
-            .into()
-    }
-
-    fn html_len(&self) -> usize {
-        self.0.iter().map(RenderHtml::html_len).sum::<usize>() + 3
-    }
-
-    fn to_html_with_buf(
-        self,
-        buf: &mut String,
-        position: &mut Position,
-        escape: bool,
-        mark_branches: bool,
-        extra_attrs: Vec<AnyAttribute>,
-    ) {
-        for child in self.0.into_iter() {
-            child.to_html_with_buf(buf, position, escape, mark_branches, extra_attrs.clone());
-        }
-        if escape {
-            buf.push_str("<!>");
-            *position = Position::NextChild;
-        }
-    }
-
-    fn to_html_async_with_buf<const OUT_OF_ORDER: bool>(
-        self,
-        buf: &mut StreamBuilder,
-        position: &mut Position,
-        escape: bool,
-        mark_branches: bool,
-        extra_attrs: Vec<AnyAttribute>,
-    ) where
-        Self: Sized,
-    {
-        for child in self.0.into_iter() {
-            child.to_html_async_with_buf::<OUT_OF_ORDER>(
-                buf,
-                position,
-                escape,
-                mark_branches,
-                extra_attrs.clone(),
-            );
-        }
-        if escape {
-            buf.push_sync("<!>");
-            *position = Position::NextChild;
-        }
-    }
-
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        cursor: &Cursor,
-        position: &PositionState,
-    ) -> Self::State {
-        let states = self
-            .0
-            .into_iter()
-            .map(|child| child.hydrate::<FROM_SERVER>(cursor, position))
-            .collect();
-
-        let marker = cursor.next_placeholder(position);
-        position.set(Position::NextChild);
-
-        Self::State { states, marker }
-    }
-
-    async fn hydrate_async(self, cursor: &Cursor, position: &PositionState) -> Self::State {
-        let mut states = Vec::with_capacity(self.0.len());
-        for child in self.0 {
-            states.push(child.hydrate_async(cursor, position).await);
-        }
-
-        let marker = cursor.next_placeholder(position);
-        position.set(Position::NextChild);
-
-        Self::State { states, marker }
-    }
 
     fn into_owned(self) -> Self::Owned {
         self.0
             .into_iter()
-            .map(RenderHtml::into_owned)
+            .map(DomView::into_owned)
             .collect::<Vec<_>>()
             .into()
     }
@@ -726,98 +435,22 @@ where
 
     fn add_any_attr<NewAttr: Attribute>(self, attr: NewAttr) -> Self::Output<NewAttr>
     where
-        Self::Output<NewAttr>: RenderHtml,
+        Self::Output<NewAttr>: DomView,
     {
         let attr = attr.into_cloneable();
         self.map(|n| n.add_any_attr(attr.clone()))
     }
 }
 
-impl<T, const N: usize> RenderHtml for [T; N]
+impl<T, const N: usize> DomView for [T; N]
 where
-    T: RenderHtml,
+    T: DomView,
 {
-    type AsyncOutput = [T::AsyncOutput; N];
     type Owned = [T::Owned; N];
-
-    const MIN_LENGTH: usize = 0;
-
-    fn dry_resolve(&mut self) {
-        for inner in self.iter_mut() {
-            inner.dry_resolve();
-        }
-    }
-
-    async fn resolve(self) -> Self::AsyncOutput {
-        futures::future::join_all(self.into_iter().map(T::resolve))
-            .await
-            .into_iter()
-            .collect::<Vec<_>>()
-            .try_into()
-            .unwrap_or_else(|_| unreachable!())
-    }
-
-    fn html_len(&self) -> usize {
-        self.iter().map(RenderHtml::html_len).sum::<usize>()
-    }
-
-    fn to_html_with_buf(
-        self,
-        buf: &mut String,
-        position: &mut Position,
-        escape: bool,
-        mark_branches: bool,
-        extra_attrs: Vec<AnyAttribute>,
-    ) {
-        for child in self.into_iter() {
-            child.to_html_with_buf(buf, position, escape, mark_branches, extra_attrs.clone());
-        }
-    }
-
-    fn to_html_async_with_buf<const OUT_OF_ORDER: bool>(
-        self,
-        buf: &mut StreamBuilder,
-        position: &mut Position,
-        escape: bool,
-        mark_branches: bool,
-        extra_attrs: Vec<AnyAttribute>,
-    ) where
-        Self: Sized,
-    {
-        for child in self.into_iter() {
-            child.to_html_async_with_buf::<OUT_OF_ORDER>(
-                buf,
-                position,
-                escape,
-                mark_branches,
-                extra_attrs.clone(),
-            );
-        }
-    }
-
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        cursor: &Cursor,
-        position: &PositionState,
-    ) -> Self::State {
-        let states = self.map(|child| child.hydrate::<FROM_SERVER>(cursor, position));
-        ArrayState { states }
-    }
-
-    async fn hydrate_async(self, cursor: &Cursor, position: &PositionState) -> Self::State {
-        let mut states = Vec::with_capacity(self.len());
-        for child in self {
-            states.push(child.hydrate_async(cursor, position).await);
-        }
-        let Ok(states) = <[<T as Render>::State; N]>::try_from(states) else {
-            unreachable!()
-        };
-        ArrayState { states }
-    }
 
     fn into_owned(self) -> Self::Owned {
         self.into_iter()
-            .map(RenderHtml::into_owned)
+            .map(DomView::into_owned)
             .collect::<Vec<_>>()
             .try_into()
             .unwrap_or_else(|_| unreachable!())

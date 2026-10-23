@@ -32,8 +32,6 @@ impl Database for Sqlite {
     type Statement = SqliteStatement;
 
     const NAME: &'static str = "SQLite";
-
-    const URL_SCHEMES: &'static [&'static str] = &["sqlite"];
 }
 
 impl HasStatementCache for Sqlite {}

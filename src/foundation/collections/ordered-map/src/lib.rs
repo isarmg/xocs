@@ -32,15 +32,6 @@
 //!   to [`IndexMap`] and [`IndexSet`]. Alternative implementations for
 //!   (de)serializing [`IndexMap`] as an ordered sequence are available in the
 //!   [`map::serde_seq`] module.
-//! * `arbitrary`: Adds implementations for the [`arbitrary::Arbitrary`] trait
-//!   to [`IndexMap`] and [`IndexSet`].
-//! * `quickcheck`: Adds implementations for the [`quickcheck::Arbitrary`] trait
-//!   to [`IndexMap`] and [`IndexSet`].
-//! * `borsh` (**deprecated**): Adds implementations for [`BorshSerialize`] and
-//!   [`BorshDeserialize`] to [`IndexMap`] and [`IndexSet`]. Due to a cyclic
-//!   dependency that arose between [`borsh`] and `indexmap`, `borsh v1.5.6`
-//!   added an `indexmap` feature that should be used instead of enabling the
-//!   feature here.
 //!
 //! _Note: only the `std` feature is enabled by default._
 //!
@@ -48,11 +39,6 @@
 //! [`no_std`]: #no-standard-library-targets
 //! [`Serialize`]: `::serde::Serialize`
 //! [`Deserialize`]: `::serde::Deserialize`
-//! [`BorshSerialize`]: `::borsh::BorshSerialize`
-//! [`BorshDeserialize`]: `::borsh::BorshDeserialize`
-//! [`borsh`]: `::borsh`
-//! [`arbitrary::Arbitrary`]: `::arbitrary::Arbitrary`
-//! [`quickcheck::Arbitrary`]: `::quickcheck::Arbitrary`
 //!
 //! ### Alternate Hashers
 //!
@@ -105,16 +91,11 @@ extern crate alloc;
 #[macro_use]
 extern crate std;
 
-mod arbitrary;
 mod inner;
 #[macro_use]
 mod macros;
-#[cfg(feature = "borsh")]
-mod borsh;
 #[cfg(feature = "serde")]
 mod serde;
-#[cfg(feature = "sval")]
-mod sval;
 mod util;
 
 pub mod map;

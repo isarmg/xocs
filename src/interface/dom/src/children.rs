@@ -2,7 +2,7 @@ use crate::into_view::{IntoView, View};
 use crate::view_tree::view::{
     any_view::{AnyView, IntoAny},
     fragment::{Fragment, IntoFragment},
-    RenderHtml,
+    DomView,
 };
 use std::{
     fmt::{self, Debug},
@@ -97,7 +97,7 @@ pub struct ChildrenOptContainer<T>(pub T);
 impl<F, C> ToChildren<F> for Children
 where
     F: FnOnce() -> C + Send + 'static,
-    C: RenderHtml + Send + 'static,
+    C: DomView + Send + 'static,
 {
     #[inline]
     fn to_children(f: F) -> Self {
@@ -118,7 +118,7 @@ where
 impl<F, C> ToChildren<F> for ChildrenFn
 where
     F: Fn() -> C + Send + Sync + 'static,
-    C: RenderHtml + Send + 'static,
+    C: DomView + Send + 'static,
 {
     #[inline]
     fn to_children(f: F) -> Self {
@@ -139,7 +139,7 @@ where
 impl<F, C> ToChildren<F> for ChildrenFnMut
 where
     F: Fn() -> C + Send + 'static,
-    C: RenderHtml + Send + 'static,
+    C: DomView + Send + 'static,
 {
     #[inline]
     fn to_children(f: F) -> Self {
@@ -160,7 +160,7 @@ where
 impl<F, C> ToChildren<F> for BoxedChildrenFn
 where
     F: Fn() -> C + Send + 'static,
-    C: RenderHtml + Send + 'static,
+    C: DomView + Send + 'static,
 {
     #[inline]
     fn to_children(f: F) -> Self {
@@ -255,7 +255,7 @@ impl Default for ViewFn {
 impl<F, C> From<F> for ViewFn
 where
     F: Fn() -> C + Send + Sync + 'static,
-    C: RenderHtml + Send + 'static,
+    C: DomView + Send + 'static,
 {
     fn from(value: F) -> Self {
         Self(Arc::new(move || value().into_any()))
@@ -292,7 +292,7 @@ impl Default for ViewFnOnce {
 impl<F, C> From<F> for ViewFnOnce
 where
     F: FnOnce() -> C + Send + 'static,
-    C: RenderHtml + Send + 'static,
+    C: DomView + Send + 'static,
 {
     fn from(value: F) -> Self {
         Self(Box::new(move || value().into_any()))
@@ -331,7 +331,6 @@ impl<F, C> ToChildren<F> for TypedChildren<C>
 where
     F: FnOnce() -> C + Send + 'static,
     C: IntoView,
-    C::AsyncOutput: Send,
 {
     #[inline]
     fn to_children(f: F) -> Self {
@@ -370,7 +369,6 @@ impl<F, C> ToChildren<F> for TypedChildrenMut<C>
 where
     F: FnMut() -> C + Send + 'static,
     C: IntoView,
-    C::AsyncOutput: Send,
 {
     #[inline]
     fn to_children(mut f: F) -> Self {
@@ -416,7 +414,6 @@ impl<F, C> ToChildren<F> for TypedChildrenFn<C>
 where
     F: Fn() -> C + Send + Sync + 'static,
     C: IntoView,
-    C::AsyncOutput: Send,
 {
     #[inline]
     fn to_children(f: F) -> Self {

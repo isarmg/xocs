@@ -234,7 +234,6 @@ macro_rules! unknown_define_index_type_option {
 /// - Manual implementations: `Debug`, `From<usize>`, `From<MyIndex> for usize`, and arithmetic ops
 ///
 /// Do not add `#[derive(Debug)]` or other conflicting derives/impls as they are already provided.
-#[cfg(all())]
 #[macro_export]
 macro_rules! define_nonmax_u32_index_type {
     (
@@ -262,18 +261,6 @@ macro_rules! define_nonmax_u32_index_type {
                 Self::from_usize(value)
             }
 
-            /// Create an index from a raw `NonMaxU32` value.
-            #[inline(always)]
-            $v const fn from_raw(value: $crate::bounded_index::NonMaxU32) -> Self {
-                Self(value)
-            }
-
-            /// Convert an index from another index type.
-            #[inline(always)]
-            $v fn from_foreign<F: $crate::typed_index::Idx>(value: F) -> Self {
-                Self::from_usize(value.index())
-            }
-
             /// Create an index from a `usize` without bounds checking.
             ///
             /// # SAFETY
@@ -281,15 +268,6 @@ macro_rules! define_nonmax_u32_index_type {
             #[inline(always)]
             $v const unsafe fn from_usize_unchecked(value: usize) -> Self {
                 Self(unsafe { $crate::bounded_index::NonMaxU32::new_unchecked(value as u32) })
-            }
-
-            /// Create an index from a raw `u32` without bounds checking.
-            ///
-            /// # SAFETY
-            /// The caller must ensure the value is not `u32::MAX`.
-            #[inline(always)]
-            $v const unsafe fn from_raw_unchecked(raw: u32) -> Self {
-                Self(unsafe { $crate::bounded_index::NonMaxU32::new_unchecked(raw) })
             }
 
             /// Create an index from a `usize` with bounds checking.
@@ -309,12 +287,6 @@ macro_rules! define_nonmax_u32_index_type {
             #[inline(always)]
             $v const fn index(self) -> usize {
                 self.0.get() as usize
-            }
-
-            /// Get the raw `NonMaxU32` value.
-            #[inline(always)]
-            $v const fn raw(self) -> $crate::bounded_index::NonMaxU32 {
-                self.0
             }
 
             #[doc(hidden)]
@@ -476,7 +448,6 @@ macro_rules! define_nonmax_u32_index_type {
     };
 }
 
-#[cfg(all())]
 #[macro_export]
 #[doc(hidden)]
 macro_rules! __internal_maybe_index_impl_serde {

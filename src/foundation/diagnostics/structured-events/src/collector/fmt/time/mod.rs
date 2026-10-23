@@ -5,17 +5,6 @@ use std::time::Instant;
 
 mod datetime;
 
-#[cfg(any())]
-mod time_crate;
-
-#[cfg(any())]
-#[cfg_attr(docsrs, doc(cfg(any())))]
-pub use time_crate::UtcTime;
-
-#[cfg(any())]
-#[cfg_attr(docsrs, doc(cfg(any())))]
-pub use time_crate::OffsetTime;
-
 /// A type that can measure and format the current time.
 ///
 /// This trait is used by `Format` to include a timestamp with each `Event` when it is logged.

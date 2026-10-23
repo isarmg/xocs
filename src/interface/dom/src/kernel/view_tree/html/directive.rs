@@ -5,12 +5,11 @@ use crate::thread_bound::SendWrapper;
 use crate::view_tree::{
     html::attribute::{maybe_next_attr_erasure_macros::next_attr_combine, NamedAttributeKey},
     prelude::AddAnyAttr,
-    view::{Position, ToTemplate},
 };
 use std::{marker::PhantomData, sync::Arc};
 
 /// Adds a directive to the element, which runs some custom logic in the browser when the element
-/// is created or hydrated.
+/// is created.
 pub trait DirectiveAttribute<T, P, D>
 where
     D: IntoDirective<T, P>,
@@ -19,7 +18,7 @@ where
     type Output;
 
     /// Adds a directive to the element, which runs some custom logic in the browser when the element
-    /// is created or hydrated.
+    /// is created.
     fn directive(self, handler: D, param: P) -> Self::Output;
 }
 
@@ -38,24 +37,22 @@ where
 }
 
 /// Adds a directive to the element, which runs some custom logic in the browser when the element
-/// is created or hydrated.
+/// is created.
 #[inline(always)]
 pub fn directive<T, P, D>(handler: D, param: P) -> Directive<T, D, P>
 where
     D: IntoDirective<T, P>,
 {
-    Directive((!cfg!(any())).then(|| {
-        SendWrapper::new(DirectiveInner {
-            handler,
-            param,
-            t: PhantomData,
-        })
+    Directive(SendWrapper::new(DirectiveInner {
+        handler,
+        param,
+        t: PhantomData,
     }))
 }
 
-/// Custom logic that runs in the browser when the element is created or hydrated.
+/// Custom logic that runs in the browser when the element is created.
 #[derive(Debug)]
-pub struct Directive<T, D, P>(Option<SendWrapper<DirectiveInner<T, D, P>>>);
+pub struct Directive<T, D, P>(SendWrapper<DirectiveInner<T, D, P>>);
 
 impl<T, D, P> Clone for Directive<T, D, P>
 where
@@ -94,43 +91,18 @@ where
     P: Clone + 'static, // TODO this is just here to make them cloneable
     T: 'static,
 {
-    const MIN_LENGTH: usize = 0;
-
-    type AsyncOutput = Self;
     type State = crate::view_tree::renderer::types::Element;
     type Cloneable = Directive<T, D::Cloneable, P>;
     type CloneableOwned = Directive<T, D::Cloneable, P>;
 
-    fn html_len(&self) -> usize {
-        0
-    }
-
-    fn to_html(
-        self,
-        _buf: &mut String,
-        _class: &mut String,
-        _style: &mut String,
-        _inner_html: &mut String,
-    ) {
-    }
-
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        el: &crate::view_tree::renderer::types::Element,
-    ) -> Self::State {
-        let inner = self.0.expect(super::FEATURE_CONFLICT_DIAGNOSTIC).take();
-        inner.handler.run(el.clone(), inner.param);
-        el.clone()
-    }
-
     fn build(self, el: &crate::view_tree::renderer::types::Element) -> Self::State {
-        let inner = self.0.expect(super::FEATURE_CONFLICT_DIAGNOSTIC).take();
+        let inner = self.0.take();
         inner.handler.run(el.clone(), inner.param);
         el.clone()
     }
 
     fn rebuild(self, state: &mut Self::State) {
-        let inner = self.0.expect(super::FEATURE_CONFLICT_DIAGNOSTIC).take();
+        let inner = self.0.take();
         inner.handler.run(state.clone(), inner.param);
     }
 
@@ -139,21 +111,13 @@ where
     }
 
     fn into_cloneable_owned(self) -> Self::CloneableOwned {
-        let inner = self.0.map(|inner| {
-            let DirectiveInner { handler, param, t } = inner.take();
-            SendWrapper::new(DirectiveInner {
-                handler: handler.into_cloneable(),
-                param,
-                t,
-            })
+        let DirectiveInner { handler, param, t } = self.0.take();
+        let inner = SendWrapper::new(DirectiveInner {
+            handler: handler.into_cloneable(),
+            param,
+            t,
         });
         Directive(inner)
-    }
-
-    fn dry_resolve(&mut self) {}
-
-    async fn resolve(self) -> Self::AsyncOutput {
-        self
     }
 
     fn keys(&self) -> Vec<NamedAttributeKey> {
@@ -171,19 +135,6 @@ where
 
     fn add_any_attr<NewAttr: Attribute>(self, new_attr: NewAttr) -> Self::Output<NewAttr> {
         next_attr_combine!(self, new_attr)
-    }
-}
-
-impl<T, D, P> ToTemplate for Directive<T, D, P> {
-    const CLASS: &'static str = "";
-
-    fn to_template(
-        _buf: &mut String,
-        _class: &mut String,
-        _style: &mut String,
-        _inner_html: &mut String,
-        _position: &mut Position,
-    ) {
     }
 }
 
@@ -221,9 +172,9 @@ impl<T, D, P> ToTemplate for Directive<T, D, P> {
 /// A directive is just syntactic sugar for
 ///
 /// ```ignore
-/// let node_ref = create_node_ref();
+/// let node_ref = NodeRef::new();
 ///
-/// create_effect(move |_| {
+/// Effect::new(move |_| {
 ///     if let Some(el) = node_ref.get() {
 ///         directive_func(el, possibly_some_param);
 ///     }

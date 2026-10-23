@@ -1,9 +1,10 @@
 [package]
+build = "../../../../tools/assets/src/platform_contract.rs"
 name = "blog-assets-compiler"
 edition = "2024"
 rust-version = "1.99"
 publish = false
-description = "宿主 JavaScript 与 CSS 解析、语义分析和压缩编译器"
+description = "宿主 JavaScript 解析、语义分析和压缩编译器"
 license = "MIT AND MPL-2.0 AND Apache-2.0 AND BSD-3-Clause AND Unicode-3.0"
 autobins = false
 autoexamples = false
@@ -13,57 +14,9 @@ autobenches = false
 name = "blog_assets_compiler"
 path = "src/lib.rs"
 [dependencies]
-[dependencies.ahash]
-package = "blog-collections-keyed-hash"
-path = "../../collections/keyed-hash"
-features = []
-default-features = true
-
 [dependencies.bitflags]
 package = "blog-collections-bit-set"
 path = "../../collections/bit-set"
-features = []
-default-features = true
-
-[dependencies.const_str]
-package = "blog-text-compile-time-text"
-path = "../../text/compile-time-text"
-features = []
-default-features = true
-
-[dependencies.data_encoding]
-package = "blog-encoding-radix-codecs"
-path = "../../encoding/radix-codecs"
-features = []
-default-features = true
-
-[dependencies.indexmap]
-package = "blog-collections-ordered-map"
-path = "../../collections/ordered-map"
-features = ["serde"]
-default-features = true
-
-[dependencies.itertools]
-package = "blog-syntax-style-iterators"
-path = "../../syntax/style-iterators"
-features = []
-default-features = true
-
-[dependencies.lazy_static]
-package = "blog-sync-lazy-global"
-path = "../../sync/lazy-global"
-features = []
-default-features = true
-
-[dependencies.lightningcss_derive]
-package = "blog-assets-style-value-derive"
-path = "../style-value-derive"
-features = []
-default-features = true
-
-[dependencies.pastey]
-package = "blog-syntax-token-concat"
-path = "../../syntax/token-concat"
 features = []
 default-features = true
 
@@ -73,28 +26,10 @@ path = "../../collections/inline-vector"
 features = ["serde", "union"]
 default-features = true
 
-[dependencies.getrandom]
-package = "blog-platform-compiler-entropy"
-path = "../../platform/compiler-entropy"
-features = []
-default-features = false
-
-[dependencies.cssparser_macros]
-package = "blog-assets-style-token-macros"
-path = "../style-token-macros"
-features = []
-default-features = true
-
 [dependencies.itoa]
 package = "blog-encoding-integer-format"
 path = "../../encoding/integer-format"
 features = []
-default-features = true
-
-[dependencies.phf]
-package = "blog-lookup-style-table"
-path = "../../lookup/style-table"
-features = ["macros"]
 default-features = true
 
 [dependencies.log]
@@ -133,11 +68,6 @@ path = "../../platform/system-abi"
 features = []
 default-features = true
 
-[dependencies.js_sys]
-package = "blog-interface-javascript-api"
-path = "../../interface/javascript-api"
-features = []
-default-features = true
 
 [dependencies.memchr]
 package = "blog-encoding-byte-search"
@@ -264,3 +194,11 @@ package = "blog-network-web-address"
 path = "../../network/web-address"
 default-features = false
 features = ["std"]
+
+[[test]]
+name = "native-calendar"
+path = "tests/native_calendar.rs"
+
+[[test]]
+name = "compiler-safety"
+path = "tests/compiler_safety.rs"

@@ -17,40 +17,32 @@ pub(crate) use blocking_check::check_socket_for_blocking;
 pub(crate) mod metric_atomics;
 
 #[cfg(any(
-    // io driver uses `WakeList` directly
     feature = "net",
-    feature = "process",
-    // `sync` enables `Notify` and `batch_semaphore`, which require `WakeList`.
     feature = "sync",
-    // `fs` uses `batch_semaphore`, which requires `WakeList`.
     feature = "fs",
-    // rt and signal use `Notify`, which requires `WakeList`.
     feature = "rt",
     feature = "signal",
-    // time driver uses `WakeList` in `Handle::process_at_time`.
-    feature = "time",
+    feature = "time"
 ))]
 mod wake_list;
 #[cfg(any(
     feature = "net",
-    feature = "process",
     feature = "sync",
     feature = "fs",
     feature = "rt",
     feature = "signal",
-    feature = "time",
+    feature = "time"
 ))]
 pub(crate) use wake_list::WakeList;
 
 #[cfg(any(
     feature = "fs",
     feature = "net",
-    feature = "process",
     feature = "rt",
     feature = "sync",
     feature = "signal",
     feature = "time",
-    fuzzing,
+    fuzzing
 ))]
 pub(crate) mod linked_list;
 

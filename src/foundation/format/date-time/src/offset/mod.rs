@@ -20,9 +20,9 @@
 
 use core::fmt;
 
-use crate::Weekday;
-use crate::format::{ParseResult, Parsed, StrftimeItems, parse};
+use crate::format::{parse, ParseResult, Parsed, StrftimeItems};
 use crate::naive::{NaiveDate, NaiveDateTime, NaiveTime};
+use crate::Weekday;
 #[allow(deprecated)]
 use crate::{Date, DateTime};
 
@@ -76,7 +76,6 @@ pub use self::utc::Utc;
 /// The type of `T` is usually a [`DateTime`] but may also be only an offset.
 pub type MappedLocalTime<T> = LocalResult<T>;
 #[derive(Clone, PartialEq, Debug, Copy, Eq, Hash)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 /// Old name of [`MappedLocalTime`]. See that type for more documentation.
 pub enum LocalResult<T> {
     /// The local time maps to a single unique result.
@@ -174,9 +173,9 @@ impl<Tz: TimeZone> MappedLocalTime<Date<Tz>> {
     #[must_use]
     pub fn and_time(self, time: NaiveTime) -> MappedLocalTime<DateTime<Tz>> {
         match self {
-            MappedLocalTime::Single(d) => {
-                d.and_time(time).map_or(MappedLocalTime::None, MappedLocalTime::Single)
-            }
+            MappedLocalTime::Single(d) => d
+                .and_time(time)
+                .map_or(MappedLocalTime::None, MappedLocalTime::Single),
             _ => MappedLocalTime::None,
         }
     }
@@ -189,9 +188,9 @@ impl<Tz: TimeZone> MappedLocalTime<Date<Tz>> {
     #[must_use]
     pub fn and_hms_opt(self, hour: u32, min: u32, sec: u32) -> MappedLocalTime<DateTime<Tz>> {
         match self {
-            MappedLocalTime::Single(d) => {
-                d.and_hms_opt(hour, min, sec).map_or(MappedLocalTime::None, MappedLocalTime::Single)
-            }
+            MappedLocalTime::Single(d) => d
+                .and_hms_opt(hour, min, sec)
+                .map_or(MappedLocalTime::None, MappedLocalTime::Single),
             _ => MappedLocalTime::None,
         }
     }
@@ -459,7 +458,7 @@ pub trait TimeZone: Sized + Clone {
     /// # Example
     ///
     /// ```
-    /// use chrono::{TimeZone, Utc};
+    /// use blog_format_date_time::{TimeZone, Utc};
     ///
     /// assert_eq!(Utc.timestamp_opt(1431648000, 0).unwrap().to_string(), "2015-05-15 00:00:00 UTC");
     /// ```
@@ -491,7 +490,7 @@ pub trait TimeZone: Sized + Clone {
     /// # Example
     ///
     /// ```
-    /// use chrono::{MappedLocalTime, TimeZone, Utc};
+    /// use blog_format_date_time::{MappedLocalTime, TimeZone, Utc};
     /// match Utc.timestamp_millis_opt(1431648000) {
     ///     MappedLocalTime::Single(dt) => assert_eq!(dt.timestamp(), 1431648),
     ///     _ => panic!("Incorrect timestamp_millis"),
@@ -512,7 +511,7 @@ pub trait TimeZone: Sized + Clone {
     /// # Example
     ///
     /// ```
-    /// use chrono::{TimeZone, Utc};
+    /// use blog_format_date_time::{TimeZone, Utc};
     ///
     /// assert_eq!(Utc.timestamp_nanos(1431648000000000).timestamp(), 1431648);
     /// ```
@@ -526,7 +525,7 @@ pub trait TimeZone: Sized + Clone {
     /// # Example
     ///
     /// ```
-    /// use chrono::{TimeZone, Utc};
+    /// use blog_format_date_time::{TimeZone, Utc};
     ///
     /// assert_eq!(Utc.timestamp_micros(1431648000000).unwrap().timestamp(), 1431648);
     /// ```

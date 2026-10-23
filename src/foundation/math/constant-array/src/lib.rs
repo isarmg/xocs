@@ -10,9 +10,7 @@
 //!
 //! This crate exposes the following feature flags. The default is NO features.
 //!
-//! - `bytemuck`: impls the `Pod` and `Zeroable` traits
 //! - `serde`: impls the `Deserialize` and `Serialize` traits for `Array`
-//! - `zeroize`: impls [`Zeroize`](https://docs.rs/zeroize/latest/zeroize/trait.Zeroize.html) for `Array<T: Zeroize, U>`
 //!
 //! ## Usage
 //!
@@ -127,15 +125,6 @@ use core::{
     slice::{self, Iter, IterMut},
 };
 use typenum::{Diff, Sum, U1};
-
-#[cfg(feature = "arbitrary")]
-use arbitrary::Arbitrary;
-
-#[cfg(feature = "bytemuck")]
-use bytemuck::{Pod, Zeroable};
-
-#[cfg(feature = "zeroize")]
-use zeroize::{Zeroize, ZeroizeOnDrop};
 
 #[cfg(feature = "zerocopy")]
 use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, Unaligned};
@@ -1091,34 +1080,6 @@ where
     }
 }
 
-#[cfg(feature = "arbitrary")]
-impl<'a, T, U> Arbitrary<'a> for Array<T, U>
-where
-    T: Arbitrary<'a>,
-    U: ArraySize,
-{
-    fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
-        Self::try_from_fn(|_n| Arbitrary::arbitrary(u))
-    }
-}
-
-#[cfg(feature = "bytemuck")]
-unsafe impl<T, U> Pod for Array<T, U>
-where
-    T: Pod,
-    U: ArraySize,
-    U::ArrayType<T>: Copy,
-{
-}
-
-#[cfg(feature = "bytemuck")]
-unsafe impl<T, U> Zeroable for Array<T, U>
-where
-    T: Zeroable,
-    U: ArraySize,
-{
-}
-
 #[cfg(feature = "ctutils")]
 impl<T, U> ctutils::CtAssign for Array<T, U>
 where
@@ -1188,26 +1149,6 @@ where
             .zip(other.iter())
             .fold(subtle::Choice::from(1), |acc, (a, b)| acc & a.ct_eq(b))
     }
-}
-
-#[cfg(feature = "zeroize")]
-impl<T, U> Zeroize for Array<T, U>
-where
-    T: Zeroize,
-    U: ArraySize,
-{
-    #[inline]
-    fn zeroize(&mut self) {
-        self.0.as_mut().iter_mut().zeroize();
-    }
-}
-
-#[cfg(feature = "zeroize")]
-impl<T, U> ZeroizeOnDrop for Array<T, U>
-where
-    T: ZeroizeOnDrop,
-    U: ArraySize,
-{
 }
 
 /// Generate a [`TryFromSliceError`] if the slice doesn't match the given length.

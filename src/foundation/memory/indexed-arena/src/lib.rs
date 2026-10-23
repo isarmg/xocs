@@ -471,14 +471,14 @@ where
     /// }
     /// ```
     #[inline]
-    pub fn iter(&self) -> Iter<T, A> {
+    pub fn iter(&self) -> Iter<'_, T, A> {
         IntoIterator::into_iter(self)
     }
 
     /// Iterate over this arena's items and their ids, allowing mutation of each
     /// item.
     #[inline]
-    pub fn iter_mut(&mut self) -> IterMut<T, A> {
+    pub fn iter_mut(&mut self) -> IterMut<'_, T, A> {
         IntoIterator::into_iter(self)
     }
 

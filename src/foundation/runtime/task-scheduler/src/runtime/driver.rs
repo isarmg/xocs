@@ -136,7 +136,7 @@ cfg_io_driver! {
 
     #[derive(Debug)]
     pub(crate) enum IoStack {
-        Enabled(ProcessDriver),
+        Enabled(SignalDriver),
         Disabled(ParkThread),
     }
 
@@ -154,9 +154,8 @@ cfg_io_driver! {
             let (io_driver, io_handle) = crate::runtime::io::Driver::new(nevents)?;
 
             let (signal_driver, signal_handle) = create_signal_driver(io_driver, &io_handle)?;
-            let process_driver = create_process_driver(signal_driver);
 
-            (IoStack::Enabled(process_driver), IoHandle::Enabled(io_handle), signal_handle)
+            (IoStack::Enabled(signal_driver), IoHandle::Enabled(io_handle), signal_handle)
         } else {
             let park_thread = ParkThread::new();
             let unpark_thread = park_thread.unpark();
@@ -263,26 +262,6 @@ cfg_not_signal_internal! {
     }
 }
 
-// ===== process driver =====
-
-cfg_process_driver! {
-    type ProcessDriver = crate::runtime::process::Driver;
-
-    fn create_process_driver(signal_driver: SignalDriver) -> ProcessDriver {
-        ProcessDriver::new(signal_driver)
-    }
-}
-
-cfg_not_process_driver! {
-    cfg_io_driver! {
-        type ProcessDriver = SignalDriver;
-
-        fn create_process_driver(signal_driver: SignalDriver) -> ProcessDriver {
-            signal_driver
-        }
-    }
-}
-
 // ===== time driver =====
 
 cfg_time! {
@@ -369,8 +348,4 @@ cfg_not_time! {
     ) -> (TimeDriver, TimeHandle) {
         (io_stack, ())
     }
-}
-
-cfg_io_uring! {
-    pub(crate) mod op;
 }

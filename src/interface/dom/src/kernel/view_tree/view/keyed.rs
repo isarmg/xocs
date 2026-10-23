@@ -1,13 +1,6 @@
-use super::{
-    add_attr::AddAnyAttr, MarkBranch, Mountable, Position, PositionState, Render, RenderHtml,
-};
+use super::{add_attr::AddAnyAttr, DomView, Mountable, Render};
 use crate::vector_drain::VecExt as VecDrainFilterExt;
-use crate::view_tree::{
-    html::attribute::{any_attribute::AnyAttribute, Attribute},
-    hydration::Cursor,
-    renderer::{CastFrom, Rndr},
-    ssr::StreamBuilder,
-};
+use crate::view_tree::{html::attribute::Attribute, renderer::Rndr};
 use indexmap::IndexSet;
 use rustc_hash::FxHasher;
 use std::hash::{BuildHasherDefault, Hash};
@@ -22,31 +15,15 @@ pub fn keyed<T, I, K, KF, VF, VFS, V>(
 ) -> Keyed<T, I, K, KF, VF, VFS, V>
 where
     I: IntoIterator<Item = T>,
-    K: Eq + Hash + SerializableKey + 'static,
+    K: Eq + Hash + 'static,
     KF: Fn(&T) -> K,
     V: Render,
     VF: Fn(usize, T) -> (VFS, V),
     VFS: Fn(usize),
 {
     Keyed {
-        items: Some(items),
-        #[cfg(any())]
-        items: None,
-        #[cfg(any())]
-        ssr_items: items
-            .into_iter()
-            .enumerate()
-            .map(|(i, t)| {
-                let key = if cfg!(any()) {
-                    let key = (key_fn)(&t);
-                    key.ser_key()
-                } else {
-                    String::new()
-                };
-                let (_, view) = (view_fn)(i, t);
-                (key, view)
-            })
-            .collect::<Vec<_>>(),
+        items,
+
         key_fn,
         view_fn,
     }
@@ -61,43 +38,10 @@ where
     VF: Fn(usize, T) -> (VFS, V),
     VFS: Fn(usize),
 {
-    items: Option<I>,
-    #[cfg(any())]
-    ssr_items: Vec<(String, V)>,
+    items: I,
+
     key_fn: KF,
     view_fn: VF,
-}
-
-/// By default, keys used in for keyed iteration do not need to be serializable.
-///
-/// However, for some scenarios (like the “islands routing” mode that mixes server-side
-/// rendering with client-side navigation) it is useful to have serializable keys.
-///
-/// When the `islands` feature is not enabled, this trait is implemented by all types.
-///
-/// When the `islands` features is enabled, this is automatically implemented for all types
-/// that implement [`Serialize`](serde::Serialize), and can be manually implemented otherwise.
-pub trait SerializableKey {
-    /// Serializes the key to a unique string.
-    ///
-    /// The string can have any value, as long as it is idempotent (i.e., serializing the same key
-    /// multiple times will give the same value).
-    fn ser_key(&self) -> String;
-}
-
-impl<T> SerializableKey for T {
-    fn ser_key(&self) -> String {
-        panic!(
-            "SerializableKey called without the `islands` feature enabled. \
-             Something has gone wrong."
-        );
-    }
-}
-#[cfg(any())]
-impl<T: serde::Serialize> SerializableKey for T {
-    fn ser_key(&self) -> String {
-        serde_json::to_string(self).expect("failed to serialize key")
-    }
 }
 
 /// Retained view state for a keyed list.
@@ -116,7 +60,7 @@ where
 impl<T, I, K, KF, VF, VFS, V> Render for Keyed<T, I, K, KF, VF, VFS, V>
 where
     I: IntoIterator<Item = T>,
-    K: Eq + Hash + SerializableKey + 'static,
+    K: Eq + Hash + 'static,
     KF: Fn(&T) -> K,
     V: Render,
     VF: Fn(usize, T) -> (VFS, V),
@@ -125,7 +69,7 @@ where
     type State = KeyedState<K, VFS, V>;
 
     fn build(self) -> Self::State {
-        let items = self.items.into_iter().flatten();
+        let items = self.items.into_iter();
         let (capacity, _) = items.size_hint();
         let mut hashed_items = FxIndexSet::with_capacity_and_hasher(capacity, Default::default());
         let mut rendered_items = Vec::with_capacity(capacity);
@@ -149,7 +93,7 @@ where
             hashed_items,
             ref mut rendered_items,
         } = state;
-        let new_items = self.items.into_iter().flatten();
+        let new_items = self.items.into_iter();
         let (capacity, _) = new_items.size_hint();
         let mut new_hashed_items =
             FxIndexSet::with_capacity_and_hasher(capacity, Default::default());
@@ -178,9 +122,9 @@ where
 impl<T, I, K, KF, VF, VFS, V> AddAnyAttr for Keyed<T, I, K, KF, VF, VFS, V>
 where
     I: IntoIterator<Item = T> + Send + 'static,
-    K: Eq + Hash + SerializableKey + 'static,
+    K: Eq + Hash + 'static,
     KF: Fn(&T) -> K + Send + 'static,
-    V: RenderHtml,
+    V: DomView + AddAnyAttr,
     V: 'static,
     VF: Fn(usize, T) -> (VFS, V) + Send + 'static,
     VFS: Fn(usize) + 'static,
@@ -201,12 +145,11 @@ where
 
     fn add_any_attr<NewAttr: Attribute>(self, attr: NewAttr) -> Self::Output<NewAttr>
     where
-        Self::Output<NewAttr>: RenderHtml,
+        Self::Output<NewAttr>: DomView,
     {
         let Keyed {
             items,
-            #[cfg(any())]
-            ssr_items,
+
             key_fn,
             view_fn,
         } = self;
@@ -214,11 +157,7 @@ where
         Keyed {
             items,
             key_fn,
-            #[cfg(any())]
-            ssr_items: ssr_items
-                .into_iter()
-                .map(|(k, v)| (k, v.add_any_attr(attr.clone())))
-                .collect(),
+
             view_fn: Box::new(move |index, item| {
                 let (index, view) = view_fn(index, item);
                 (index, view.add_any_attr(attr.clone()))
@@ -227,197 +166,18 @@ where
     }
 }
 
-impl<T, I, K, KF, VF, VFS, V> RenderHtml for Keyed<T, I, K, KF, VF, VFS, V>
+impl<T, I, K, KF, VF, VFS, V> DomView for Keyed<T, I, K, KF, VF, VFS, V>
 where
     I: IntoIterator<Item = T> + Send + 'static,
-    K: Eq + Hash + SerializableKey + 'static,
+    K: Eq + Hash + 'static,
     KF: Fn(&T) -> K + Send + 'static,
-    V: RenderHtml + 'static,
+    V: DomView + 'static,
     VF: Fn(usize, T) -> (VFS, V) + Send + 'static,
     VFS: Fn(usize) + 'static,
     T: 'static,
 {
-    type AsyncOutput = Vec<V::AsyncOutput>; // TODO
+    // TODO
     type Owned = Self;
-
-    const MIN_LENGTH: usize = 0;
-
-    fn dry_resolve(&mut self) {
-        #[cfg(any())]
-        for view in &mut self.ssr_items {
-            view.dry_resolve();
-        }
-    }
-
-    async fn resolve(self) -> Self::AsyncOutput {
-        #[cfg(any())]
-        {
-            futures::future::join_all(self.ssr_items.into_iter().map(|(_, view)| view.resolve()))
-                .await
-                .into_iter()
-                .collect::<Vec<_>>()
-        }
-
-        {
-            futures::future::join_all(self.items.into_iter().flatten().enumerate().map(
-                |(index, item)| {
-                    let (_, view) = (self.view_fn)(index, item);
-                    view.resolve()
-                },
-            ))
-            .await
-            .into_iter()
-            .collect::<Vec<_>>()
-        }
-    }
-
-    #[allow(unused)]
-    fn to_html_with_buf(
-        self,
-        buf: &mut String,
-        position: &mut Position,
-        escape: bool,
-        mark_branches: bool,
-        extra_attrs: Vec<AnyAttribute>,
-    ) {
-        if mark_branches && escape {
-            buf.open_branch("for");
-        }
-
-        #[cfg(any())]
-        for (key, item) in self.ssr_items {
-            let branch_name = mark_branches.then(|| format!("item-{key}"));
-            if mark_branches && escape {
-                buf.open_branch(branch_name.as_ref().unwrap());
-            }
-            item.to_html_with_buf(buf, position, escape, mark_branches, extra_attrs.clone());
-            if mark_branches && escape {
-                buf.close_branch(branch_name.as_ref().unwrap());
-            }
-            *position = Position::NextChild;
-        }
-        if mark_branches && escape {
-            buf.close_branch("for");
-        }
-        buf.push_str("<!>");
-    }
-
-    #[allow(unused)]
-    fn to_html_async_with_buf<const OUT_OF_ORDER: bool>(
-        self,
-        buf: &mut StreamBuilder,
-        position: &mut Position,
-        escape: bool,
-        mark_branches: bool,
-        extra_attrs: Vec<AnyAttribute>,
-    ) {
-        if mark_branches && escape {
-            buf.open_branch("for");
-        }
-
-        #[cfg(any())]
-        for (key, item) in self.ssr_items {
-            let branch_name = mark_branches.then(|| format!("item-{key}"));
-            if mark_branches && escape {
-                buf.open_branch(branch_name.as_ref().unwrap());
-            }
-            item.to_html_async_with_buf::<OUT_OF_ORDER>(
-                buf,
-                position,
-                escape,
-                mark_branches,
-                extra_attrs.clone(),
-            );
-            if mark_branches && escape {
-                buf.close_branch(branch_name.as_ref().unwrap());
-            }
-            *position = Position::NextChild;
-        }
-
-        if mark_branches && escape {
-            buf.close_branch("for");
-        }
-        buf.push_sync("<!>");
-    }
-
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        cursor: &Cursor,
-        position: &PositionState,
-    ) -> Self::State {
-        // get parent and position
-        let current = cursor.current();
-        let parent = if position.get() == Position::FirstChild {
-            current
-        } else {
-            Rndr::get_parent(&current).expect("first child of keyed list has no parent")
-        };
-        let parent = crate::view_tree::renderer::types::Element::cast_from(parent)
-            .expect("parent of keyed list should be an element");
-
-        // build list
-        let items = self.items.into_iter().flatten();
-        let (capacity, _) = items.size_hint();
-        let mut hashed_items = FxIndexSet::with_capacity_and_hasher(capacity, Default::default());
-        let mut rendered_items = Vec::with_capacity(capacity);
-        // SSR creates all items, then renders them to HTML;
-        // hydration needs to create all items, then hydrate them
-        // See https://github.com/leptos-rs/leptos/issues/4881
-        let mut views = Vec::with_capacity(capacity);
-        for (index, item) in items.enumerate() {
-            hashed_items.insert((self.key_fn)(&item));
-            views.push((self.view_fn)(index, item));
-        }
-        for (set_index, view) in views {
-            let item = view.hydrate::<FROM_SERVER>(cursor, position);
-            rendered_items.push(Some((set_index, item)));
-        }
-        let marker = cursor.next_placeholder(position);
-        position.set(Position::NextChild);
-
-        KeyedState {
-            parent: Some(parent),
-            marker,
-            hashed_items,
-            rendered_items,
-        }
-    }
-
-    async fn hydrate_async(self, cursor: &Cursor, position: &PositionState) -> Self::State {
-        // get parent and position
-        let current = cursor.current();
-        let parent = if position.get() == Position::FirstChild {
-            current
-        } else {
-            Rndr::get_parent(&current).expect("first child of keyed list has no parent")
-        };
-        let parent = crate::view_tree::renderer::types::Element::cast_from(parent)
-            .expect("parent of keyed list should be an element");
-
-        // build list
-        let items = self.items.into_iter().flatten();
-        let (capacity, _) = items.size_hint();
-        let mut hashed_items = FxIndexSet::with_capacity_and_hasher(capacity, Default::default());
-        let mut rendered_items = Vec::with_capacity(capacity);
-        let mut views = Vec::with_capacity(capacity);
-        for (index, item) in items.enumerate() {
-            hashed_items.insert((self.key_fn)(&item));
-            views.push((self.view_fn)(index, item));
-        }
-        for (set_index, view) in views {
-            let item = view.hydrate_async(cursor, position).await;
-            rendered_items.push(Some((set_index, item)));
-        }
-        let marker = cursor.next_placeholder(position);
-        position.set(Position::NextChild);
-
-        KeyedState {
-            parent: Some(parent),
-            marker,
-            hashed_items,
-            rendered_items,
-        }
-    }
 
     fn into_owned(self) -> Self::Owned {
         self
@@ -806,116 +566,3 @@ fn unpack_moves(diff: &Diff) -> (Vec<DiffOpMove>, Vec<DiffOpAdd>) {
 
     (moves, adds)
 }
-/*
-#[cfg(test)]
-mod tests {
-    use crate::{
-        html::element::{li, ul, HtmlElement, Li},
-        renderer::mock_dom::MockDom,
-        view::{keyed::keyed, Render},
-    };
-
-    fn item(key: usize) -> HtmlElement<Li, (), String, MockDom> {
-        li((), key.to_string())
-    }
-
-    #[test]
-    fn keyed_creates_list() {
-        let el = ul((), keyed(1..=3, |k| *k, item));
-        let el_state = el.build();
-        assert_eq!(
-            el_state.el.to_debug_html(),
-            "<ul><li>1</li><li>2</li><li>3</li></ul>"
-        );
-    }
-
-    #[test]
-    fn adding_items_updates_list() {
-        let el = ul((), keyed(1..=3, |k| *k, item));
-        let mut el_state = el.build();
-        let el = ul((), keyed(1..=5, |k| *k, item));
-        el.rebuild(&mut el_state);
-        assert_eq!(
-            el_state.el.to_debug_html(),
-            "<ul><li>1</li><li>2</li><li>3</li><li>4</li><li>5</li></ul>"
-        );
-    }
-
-    #[test]
-    fn removing_items_updates_list() {
-        let el = ul((), keyed(1..=3, |k| *k, item));
-        let mut el_state = el.build();
-        let el = ul((), keyed(1..=2, |k| *k, item));
-        el.rebuild(&mut el_state);
-        assert_eq!(
-            el_state.el.to_debug_html(),
-            "<ul><li>1</li><li>2</li></ul>"
-        );
-    }
-
-    #[test]
-    fn swapping_items_updates_list() {
-        let el = ul((), keyed([1, 2, 3, 4, 5], |k| *k, item));
-        let mut el_state = el.build();
-        let el = ul((), keyed([1, 4, 3, 2, 5], |k| *k, item));
-        el.rebuild(&mut el_state);
-        assert_eq!(
-            el_state.el.to_debug_html(),
-            "<ul><li>1</li><li>4</li><li>3</li><li>2</li><li>5</li></ul>"
-        );
-    }
-
-    #[test]
-    fn swapping_and_removing_orders_correctly() {
-        let el = ul((), keyed([1, 2, 3, 4, 5], |k| *k, item));
-        let mut el_state = el.build();
-        let el = ul((), keyed([1, 4, 3, 5], |k| *k, item));
-        el.rebuild(&mut el_state);
-        assert_eq!(
-            el_state.el.to_debug_html(),
-            "<ul><li>1</li><li>4</li><li>3</li><li>5</li></ul>"
-        );
-    }
-
-    #[test]
-    fn arbitrarily_hard_adjustment() {
-        let el = ul((), keyed([1, 2, 3, 4, 5], |k| *k, item));
-        let mut el_state = el.build();
-        let el = ul((), keyed([2, 4, 3], |k| *k, item));
-        el.rebuild(&mut el_state);
-        assert_eq!(
-            el_state.el.to_debug_html(),
-            "<ul><li>2</li><li>4</li><li>3</li></ul>"
-        );
-    }
-
-    #[test]
-    fn a_series_of_moves() {
-        let el = ul((), keyed([1, 2, 3, 4, 5], |k| *k, item));
-        let mut el_state = el.build();
-        let el = ul((), keyed([2, 4, 3], |k| *k, item));
-        el.rebuild(&mut el_state);
-        let el = ul((), keyed([1, 7, 5, 11, 13, 17], |k| *k, item));
-        el.rebuild(&mut el_state);
-        let el = ul((), keyed([2, 6, 8, 7, 13], |k| *k, item));
-        el.rebuild(&mut el_state);
-        let el = ul((), keyed([13, 4, 5, 3], |k| *k, item));
-        el.rebuild(&mut el_state);
-        let el = ul((), keyed([1, 2, 3, 4], |k| *k, item));
-        el.rebuild(&mut el_state);
-        assert_eq!(
-            el_state.el.to_debug_html(),
-            "<ul><li>1</li><li>2</li><li>3</li><li>4</li></ul>"
-        );
-    }
-
-    #[test]
-    fn clearing_works() {
-        let el = ul((), keyed([1, 2, 3, 4, 5], |k| *k, item));
-        let mut el_state = el.build();
-        let el = ul((), keyed([], |k| *k, item));
-        el.rebuild(&mut el_state);
-        assert_eq!(el_state.el.to_debug_html(), "<ul></ul>");
-    }
-}
-*/

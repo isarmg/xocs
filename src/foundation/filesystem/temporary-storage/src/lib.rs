@@ -188,8 +188,8 @@
 #![deny(rust_2018_idioms)]
 #![allow(clippy::redundant_field_names)]
 
-#[cfg(doctest)]
-doc_comment::doctest!("../README.md");
+#[cfg(not(all(target_os = "linux", target_arch = "x86_64", target_env = "gnu")))]
+compile_error!("temporary filesystem storage requires Linux amd64 GNU");
 
 const NUM_RETRIES: u32 = 65536;
 const NUM_RAND_CHARS: usize = 6;
@@ -490,12 +490,6 @@ impl<'a, 'b> Builder<'a, 'b> {
     pub fn disable_cleanup(&mut self, disable_cleanup: bool) -> &mut Self {
         self.disable_cleanup = disable_cleanup;
         self
-    }
-
-    /// Deprecated alias for [`Builder::disable_cleanup`].
-    #[deprecated = "Use Builder::disable_cleanup"]
-    pub fn keep(&mut self, keep: bool) -> &mut Self {
-        self.disable_cleanup(keep)
     }
 
     /// Create the named temporary file.

@@ -191,21 +191,6 @@ where
         executor.execute(self).await
     }
 
-    /// Execute multiple queries and return the rows affected from each query, in a stream.
-    #[inline]
-    #[deprecated = "Only the SQLite driver supports multiple statements in one prepared statement and that behavior is deprecated. Use `sqlx::raw_sql()` instead. See https://github.com/launchbadge/sqlx/issues/3108 for discussion."]
-    pub async fn execute_many<'e, 'c: 'e, E>(
-        self,
-        executor: E,
-    ) -> BoxStream<'e, Result<DB::QueryResult, Error>>
-    where
-        'q: 'e,
-        A: 'e,
-        E: Executor<'c, Database = DB>,
-    {
-        executor.execute_many(self)
-    }
-
     /// Execute the query and return the generated results as a stream.
     #[inline]
     pub fn fetch<'e, 'c: 'e, E>(self, executor: E) -> BoxStream<'e, Result<DB::Row, Error>>
@@ -215,25 +200,6 @@ where
         E: Executor<'c, Database = DB>,
     {
         executor.fetch(self)
-    }
-
-    /// Execute multiple queries and return the generated results as a stream.
-    ///
-    /// For each query in the stream, any generated rows are returned first,
-    /// then the `QueryResult` with the number of rows affected.
-    #[inline]
-    #[deprecated = "Only the SQLite driver supports multiple statements in one prepared statement and that behavior is deprecated. Use `sqlx::raw_sql()` instead. See https://github.com/launchbadge/sqlx/issues/3108 for discussion."]
-    // TODO: we'll probably still want a way to get the `DB::QueryResult` at the end of a `fetch()` stream.
-    pub fn fetch_many<'e, 'c: 'e, E>(
-        self,
-        executor: E,
-    ) -> BoxStream<'e, Result<Either<DB::QueryResult, DB::Row>, Error>>
-    where
-        'q: 'e,
-        A: 'e,
-        E: Executor<'c, Database = DB>,
-    {
-        executor.fetch_many(self)
     }
 
     /// Execute the query and return all the resulting rows collected into a [`Vec`].
@@ -378,47 +344,11 @@ where
         F: 'e,
         O: 'e,
     {
-        // FIXME: this should have used `executor.fetch()` but that's a breaking change
-        // because this technically allows multiple statements in one query string.
-        #[allow(deprecated)]
-        self.fetch_many(executor)
-            .try_filter_map(|step| async move {
-                Ok(match step {
-                    Either::Left(_) => None,
-                    Either::Right(o) => Some(o),
-                })
-            })
+        let mut mapper = self.mapper;
+        executor
+            .fetch(self.inner)
+            .map(move |row| mapper(row?))
             .boxed()
-    }
-
-    /// Execute multiple queries and return the generated results as a stream
-    /// from each query, in a stream.
-    #[deprecated = "Only the SQLite driver supports multiple statements in one prepared statement and that behavior is deprecated. Use `sqlx::raw_sql()` instead."]
-    pub fn fetch_many<'e, 'c: 'e, E>(
-        mut self,
-        executor: E,
-    ) -> BoxStream<'e, Result<Either<DB::QueryResult, O>, Error>>
-    where
-        'q: 'e,
-        E: 'e + Executor<'c, Database = DB>,
-        DB: 'e,
-        F: 'e,
-        O: 'e,
-    {
-        Box::pin(try_stream! {
-            let mut s = executor.fetch_many(self.inner);
-
-            while let Some(v) = s.try_next().await? {
-                r#yield!(match v {
-                    Either::Left(v) => Either::Left(v),
-                    Either::Right(row) => {
-                        Either::Right((self.mapper)(row)?)
-                    }
-                });
-            }
-
-            Ok(())
-        })
     }
 
     /// Execute the query and return all the resulting rows collected into a [`Vec`].
@@ -528,16 +458,12 @@ where
 
 /// Execute a single SQL query as a prepared statement (transparently cached).
 ///
-/// The query string may only contain a single DML statement: `SELECT`, `INSERT`, `UPDATE`, `DELETE` and variants.
-/// The SQLite driver does not currently follow this restriction, but that behavior is deprecated.
+/// SQLite accepts one or more statements in the query string. Bound arguments
+/// apply across the statements; row-oriented fetch methods return their rows in order.
 ///
 /// The connection will transparently prepare and cache the statement, which means it only needs to be parsed once
 /// in the connection's lifetime, and any generated query plans can be retained.
 /// Thus, the overhead of executing the statement is amortized.
-///
-/// Some third-party databases that speak a supported protocol, e.g. CockroachDB or PGBouncer that speak Postgres,
-/// may have issues with the transparent caching of prepared statements. If you are having trouble,
-/// try setting [`.persistent(false)`][Query::persistent].
 ///
 /// See the [`Query`] type for the methods you may call.
 ///

@@ -35,26 +35,29 @@
 #![deny(missing_docs)]
 #![deny(missing_debug_implementations)]
 #![doc(test(attr(allow(unused_variables), deny(warnings))))]
-#![cfg_attr(doc_cfg, feature(doc_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![no_std]
 
 use core::convert::AsMut;
 use core::default::Default;
 
-#[cfg(feature = "std")] extern crate std;
-#[cfg(feature = "alloc")] extern crate alloc;
-#[cfg(feature = "alloc")] use alloc::boxed::Box;
+#[cfg(feature = "alloc")]
+extern crate alloc;
+#[cfg(feature = "std")]
+extern crate std;
+#[cfg(feature = "alloc")]
+use alloc::boxed::Box;
 
 pub use error::Error;
-#[cfg(feature = "getrandom")] pub use os::OsRng;
-
+#[cfg(feature = "getrandom")]
+pub use os::OsRng;
 
 pub mod block;
 mod error;
 pub mod impls;
 pub mod le;
-#[cfg(feature = "getrandom")] mod os;
-
+#[cfg(feature = "getrandom")]
+mod os;
 
 /// The core of a random number generator.
 ///
@@ -408,10 +411,10 @@ pub trait SeedableRng: Sized {
     ///
     /// [`getrandom`]: https://docs.rs/getrandom
     #[cfg(feature = "getrandom")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "getrandom")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
     fn from_entropy() -> Self {
         let mut seed = Self::Seed::default();
-        if let Err(err) = getrandom::getrandom(seed.as_mut()) {
+        if let Err(err) = getrandom::fill(seed.as_mut()) {
             panic!("from_entropy failed: {}", err);
         }
         Self::from_seed(seed)

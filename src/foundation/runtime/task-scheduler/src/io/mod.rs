@@ -227,7 +227,7 @@ cfg_io_driver_impl! {
     pub(crate) mod interest;
     pub(crate) mod ready;
 
-    cfg_net_or_uring! {
+    cfg_net! {
         pub use interest::Interest;
         pub use ready::Ready;
     }
@@ -242,15 +242,6 @@ cfg_io_driver_impl! {
 
 // The bsd module can't be build on Windows, so we completely ignore it, even
 // when building documentation.
-#[cfg(unix)]
-cfg_aio! {
-    /// BSD-specific I/O types.
-    pub mod bsd {
-        mod poll_aio;
-
-        pub use poll_aio::{Aio, AioEvent, AioSource};
-    }
-}
 
 cfg_net_unix! {
     mod async_fd;
@@ -288,11 +279,7 @@ cfg_io_util! {
     };
 }
 
-cfg_not_io_util! {
-    cfg_process! {
-        pub(crate) mod util;
-    }
-}
+cfg_not_io_util! {}
 
 cfg_io_blocking! {
     /// Types in this module can be mocked out in tests.
@@ -301,8 +288,4 @@ cfg_io_blocking! {
         pub(crate) use crate::blocking::spawn_blocking as run;
         pub(crate) use crate::blocking::JoinHandle as Blocking;
     }
-}
-
-cfg_io_uring! {
-    pub(crate) mod uring;
 }

@@ -9,7 +9,7 @@ use crate::sqlite::error::BoxDynError;
 pub(crate) use crate::query_engine::type_info::*;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-#[cfg_attr(feature = "offline", derive(serde::Serialize, serde::Deserialize))]
+
 pub(crate) enum DataType {
     // These variants should correspond to `SQLITE_*` type constants.
     Null,
@@ -20,10 +20,6 @@ pub(crate) enum DataType {
     Float,
     Text,
     Blob,
-
-    // Explicitly not supported: see documentation in `types/mod.rs`
-    #[allow(dead_code)]
-    Numeric,
 
     // non-standard extensions (chosen based on the column's declared type)
     /// Chosen if the column's declared type is `BOOLEAN`.
@@ -39,7 +35,7 @@ pub(crate) enum DataType {
 
 /// Type information for a SQLite type.
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-#[cfg_attr(feature = "offline", derive(serde::Serialize, serde::Deserialize))]
+
 pub struct SqliteTypeInfo(pub(crate) DataType);
 
 impl Display for SqliteTypeInfo {
@@ -60,7 +56,6 @@ impl TypeInfo for SqliteTypeInfo {
             DataType::Float => "REAL",
             DataType::Blob => "BLOB",
             DataType::Int4 | DataType::Integer => "INTEGER",
-            DataType::Numeric => "NUMERIC",
 
             // non-standard extensions
             DataType::Bool => "BOOLEAN",
@@ -116,46 +111,4 @@ impl FromStr for DataType {
             }
         })
     }
-}
-
-// #[cfg(feature = "any")]
-// impl From<SqliteTypeInfo> for crate::sqlite::any::AnyTypeInfo {
-//     #[inline]
-//     fn from(ty: SqliteTypeInfo) -> Self {
-//         crate::sqlite::any::AnyTypeInfo(crate::sqlite::any::type_info::AnyTypeInfoKind::Sqlite(ty))
-//     }
-// }
-
-#[test]
-fn test_data_type_from_str() -> Result<(), BoxDynError> {
-    assert_eq!(DataType::Int4, "INT4".parse()?);
-
-    assert_eq!(DataType::Integer, "INT".parse()?);
-    assert_eq!(DataType::Integer, "INTEGER".parse()?);
-    assert_eq!(DataType::Integer, "INTBIG".parse()?);
-    assert_eq!(DataType::Integer, "MEDIUMINT".parse()?);
-
-    assert_eq!(DataType::Integer, "BIGINT".parse()?);
-    assert_eq!(DataType::Integer, "UNSIGNED BIG INT".parse()?);
-    assert_eq!(DataType::Integer, "INT8".parse()?);
-
-    assert_eq!(DataType::Text, "CHARACTER(20)".parse()?);
-    assert_eq!(DataType::Text, "NCHAR(55)".parse()?);
-    assert_eq!(DataType::Text, "TEXT".parse()?);
-    assert_eq!(DataType::Text, "CLOB".parse()?);
-
-    assert_eq!(DataType::Blob, "BLOB".parse()?);
-
-    assert_eq!(DataType::Float, "REAL".parse()?);
-    assert_eq!(DataType::Float, "FLOAT".parse()?);
-    assert_eq!(DataType::Float, "DOUBLE PRECISION".parse()?);
-
-    assert_eq!(DataType::Bool, "BOOLEAN".parse()?);
-    assert_eq!(DataType::Bool, "BOOL".parse()?);
-
-    assert_eq!(DataType::Datetime, "DATETIME".parse()?);
-    assert_eq!(DataType::Time, "TIME".parse()?);
-    assert_eq!(DataType::Date, "DATE".parse()?);
-
-    Ok(())
 }

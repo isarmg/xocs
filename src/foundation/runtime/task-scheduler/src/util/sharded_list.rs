@@ -140,20 +140,3 @@ impl<'a, L: ShardedListItem> ShardGuard<'a, L> {
         self.count.increment();
     }
 }
-
-cfg_taskdump! {
-    impl<L: ShardedListItem> ShardedList<L> {
-        pub(crate) fn for_each<F>(&self, mut f: F)
-        where
-            F: FnMut(&L::Handle),
-        {
-            let mut guards = Vec::with_capacity(self.lists.len());
-            for list in self.lists.iter() {
-                guards.push(list.lock());
-            }
-            for g in &mut guards {
-                g.for_each(&mut f);
-            }
-        }
-    }
-}

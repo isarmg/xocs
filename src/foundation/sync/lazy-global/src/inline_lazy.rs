@@ -12,18 +12,15 @@ use self::std::cell::Cell;
 use self::std::mem::MaybeUninit;
 use self::std::prelude::v1::*;
 use self::std::sync::Once;
-#[allow(deprecated)]
-pub use self::std::sync::ONCE_INIT;
 
 #[allow(dead_code)] // Used in macros
 pub struct Lazy<T: Sync>(Cell<MaybeUninit<T>>, Once);
 
 impl<T: Sync> Lazy<T> {
-    #[allow(deprecated)]
-    pub const INIT: Self = Lazy(Cell::new(MaybeUninit::uninit()), ONCE_INIT);
+    pub const INIT: Self = Lazy(Cell::new(MaybeUninit::uninit()), Once::new());
 
     #[inline(always)]
-    pub fn get<F>(&'static self, f: F) -> &T
+    pub fn get<F>(&'static self, f: F) -> &'static T
     where
         F: FnOnce() -> T,
     {

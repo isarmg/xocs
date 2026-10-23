@@ -92,14 +92,6 @@ impl AHasher {
         self.enc = aesdec(self.enc, v2);
         self.sum = shuffle_and_add(self.sum, v2);
     }
-
-    #[inline]
-    #[cfg(specialize)]
-    fn short_finish(&self) -> u64 {
-        let combined = aesenc(self.sum, self.enc);
-        let result: [u64; 2] = aesdec(combined, combined).convert();
-        result[0]
-    }
 }
 
 /// Provides [Hasher] methods to hash all of the primitive types.
@@ -214,151 +206,6 @@ impl Hasher for AHasher {
     }
 }
 
-#[cfg(specialize)]
-pub(crate) struct AHasherU64 {
-    pub(crate) buffer: u64,
-    pub(crate) pad: u64,
-}
-
-/// A specialized hasher for only primitives under 64 bits.
-#[cfg(specialize)]
-impl Hasher for AHasherU64 {
-    #[inline]
-    fn finish(&self) -> u64 {
-        folded_multiply(self.buffer, self.pad)
-    }
-
-    #[inline]
-    fn write(&mut self, _bytes: &[u8]) {
-        unreachable!("Specialized hasher was called with a different type of object")
-    }
-
-    #[inline]
-    fn write_u8(&mut self, i: u8) {
-        self.write_u64(i as u64);
-    }
-
-    #[inline]
-    fn write_u16(&mut self, i: u16) {
-        self.write_u64(i as u64);
-    }
-
-    #[inline]
-    fn write_u32(&mut self, i: u32) {
-        self.write_u64(i as u64);
-    }
-
-    #[inline]
-    fn write_u64(&mut self, i: u64) {
-        self.buffer = folded_multiply(i ^ self.buffer, MULTIPLE);
-    }
-
-    #[inline]
-    fn write_u128(&mut self, _i: u128) {
-        unreachable!("Specialized hasher was called with a different type of object")
-    }
-
-    #[inline]
-    fn write_usize(&mut self, _i: usize) {
-        unreachable!("Specialized hasher was called with a different type of object")
-    }
-}
-
-#[cfg(specialize)]
-pub(crate) struct AHasherFixed(pub AHasher);
-
-/// A specialized hasher for fixed size primitives larger than 64 bits.
-#[cfg(specialize)]
-impl Hasher for AHasherFixed {
-    #[inline]
-    fn finish(&self) -> u64 {
-        self.0.short_finish()
-    }
-
-    #[inline]
-    fn write(&mut self, bytes: &[u8]) {
-        self.0.write(bytes)
-    }
-
-    #[inline]
-    fn write_u8(&mut self, i: u8) {
-        self.write_u64(i as u64);
-    }
-
-    #[inline]
-    fn write_u16(&mut self, i: u16) {
-        self.write_u64(i as u64);
-    }
-
-    #[inline]
-    fn write_u32(&mut self, i: u32) {
-        self.write_u64(i as u64);
-    }
-
-    #[inline]
-    fn write_u64(&mut self, i: u64) {
-        self.0.write_u64(i);
-    }
-
-    #[inline]
-    fn write_u128(&mut self, i: u128) {
-        self.0.write_u128(i);
-    }
-
-    #[inline]
-    fn write_usize(&mut self, i: usize) {
-        self.0.write_usize(i);
-    }
-}
-
-#[cfg(specialize)]
-pub(crate) struct AHasherStr(pub AHasher);
-
-/// A specialized hasher for strings
-/// Note that the other types don't panic because the hash impl for String tacks on an unneeded call. (As does vec)
-#[cfg(specialize)]
-impl Hasher for AHasherStr {
-    #[inline]
-    fn finish(&self) -> u64 {
-        let result: [u64; 2] = self.0.enc.convert();
-        result[0]
-    }
-
-    #[inline]
-    fn write(&mut self, bytes: &[u8]) {
-        if bytes.len() > 8 {
-            self.0.write(bytes);
-            self.0.enc = aesenc(self.0.sum, self.0.enc);
-            self.0.enc = aesdec(aesdec(self.0.enc, self.0.key), self.0.enc);
-        } else {
-            add_in_length(&mut self.0.enc, bytes.len() as u64);
-
-            let value = read_small(bytes).convert();
-            self.0.sum = shuffle_and_add(self.0.sum, value);
-            self.0.enc = aesenc(self.0.sum, self.0.enc);
-            self.0.enc = aesdec(aesdec(self.0.enc, self.0.key), self.0.enc);
-        }
-    }
-
-    #[inline]
-    fn write_u8(&mut self, _i: u8) {}
-
-    #[inline]
-    fn write_u16(&mut self, _i: u16) {}
-
-    #[inline]
-    fn write_u32(&mut self, _i: u32) {}
-
-    #[inline]
-    fn write_u64(&mut self, _i: u64) {}
-
-    #[inline]
-    fn write_u128(&mut self, _i: u128) {}
-
-    #[inline]
-    fn write_usize(&mut self, _i: usize) {}
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -376,7 +223,7 @@ mod tests {
         assert_ne!(h1, h2);
     }
 
-    #[cfg(feature = "compile-time-rng")]
+    #[cfg(feature = "runtime-rng")]
     #[test]
     fn test_builder() {
         use std::collections::HashMap;
@@ -386,7 +233,7 @@ mod tests {
         map.insert(1, 3);
     }
 
-    #[cfg(feature = "compile-time-rng")]
+    #[cfg(feature = "runtime-rng")]
     #[test]
     fn test_default() {
         let hasher_a = AHasher::default();

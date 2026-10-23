@@ -160,10 +160,7 @@ impl Pair {
     /// If a pair could not be created (for example, if the needle is too
     /// short), then `None` is returned.
     #[inline]
-    pub fn with_ranker<R: HeuristicFrequencyRank>(
-        needle: &[u8],
-        ranker: R,
-    ) -> Option<Pair> {
+    pub fn with_ranker<R: HeuristicFrequencyRank>(needle: &[u8], ranker: R) -> Option<Pair> {
         if needle.len() <= 1 {
             return None;
         }
@@ -176,7 +173,7 @@ impl Pair {
             core::mem::swap(&mut rare1, &mut rare2);
             core::mem::swap(&mut index1, &mut index2);
         }
-        let max = usize::from(core::u8::MAX);
+        let max = usize::from(u8::MAX);
         for (i, &b) in needle.iter().enumerate().take(max).skip(2) {
             if ranker.rank(b) < ranker.rank(rare1) {
                 rare2 = rare1;
@@ -211,11 +208,7 @@ impl Pair {
     /// If a pair could not be created (for example, if the needle is too
     /// short), then `None` is returned.
     #[inline]
-    pub fn with_indices(
-        needle: &[u8],
-        index1: u8,
-        index2: u8,
-    ) -> Option<Pair> {
+    pub fn with_indices(needle: &[u8], index1: u8, index2: u8) -> Option<Pair> {
         // While not strictly required for how a Pair is normally used, we
         // really don't want these to be equivalent. If they were, it would
         // reduce the effectiveness of candidate searching using these rare
@@ -343,12 +336,7 @@ mod tests {
 
     #[test]
     fn forward_packedpair() {
-        fn find(
-            haystack: &[u8],
-            needle: &[u8],
-            _index1: u8,
-            _index2: u8,
-        ) -> Option<Option<usize>> {
+        fn find(haystack: &[u8], needle: &[u8], _index1: u8, _index2: u8) -> Option<Option<usize>> {
             // We ignore the index positions requested since it winds up making
             // this test too slow overall.
             let f = Finder::new(needle)?;

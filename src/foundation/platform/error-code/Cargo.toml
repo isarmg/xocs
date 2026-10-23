@@ -31,20 +31,7 @@ std = ["libc/std"]
 name = "blog_platform_error_code"
 path = "src/lib.rs"
 
-[target."cfg(unix)".dependencies.libc]
+[dependencies.libc]
 default-features = false
 path = "../system-abi"
 package = "blog-platform-system-abi"
-
-
-[target."cfg(target_os=\"hermit\")".dependencies]
-libc = { default-features = false, path = "../system-abi",package = "blog-platform-system-abi"}
-
-[target."cfg(target_os=\"wasi\")".dependencies]
-libc = { default-features = false, path = "../system-abi",package = "blog-platform-system-abi"}
-
-[target."cfg(windows)"]
-[lints.rust.unexpected_cfgs]
-level = "warn"
-priority = 0
-check-cfg = ['cfg(target_os, values("cygwin"))']

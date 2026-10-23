@@ -67,11 +67,7 @@
 #![warn(unsafe_op_in_unsafe_fn)]
 #![cfg_attr(feature = "nightly", feature(thread_local))]
 
-mod cached;
 mod thread_id;
-
-#[allow(deprecated)]
-pub use cached::{CachedIntoIter, CachedIterMut, CachedThreadLocal};
 
 use std::cell::UnsafeCell;
 use std::fmt;

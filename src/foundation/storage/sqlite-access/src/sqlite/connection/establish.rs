@@ -8,15 +8,12 @@ use libsqlite3_sys::{
     SQLITE_OPEN_NOMUTEX, SQLITE_OPEN_PRIVATECACHE, SQLITE_OPEN_READONLY, SQLITE_OPEN_READWRITE,
     SQLITE_OPEN_SHAREDCACHE, SQLITE_OPEN_URI,
 };
-use url_encoding::percent::NON_ALPHANUMERIC;
 use std::collections::BTreeMap;
 use std::ffi::CString;
 use std::io;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
-
-#[cfg(feature = "sqlite-load-extension")]
-use crate::query_engine::IndexMap;
+use url_encoding::percent::NON_ALPHANUMERIC;
 
 // This was originally `AtomicU64` but that's not supported on MIPS (or PowerPC):
 // https://github.com/launchbadge/sqlx/issues/2859
@@ -29,12 +26,8 @@ pub struct EstablishParams {
     busy_timeout: Duration,
     statement_cache_capacity: usize,
     log_settings: LogSettings,
-    #[cfg(feature = "sqlite-load-extension")]
-    extensions: IndexMap<CString, Option<CString>>,
     pub(crate) thread_name: String,
     pub(crate) command_channel_size: usize,
-    #[cfg(feature = "regexp")]
-    register_regexp_function: bool,
 }
 
 impl EstablishParams {
@@ -111,34 +104,6 @@ impl EstablishParams {
             )
         })?;
 
-        #[cfg(feature = "sqlite-load-extension")]
-        let extensions = options
-            .extensions
-            .iter()
-            .map(|(name, entry)| {
-                let entry = entry
-                    .as_ref()
-                    .map(|e| {
-                        CString::new(e.as_bytes()).map_err(|_| {
-                            io::Error::new(
-                                io::ErrorKind::InvalidData,
-                                "extension entrypoint names passed to SQLite must not contain nul bytes"
-                            )
-                        })
-                    })
-                    .transpose()?;
-                Ok((
-                    CString::new(name.as_bytes()).map_err(|_| {
-                        io::Error::new(
-                            io::ErrorKind::InvalidData,
-                            "extension names passed to SQLite must not contain nul bytes",
-                        )
-                    })?,
-                    entry,
-                ))
-            })
-            .collect::<Result<IndexMap<CString, Option<CString>>, io::Error>>()?;
-
         let thread_id = THREAD_ID.fetch_add(1, Ordering::AcqRel);
 
         Ok(Self {
@@ -147,31 +112,13 @@ impl EstablishParams {
             busy_timeout: options.busy_timeout,
             statement_cache_capacity: options.statement_cache_capacity,
             log_settings: options.log_settings.clone(),
-            #[cfg(feature = "sqlite-load-extension")]
-            extensions,
             thread_name: (options.thread_name)(thread_id as u64),
             command_channel_size: options.command_channel_size,
-            #[cfg(feature = "regexp")]
-            register_regexp_function: options.register_regexp_function,
         })
     }
 
     pub(crate) fn establish(&self) -> Result<ConnectionState, Error> {
         let mut handle = ConnectionHandle::open(&self.filename, self.open_flags)?;
-
-        #[cfg(feature = "sqlite-load-extension")]
-        unsafe {
-            self.apply_extensions(&mut handle)?;
-        }
-
-        #[cfg(feature = "regexp")]
-        if self.register_regexp_function {
-            // configure a `regexp` function for sqlite, it does not come with one by default
-            let status = crate::sqlite::regexp::register(handle.as_ptr());
-            if status != libsqlite3_sys::SQLITE_OK {
-                return Err(Error::Database(Box::new(handle.expect_error())));
-            }
-        }
 
         // Configure a busy timeout
         // This causes SQLite to automatically sleep in increasing intervals until the time
@@ -189,83 +136,8 @@ impl EstablishParams {
             log_settings: self.log_settings.clone(),
             progress_handler_callback: None,
             update_hook_callback: None,
-            #[cfg(feature = "sqlite-preupdate-hook")]
-            preupdate_hook_callback: None,
             commit_hook_callback: None,
             rollback_hook_callback: None,
         })
-    }
-
-    #[cfg(feature = "sqlite-load-extension")]
-    unsafe fn apply_extensions(&self, handle: &mut ConnectionHandle) -> Result<(), Error> {
-        use libsqlite3_sys::{sqlite3_free, sqlite3_load_extension};
-        use std::ffi::{c_int, CStr};
-        use std::ptr;
-
-        /// `true` enables *just* `sqlite3_load_extension`, false disables *all* extension loading.
-        fn enable_load_extension(
-            handle: &mut ConnectionHandle,
-            enabled: bool,
-        ) -> Result<(), Error> {
-            use libsqlite3_sys::{sqlite3_db_config, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION};
-
-            // SAFETY: we have exclusive access and this matches the expected signature
-            // <https://www.sqlite.org/c3ref/c_dbconfig_defensive.html#sqlitedbconfigenableloadextension>
-            handle.call_with_result(|db| unsafe {
-                // https://doc.rust-lang.org/reference/expressions/operator-expr.html#r-expr.as.bool-char-as-int
-                sqlite3_db_config(
-                    db,
-                    SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION,
-                    enabled as c_int,
-                    ptr::null_mut::<c_int>(),
-                )
-            })?;
-
-            Ok(())
-        }
-
-        if self.extensions.is_empty() {
-            return Ok(());
-        }
-
-        // We enable extension loading only so long as *we're* doing it.
-        enable_load_extension(handle, true)?;
-
-        for (name, entrypoint) in &self.extensions {
-            let name_ptr = name.as_ptr();
-            let entrypoint_ptr = entrypoint.as_ref().map_or_else(ptr::null, |s| s.as_ptr());
-            let mut err_msg_ptr = ptr::null_mut();
-
-            // SAFETY:
-            // * we have exclusive access
-            // * all pointers are initialized
-            // * we warn the user about loading extensions in documentation
-            handle
-                .call_with_result(|db| unsafe {
-                    sqlite3_load_extension(db, name_ptr, entrypoint_ptr, &mut err_msg_ptr)
-                })
-                .map_err(|e| {
-                    if !err_msg_ptr.is_null() {
-                        // SAFETY: pointer is not-null,
-                        // and we copy the error message to an allocation we own.
-                        let err_msg = unsafe { CStr::from_ptr(err_msg_ptr) }
-                            // In practice, the string *should* be UTF-8.
-                            .to_string_lossy()
-                            .into_owned();
-
-                        // SAFETY: we're expected to free the error message afterward.
-                        unsafe {
-                            sqlite3_free(err_msg_ptr.cast());
-                        }
-
-                        e.with_message(err_msg)
-                    } else {
-                        e
-                    }
-                })?;
-        }
-
-        // We then disable extension loading immediately afterward.
-        enable_load_extension(handle, false)
     }
 }

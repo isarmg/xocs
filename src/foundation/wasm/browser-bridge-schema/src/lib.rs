@@ -364,13 +364,7 @@ pub fn dynamic_union_variant(union_name: &str, variant_idx: u32) -> String {
 }
 
 pub fn version() -> String {
-    let mut v = env!("CARGO_PKG_VERSION").to_string();
-    if let Some(s) = option_env!("WBG_VERSION") {
-        v.push_str(" (");
-        v.push_str(s);
-        v.push(')');
-    }
-    v
+    SCHEMA_VERSION.to_string()
 }
 
 pub fn escape_string(s: &str) -> String {

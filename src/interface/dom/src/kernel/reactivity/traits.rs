@@ -519,10 +519,12 @@ where
 
     #[track_caller]
     fn set(&self, value: Self::Value) {
-        let failed = self.try_update(|n| *n = value).is_none();
+        let result = self.try_update(|n| *n = value);
+        #[cfg(not(any(debug_assertions, leptos_debuginfo)))]
+        let _ = result;
 
         #[cfg(any(debug_assertions, leptos_debuginfo))]
-        if failed && !self.is_disposed() {
+        if result.is_none() && !self.is_disposed() {
             let called_at = Location::caller();
             let ty = std::any::type_name::<Self::Value>();
 
@@ -568,7 +570,7 @@ where
 
         Owner::on_cleanup(move || close_channel.close_channel());
 
-        Effect::new_isomorphic({
+        Effect::new_sync({
             let this = self.clone();
             move |_| {
                 let _ = tx.unbounded_send(this.get());

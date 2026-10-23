@@ -128,35 +128,6 @@ pub fn code_to_str(code: c_int) -> &'static str {
     }
 }
 
-/// Loadable extension initialization error
-#[cfg(feature = "loadable_extension")]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[non_exhaustive]
-pub enum InitError {
-    /// Version mismatch between the extension and the SQLite3 library
-    VersionMismatch { compile_time: i32, runtime: i32 },
-    /// Invalid function pointer in one of `sqlite3_api_routines` fields
-    NullFunctionPointer,
-}
-#[cfg(feature = "loadable_extension")]
-impl fmt::Display for InitError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            Self::VersionMismatch {
-                compile_time,
-                runtime,
-            } => {
-                write!(f, "SQLite version mismatch: {runtime} < {compile_time}")
-            }
-            Self::NullFunctionPointer => {
-                write!(f, "Some sqlite3_api_routines fields are null")
-            }
-        }
-    }
-}
-#[cfg(feature = "loadable_extension")]
-impl error::Error for InitError {}
-
 #[cfg(test)]
 mod test {
     use crate::*;

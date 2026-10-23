@@ -72,7 +72,6 @@
 //!
 //! The following is a list of feature flags and their corresponding `RUSTFLAG`:
 //!
-//! - `ffi`: Enables C API for hyper `hyper_unstable_ffi`.
 //! - `tracing`: Enables debug logging with `hyper_unstable_tracing`.
 //!
 //! For example:
@@ -131,10 +130,6 @@ pub mod rt;
 pub mod service;
 pub mod upgrade;
 
-#[cfg(feature = "ffi")]
-#[cfg_attr(docsrs, doc(cfg(all(feature = "ffi", hyper_unstable_ffi))))]
-pub mod ffi;
-
 cfg_proto! {
     mod headers;
     mod proto;
@@ -152,6 +147,6 @@ cfg_feature! {
     pub mod server;
 }
 
-/// Opt-in runtime, service, client-pool and server adapters.
+/// Opt-in runtime, service, pooled HTTP client and server adapters.
 #[cfg(feature = "adapters")]
 pub mod adapters;

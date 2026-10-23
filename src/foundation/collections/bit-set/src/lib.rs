@@ -26,8 +26,6 @@ The `bitflags` library defines a few Cargo features that you can opt-in to:
 
 - `std`: Implement the `Error` trait on error types used by `bitflags`.
 - `serde`: Support deriving `serde` traits on generated flags types.
-- `arbitrary`: Support deriving `arbitrary` traits on generated flags types.
-- `bytemuck`: Support deriving `bytemuck` traits on generated flags types.
 
 ## Generating flags types
 
@@ -81,9 +79,6 @@ libraries are currently supported:
 
 - `serde`: Support `#[derive(Serialize, Deserialize)]`, using text for human-readable formats,
   and a raw number for binary formats.
-- `arbitrary`: Support `#[derive(Arbitrary)]`, only generating flags values with known bits.
-- `bytemuck`: Support `#[derive(Pod, Zeroable)]`, for casting between flags values and their
-  underlying bits values.
 
 You can also define your own flags type outside of the [`bitflags`] macro and then use it to generate methods.
 This can be useful if you need a custom `#[derive]` attribute for a library that `bitflags` doesn't

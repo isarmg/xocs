@@ -8,7 +8,6 @@
 
 //! Math helper functions
 
-
 pub(crate) trait WideningMultiply<RHS = Self> {
     type Output;
 
@@ -235,7 +234,7 @@ macro_rules! scalar_float_impl {
 
             #[inline]
             fn is_infinite(self) -> bool {
-                self == ::core::$ty::INFINITY || self == ::core::$ty::NEG_INFINITY
+                self == <$ty>::INFINITY || self == <$ty>::NEG_INFINITY
             }
 
             #[inline]

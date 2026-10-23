@@ -1,4 +1,3 @@
-use super::plumbing::*;
 use super::*;
 use std::cell::Cell;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -184,7 +183,7 @@ impl<'p, P: 'p + Fn(&T) -> bool, T> Folder<T> for FindFolder<'p, T, P> {
             // Update the best found index if ours is better.
             let update =
                 self.best_found
-                    .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |current| {
+                    .try_update(Ordering::Relaxed, Ordering::Relaxed, |current| {
                         better_position(self.boundary, current, self.match_position)
                             .then_some(self.boundary)
                     });

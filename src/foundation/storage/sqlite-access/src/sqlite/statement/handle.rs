@@ -1,26 +1,21 @@
 use std::ffi::c_void;
 use std::ffi::CStr;
 
-use crate::sqlite::error::{BoxDynError, Error};
+use crate::query_engine::column::{ColumnOrigin, TableColumn};
 use crate::sqlite::type_info::DataType;
 use crate::sqlite::{SqliteError, SqliteTypeInfo};
 use libsqlite3_sys::{
     sqlite3, sqlite3_bind_blob64, sqlite3_bind_double, sqlite3_bind_int, sqlite3_bind_int64,
     sqlite3_bind_null, sqlite3_bind_parameter_count, sqlite3_bind_parameter_name,
-    sqlite3_bind_text64, sqlite3_changes, sqlite3_clear_bindings, sqlite3_column_blob,
-    sqlite3_column_bytes, sqlite3_column_count, sqlite3_column_database_name,
-    sqlite3_column_decltype, sqlite3_column_double, sqlite3_column_int, sqlite3_column_int64,
-    sqlite3_column_name, sqlite3_column_origin_name, sqlite3_column_table_name,
-    sqlite3_column_type, sqlite3_column_value, sqlite3_db_handle, sqlite3_finalize, sqlite3_reset,
-    sqlite3_sql, sqlite3_step, sqlite3_stmt, sqlite3_stmt_readonly, sqlite3_table_column_metadata,
-    sqlite3_value, SQLITE_DONE, SQLITE_MISUSE, SQLITE_OK, SQLITE_ROW, SQLITE_TRANSIENT,
-    SQLITE_UTF8,
+    sqlite3_bind_text64, sqlite3_changes, sqlite3_clear_bindings, sqlite3_column_count,
+    sqlite3_column_database_name, sqlite3_column_decltype, sqlite3_column_name,
+    sqlite3_column_origin_name, sqlite3_column_table_name, sqlite3_column_type,
+    sqlite3_column_value, sqlite3_db_handle, sqlite3_finalize, sqlite3_reset, sqlite3_step,
+    sqlite3_stmt, sqlite3_value, SQLITE_DONE, SQLITE_MISUSE, SQLITE_OK, SQLITE_ROW,
+    SQLITE_TRANSIENT, SQLITE_UTF8,
 };
-use crate::query_engine::column::{ColumnOrigin, TableColumn};
 use std::os::raw::{c_char, c_int};
-use std::ptr;
 use std::ptr::NonNull;
-use std::slice::from_raw_parts;
 use std::str::from_utf8;
 use std::sync::Arc;
 
@@ -52,8 +47,6 @@ macro_rules! check_col_idx {
     };
 }
 
-// might use some of this later
-#[allow(dead_code)]
 impl StatementHandle {
     pub(super) fn new(ptr: NonNull<sqlite3_stmt>) -> Self {
         Self(ptr)
@@ -64,22 +57,6 @@ impl StatementHandle {
         // O(c) access to the connection handle for this statement handle
         // https://sqlite.org/c3ref/db_handle.html
         sqlite3_db_handle(self.0.as_ptr())
-    }
-
-    pub(crate) fn read_only(&self) -> bool {
-        // https://sqlite.org/c3ref/stmt_readonly.html
-        unsafe { sqlite3_stmt_readonly(self.0.as_ptr()) != 0 }
-    }
-
-    pub(crate) fn sql(&self) -> &str {
-        // https://sqlite.org/c3ref/expanded_sql.html
-        unsafe {
-            let raw = sqlite3_sql(self.0.as_ptr());
-            debug_assert!(!raw.is_null());
-
-            from_utf8(CStr::from_ptr(raw).to_bytes())
-                .expect("sqlite3_sql() returned non-UTF-8 string")
-        }
     }
 
     #[inline]
@@ -185,13 +162,6 @@ impl StatementHandle {
         SqliteTypeInfo(DataType::from_code(self.column_type(index)))
     }
 
-    pub(crate) fn column_type_info_opt(&self, index: usize) -> Option<SqliteTypeInfo> {
-        match DataType::from_code(self.column_type(index)) {
-            DataType::Null => None,
-            dt => Some(SqliteTypeInfo(dt)),
-        }
-    }
-
     #[inline]
     pub(crate) fn column_decltype(&self, index: usize) -> Option<SqliteTypeInfo> {
         unsafe {
@@ -210,76 +180,6 @@ impl StatementHandle {
         }
     }
 
-    /// Use sqlite3_column_metadata to determine if a specific column is nullable.
-    ///
-    /// Returns None in the case of INTEGER PRIMARY KEYs
-    /// This is because this column is an alias to rowid if the table does not use a compound
-    /// primary key. In this case the row is not nullable, and the output of
-    /// sqlite3_column_metadata may be incorrect.
-    pub(crate) fn column_nullable(&self, index: usize) -> Result<Option<bool>, Error> {
-        unsafe {
-            let index = check_col_idx!(index);
-            // https://sqlite.org/c3ref/column_database_name.html
-            //
-            // ### Note
-            // The returned string is valid until the prepared statement is destroyed using
-            // sqlite3_finalize() or until the statement is automatically reprepared by the
-            // first call to sqlite3_step() for a particular run or until the same information
-            // is requested again in a different encoding.
-            let db_name = sqlite3_column_database_name(self.0.as_ptr(), index);
-            let table_name = sqlite3_column_table_name(self.0.as_ptr(), index);
-            let origin_name = sqlite3_column_origin_name(self.0.as_ptr(), index);
-            if db_name.is_null() || table_name.is_null() || origin_name.is_null() {
-                return Ok(None);
-            }
-
-            let mut not_null: c_int = 0;
-            let mut datatype: *const c_char = ptr::null();
-            let mut primary_key: c_int = 0;
-
-            // https://sqlite.org/c3ref/table_column_metadata.html
-            let status = sqlite3_table_column_metadata(
-                self.db_handle(),
-                db_name,
-                table_name,
-                origin_name,
-                &mut datatype,
-                // function docs state to provide NULL for return values you don't care about
-                ptr::null_mut(),
-                &mut not_null,
-                &mut primary_key,
-                ptr::null_mut(),
-            );
-
-            if status != SQLITE_OK {
-                // implementation note: the docs for sqlite3_table_column_metadata() specify
-                // that an error can be returned if the column came from a view; however,
-                // experimentally we found that the above functions give us the true origin
-                // for columns in views that came from real tables and so we should never hit this
-                // error; for view columns that are expressions we are given NULL for their origins
-                // so we don't need special handling for that case either.
-                //
-                // this is confirmed in the `tests/sqlite-macros.rs` integration test
-                return Err(SqliteError::new(self.db_handle()).into());
-            }
-
-            let datatype = CStr::from_ptr(datatype);
-
-            Ok(
-                if primary_key != 0
-                    && datatype
-                        .to_bytes()
-                        .eq_ignore_ascii_case("integer".as_bytes())
-                {
-                    None
-                } else {
-                    Some(not_null == 0)
-                },
-            )
-        }
-    }
-
-    // Number Of SQL Parameters
     #[inline]
     pub(crate) fn bind_parameter_count(&self) -> usize {
         // https://www.sqlite.org/c3ref/bind_parameter_count.html
@@ -366,44 +266,8 @@ impl StatementHandle {
     }
 
     #[inline]
-    pub(crate) fn column_int(&self, index: usize) -> i32 {
-        unsafe { sqlite3_column_int(self.0.as_ptr(), check_col_idx!(index)) as i32 }
-    }
-
-    #[inline]
-    pub(crate) fn column_int64(&self, index: usize) -> i64 {
-        unsafe { sqlite3_column_int64(self.0.as_ptr(), check_col_idx!(index)) as i64 }
-    }
-
-    #[inline]
-    pub(crate) fn column_double(&self, index: usize) -> f64 {
-        unsafe { sqlite3_column_double(self.0.as_ptr(), check_col_idx!(index)) }
-    }
-
-    #[inline]
     pub(crate) fn column_value(&self, index: usize) -> *mut sqlite3_value {
         unsafe { sqlite3_column_value(self.0.as_ptr(), check_col_idx!(index)) }
-    }
-
-    pub(crate) fn column_blob(&self, index: usize) -> &[u8] {
-        let len = unsafe {
-            expect_ret_valid!(sqlite3_column_bytes(self.0.as_ptr(), check_col_idx!(index)))
-        };
-
-        if len == 0 {
-            // empty blobs are NULL so just return an empty slice
-            return &[];
-        }
-
-        let ptr =
-            unsafe { sqlite3_column_blob(self.0.as_ptr(), check_col_idx!(index)) } as *const u8;
-        debug_assert!(!ptr.is_null());
-
-        unsafe { from_raw_parts(ptr, len) }
-    }
-
-    pub(crate) fn column_text(&self, index: usize) -> Result<&str, BoxDynError> {
-        Ok(from_utf8(self.column_blob(index))?)
     }
 
     pub(crate) fn clear_bindings(&self) {
@@ -424,23 +288,11 @@ impl StatementHandle {
     pub(crate) fn step(&mut self) -> Result<bool, SqliteError> {
         // SAFETY: we have exclusive access to the handle
         unsafe {
-            #[cfg_attr(not(feature = "sqlite-unlock-notify"), expect(clippy::never_loop))]
-            loop {
-                match sqlite3_step(self.0.as_ptr()) {
-                    SQLITE_ROW => return Ok(true),
-                    SQLITE_DONE => return Ok(false),
-                    SQLITE_MISUSE => panic!("misuse!"),
-                    #[cfg(feature = "sqlite-unlock-notify")]
-                    libsqlite3_sys::SQLITE_LOCKED_SHAREDCACHE => {
-                        // The shared cache is locked by another connection. Wait for unlock
-                        // notification and try again.
-                        super::unlock_notify::wait(self.db_handle())?;
-                        // Need to reset the handle after the unlock
-                        // (https://www.sqlite.org/unlock_notify.html)
-                        sqlite3_reset(self.0.as_ptr());
-                    }
-                    _ => return Err(SqliteError::new(self.db_handle())),
-                }
+            match sqlite3_step(self.0.as_ptr()) {
+                SQLITE_ROW => Ok(true),
+                SQLITE_DONE => Ok(false),
+                SQLITE_MISUSE => panic!("misuse!"),
+                _ => Err(SqliteError::new(self.db_handle())),
             }
         }
     }

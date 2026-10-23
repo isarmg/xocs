@@ -23,11 +23,7 @@ use std::io;
 ///
 /// # Implementation notes
 ///
-/// On platforms that support kqueue this will use the `EVFILT_USER` event
-/// filter, see [implementation notes of `Poll`] to see what platforms support
-/// kqueue. On Linux it uses [eventfd].
-///
-/// [implementation notes of `Poll`]: struct.Poll.html#implementation-notes
+/// Waking writes to a Linux [eventfd] registered with the poller.
 /// [eventfd]: https://man7.org/linux/man-pages/man2/eventfd.2.html
 ///
 /// # Examples
@@ -41,7 +37,7 @@ use std::io;
 /// use std::time::Duration;
 /// use std::sync::Arc;
 ///
-/// use mio::{Events, Token, Poll, Waker};
+/// use blog_runtime_io_poller::{Events, Token, Poll, Waker};
 ///
 /// const WAKE_TOKEN: Token = Token(10);
 ///

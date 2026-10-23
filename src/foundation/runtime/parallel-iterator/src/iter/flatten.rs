@@ -1,4 +1,3 @@
-use super::plumbing::*;
 use super::*;
 
 /// `Flatten` turns each element to a parallel iterator, then flattens these iterators

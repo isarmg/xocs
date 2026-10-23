@@ -29,27 +29,20 @@
 //! - **HTTP/1 Reason Phrase**: [`ReasonPhrase`] — Access non-canonical reason phrases in HTTP/1 responses.
 //! - **Informational Responses**: [`on_informational`] — Register callbacks for 1xx HTTP/1 responses on the client.
 //! - **Header Case Tracking**: Internal types for tracking the original casing and order of headers as received.
-//! - **HTTP/2 Protocol Extensions**: [`Protocol`] — Access the `:protocol` pseudo-header for Extended CONNECT in HTTP/2.
 //!
-//! Some extensions are only available for specific protocols (HTTP/1 or HTTP/2) or use cases (client, server, FFI).
+//! Some extensions are only available for HTTP/1 clients or servers.
 //!
 //! See the documentation on each item for details about its usage and requirements.
 
 #[cfg(all(any(feature = "client", feature = "server"), feature = "http1"))]
 use bytes::Bytes;
-#[cfg(any(
-    all(any(feature = "client", feature = "server"), feature = "http1"),
-    feature = "ffi"
-))]
+#[cfg(all(any(feature = "client", feature = "server"), feature = "http1"))]
 use http::header::HeaderName;
 #[cfg(all(any(feature = "client", feature = "server"), feature = "http1"))]
 use http::header::{HeaderMap, IntoHeaderName, ValueIter};
-#[cfg(feature = "ffi")]
-use std::collections::HashMap;
-
-#[cfg(any(feature = "http1", feature = "ffi"))]
+#[cfg(feature = "http1")]
 mod h1_reason_phrase;
-#[cfg(any(feature = "http1", feature = "ffi"))]
+#[cfg(feature = "http1")]
 pub use h1_reason_phrase::ReasonPhrase;
 
 #[cfg(all(feature = "http1", feature = "client"))]
@@ -58,8 +51,6 @@ mod informational;
 pub use informational::on_informational;
 #[cfg(all(feature = "http1", feature = "client"))]
 pub(crate) use informational::OnInformational;
-#[cfg(all(feature = "http1", feature = "client", feature = "ffi"))]
-pub(crate) use informational::{on_informational_raw, OnInformationalCallback};
 
 /// A map from header names to their original casing as received in an HTTP message.
 ///
@@ -110,7 +101,7 @@ impl HeaderCaseMap {
         Self(HeaderMap::default())
     }
 
-    #[cfg(any(test, feature = "ffi"))]
+    #[cfg(test)]
     pub(crate) fn insert(&mut self, name: HeaderName, orig: Bytes) {
         self.0.insert(name, orig);
     }
@@ -121,69 +112,5 @@ impl HeaderCaseMap {
         N: IntoHeaderName,
     {
         self.0.append(name, orig);
-    }
-}
-
-#[cfg(feature = "ffi")]
-#[derive(Clone, Debug)]
-/// Hashmap<Headername, numheaders with that name>
-pub(crate) struct OriginalHeaderOrder {
-    /// Stores how many entries a Headername maps to. This is used
-    /// for accounting.
-    num_entries: HashMap<HeaderName, usize>,
-    /// Stores the ordering of the headers. ex: `vec[i] = (headerName, idx)`,
-    /// The vector is ordered such that the ith element
-    /// represents the ith header that came in off the line.
-    /// The `HeaderName` and `idx` are then used elsewhere to index into
-    /// the multi map that stores the header values.
-    entry_order: Vec<(HeaderName, usize)>,
-}
-
-#[cfg(all(feature = "http1", feature = "ffi"))]
-impl OriginalHeaderOrder {
-    pub(crate) fn default() -> Self {
-        OriginalHeaderOrder {
-            num_entries: HashMap::new(),
-            entry_order: Vec::new(),
-        }
-    }
-
-    pub(crate) fn insert(&mut self, name: HeaderName) {
-        if !self.num_entries.contains_key(&name) {
-            let idx = 0;
-            self.num_entries.insert(name.clone(), 1);
-            self.entry_order.push((name, idx));
-        }
-        // Replacing an already existing element does not
-        // change ordering, so we only care if its the first
-        // header name encountered
-    }
-
-    pub(crate) fn append<N>(&mut self, name: N)
-    where
-        N: IntoHeaderName + Into<HeaderName> + Clone,
-    {
-        let name: HeaderName = name.into();
-        let idx = match self.num_entries.entry(name.clone()) {
-            std::collections::hash_map::Entry::Occupied(mut entry) => {
-                let idx = *entry.get();
-                *entry.get_mut() += 1;
-                idx
-            }
-            std::collections::hash_map::Entry::Vacant(entry) => {
-                entry.insert(1);
-                0
-            }
-        };
-        self.entry_order.push((name, idx));
-    }
-
-    // No doc test is run here because `RUSTFLAGS='--cfg hyper_unstable_ffi'`
-    // is needed to compile. Once ffi is stabilized `no_run` should be removed
-    // here.
-    /// This returns an iterator that provides header names and indexes
-    /// in the original order received.
-    pub(crate) fn get_in_order(&self) -> impl Iterator<Item = &(HeaderName, usize)> {
-        self.entry_order.iter()
     }
 }

@@ -7,8 +7,7 @@ use crate::reactivity::owner::Owner;
 use crate::thread_bound::SendWrapper;
 use crate::view_tree::html::event::EventDescriptor;
 use std::time::Duration;
-#[cfg(any())]
-use tracing::instrument;
+
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue, UnwrapThrowExt};
 
 thread_local! {
@@ -163,14 +162,6 @@ fn closure_once(cb: impl FnOnce() + 'static) -> JsValue {
 pub fn request_animation_frame_with_handle(
     cb: impl FnOnce() + 'static,
 ) -> Result<AnimationFrameRequestHandle, JsValue> {
-    #[cfg(any())]
-    let span = ::tracing::Span::current();
-    #[cfg(any())]
-    let cb = move || {
-        let _guard = span.enter();
-        cb();
-    };
-
     #[inline(never)]
     fn raf(cb: JsValue) -> Result<AnimationFrameRequestHandle, JsValue> {
         window()
@@ -216,14 +207,6 @@ pub fn request_idle_callback(cb: impl Fn() + 'static) {
 pub fn request_idle_callback_with_handle(
     cb: impl Fn() + 'static,
 ) -> Result<IdleCallbackHandle, JsValue> {
-    #[cfg(any())]
-    let span = ::tracing::Span::current();
-    #[cfg(any())]
-    let cb = move || {
-        let _guard = span.enter();
-        cb();
-    };
-
     #[inline(never)]
     fn ric(cb: Box<dyn Fn()>) -> Result<IdleCallbackHandle, JsValue> {
         let cb = Closure::wrap(cb).into_js_value();
@@ -289,14 +272,6 @@ pub fn set_timeout_with_handle(
         cb();
     };
 
-    #[cfg(any())]
-    let span = ::tracing::Span::current();
-    #[cfg(any())]
-    let cb = move || {
-        let _guard = span.enter();
-        cb();
-    };
-
     #[inline(never)]
     fn st(cb: JsValue, duration: Duration) -> Result<TimeoutHandle, JsValue> {
         window()
@@ -326,23 +301,16 @@ pub fn set_timeout_with_handle(
 /// ### Note about Context
 ///
 /// The callback is called outside of the reactive ownership tree. This means that it does not have access to context via [`use_context`](blog_dom::reactivity::owner::use_context). If you want to use context inside the callback, you should either call `use_context` in the body of the component, and move the value into the callback, or access the current owner inside the component body using [`Owner::current`](blog_dom::reactivity::owner::Owner::current) and reestablish it in the callback with [`Owner::with`](blog_dom::reactivity::owner::Owner::with).
-pub fn debounce<T: 'static>(delay: Duration, mut cb: impl FnMut(T) + 'static) -> impl FnMut(T) {
+pub fn debounce<T: 'static>(delay: Duration, cb: impl FnMut(T) + 'static) -> impl FnMut(T) {
     use std::sync::{Arc, RwLock};
 
     #[cfg(debug_assertions)]
-    #[allow(unused_mut)]
-    let mut cb = move |value| {
-        let _z = SpecialNonReactiveZone::enter();
-        cb(value);
-    };
-
-    #[cfg(any())]
-    let span = ::tracing::Span::current();
-    #[cfg(any())]
-    #[allow(unused_mut)]
-    let mut cb = move |value| {
-        let _guard = span.enter();
-        cb(value);
+    let cb = {
+        let mut cb = cb;
+        move |value| {
+            let _z = SpecialNonReactiveZone::enter();
+            cb(value);
+        }
     };
 
     let cb = Arc::new(RwLock::new(cb));
@@ -415,13 +383,6 @@ pub fn set_interval_with_handle(
         let _z = SpecialNonReactiveZone::enter();
         cb();
     };
-    #[cfg(any())]
-    let span = ::tracing::Span::current();
-    #[cfg(any())]
-    let cb = move || {
-        let _guard = span.enter();
-        cb();
-    };
 
     #[inline(never)]
     fn si(cb: Box<dyn FnMut()>, duration: Duration) -> Result<IntervalHandle, JsValue> {
@@ -452,13 +413,6 @@ pub fn window_event_listener_untyped(
     #[cfg(debug_assertions)]
     let cb = move |e| {
         let _z = SpecialNonReactiveZone::enter();
-        cb(e);
-    };
-    #[cfg(any())]
-    let span = ::tracing::Span::current();
-    #[cfg(any())]
-    let cb = move |e| {
-        let _guard = span.enter();
         cb(e);
     };
 
@@ -526,13 +480,6 @@ impl WindowListenerHandle {
 
 /// Returns `true` if the current environment is a server.
 pub fn is_server() -> bool {
-    #[cfg(any())]
-    {
-        Owner::current_shared_context()
-            .map(|sc| !sc.is_browser())
-            .unwrap_or(false)
-    }
-
     {
         false
     }

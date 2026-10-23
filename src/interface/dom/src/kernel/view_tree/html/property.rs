@@ -5,7 +5,6 @@ use crate::thread_bound::SendWrapper;
 use crate::view_tree::{
     html::attribute::{maybe_next_attr_erasure_macros::next_attr_combine, NamedAttributeKey},
     renderer::Rndr,
-    view::{Position, ToTemplate},
 };
 use std::{borrow::Cow, sync::Arc};
 use wasm_bindgen::JsValue;
@@ -19,7 +18,7 @@ where
 {
     Property {
         key,
-        value: (!cfg!(any())).then(|| SendWrapper::new(value)),
+        value: SendWrapper::new(value),
     }
 }
 
@@ -28,7 +27,7 @@ where
 pub struct Property<K, P> {
     key: K,
     // property values will only be accessed in the browser
-    value: Option<SendWrapper<P>>,
+    value: SendWrapper<P>,
 }
 
 impl<K, P> Clone for Property<K, P>
@@ -49,73 +48,30 @@ where
     K: AsRef<str> + Send,
     P: IntoProperty,
 {
-    const MIN_LENGTH: usize = 0;
-
-    type AsyncOutput = Self;
     type State = P::State;
     type Cloneable = Property<Arc<str>, P::Cloneable>;
     type CloneableOwned = Property<Arc<str>, P::CloneableOwned>;
 
-    #[inline(always)]
-    fn html_len(&self) -> usize {
-        0
-    }
-
-    fn to_html(
-        self,
-        _buf: &mut String,
-        _class: &mut String,
-        _style: &mut String,
-        _inner_html: &mut String,
-    ) {
-    }
-
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        el: &crate::view_tree::renderer::types::Element,
-    ) -> Self::State {
-        self.value
-            .expect(super::FEATURE_CONFLICT_DIAGNOSTIC)
-            .take()
-            .hydrate::<FROM_SERVER>(el, self.key.as_ref())
-    }
-
     fn build(self, el: &crate::view_tree::renderer::types::Element) -> Self::State {
-        self.value
-            .expect(super::FEATURE_CONFLICT_DIAGNOSTIC)
-            .take()
-            .build(el, self.key.as_ref())
+        self.value.take().build(el, self.key.as_ref())
     }
 
     fn rebuild(self, state: &mut Self::State) {
-        self.value
-            .expect(super::FEATURE_CONFLICT_DIAGNOSTIC)
-            .take()
-            .rebuild(state, self.key.as_ref())
+        self.value.take().rebuild(state, self.key.as_ref())
     }
 
     fn into_cloneable(self) -> Self::Cloneable {
         Property {
             key: self.key.as_ref().into(),
-            value: self
-                .value
-                .map(|value| SendWrapper::new(value.take().into_cloneable())),
+            value: SendWrapper::new(self.value.take().into_cloneable()),
         }
     }
 
     fn into_cloneable_owned(self) -> Self::CloneableOwned {
         Property {
             key: self.key.as_ref().into(),
-            value: self
-                .value
-                .map(|value| SendWrapper::new(value.take().into_cloneable_owned())),
+            value: SendWrapper::new(self.value.take().into_cloneable_owned()),
         }
-    }
-
-    fn dry_resolve(&mut self) {}
-
-    async fn resolve(self) -> Self::AsyncOutput {
-        self
     }
 
     fn keys(&self) -> Vec<NamedAttributeKey> {
@@ -137,21 +93,6 @@ where
     }
 }
 
-impl<K, P> ToTemplate for Property<K, P>
-where
-    K: AsRef<str>,
-    P: IntoProperty,
-{
-    fn to_template(
-        _buf: &mut String,
-        _class: &mut String,
-        _style: &mut String,
-        _inner_html: &mut String,
-        _position: &mut Position,
-    ) {
-    }
-}
-
 /// A possible value for a DOM property.
 pub trait IntoProperty {
     /// The view state retained between building and rebuilding.
@@ -160,13 +101,6 @@ pub trait IntoProperty {
     type Cloneable: IntoProperty + Clone;
     /// An equivalent value that can be cloned and is `'static`.
     type CloneableOwned: IntoProperty + Clone + 'static;
-
-    /// Adds the property on an element created from HTML.
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        el: &crate::view_tree::renderer::types::Element,
-        key: &str,
-    ) -> Self::State;
 
     /// Adds the property during client-side rendering.
     fn build(self, el: &crate::view_tree::renderer::types::Element, key: &str) -> Self::State;
@@ -187,16 +121,6 @@ macro_rules! prop_type {
             type State = (crate::view_tree::renderer::types::Element, JsValue);
             type Cloneable = Self;
             type CloneableOwned = Self;
-
-            fn hydrate<const FROM_SERVER: bool>(
-                self,
-                el: &crate::view_tree::renderer::types::Element,
-                key: &str,
-            ) -> Self::State {
-                let value = self.into();
-                Rndr::set_property_or_value(el, key, &value);
-                (el.clone(), value)
-            }
 
             fn build(
                 self,
@@ -228,19 +152,6 @@ macro_rules! prop_type {
             type State = (crate::view_tree::renderer::types::Element, JsValue);
             type Cloneable = Self;
             type CloneableOwned = Self;
-
-            fn hydrate<const FROM_SERVER: bool>(
-                self,
-                el: &crate::view_tree::renderer::types::Element,
-                key: &str,
-            ) -> Self::State {
-                let was_some = self.is_some();
-                let value = self.into();
-                if was_some {
-                    Rndr::set_property_or_value(el, key, &value);
-                }
-                (el.clone(), value)
-            }
 
             fn build(
                 self,
@@ -280,16 +191,6 @@ macro_rules! prop_type_str {
             type Cloneable = Arc<str>;
             type CloneableOwned = Arc<str>;
 
-            fn hydrate<const FROM_SERVER: bool>(
-                self,
-                el: &crate::view_tree::renderer::types::Element,
-                key: &str,
-            ) -> Self::State {
-                let value = JsValue::from(&*self);
-                Rndr::set_property_or_value(el, key, &value);
-                (el.clone(), value)
-            }
-
             fn build(
                 self,
                 el: &crate::view_tree::renderer::types::Element,
@@ -322,19 +223,6 @@ macro_rules! prop_type_str {
             type State = (crate::view_tree::renderer::types::Element, JsValue);
             type Cloneable = Option<Arc<str>>;
             type CloneableOwned = Option<Arc<str>>;
-
-            fn hydrate<const FROM_SERVER: bool>(
-                self,
-                el: &crate::view_tree::renderer::types::Element,
-                key: &str,
-            ) -> Self::State {
-                let was_some = self.is_some();
-                let value = JsValue::from(self.map(|n| JsValue::from_str(&n)));
-                if was_some {
-                    Rndr::set_property_or_value(el, key, &value);
-                }
-                (el.clone(), value)
-            }
 
             fn build(
                 self,
@@ -378,16 +266,6 @@ impl IntoProperty for Arc<str> {
     type Cloneable = Self;
     type CloneableOwned = Self;
 
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        el: &crate::view_tree::renderer::types::Element,
-        key: &str,
-    ) -> Self::State {
-        let value = JsValue::from_str(self.as_ref());
-        Rndr::set_property_or_value(el, key, &value);
-        (el.clone(), value)
-    }
-
     fn build(self, el: &crate::view_tree::renderer::types::Element, key: &str) -> Self::State {
         let value = JsValue::from_str(self.as_ref());
         Rndr::set_property_or_value(el, key, &value);
@@ -414,19 +292,6 @@ impl IntoProperty for Option<Arc<str>> {
     type State = (crate::view_tree::renderer::types::Element, JsValue);
     type Cloneable = Self;
     type CloneableOwned = Self;
-
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        el: &crate::view_tree::renderer::types::Element,
-        key: &str,
-    ) -> Self::State {
-        let was_some = self.is_some();
-        let value = JsValue::from(self.map(|n| JsValue::from_str(&n)));
-        if was_some {
-            Rndr::set_property_or_value(el, key, &value);
-        }
-        (el.clone(), value)
-    }
 
     fn build(self, el: &crate::view_tree::renderer::types::Element, key: &str) -> Self::State {
         let was_some = self.is_some();

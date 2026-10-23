@@ -6,18 +6,10 @@ use core::{
     sync::atomic::{AtomicI32, Ordering},
 };
 
-#[cfg(not(any(target_os = "android", target_os = "linux")))]
-pub use crate::util::{inner_u32, inner_u64};
-
 #[path = "../utils/sys_fill_exact.rs"]
 pub(super) mod utils;
 
-/// For all platforms, we use `/dev/urandom` rather than `/dev/random`.
-/// For more information see the linked man pages in lib.rs.
-///   - On Linux, "/dev/urandom is preferred and sufficient in all use cases".
-///   - On Redox, only /dev/urandom is provided.
-///   - On AIX, /dev/urandom will "provide cryptographically secure output".
-///   - On Haiku and QNX Neutrino they are identical.
+/// Linux urandom fallback, used only after waiting for kernel entropy readiness.
 const FILE_PATH: &CStr = c"/dev/urandom";
 
 // File descriptor is a "nonnegative integer", so we can safely use negative sentinel values.
@@ -94,47 +86,18 @@ fn open_or_wait() -> Result<libc::c_int, Error> {
     };
     FD.store(val, Ordering::Release);
 
-    // On non-Linux targets `wait` is just 1 ms sleep,
-    // so we don't need any explicit wake up in addition
-    // to updating value of `FD`.
-    #[cfg(any(target_os = "android", target_os = "linux"))]
     sync::wake();
 
     res
 }
 
 fn open_fd() -> Result<libc::c_int, Error> {
-    #[cfg(any(target_os = "android", target_os = "linux"))]
     sync::wait_until_rng_ready()?;
     let fd = open_readonly(FILE_PATH)?;
     debug_assert!(fd >= 0);
     Ok(fd)
 }
 
-#[cfg(not(any(target_os = "android", target_os = "linux")))]
-mod sync {
-    /// Sleep 1 ms before checking `FD` again.
-    ///
-    /// On non-Linux targets the critical section only opens file,
-    /// which should not block, so in the unlikely contended case,
-    /// we can sleep-wait for the opening operation to finish.
-    pub(super) fn wait() {
-        let rqtp = libc::timespec {
-            tv_sec: 0,
-            tv_nsec: 1_000_000,
-        };
-        let mut rmtp = libc::timespec {
-            tv_sec: 0,
-            tv_nsec: 0,
-        };
-        // We do not care if sleep gets interrupted, so the return value is ignored
-        unsafe {
-            libc::nanosleep(&rqtp, &mut rmtp);
-        }
-    }
-}
-
-#[cfg(any(target_os = "android", target_os = "linux"))]
 mod sync {
     use super::{Error, FD, FD_ONGOING_INIT, open_readonly, utils};
 
@@ -148,11 +111,11 @@ mod sync {
         let op = libc::FUTEX_WAIT | libc::FUTEX_PRIVATE_FLAG;
         let timeout_ptr = core::ptr::null::<libc::timespec>();
         let ret = unsafe { libc::syscall(libc::SYS_futex, &FD, op, FD_ONGOING_INIT, timeout_ptr) };
-        // FUTEX_WAIT should return either 0 or EAGAIN error
+        // Signals may interrupt the wait; the outer loop always rechecks FD.
         debug_assert!({
             match ret {
                 0 => true,
-                -1 => utils::get_errno() == libc::EAGAIN,
+                -1 => matches!(utils::get_errno(), libc::EAGAIN | libc::EINTR),
                 _ => false,
             }
         });
@@ -161,7 +124,7 @@ mod sync {
     /// Wake up all threads which wait for value of atomic `FD` to change.
     pub(super) fn wake() {
         let op = libc::FUTEX_WAKE | libc::FUTEX_PRIVATE_FLAG;
-        let ret = unsafe { libc::syscall(libc::SYS_futex, &FD, op, libc::INT_MAX) };
+        let ret = unsafe { libc::syscall(libc::SYS_futex, &FD, op, libc::c_int::MAX) };
         debug_assert!(ret >= 0);
     }
 

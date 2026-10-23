@@ -1,5 +1,4 @@
 use super::noop::NoopConsumer;
-use super::plumbing::*;
 use super::*;
 
 /// `Skip` is an iterator that skips over the first `n` elements.

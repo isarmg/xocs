@@ -23,22 +23,10 @@ description = "local time zone"
 license = "MIT OR Apache-2.0"
 publish = false
 
-[features]
-fallback = []
-
 [lib]
 name = "blog_platform_local_time_zone"
 path = "src/lib.rs"
 
 [target."cfg(all(target_arch = \"wasm32\", target_os = \"unknown\"))".dependencies]
 js-sys = { path = "../../interface/javascript-api",package = "blog-interface-javascript-api"}
-log = { path = "../../diagnostics/event-facade",package = "blog-diagnostics-event-facade"}
 wasm-bindgen = { path = "../../wasm/browser-bridge",package = "blog-wasm-browser-bridge"}
-
-[target."cfg(target_os = \"android\")"]
-
-[target."cfg(target_os = \"haiku\")"]
-
-[target."cfg(target_os = \"windows\")"]
-
-[target."cfg(target_vendor = \"apple\")"]

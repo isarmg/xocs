@@ -137,7 +137,7 @@ impl UnixDatagram {
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use std::io;
     /// use std::os::fd::AsRawFd;
-    /// use mio::net::UnixDatagram;
+    /// use blog_runtime_io_poller::net::UnixDatagram;
     ///
     /// let (dgram1, dgram2) = UnixDatagram::pair()?;
     ///

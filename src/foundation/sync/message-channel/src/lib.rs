@@ -51,7 +51,6 @@ use std::{
         atomic::{AtomicBool, AtomicUsize, Ordering},
         Arc, Weak,
     },
-    thread,
     time::{Duration, Instant},
 };
 
@@ -412,10 +411,10 @@ fn wait_lock<T>(lock: &Spinlock<T>) -> SpinlockGuard<'_, T> {
                 if let Some(guard) = lock.try_lock() {
                     return guard;
                 }
-                thread::yield_now();
+                std::thread::yield_now();
             }
             // Sleep for at most ~1 ms
-            thread::sleep(Duration::from_nanos(1 << i.min(20)));
+            std::thread::sleep(Duration::from_nanos(1 << i.min(20)));
             i += 1;
         }
     }
@@ -890,7 +889,7 @@ impl<T> WeakSender<T> {
             .filter(|shared| {
                 shared
                     .sender_count
-                    .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |count| {
+                    .try_update(Ordering::Relaxed, Ordering::Relaxed, |count| {
                         if count == 0 {
                             // all senders are closed already -> don't increase the sender count
                             None

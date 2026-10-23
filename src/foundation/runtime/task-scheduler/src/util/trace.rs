@@ -139,7 +139,6 @@ cfg_rt! {
             pub(crate) resource_span: tracing::Span,
         }
 
-
         pin_project! {
             #[derive(Debug, Clone)]
             pub(crate) struct InstrumentedAsyncOp<F> {

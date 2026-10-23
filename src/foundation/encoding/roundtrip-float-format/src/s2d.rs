@@ -2,16 +2,12 @@ use crate::common::{ceil_log2_pow5, log2_pow5};
 use crate::d2s;
 use crate::d2s_intrinsics::{mul_shift_64, multiple_of_power_of_2, multiple_of_power_of_5};
 use crate::parse::Error;
-#[cfg(feature = "no-panic")]
-use no_panic::no_panic;
 
 const DOUBLE_EXPONENT_BIAS: usize = 1023;
 
 fn floor_log2(value: u64) -> u32 {
     63_u32.wrapping_sub(value.leading_zeros())
 }
-
-#[cfg_attr(feature = "no-panic", no_panic)]
 pub fn s2d(buffer: &[u8]) -> Result<f64, Error> {
     let len = buffer.len();
     if len == 0 {

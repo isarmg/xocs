@@ -190,20 +190,6 @@ pub trait Executor<'c>: Send + Debug + Sized {
     ) -> BoxFuture<'e, Result<<Self::Database as Database>::Statement, Error>>
     where
         'c: 'e;
-
-    /// Describe the SQL query and return type information about its parameters
-    /// and results.
-    ///
-    /// This is used by compile-time verification in the query macros to
-    /// power their type inference.
-    #[doc(hidden)]
-    #[cfg(feature = "offline")]
-    fn describe<'e>(
-        self,
-        sql: SqlStr,
-    ) -> BoxFuture<'e, Result<crate::query_engine::describe::Describe<Self::Database>, Error>>
-    where
-        'c: 'e;
 }
 
 /// A type that may be executed against a database connection.

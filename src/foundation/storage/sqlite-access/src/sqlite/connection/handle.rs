@@ -110,27 +110,20 @@ impl ConnectionHandle {
 
         // SAFETY: we have exclusive access to the database handle
         unsafe {
-            #[cfg_attr(not(feature = "sqlite-unlock-notify"), expect(clippy::never_loop))]
-            loop {
-                let status = sqlite3_exec(
-                    self.as_ptr(),
-                    query.as_ptr(),
-                    // callback if we wanted result rows
-                    None,
-                    // callback data
-                    ptr::null_mut(),
-                    // out-pointer for the error message, we just use `SqliteError::new()`
-                    ptr::null_mut(),
-                );
+            let status = sqlite3_exec(
+                self.as_ptr(),
+                query.as_ptr(),
+                // callback if we wanted result rows
+                None,
+                // callback data
+                ptr::null_mut(),
+                // out-pointer for the error message, we just use `SqliteError::new()`
+                ptr::null_mut(),
+            );
 
-                match status {
-                    SQLITE_OK => return Ok(()),
-                    #[cfg(feature = "sqlite-unlock-notify")]
-                    libsqlite3_sys::SQLITE_LOCKED_SHAREDCACHE => {
-                        crate::sqlite::statement::unlock_notify::wait(self.as_ptr())?
-                    }
-                    _ => return Err(SqliteError::new(self.as_ptr()).into()),
-                }
+            match status {
+                SQLITE_OK => Ok(()),
+                _ => Err(SqliteError::new(self.as_ptr()).into()),
             }
         }
     }

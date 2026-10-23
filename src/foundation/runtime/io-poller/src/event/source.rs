@@ -40,9 +40,9 @@ use std::io;
 ///
 #[cfg_attr(all(feature = "os-poll", feature = "net"), doc = "```")]
 #[cfg_attr(not(all(feature = "os-poll", feature = "net")), doc = "```ignore")]
-/// use mio::{Interest, Registry, Token};
-/// use mio::event::Source;
-/// use mio::net::TcpStream;
+/// use blog_runtime_io_poller::{Interest, Registry, Token};
+/// use blog_runtime_io_poller::event::Source;
+/// use blog_runtime_io_poller::net::TcpStream;
 ///
 /// use std::io;
 ///

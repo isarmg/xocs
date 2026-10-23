@@ -1,8 +1,7 @@
 //! The reactive ownership model, which manages effect cancellation, cleanups, and arena allocation.
 
 use crate::poison::OrPoisoned;
-#[cfg(any())]
-use hydration_context::SharedContext;
+
 use rustc_hash::FxHashMap;
 use std::{
     any::{Any, TypeId},
@@ -20,16 +19,13 @@ mod storage;
 mod stored_value;
 use self::arena::Arena;
 pub use arc_stored_value::ArcStoredValue;
-#[cfg(any())]
-pub use arena::sandboxed::Sandboxed;
-#[cfg(any())]
-use arena::ArenaMap;
+
 use arena::NodeId;
 pub use arena_item::*;
 pub use context::*;
 pub use storage::*;
 #[allow(deprecated)] // allow exporting deprecated fn
-pub use stored_value::{store_value, FromLocal, StoredValue};
+pub use stored_value::{FromLocal, StoredValue};
 
 /// A reactive owner, which manages
 /// 1) the cancellation of [`Effect`](crate::reactivity::effect::Effect)s,
@@ -56,8 +52,6 @@ pub use stored_value::{store_value, FromLocal, StoredValue};
 #[must_use]
 pub struct Owner {
     pub(crate) inner: Arc<RwLock<OwnerInner>>,
-    #[cfg(any())]
-    pub(crate) shared_context: Option<Arc<dyn SharedContext + Send + Sync>>,
 }
 
 impl Owner {
@@ -65,8 +59,6 @@ impl Owner {
     pub fn downgrade(&self) -> WeakOwner {
         WeakOwner {
             inner: Arc::downgrade(&self.inner),
-            #[cfg(any())]
-            shared_context: self.shared_context.as_ref().map(Arc::downgrade),
         }
     }
 }
@@ -78,8 +70,6 @@ impl Owner {
 #[derive(Clone)]
 pub struct WeakOwner {
     inner: Weak<RwLock<OwnerInner>>,
-    #[cfg(any())]
-    shared_context: Option<Weak<dyn SharedContext + Send + Sync>>,
 }
 
 impl WeakOwner {
@@ -87,15 +77,7 @@ impl WeakOwner {
     ///
     /// Returns `None` if the owner has already been dropped.
     pub fn upgrade(&self) -> Option<Owner> {
-        self.inner.upgrade().map(|inner| {
-            #[cfg(any())]
-            let shared_context = self.shared_context.as_ref().and_then(|sc| sc.upgrade());
-            Owner {
-                inner,
-                #[cfg(any())]
-                shared_context,
-            }
-        })
+        self.inner.upgrade().map(|inner| Owner { inner })
     }
 }
 
@@ -158,32 +140,6 @@ impl Owner {
             .unwrap_or_default()
     }
 
-    /// Creates a new "root" context with the given [`SharedContext`], which allows sharing data
-    /// between the server and client.
-    ///
-    /// Only one `SharedContext` needs to be created per request, and will be automatically shared
-    /// by any other `Owner`s created under this one.
-    #[cfg(any())]
-    #[track_caller]
-    pub fn new_root(shared_context: Option<Arc<dyn SharedContext + Send + Sync>>) -> Self {
-        let this = Self {
-            inner: Arc::new(RwLock::new(OwnerInner {
-                parent: None,
-                nodes: Default::default(),
-                contexts: Default::default(),
-                cleanups: Default::default(),
-                children: Default::default(),
-                #[cfg(any())]
-                arena: Default::default(),
-                paused: false,
-            })),
-            #[cfg(any())]
-            shared_context,
-        };
-        this.set();
-        this
-    }
-
     /// Returns the parent of this `Owner`, if any.
     ///
     /// None when:
@@ -196,19 +152,14 @@ impl Owner {
             .parent
             .as_ref()
             .and_then(|p| p.upgrade())
-            .map(|inner| Owner {
-                inner,
-                #[cfg(any())]
-                shared_context: self.shared_context.clone(),
-            })
+            .map(|inner| Owner { inner })
     }
 
     /// Creates a new `Owner` that is the child of the current `Owner`, if any.
     pub fn child(&self) -> Self {
         let parent = Some(Arc::downgrade(&self.inner));
         let mut inner = self.inner.write().or_poisoned();
-        #[cfg(any())]
-        let arena = inner.arena.clone();
+
         let paused = inner.paused;
         let child = Self {
             inner: Arc::new(RwLock::new(OwnerInner {
@@ -217,12 +168,9 @@ impl Owner {
                 contexts: Default::default(),
                 cleanups: Default::default(),
                 children: Default::default(),
-                #[cfg(any())]
-                arena,
+
                 paused,
             })),
-            #[cfg(any())]
-            shared_context: self.shared_context.clone(),
         };
         inner.register_child(&child);
         child
@@ -231,8 +179,6 @@ impl Owner {
     /// Sets this as the current `Owner`.
     pub fn set(&self) {
         OWNER.with_borrow_mut(|owner| *owner = Some(self.downgrade()));
-        #[cfg(any())]
-        Arena::set(&self.inner.read().or_poisoned().arena);
     }
 
     /// Runs the given function with this as the current `Owner`.
@@ -265,15 +211,6 @@ impl Owner {
         if let Some(owner) = Owner::current() {
             let mut inner = owner.inner.write().or_poisoned();
 
-            #[cfg(any())]
-            let fun = {
-                let arena = Arc::clone(&inner.arena);
-                move || {
-                    Arena::set(&arena);
-                    fun()
-                }
-            };
-
             inner.cleanups.push(Box::new(fun));
         }
     }
@@ -285,12 +222,6 @@ impl Owner {
     /// Returns the current `Owner`, if any.
     pub fn current() -> Option<Owner> {
         OWNER.with(|o| o.borrow().as_ref().and_then(|n| n.upgrade()))
-    }
-
-    /// Returns the [`SharedContext`] associated with this owner, if any.
-    #[cfg(any())]
-    pub fn shared_context(&self) -> Option<Arc<dyn SharedContext + Send + Sync>> {
-        self.shared_context.clone()
     }
 
     /// Removes this from its state as the thread-local owner and drops it.
@@ -322,70 +253,6 @@ impl Owner {
             }
         });
         self.cleanup();
-    }
-
-    /// Returns the current [`SharedContext`], if any.
-    #[cfg(any())]
-    pub fn current_shared_context() -> Option<Arc<dyn SharedContext + Send + Sync>> {
-        OWNER.with(|o| {
-            o.borrow()
-                .as_ref()
-                .and_then(|o| o.upgrade())
-                .and_then(|current| current.shared_context.clone())
-        })
-    }
-
-    /// Runs the given function, after indicating that the current [`SharedContext`] should be
-    /// prepared to handle any data created in the function.
-    #[cfg(any())]
-    pub fn with_hydration<T>(fun: impl FnOnce() -> T + 'static) -> T {
-        fn inner<T>(fun: Box<dyn FnOnce() -> T>) -> T {
-            provide_context(IsHydrating(true));
-
-            let sc = OWNER.with_borrow(|o| {
-                o.as_ref()
-                    .and_then(|o| o.upgrade())
-                    .and_then(|current| current.shared_context.clone())
-            });
-            match sc {
-                None => fun(),
-                Some(sc) => {
-                    let prev = sc.get_is_hydrating();
-                    sc.set_is_hydrating(true);
-                    let value = fun();
-                    sc.set_is_hydrating(prev);
-                    value
-                }
-            }
-        }
-
-        inner(Box::new(fun))
-    }
-
-    /// Runs the given function, after indicating that the current [`SharedContext`] should /// not handle data created in this function.
-    #[cfg(any())]
-    pub fn with_no_hydration<T>(fun: impl FnOnce() -> T + 'static) -> T {
-        fn inner<T>(fun: Box<dyn FnOnce() -> T>) -> T {
-            provide_context(IsHydrating(false));
-
-            let sc = OWNER.with_borrow(|o| {
-                o.as_ref()
-                    .and_then(|o| o.upgrade())
-                    .and_then(|current| current.shared_context.clone())
-            });
-            match sc {
-                None => fun(),
-                Some(sc) => {
-                    let prev = sc.get_is_hydrating();
-                    sc.set_is_hydrating(false);
-                    let value = fun();
-                    sc.set_is_hydrating(prev);
-                    value
-                }
-            }
-        }
-
-        inner(Box::new(fun))
     }
 
     /// Pauses the execution of side effects for this owner, and any of its descendants.
@@ -452,8 +319,7 @@ pub(crate) struct OwnerInner {
     pub contexts: FxHashMap<TypeId, Box<dyn Any + Send + Sync>>,
     pub cleanups: Vec<Box<dyn FnOnce() + Send + Sync>>,
     pub children: Vec<Weak<RwLock<OwnerInner>>>,
-    #[cfg(any())]
-    arena: Arc<RwLock<ArenaMap>>,
+
     paused: bool,
 }
 
@@ -506,13 +372,6 @@ impl Drop for OwnerInner {
                     nodes_to_drop.extend(arena.remove(node));
                 }
             });
-            #[cfg(any())]
-            {
-                let mut arena = self.arena.write().or_poisoned();
-                for node in nodes {
-                    nodes_to_drop.extend(arena.remove(node));
-                }
-            }
         }
     }
 }
@@ -548,14 +407,6 @@ impl Cleanup for RwLock<OwnerInner> {
                     nodes_to_drop.extend(arena.remove(node));
                 }
             });
-            #[cfg(any())]
-            {
-                let arena = self.read().or_poisoned().arena.clone();
-                let mut arena = arena.write().or_poisoned();
-                for node in nodes {
-                    nodes_to_drop.extend(arena.remove(node));
-                }
-            }
         }
     }
 }

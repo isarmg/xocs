@@ -23,13 +23,8 @@ license = "MIT OR Apache-2.0"
 publish = false
 
 [features]
-alloc = ["serde/alloc", "embedded-io-04?/alloc", "embedded-io-06?/alloc"]
-core-num-saturating = []
+alloc = ["serde/alloc"]
 default = []
-embedded-io = ["dep:embedded-io-04"]
-embedded-io-04 = ["dep:embedded-io-04"]
-embedded-io-06 = ["dep:embedded-io-06"]
-paste = []
 use-std = ["serde/std", "alloc"]
 
 [lib]
@@ -41,16 +36,6 @@ path = "src/lib.rs"
 default-features = false
 path = "../../encoding/framing"
 package = "blog-encoding-framing"
-
-[dependencies.embedded-io-04]
-optional = true
-package = "blog-io-record-stream"
-path = "../../io/record-stream"
-
-[dependencies.embedded-io-06]
-optional = true
-package = "blog-io-portable-stream"
-path = "../../io/portable-stream"
 
 [dependencies.serde]
 features = ["derive"]

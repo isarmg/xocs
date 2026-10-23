@@ -1,20 +1,12 @@
 //! Body types.
 //!
-//! All these are wrappers around other body types. You shouldn't have to use them in your code.
-//! Use `http-body-util` instead.
-//!
-//! They exist because we don't want to expose types from `http-body-util` in `tower-http`s public
-//! API.
+//! The erased body used by the file service and its optional fallback.
 
 #![allow(missing_docs)]
 
-use std::convert::Infallible;
-
-use bytes::{Buf, Bytes};
+use bytes::Buf;
 use http_body::Body;
 use pin_project_lite::pin_project;
-
-use crate::BoxError;
 
 macro_rules! body_methods {
     () => {
@@ -36,53 +28,6 @@ macro_rules! body_methods {
             Body::size_hint(&self.inner)
         }
     };
-}
-
-pin_project! {
-    #[derive(Default)]
-    pub struct Full {
-        #[pin]
-        pub(crate) inner: http_body::Full<Bytes>
-    }
-}
-
-impl Full {
-    #[allow(dead_code)]
-    pub(crate) fn new(inner: http_body::Full<Bytes>) -> Self {
-        Self { inner }
-    }
-}
-
-impl Body for Full {
-    type Data = Bytes;
-    type Error = Infallible;
-
-    body_methods!();
-}
-
-pin_project! {
-    pub struct Limited<B> {
-        #[pin]
-        pub(crate) inner: http_body::Limited<B>
-    }
-}
-
-impl<B> Limited<B> {
-    #[allow(dead_code)]
-    pub(crate) fn new(inner: http_body::Limited<B>) -> Self {
-        Self { inner }
-    }
-}
-
-impl<B> Body for Limited<B>
-where
-    B: Body,
-    B::Error: Into<BoxError>,
-{
-    type Data = B::Data;
-    type Error = BoxError;
-
-    body_methods!();
 }
 
 pin_project! {

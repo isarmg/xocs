@@ -165,26 +165,24 @@ impl TcpSocket {
         #[cfg(any(
             target_os = "android",
             target_os = "dragonfly",
-            target_os = "freebsd",
             target_os = "fuchsia",
             target_os = "illumos",
             target_os = "linux",
             target_os = "netbsd",
             target_os = "openbsd",
-            target_os = "wasi",
+            target_os = "wasi"
         ))]
         let ty = ty.nonblocking();
         let inner = socket2::Socket::new(domain, ty, Some(socket2::Protocol::TCP))?;
         #[cfg(not(any(
             target_os = "android",
             target_os = "dragonfly",
-            target_os = "freebsd",
             target_os = "fuchsia",
             target_os = "illumos",
             target_os = "linux",
             target_os = "netbsd",
             target_os = "openbsd",
-            target_os = "wasi",
+            target_os = "wasi"
         )))]
         inner.set_nonblocking(true)?;
         Ok(TcpSocket { inner })
@@ -528,13 +526,12 @@ impl TcpSocket {
     #[cfg(any(
         target_os = "android",
         target_os = "dragonfly",
-        target_os = "freebsd",
         target_os = "fuchsia",
         target_os = "linux",
         target_os = "macos",
         target_os = "netbsd",
         target_os = "openbsd",
-        target_os = "cygwin",
+        target_os = "cygwin"
     ))]
     #[cfg_attr(
         docsrs,
@@ -566,13 +563,12 @@ impl TcpSocket {
     #[cfg(any(
         target_os = "android",
         target_os = "dragonfly",
-        target_os = "freebsd",
         target_os = "fuchsia",
         target_os = "linux",
         target_os = "macos",
         target_os = "netbsd",
         target_os = "openbsd",
-        target_os = "cygwin",
+        target_os = "cygwin"
     ))]
     #[cfg_attr(
         docsrs,

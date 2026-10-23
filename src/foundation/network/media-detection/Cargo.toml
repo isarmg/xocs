@@ -10,6 +10,7 @@
 # See Cargo.toml.orig for the original contents.
 
 [package]
+build = false
 name = "blog-network-media-detection"
 description = "media detection"
 license = "MIT"
@@ -25,13 +26,3 @@ package = "blog-network-media-type"
 [dependencies.unicase]
 path = "../../text/case-insensitive-text"
 package = "blog-text-case-insensitive-text"
-
-
-[build-dependencies.unicase]
-path = "../../text/case-insensitive-text"
-package = "blog-text-case-insensitive-text"
-
-
-[features]
-default = ["rev-mappings"]
-rev-mappings = []

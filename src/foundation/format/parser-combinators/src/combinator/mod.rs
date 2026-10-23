@@ -80,7 +80,7 @@
 //! - [`backtrack_err`]: Attempts a parse, allowing alternative parsers to be attempted despite
 //!   use of `cut_err`
 //! - [`Parser::context`]: Add context to the error if the parser fails
-//! - [`trace`]: Print the parse state with the `debug` feature flag
+//! - [`trace`]: Name a parser boundary without terminal output
 //! - [`todo()`]: Placeholder parser
 //!
 //! ## Remaining combinators

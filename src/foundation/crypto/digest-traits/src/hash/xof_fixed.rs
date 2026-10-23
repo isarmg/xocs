@@ -117,12 +117,6 @@ impl<T: ExtendableOutputReset, S: ArraySize> ExtendableOutputReset for XofFixedW
     }
 }
 
-#[cfg(feature = "zeroize")]
-impl<T: ExtendableOutput + zeroize::ZeroizeOnDrop, S: ArraySize> zeroize::ZeroizeOnDrop
-    for XofFixedWrapper<T, S>
-{
-}
-
 impl<T: ExtendableOutput + CustomizedInit, S: ArraySize> CustomizedInit for XofFixedWrapper<T, S> {
     fn new_customized(customization: &[u8]) -> Self {
         Self {

@@ -1,7 +1,5 @@
 use crate::digit_table::DIGIT_TABLE;
 use core::ptr;
-
-#[cfg_attr(feature = "no-panic", inline)]
 pub unsafe fn write_mantissa_long(mut output: u64, mut result: *mut u8) {
     if (output >> 32) != 0 {
         // One expensive 64-bit division.
@@ -23,8 +21,6 @@ pub unsafe fn write_mantissa_long(mut output: u64, mut result: *mut u8) {
     }
     write_mantissa(output as u32, result);
 }
-
-#[cfg_attr(feature = "no-panic", inline)]
 pub unsafe fn write_mantissa(mut output: u32, mut result: *mut u8) {
     while output >= 10_000 {
         let c = output - 10_000 * (output / 10_000);

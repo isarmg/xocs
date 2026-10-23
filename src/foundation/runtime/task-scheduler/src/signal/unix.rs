@@ -140,7 +140,6 @@ impl SignalKind {
     /// process. By default, this signal is ignored.
     #[cfg(any(
         target_os = "dragonfly",
-        target_os = "freebsd",
         target_os = "macos",
         target_os = "netbsd",
         target_os = "openbsd",
@@ -489,17 +488,6 @@ impl Signal {
 }
 
 // Work around for abstracting streams internally
-#[cfg(feature = "process")]
-pub(crate) trait InternalStream {
-    fn poll_recv(&mut self, cx: &mut Context<'_>) -> Poll<Option<()>>;
-}
-
-#[cfg(feature = "process")]
-impl InternalStream for Signal {
-    fn poll_recv(&mut self, cx: &mut Context<'_>) -> Poll<Option<()>> {
-        self.poll_recv(cx)
-    }
-}
 
 pub(crate) fn ctrl_c() -> io::Result<Signal> {
     signal(SignalKind::interrupt())

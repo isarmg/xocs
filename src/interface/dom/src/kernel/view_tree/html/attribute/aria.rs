@@ -4,7 +4,7 @@ use crate::view_tree::{
         element::{ElementType, HtmlElement},
     },
     renderer::Rndr,
-    view::{add_attr::AddAnyAttr, RenderHtml},
+    view::{add_attr::AddAnyAttr, DomView},
 };
 
 /// Applies ARIA attributes to an HTML element.
@@ -276,7 +276,7 @@ impl<El, At, Ch, V> AriaAttributes<Rndr, V> for HtmlElement<El, At, Ch>
 where
     El: ElementType + Send,
     At: Attribute + Send,
-    Ch: RenderHtml + Send,
+    Ch: DomView + Send,
     V: AttributeValue,
 {
 }

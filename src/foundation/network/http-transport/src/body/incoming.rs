@@ -39,9 +39,6 @@ enum Kind {
         content_length: DecodedLength,
         rx: chan::Receiver,
     },
-
-    #[cfg(feature = "ffi")]
-    Ffi(crate::ffi::UserBody),
 }
 
 /// A sender half created through [`Body::channel()`].
@@ -87,23 +84,6 @@ impl Incoming {
     pub(crate) fn empty() -> Incoming {
         Incoming::new(Kind::Empty)
     }
-
-    #[cfg(feature = "ffi")]
-    pub(crate) fn ffi() -> Incoming {
-        Incoming::new(Kind::Ffi(crate::ffi::UserBody::new()))
-    }
-
-    #[cfg(feature = "ffi")]
-    pub(crate) fn as_ffi_mut(&mut self) -> &mut crate::ffi::UserBody {
-        if !matches!(self.kind, Kind::Ffi(_)) {
-            self.kind = Kind::Ffi(crate::ffi::UserBody::new());
-        }
-
-        match &mut self.kind {
-            Kind::Ffi(body) => body,
-            _ => unreachable!(),
-        }
-    }
 }
 
 impl Body for Incoming {
@@ -135,9 +115,6 @@ impl Body for Incoming {
                 }
                 Poll::Ready(rx.take_trailers().map(Frame::trailers).map(Ok))
             }
-
-            #[cfg(feature = "ffi")]
-            Kind::Ffi(body) => body.poll_data(cx),
         }
     }
 
@@ -146,9 +123,6 @@ impl Body for Incoming {
             Kind::Empty => true,
             #[cfg(all(feature = "http1", any(feature = "client", feature = "server")))]
             Kind::Chan { content_length, .. } => *content_length == DecodedLength::ZERO,
-
-            #[cfg(feature = "ffi")]
-            Kind::Ffi(..) => false,
         }
     }
 
@@ -166,19 +140,13 @@ impl Body for Incoming {
             Kind::Empty => SizeHint::with_exact(0),
             #[cfg(all(feature = "http1", any(feature = "client", feature = "server")))]
             Kind::Chan { content_length, .. } => opt_len(content_length),
-
-            #[cfg(feature = "ffi")]
-            Kind::Ffi(..) => SizeHint::default(),
         }
     }
 }
 
 impl fmt::Debug for Incoming {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        #[cfg(any(
-            all(feature = "http1", any(feature = "client", feature = "server")),
-            feature = "ffi"
-        ))]
+        #[cfg(all(feature = "http1", any(feature = "client", feature = "server")))]
         #[derive(Debug)]
         struct Streaming;
         #[derive(Debug)]
@@ -187,10 +155,7 @@ impl fmt::Debug for Incoming {
         let mut builder = f.debug_tuple("Body");
         match self.kind {
             Kind::Empty => builder.field(&Empty),
-            #[cfg(any(
-                all(feature = "http1", any(feature = "client", feature = "server")),
-                feature = "ffi"
-            ))]
+            #[cfg(all(feature = "http1", any(feature = "client", feature = "server")))]
             _ => builder.field(&Streaming),
         };
 

@@ -67,13 +67,7 @@ __impl_external_bitflags_my_library! {
 
 pub(crate) mod __private {
     #[cfg(feature = "serde")]
-    pub use serde as serde;
-
-    #[cfg(feature = "arbitrary")]
-    pub use arbitrary;
-
-    #[cfg(feature = "bytemuck")]
-    pub use bytemuck;
+    pub use serde;
 }
 
 /// Implements traits from external libraries for the internal bitflags type.
@@ -101,23 +95,6 @@ macro_rules! __impl_external_bitflags {
             }
         }
 
-        $crate::__impl_external_bitflags_arbitrary! {
-            $InternalBitFlags: $T, $PublicBitFlags {
-                $(
-                    $(#[$inner $($args)*])*
-                    const $Flag;
-                )*
-            }
-        }
-
-        $crate::__impl_external_bitflags_bytemuck! {
-            $InternalBitFlags: $T, $PublicBitFlags {
-                $(
-                    $(#[$inner $($args)*])*
-                    const $Flag;
-                )*
-            }
-        }
     };
 }
 
@@ -165,92 +142,6 @@ macro_rules! __impl_external_bitflags_serde {
 #[doc(hidden)]
 #[cfg(not(feature = "serde"))]
 macro_rules! __impl_external_bitflags_serde {
-    (
-        $InternalBitFlags:ident: $T:ty, $PublicBitFlags:ident {
-            $(
-                $(#[$inner:ident $($args:tt)*])*
-                const $Flag:tt;
-            )*
-        }
-    ) => {};
-}
-
-#[cfg(feature = "arbitrary")]
-pub mod arbitrary;
-
-#[cfg(feature = "bytemuck")]
-mod bytemuck;
-
-/// Implement `Arbitrary` for the internal bitflags type.
-#[macro_export]
-#[doc(hidden)]
-#[cfg(feature = "arbitrary")]
-macro_rules! __impl_external_bitflags_arbitrary {
-    (
-            $InternalBitFlags:ident: $T:ty, $PublicBitFlags:ident {
-                $(
-                    $(#[$inner:ident $($args:tt)*])*
-                    const $Flag:tt;
-                )*
-            }
-    ) => {
-        impl<'a> $crate::__private::arbitrary::Arbitrary<'a> for $InternalBitFlags {
-            fn arbitrary(
-                u: &mut $crate::__private::arbitrary::Unstructured<'a>,
-            ) -> $crate::__private::arbitrary::Result<Self> {
-                $crate::arbitrary::arbitrary::<$PublicBitFlags>(u).map(|flags| flags.0)
-            }
-        }
-    };
-}
-
-#[macro_export]
-#[doc(hidden)]
-#[cfg(not(feature = "arbitrary"))]
-macro_rules! __impl_external_bitflags_arbitrary {
-    (
-        $InternalBitFlags:ident: $T:ty, $PublicBitFlags:ident {
-            $(
-                $(#[$inner:ident $($args:tt)*])*
-                const $Flag:tt;
-            )*
-        }
-    ) => {};
-}
-
-/// Implement `Pod` and `Zeroable` for the internal bitflags type.
-#[macro_export]
-#[doc(hidden)]
-#[cfg(feature = "bytemuck")]
-macro_rules! __impl_external_bitflags_bytemuck {
-    (
-        $InternalBitFlags:ident: $T:ty, $PublicBitFlags:ident {
-            $(
-                $(#[$inner:ident $($args:tt)*])*
-                const $Flag:tt;
-            )*
-        }
-    ) => {
-        // SAFETY: $InternalBitFlags is guaranteed to have the same ABI as $T,
-        // and $T implements Pod
-        unsafe impl $crate::__private::bytemuck::Pod for $InternalBitFlags where
-            $T: $crate::__private::bytemuck::Pod
-        {
-        }
-
-        // SAFETY: $InternalBitFlags is guaranteed to have the same ABI as $T,
-        // and $T implements Zeroable
-        unsafe impl $crate::__private::bytemuck::Zeroable for $InternalBitFlags where
-            $T: $crate::__private::bytemuck::Zeroable
-        {
-        }
-    };
-}
-
-#[macro_export]
-#[doc(hidden)]
-#[cfg(not(feature = "bytemuck"))]
-macro_rules! __impl_external_bitflags_bytemuck {
     (
         $InternalBitFlags:ident: $T:ty, $PublicBitFlags:ident {
             $(

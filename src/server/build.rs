@@ -3,11 +3,14 @@
 mod config_definition;
 #[path = "src/installation_definition.rs"]
 mod installation_definition;
+#[path = "../../tools/assets/src/platform_contract.rs"]
+mod platform_contract;
 #[path = "src/schema_definition.rs"]
 mod schema_definition;
 use std::{env, fs, path::PathBuf};
 
 fn main() {
+    platform_contract::check();
     println!("cargo:rerun-if-env-changed=BLOG_WEB_DIST");
     println!("cargo:rerun-if-env-changed=BLOG_BUILD_METADATA_DIR");
     println!("cargo:rerun-if-env-changed=BLOG_SOURCE_REVISION");

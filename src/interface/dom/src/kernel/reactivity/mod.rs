@@ -79,8 +79,7 @@ pub mod effect;
 pub mod graph;
 pub mod owner;
 pub mod send_wrapper_ext;
-#[cfg(any())]
-mod serde;
+
 pub mod signal;
 mod trait_options;
 pub mod traits;
@@ -93,9 +92,6 @@ pub use into_reactive_value::*;
 pub mod callback;
 
 use computed::ScopedFuture;
-
-#[cfg(any())]
-mod nightly;
 
 /// Reexports frequently-used traits.
 pub mod prelude {
@@ -121,9 +117,6 @@ pub fn log_warning(text: Arguments) {
 /// Calls [`Executor::spawn`](blog_dom::tasks::Executor::spawn) on non-wasm targets and [`Executor::spawn_local`](blog_dom::tasks::Executor::spawn_local) on wasm targets, but ensures that the task also runs in the current arena, if
 /// multithreaded arena sandboxing is enabled.
 pub fn spawn(task: impl Future<Output = ()> + Send + 'static) {
-    #[cfg(any())]
-    let task = owner::Sandboxed::new(task);
-
     #[cfg(not(target_family = "wasm"))]
     crate::tasks::Executor::spawn(task);
 
@@ -134,9 +127,6 @@ pub fn spawn(task: impl Future<Output = ()> + Send + 'static) {
 /// Calls [`Executor::spawn_local`](blog_dom::tasks::Executor::spawn_local), but ensures that the task also runs in the current arena, if
 /// multithreaded arena sandboxing is enabled.
 pub fn spawn_local(task: impl Future<Output = ()> + 'static) {
-    #[cfg(any())]
-    let task = owner::Sandboxed::new(task);
-
     crate::tasks::Executor::spawn_local(task);
 }
 
@@ -145,9 +135,6 @@ pub fn spawn_local(task: impl Future<Output = ()> + 'static) {
 /// Does not cancel the task if the owner is cleaned up.
 pub fn spawn_local_scoped(task: impl Future<Output = ()> + 'static) {
     let task = ScopedFuture::new(task);
-
-    #[cfg(any())]
-    let task = owner::Sandboxed::new(task);
 
     crate::tasks::Executor::spawn_local(task);
 }
@@ -164,9 +151,6 @@ pub fn spawn_local_scoped_with_cancellation(task: impl Future<Output = ()> + 'st
 
     let task = Abortable::new(task, abort_registration);
     let task = ScopedFuture::new(task);
-
-    #[cfg(any())]
-    let task = owner::Sandboxed::new(task);
 
     crate::tasks::Executor::spawn_local(async move {
         _ = task.await;

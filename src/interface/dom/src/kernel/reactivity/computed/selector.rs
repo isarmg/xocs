@@ -28,7 +28,7 @@ use std::{
 /// let a = RwSignal::new(0);
 /// let is_selected = Selector::new(move || a.get());
 /// let total_notifications = StoredValue::new(0);
-/// Effect::new_isomorphic({
+/// Effect::new_sync({
 ///     let is_selected = is_selected.clone();
 ///     move |_| {
 ///         if is_selected.selected(&5) {
@@ -87,7 +87,7 @@ where
         let v: Arc<RwLock<Option<T>>> = Default::default();
         let f = Arc::new(f) as Arc<dyn Fn(&T, &T) -> bool + Send + Sync>;
 
-        let effect = Arc::new(RenderEffect::new_isomorphic({
+        let effect = Arc::new(RenderEffect::new_sync({
             let subs = Arc::clone(&subs);
             let f = Arc::clone(&f);
             let v = Arc::clone(&v);

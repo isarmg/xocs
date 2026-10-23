@@ -5,8 +5,9 @@ use std::sync::Arc;
 use crate::query_engine::column::ColumnIndex;
 use crate::query_engine::error::Error;
 use crate::query_engine::ext::ustr::UStr;
-use crate::query_engine::row::{debug_row, Row};
+use crate::query_engine::row::Row;
 use crate::query_engine::HashMap;
+use crate::query_engine::{column::Column, value::Value};
 
 use crate::sqlite::statement::StatementHandle;
 use crate::sqlite::{Sqlite, SqliteColumn, SqliteValue, SqliteValueRef};
@@ -18,14 +19,11 @@ pub struct SqliteRow {
     pub(crate) column_names: Arc<HashMap<UStr, usize>>,
 }
 
-// Accessing values from the statement object is
-// safe across threads as long as we don't call [sqlite3_step]
-
-// we block ourselves from doing that by only exposing
-// a set interface on [StatementHandle]
-
-unsafe impl Send for SqliteRow {}
-unsafe impl Sync for SqliteRow {}
+// A row can move to another thread, but cannot be shared concurrently: decoding
+// may mutate SQLite value storage and the Rust borrow cache in SqliteValue.
+// sqlite3_value_dup() detaches the value from the connection (db = NULL in the
+// bundled SQLite implementation); sqlite3_value_blob() can then write its flags
+// without a connection mutex. "Protected" does not make this Rust cache Sync.
 
 impl SqliteRow {
     pub(crate) fn current(
@@ -79,17 +77,45 @@ impl ColumnIndex<SqliteRow> for &'_ str {
 
 impl std::fmt::Debug for SqliteRow {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        debug_row(self, f)
+        write!(f, "SqliteRow ")?;
+        let mut map = f.debug_map();
+        for (column, value) in self.columns.iter().zip(&self.values) {
+            map.entry(&column.name(), &DebugValue(value));
+        }
+        map.finish()
     }
 }
 
-// #[cfg(feature = "any")]
-// impl From<SqliteRow> for crate::sqlite::any::AnyRow {
-//     #[inline]
-//     fn from(row: SqliteRow) -> Self {
-//         crate::sqlite::any::AnyRow {
-//             columns: row.columns.iter().map(|col| col.clone().into()).collect(),
-//             kind: crate::sqlite::any::row::AnyRowKind::Sqlite(row),
-//         }
-//     }
-// }
+struct DebugValue<'a>(&'a SqliteValue);
+
+impl std::fmt::Debug for DebugValue<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use crate::sqlite::type_info::DataType;
+
+        // Formatting must not invalidate a previously decoded &str or &[u8].
+        let value = match self.0.try_clone() {
+            Ok(value) => value,
+            Err(error) => return write!(f, "<decode error: {error}>"),
+        };
+        if value.is_null() {
+            return f.write_str("NULL");
+        }
+        match value.type_info().0 {
+            DataType::Bool => fmt_decoded(value.try_decode::<bool>(), f),
+            DataType::Int4 | DataType::Integer => fmt_decoded(value.try_decode::<i64>(), f),
+            DataType::Float => fmt_decoded(value.try_decode::<f64>(), f),
+            DataType::Blob => fmt_decoded(value.try_decode::<&[u8]>(), f),
+            _ => fmt_decoded(value.try_decode::<&str>(), f),
+        }
+    }
+}
+
+fn fmt_decoded<T: std::fmt::Debug>(
+    value: Result<T, Error>,
+    f: &mut std::fmt::Formatter<'_>,
+) -> std::fmt::Result {
+    match value {
+        Ok(value) => value.fmt(f),
+        Err(error) => write!(f, "<decode error: {error}>"),
+    }
+}

@@ -41,14 +41,10 @@ os-ext = ["os-poll"]
 name = "blog_runtime_io_poller"
 path = "src/lib.rs"
 
-[target.'cfg(any(unix, target_os = "hermit", target_os = "wasi"))'.dependencies.libc]
+[dependencies.libc]
 path = "../../platform/system-abi"
 package = "blog-platform-system-abi"
 
-
-[target."cfg(target_os = \"wasi\")"]
-
-[target."cfg(windows)"]
 [lints.rust.unexpected_cfgs]
 level = "warn"
 priority = 0
@@ -56,3 +52,8 @@ check-cfg = ["cfg(mio_unsupported_force_poll_poll)", "cfg(mio_unsupported_force_
 
 [dependencies]
 log = { optional = true, path = "../../diagnostics/event-facade",package = "blog-diagnostics-event-facade"}
+
+[[test]]
+name = "linux_poll"
+path = "tests/linux_poll.rs"
+required-features = ["os-poll", "net"]

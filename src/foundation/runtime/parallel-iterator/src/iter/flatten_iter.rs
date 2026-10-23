@@ -1,4 +1,3 @@
-use super::plumbing::*;
 use super::*;
 
 /// `FlattenIter` turns each element to a serial iterator, then flattens these iterators

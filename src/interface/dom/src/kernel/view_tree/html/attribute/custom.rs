@@ -4,7 +4,7 @@ use crate::view_tree::{
         maybe_next_attr_erasure_macros::next_attr_combine, Attribute, AttributeValue,
         NamedAttributeKey,
     },
-    view::{add_attr::AddAnyAttr, Position, ToTemplate},
+    view::add_attr::AddAnyAttr,
 };
 use std::{borrow::Cow, sync::Arc};
 
@@ -47,36 +47,9 @@ where
     K: CustomAttributeKey,
     V: AttributeValue,
 {
-    const MIN_LENGTH: usize = 0;
-    type AsyncOutput = CustomAttr<K, V::AsyncOutput>;
     type State = V::State;
     type Cloneable = CustomAttr<K, V::Cloneable>;
     type CloneableOwned = CustomAttr<K, V::CloneableOwned>;
-
-    fn html_len(&self) -> usize {
-        self.key.as_ref().len() + 3 + self.value.html_len()
-    }
-
-    fn to_html(
-        self,
-        buf: &mut String,
-        _class: &mut String,
-        _style: &mut String,
-        _inner_html: &mut String,
-    ) {
-        self.value.to_html(self.key.as_ref(), buf);
-    }
-
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        el: &crate::view_tree::renderer::types::Element,
-    ) -> Self::State {
-        if !K::KEY.is_empty() {
-            self.value.hydrate::<FROM_SERVER>(self.key.as_ref(), el)
-        } else {
-            self.value.build(el, self.key.as_ref())
-        }
-    }
 
     fn build(self, el: &crate::view_tree::renderer::types::Element) -> Self::State {
         self.value.build(el, self.key.as_ref())
@@ -100,17 +73,6 @@ where
         }
     }
 
-    fn dry_resolve(&mut self) {
-        self.value.dry_resolve();
-    }
-
-    async fn resolve(self) -> Self::AsyncOutput {
-        CustomAttr {
-            key: self.key,
-            value: self.value.resolve().await,
-        }
-    }
-
     fn keys(&self) -> Vec<NamedAttributeKey> {
         vec![NamedAttributeKey::Attribute(
             self.key.as_ref().to_string().into(),
@@ -127,24 +89,6 @@ where
 
     fn add_any_attr<NewAttr: Attribute>(self, new_attr: NewAttr) -> Self::Output<NewAttr> {
         next_attr_combine!(self, new_attr)
-    }
-}
-
-impl<K, V> ToTemplate for CustomAttr<K, V>
-where
-    K: CustomAttributeKey,
-    V: AttributeValue,
-{
-    fn to_template(
-        buf: &mut String,
-        _class: &mut String,
-        _style: &mut String,
-        _inner_html: &mut String,
-        _position: &mut Position,
-    ) {
-        if !K::KEY.is_empty() {
-            V::to_template(K::KEY, buf);
-        }
     }
 }
 
@@ -169,11 +113,6 @@ impl CustomAttributeKey for String {
 
 impl CustomAttributeKey for Arc<str> {
     const KEY: &'static str = "";
-}
-
-#[cfg(any())]
-impl<const K: &'static str> CustomAttributeKey for crate::view_tree::view::static_types::Static<K> {
-    const KEY: &'static str = K;
 }
 
 /// Adds a custom attribute to an element.

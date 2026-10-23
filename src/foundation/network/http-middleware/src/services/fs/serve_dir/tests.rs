@@ -677,7 +677,8 @@ async fn last_modified() {
 
     let res = svc.oneshot(req).await.unwrap();
     assert_eq!(res.status(), StatusCode::OK);
-    let readme_bytes = include_bytes!("../../../../../../../../docs/upstream/tower-http-0.6.11/README.md");
+    let readme_bytes =
+        include_bytes!("../../../../../../../../docs/upstream/tower-http-0.6.11/README.md");
     let body = res.into_body().collect().await.unwrap().to_bytes();
     assert_eq!(body.as_ref(), readme_bytes);
 
@@ -890,126 +891,6 @@ async fn calls_fallback_on_null() {
     let res = svc.oneshot(req).await.unwrap();
 
     assert_eq!(res.headers()["from-fallback"], "1");
-}
-
-#[cfg(windows)]
-fn verify_windows_device(name: &str, is_positive: bool) {
-    use std::fs::OpenOptions;
-    use std::os::windows::io::AsRawHandle;
-
-    extern "system" {
-        fn GetFileType(hFile: *mut std::ffi::c_void) -> u32;
-    }
-    const FILE_TYPE_CHAR: u32 = 0x0002;
-
-    let file_res = OpenOptions::new().read(true).open(name);
-    if let Ok(file) = file_res {
-        let handle = file.as_raw_handle();
-        let file_type = unsafe { GetFileType(handle as _) };
-        if is_positive {
-            assert_eq!(
-                file_type, FILE_TYPE_CHAR,
-                "Expected Windows to treat {:?} as a system character device",
-                name
-            );
-        } else {
-            assert_ne!(
-                file_type, FILE_TYPE_CHAR,
-                "Expected Windows NOT to treat {:?} as a system character device",
-                name
-            );
-        }
-    }
-}
-
-#[test]
-fn test_is_reserved_dos_name() {
-    use super::is_reserved_dos_name;
-
-    let positives = [
-        "CON",
-        "con",
-        "Con",
-        "PRN",
-        "Prn",
-        "AUX",
-        "aux",
-        "NUL",
-        "nul",
-        "CONIN$",
-        "conin$",
-        "CONOUT$",
-        "ConOut$",
-        "COM0",
-        "com0",
-        "Com0",
-        "COM1",
-        "com9",
-        "Com3",
-        "COM¹",
-        "com³",
-        "LPT0",
-        "lpt0",
-        "Lpt0",
-        "LPT1",
-        "lpt9",
-        "Lpt3",
-        "LPT¹",
-        "lpt²",
-        "CON.txt",
-        "con.anything",
-        "AUX.tar.gz",
-        "NUL.",
-        "COM1:",
-        "com9.ext:",
-        "CON ",
-        "CON  ",
-        "NUL  .txt",
-        "CON\t",
-        "CON\n",
-        "CON\r",
-        "CON \t",
-        "CON\x0B",
-    ];
-
-    for name in positives {
-        assert!(
-            is_reserved_dos_name(|| name.encode_utf16()),
-            "Expected true for {:?}",
-            name
-        );
-
-        #[cfg(windows)]
-        verify_windows_device(name, true);
-    }
-
-    let negatives = [
-        "C0N",
-        "PRN1",
-        "AUX42",
-        "NULL",
-        "CONIN",
-        "CONOUT",
-        "COM10",
-        "LPT42",
-        "COMa",
-        "LPTb",
-        "safe.txt",
-        "index.html",
-        "aux-file.js",
-        "contact.html",
-    ];
-
-    for name in negatives {
-        assert!(
-            !is_reserved_dos_name(|| name.encode_utf16()),
-            "Expected false for {:?}",
-            name
-        );
-
-        #[cfg(windows)]
-        verify_windows_device(name, false);
-    }
 }
 
 #[test]

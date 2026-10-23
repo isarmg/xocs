@@ -1,4 +1,3 @@
-use super::plumbing::*;
 use super::*;
 use rayon_core::join;
 use std::iter;

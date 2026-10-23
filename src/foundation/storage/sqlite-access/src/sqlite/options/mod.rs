@@ -16,9 +16,9 @@ use std::sync::Arc;
 use std::{borrow::Cow, time::Duration};
 pub use synchronous::SqliteSynchronous;
 
+use crate::query_engine::IndexMap;
 use crate::sqlite::common::DebugFn;
 use crate::sqlite::connection::collation::Collation;
-use crate::query_engine::{config, IndexMap};
 
 /// Options and flags which can be used to configure a SQLite connection.
 ///
@@ -73,13 +73,6 @@ pub struct SqliteConnectOptions {
 
     pub(crate) pragmas: IndexMap<Cow<'static, str>, Option<Cow<'static, str>>>,
 
-    /// Extensions are specified as a pair of \<Extension Name : Optional Entry Point>, the majority
-    /// of SQLite extensions will use the default entry points specified in the docs, these should
-    /// be added to the map with a `None` value.
-    /// <https://www.sqlite.org/loadext.html#loading_an_extension>
-    #[cfg(feature = "sqlite-load-extension")]
-    pub(crate) extensions: IndexMap<Cow<'static, str>, Option<Cow<'static, str>>>,
-
     pub(crate) command_channel_size: usize,
     pub(crate) row_channel_size: usize,
 
@@ -89,9 +82,6 @@ pub struct SqliteConnectOptions {
     pub(crate) thread_name: Arc<DebugFn<dyn Fn(u64) -> String + Send + Sync + 'static>>,
 
     pub(crate) optimize_on_close: OptimizeOnClose,
-
-    #[cfg(feature = "regexp")]
-    pub(crate) register_regexp_function: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -122,45 +112,6 @@ impl SqliteConnectOptions {
         // However, by inserting into the map here, we can ensure that they're set in the proper
         // order, even if they're overwritten later by their respective setters or
         // directly by `pragma()`
-
-        // SQLCipher special case: if the `key` pragma is set, it must be executed first.
-        pragmas.insert("key".into(), None);
-
-        // Other SQLCipher pragmas that has to be after the key, but before any other operation on the database.
-        // https://www.zetetic.net/sqlcipher/sqlcipher-api/
-
-        // Bytes of the database file that is not encrypted
-        // Default for SQLCipher v4 is 0
-        // If greater than zero 'cipher_salt' pragma must be also defined
-        pragmas.insert("cipher_plaintext_header_size".into(), None);
-
-        // Allows to provide salt manually
-        // By default SQLCipher sets salt automatically, use only in conjunction with
-        // 'cipher_plaintext_header_size' pragma
-        pragmas.insert("cipher_salt".into(), None);
-
-        // Number of iterations used in PBKDF2 key derivation.
-        // Default for SQLCipher v4 is 256000
-        pragmas.insert("kdf_iter".into(), None);
-
-        // Define KDF algorithm to be used.
-        // Default for SQLCipher v4 is PBKDF2_HMAC_SHA512.
-        pragmas.insert("cipher_kdf_algorithm".into(), None);
-
-        // Enable or disable HMAC functionality.
-        // Default for SQLCipher v4 is 1.
-        pragmas.insert("cipher_use_hmac".into(), None);
-
-        // Set default encryption settings depending on the version 1,2,3, or 4.
-        pragmas.insert("cipher_compatibility".into(), None);
-
-        // Page size of encrypted database.
-        // Default for SQLCipher v4 is 4096.
-        pragmas.insert("cipher_page_size".into(), None);
-
-        // Choose algorithm used for HMAC.
-        // Default for SQLCipher v4 is HMAC_SHA512.
-        pragmas.insert("cipher_hmac_algorithm".into(), None);
 
         // Normally, page_size must be set before any other action on the database.
         // Defaults to 4096 for new databases.
@@ -205,16 +156,12 @@ impl SqliteConnectOptions {
             immutable: false,
             vfs: None,
             pragmas,
-            #[cfg(feature = "sqlite-load-extension")]
-            extensions: Default::default(),
             collations: Default::default(),
             serialized: false,
             thread_name: Arc::new(DebugFn(|id| format!("sqlx-sqlite-worker-{id}"))),
             command_channel_size: 50,
             row_channel_size: 50,
             optimize_on_close: OptimizeOnClose::Disabled,
-            #[cfg(feature = "regexp")]
-            register_regexp_function: false,
         }
     }
 
@@ -468,103 +415,6 @@ impl SqliteConnectOptions {
         self
     }
 
-    /// Add a [SQLite extension](https://www.sqlite.org/loadext.html) to be loaded into the database
-    /// connection at startup, using the default entrypoint.
-    ///
-    /// Most common SQLite extensions can be loaded using this method.
-    /// For extensions where you need to override the entry point,
-    /// use [`.extension_with_entrypoint()`].
-    ///
-    /// Multiple extensions can be loaded by calling this method,
-    /// or [`.extension_with_entrypoint()`] where applicable,
-    /// once for each extension.
-    ///
-    /// Extension loading is only enabled during the initialization of the connection,
-    /// and disabled before `connect()` returns by setting
-    /// [`SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION`] to 0.
-    ///
-    /// This will not enable the SQL `load_extension()` function.
-    ///
-    /// [`SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION`]: https://www.sqlite.org/c3ref/c_dbconfig_defensive.html#sqlitedbconfigenableloadextension
-    /// [`.extension_with_entrypoint()`]: Self::extension_with_entrypoint
-    ///
-    /// # Safety
-    /// This causes arbitrary DLLs on the filesystem to be loaded at runtime,
-    /// which can easily result in undefined behavior, memory corruption,
-    /// or exploitable vulnerabilities if misused.
-    ///
-    /// It is not possible to provide a truly safe version of this API.
-    ///
-    /// Use this method with care, and only load extensions that you trust.
-    ///
-    /// # Example
-    /// ```rust,no_run
-    /// # use crate::query_engine::error::Error;
-    /// # use std::str::FromStr;
-    /// # use sqlx_sqlite::SqliteConnectOptions;
-    /// # fn options() -> Result<SqliteConnectOptions, Error> {
-    /// let mut options = SqliteConnectOptions::from_str("sqlite://data.db")?;
-    ///
-    /// // SAFETY: these are trusted extensions.
-    /// unsafe {
-    ///     options = options
-    ///         .extension("vsv")
-    ///         .extension("mod_spatialite");
-    /// }
-    ///
-    /// # Ok(options)
-    /// # }
-    /// ```
-    #[cfg(feature = "sqlite-load-extension")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "sqlite-load-extension")))]
-    pub unsafe fn extension(mut self, extension_name: impl Into<Cow<'static, str>>) -> Self {
-        self.extensions.insert(extension_name.into(), None);
-        self
-    }
-
-    /// Add a [SQLite extension](https://www.sqlite.org/loadext.html) to be loaded into the database
-    /// connection at startup, overriding the entrypoint.
-    ///
-    /// See also [`.extension()`] for extensions using the standard entrypoint name
-    /// `sqlite3_extension_init` or `sqlite3_<extension name>_init`.
-    ///
-    /// Multiple extensions can be loaded by calling this method,
-    /// or [`.extension()`] where applicable,
-    /// once for each extension.
-    ///
-    /// Extension loading is only enabled during the initialization of the connection,
-    /// and disabled before `connect()` returns by setting
-    /// [`SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION`] to 0.
-    ///
-    /// This will not enable the SQL `load_extension()` function.
-    ///
-    /// [`SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION`]: https://www.sqlite.org/c3ref/c_dbconfig_defensive.html#sqlitedbconfigenableloadextension
-    /// [`.extension_with_entrypoint()`]: Self::extension_with_entrypoint
-    ///
-    /// # Safety
-    /// This causes arbitrary DLLs on the filesystem to be loaded at runtime,
-    /// which can easily result in undefined behavior, memory corruption,
-    /// or exploitable vulnerabilities if misused.
-    ///
-    /// If you specify the wrong entrypoint name, it _may_ simply result in an error,
-    /// or it may end up invoking the wrong routine, leading to undefined behavior.
-    ///
-    /// It is not possible to provide a truly safe version of this API.
-    ///
-    /// Use this method with care, only load extensions that you trust,
-    /// and double-check the entrypoint name with the extension's documentation or source code.
-    #[cfg(feature = "sqlite-load-extension")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "sqlite-load-extension")))]
-    pub unsafe fn extension_with_entrypoint(
-        mut self,
-        extension_name: impl Into<Cow<'static, str>>,
-        entry_point: impl Into<Cow<'static, str>>,
-    ) -> Self {
-        self.extensions
-            .insert(extension_name.into(), Some(entry_point.into()));
-        self
-    }
-
     /// Execute `PRAGMA optimize;` on the SQLite connection before closing.
     ///
     /// The SQLite manual recommends using this for long-lived databases.
@@ -611,65 +461,5 @@ impl SqliteConnectOptions {
         }
         self.pragmas.insert("analysis_limit".into(), None);
         self
-    }
-
-    /// Register a regexp function that allows using regular expressions in queries.
-    ///
-    /// ```
-    /// # use std::str::FromStr;
-    /// # use sqlx::{ConnectOptions, Connection, Row};
-    /// # use sqlx_sqlite::SqliteConnectOptions;
-    /// # async fn run() -> sqlx::Result<()> {
-    /// let mut sqlite = SqliteConnectOptions::from_str("sqlite://:memory:")?
-    ///     .with_regexp()
-    ///     .connect()
-    ///     .await?;
-    /// let tables = sqlx::query("SELECT name FROM sqlite_schema WHERE name REGEXP 'foo(\\d+)bar'")
-    ///     .fetch_all(&mut sqlite)
-    ///     .await?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    ///
-    /// This uses the [`regex`] crate, and is only enabled when you enable the `regex` feature is enabled on sqlx
-    #[cfg(feature = "regexp")]
-    pub fn with_regexp(mut self) -> Self {
-        self.register_regexp_function = true;
-        self
-    }
-
-    #[cfg_attr(not(feature = "sqlite-load-extension"), expect(unused_mut))]
-    pub(crate) fn apply_driver_config(
-        mut self,
-        config: &config::drivers::SqliteConfig,
-    ) -> crate::sqlite::Result<Self> {
-        #[cfg(feature = "sqlite-load-extension")]
-        for extension in &config.unsafe_load_extensions {
-            // SAFETY: the documentation warns the user about loading extensions
-            match extension {
-                config::drivers::SqliteExtension::Path(path) => {
-                    self = unsafe { self.extension(path.clone()) }
-                }
-                config::drivers::SqliteExtension::PathWithEntrypoint { path, entrypoint } => {
-                    self =
-                        unsafe { self.extension_with_entrypoint(path.clone(), entrypoint.clone()) }
-                }
-            }
-        }
-
-        #[cfg(not(feature = "sqlite-load-extension"))]
-        if !config.unsafe_load_extensions.is_empty() {
-            return Err(crate::query_engine::Error::Configuration(
-                format!(
-                    "sqlx.toml specifies `drivers.sqlite.unsafe-load-extensions = {:?}` \
-                 but extension loading is not enabled; \
-                 enable the `sqlite-load-extension` feature of SQLx to use SQLite extensions",
-                    config.unsafe_load_extensions,
-                )
-                .into(),
-            ));
-        }
-
-        Ok(self)
     }
 }

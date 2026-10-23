@@ -20,8 +20,6 @@ macro_rules! html_element_inner {
             #[$meta]
             #[track_caller]
             pub fn $tag() -> HtmlElement<$struct_name, (), ()>
-            where
-
             {
                 HtmlElement {
                     #[cfg(any(debug_assertions, leptos_debuginfo))]
@@ -78,7 +76,7 @@ macro_rules! html_element_inner {
 
                 const TAG: &'static str = stringify!($tag);
                 const SELF_CLOSING: bool = false;
-                const ESCAPE_CHILDREN: bool = $escape;
+
                 const NAMESPACE: Option<&'static str> = None;
 
                 #[inline(always)]
@@ -127,8 +125,6 @@ macro_rules! html_self_closing_elements {
                 #[$meta]
                 #[track_caller]
                 pub fn $tag() -> HtmlElement<[<$tag:camel>], (), ()>
-                where
-
                 {
                     HtmlElement {
                         #[cfg(any(debug_assertions, leptos_debuginfo))]
@@ -183,7 +179,7 @@ macro_rules! html_self_closing_elements {
 
                     const TAG: &'static str = stringify!($tag);
                     const SELF_CLOSING: bool = true;
-                    const ESCAPE_CHILDREN: bool = $escape;
+
                     const NAMESPACE: Option<&'static str> = None;
 
                     #[inline(always)]

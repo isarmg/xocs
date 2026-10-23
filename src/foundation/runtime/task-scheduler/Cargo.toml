@@ -65,35 +65,11 @@ optional = true
 path = "../task-entry"
 package = "blog-runtime-task-entry"
 
-
-[target.'cfg(all(tokio_unstable, target_os = "linux"))'.dependencies]
-slab = { optional = true, path = "../../collections/slot-storage",package = "blog-collections-slot-storage"}
-
-[target.'cfg(all(tokio_unstable, target_os = "linux"))'.dependencies.libc]
-optional = true
-path = "../../platform/system-abi"
-package = "blog-platform-system-abi"
-
-[target.'cfg(all(tokio_unstable, target_os = "linux"))'.dependencies.mio]
-features = [
-    "os-poll",
-    "os-ext",
-]
-optional = true
-default-features = false
-path = "../io-poller"
-package = "blog-runtime-io-poller"
-
-[target.'cfg(any(not(target_family = "wasm"), all(target_os = "wasi", not(target_env = "p1"))))'.dependencies.socket2]
+[target.'cfg(not(target_family = "wasm"))'.dependencies.socket2]
 features = ["all"]
 optional = true
 path = "../../platform/socket-options"
 package = "blog-platform-socket-options"
-
-[target.'cfg(target_os = "wasi")'.dependencies.libc]
-optional = true
-path = "../../platform/system-abi"
-package = "blog-platform-system-abi"
 
 [target."cfg(unix)".dependencies.libc]
 optional = true
@@ -105,14 +81,10 @@ optional = true
 path = "../signal-registry"
 package = "blog-runtime-signal-registry"
 
-
-[target."cfg(tokio_unstable)".dependencies]
-
-[target."cfg(windows)"]
 [lints.rust.unexpected_cfgs]
 level = "warn"
 priority = 0
-check-cfg = ["cfg(fuzzing)", "cfg(loom)", "cfg(mio_unsupported_force_poll_poll)", "cfg(tokio_allow_from_blocking_fd)", "cfg(tokio_internal_mt_counters)", "cfg(tokio_no_parking_lot)", "cfg(tokio_no_tuning_tests)", "cfg(tokio_unstable)", 'cfg(target_os, values("cygwin"))', "cfg(feature, values(\"full\", \"io-uring\", \"net\", \"process\", \"signal\", \"taskdump\"))"]
+check-cfg = ["cfg(fuzzing)", "cfg(loom)", "cfg(mio_unsupported_force_poll_poll)", "cfg(tokio_allow_from_blocking_fd)", "cfg(tokio_internal_mt_counters)", "cfg(tokio_no_parking_lot)", "cfg(tokio_no_tuning_tests)", "cfg(tokio_unstable)", 'cfg(target_os, values("cygwin"))', "cfg(feature, values(\"full\", \"net\", \"signal\"))"]
 
 [target."cfg(tokio_unstable)".dependencies.tracing]
 features = [

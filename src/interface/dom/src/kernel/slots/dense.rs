@@ -102,9 +102,7 @@ impl<K: Key, V> DenseSlotMap<K, V> {
     /// ```
     pub fn with_capacity_and_key(capacity: usize) -> Self {
         // Create slots with a sentinel at index 0.
-        // We don't actually use the sentinel for anything currently, but
-        // HopSlotMap does, and if we want keys to remain valid through
-        // conversion we have to have one as well.
+        // Keep index zero reserved so every generated key has a nonzero index.
         let mut slots = Vec::with_capacity(capacity + 1);
         slots.push(Slot {
             idx_or_free: 0,
@@ -1284,96 +1282,3 @@ impl<'a, K: 'a + Key, V> ExactSizeIterator for Drain<'a, K, V> {}
 impl<K: Key, V> ExactSizeIterator for IntoIter<K, V> {}
 
 // Serialization with serde.
-#[cfg(any())]
-mod serialize {
-    use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
-
-    use super::*;
-
-    #[derive(Serialize, Deserialize)]
-    struct SerdeSlot<T> {
-        value: Option<T>,
-        version: u32,
-    }
-
-    impl<K: Key, V: Serialize> Serialize for DenseSlotMap<K, V> {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
-        {
-            let serde_slots: Vec<_> = self
-                .slots
-                .iter()
-                .map(|slot| SerdeSlot {
-                    value: if slot.version % 2 == 1 {
-                        self.values.get(slot.idx_or_free as usize)
-                    } else {
-                        None
-                    },
-                    version: slot.version,
-                })
-                .collect();
-            serde_slots.serialize(serializer)
-        }
-    }
-
-    impl<'de, K: Key, V: Deserialize<'de>> Deserialize<'de> for DenseSlotMap<K, V> {
-        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            let serde_slots: Vec<SerdeSlot<V>> = Deserialize::deserialize(deserializer)?;
-            if serde_slots.len() >= u32::MAX as usize {
-                return Err(de::Error::custom("too many slots"));
-            }
-
-            // Ensure the first slot exists and is empty for the sentinel.
-            if serde_slots
-                .first()
-                .map_or(true, |slot| slot.version % 2 == 1)
-            {
-                return Err(de::Error::custom("first slot not empty"));
-            }
-
-            // Rebuild slots, key and values.
-            let mut keys = Vec::new();
-            let mut values = Vec::new();
-            let mut slots = Vec::new();
-            slots.push(Slot {
-                idx_or_free: 0,
-                version: 0,
-            });
-
-            let mut next_free = serde_slots.len();
-            for (i, serde_slot) in serde_slots.into_iter().enumerate().skip(1) {
-                let occupied = serde_slot.version % 2 == 1;
-                if occupied ^ serde_slot.value.is_some() {
-                    return Err(de::Error::custom("inconsistent occupation in Slot"));
-                }
-
-                if let Some(value) = serde_slot.value {
-                    let kd = KeyData::new(i as u32, serde_slot.version);
-                    keys.push(kd.into());
-                    values.push(value);
-                    slots.push(Slot {
-                        version: serde_slot.version,
-                        idx_or_free: (keys.len() - 1) as u32,
-                    });
-                } else {
-                    slots.push(Slot {
-                        version: serde_slot.version,
-                        idx_or_free: next_free as u32,
-                    });
-                    next_free = i;
-                }
-            }
-
-            Ok(DenseSlotMap {
-                keys,
-                values,
-                slots,
-                free_head: next_free as u32,
-            })
-        }
-    }
-}

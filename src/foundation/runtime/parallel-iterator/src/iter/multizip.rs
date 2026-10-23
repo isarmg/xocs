@@ -1,4 +1,3 @@
-use super::plumbing::*;
 use super::*;
 
 /// `MultiZip` is an iterator that zips up a tuple of parallel iterators to

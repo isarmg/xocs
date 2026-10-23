@@ -42,10 +42,3 @@ package = "blog-sync-pinned-projection"
 optional = true
 path = "../thread-wait"
 package = "blog-sync-thread-wait"
-
-
-[target."cfg(loom)"]
-[lints.rust.unexpected_cfgs]
-level = "warn"
-priority = 0
-check-cfg = ["cfg(loom)", "cfg(feature, values(\"loom\", \"portable-atomic\"))"]

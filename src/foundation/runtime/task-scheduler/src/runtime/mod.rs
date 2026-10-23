@@ -426,10 +426,6 @@ cfg_io_driver_impl! {
     pub(crate) mod io;
 }
 
-cfg_process_driver! {
-    mod process;
-}
-
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub(crate) enum TimerFlavor {
@@ -597,11 +593,6 @@ cfg_rt! {
         }
     }
 
-    cfg_taskdump! {
-        pub mod dump;
-        pub use dump::Dump;
-    }
-
     mod task_hooks;
     pub(crate) use task_hooks::{TaskHooks, TaskCallback};
     cfg_unstable! {
@@ -621,7 +612,6 @@ cfg_rt! {
 
     mod id;
     pub use id::Id;
-
 
     /// Boundary value to prevent stack overflow caused by a large-sized
     /// Future being placed in the stack.

@@ -58,7 +58,3 @@ cfg_net_unix! {
     pub use unix::stream::UnixStream;
     pub use unix::socket::UnixSocket;
 }
-
-cfg_net_windows! {
-    pub mod windows;
-}

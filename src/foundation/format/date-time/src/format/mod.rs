@@ -18,7 +18,7 @@
 //! # Example
 //! ```
 //! # #[cfg(feature = "alloc")] {
-//! use chrono::{NaiveDateTime, TimeZone, Utc};
+//! use blog_format_date_time::{NaiveDateTime, TimeZone, Utc};
 //!
 //! let date_time = Utc.with_ymd_and_hms(2020, 11, 10, 0, 1, 32).unwrap();
 //!
@@ -28,7 +28,7 @@
 //! let parsed = NaiveDateTime::parse_from_str(&formatted, "%Y-%m-%d %H:%M:%S")?.and_utc();
 //! assert_eq!(parsed, date_time);
 //! # }
-//! # Ok::<(), chrono::ParseError>(())
+//! # Ok::<(), blog_format_date_time::ParseError>(())
 //! ```
 
 #[cfg(all(feature = "alloc", not(feature = "std"), not(test)))]
@@ -56,15 +56,15 @@ pub mod strftime;
 // not require `alloc`.
 pub(crate) mod locales;
 
-pub use formatting::SecondsFormat;
 pub(crate) use formatting::write_hundreds;
 #[cfg(feature = "alloc")]
 pub(crate) use formatting::write_rfc2822;
 #[cfg(any(feature = "alloc", feature = "serde"))]
 pub(crate) use formatting::write_rfc3339;
+pub use formatting::SecondsFormat;
 #[cfg(feature = "alloc")]
 #[allow(deprecated)]
-pub use formatting::{DelayedFormat, format, format_item};
+pub use formatting::{format, format_item, DelayedFormat};
 #[cfg(feature = "unstable-locales")]
 pub use locales::Locale;
 pub(crate) use parse::parse_rfc3339;
@@ -78,7 +78,6 @@ enum Void {}
 
 /// Padding characters for numeric items.
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Pad {
     /// No padding.
     None,
@@ -103,7 +102,6 @@ pub enum Pad {
 /// parsed with the same formatting items.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Numeric {
     /// Full Gregorian year (FW=4, PW=∞).
     /// May accept years before 1 BCE or after 9999 CE, given an initial sign (+/-).
@@ -172,20 +170,12 @@ impl fmt::Debug for InternalNumeric {
     }
 }
 
-#[cfg(feature = "defmt")]
-impl defmt::Format for InternalNumeric {
-    fn format(&self, f: defmt::Formatter) {
-        defmt::write!(f, "<InternalNumeric>")
-    }
-}
-
 /// Fixed-format item types.
 ///
 /// They have their own rules of formatting and parsing.
 /// Otherwise noted, they print in the specified cases but parse case-insensitively.
 #[non_exhaustive]
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Fixed {
     /// Abbreviated month names.
     ///
@@ -270,13 +260,11 @@ pub enum Fixed {
 
 /// An opaque type representing fixed-format item types for internal uses only.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct InternalFixed {
     val: InternalInternal,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 enum InternalInternal {
     /// Same as [`TimezoneOffsetColonZ`](#variant.TimezoneOffsetColonZ), but
     /// allows missing minutes (per [ISO 8601][iso8601]).
@@ -297,7 +285,6 @@ enum InternalInternal {
 
 /// Type for specifying the format of UTC offsets.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct OffsetFormat {
     /// See `OffsetPrecision`.
     pub precision: OffsetPrecision,
@@ -311,7 +298,6 @@ pub struct OffsetFormat {
 
 /// The precision of an offset from UTC formatting item.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum OffsetPrecision {
     /// Format offset from UTC as only hours. Not recommended, it is not uncommon for timezones to
     /// have an offset of 30 minutes, 15 minutes, etc.
@@ -333,7 +319,6 @@ pub enum OffsetPrecision {
 
 /// The separator between hours and minutes in an offset.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Colons {
     /// No separator
     None,
@@ -363,23 +348,6 @@ pub enum Item<'a> {
     Fixed(Fixed),
     /// Issues a formatting error. Used to signal an invalid format string.
     Error,
-}
-
-#[cfg(feature = "defmt")]
-impl<'a> defmt::Format for Item<'a> {
-    fn format(&self, f: defmt::Formatter) {
-        match self {
-            Item::Literal(v) => defmt::write!(f, "Literal {{ {} }}", v),
-            #[cfg(feature = "alloc")]
-            Item::OwnedLiteral(_) => {}
-            Item::Space(v) => defmt::write!(f, "Space {{ {}  }}", v),
-            #[cfg(feature = "alloc")]
-            Item::OwnedSpace(_) => {}
-            Item::Numeric(u, v) => defmt::write!(f, "Numeric {{ {}, {} }}", u, v),
-            Item::Fixed(v) => defmt::write!(f, "Fixed {{ {}  }}", v),
-            Item::Error => defmt::write!(f, "Error"),
-        }
-    }
 }
 
 const fn num(numeric: Numeric) -> Item<'static> {
@@ -420,7 +388,6 @@ impl Item<'_> {
 
 /// An error from the `parse` function.
 #[derive(Debug, Clone, PartialEq, Eq, Copy, Hash)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct ParseError(ParseErrorKind);
 
 impl ParseError {
@@ -433,7 +400,6 @@ impl ParseError {
 /// The category of parse error
 #[allow(clippy::manual_non_exhaustive)]
 #[derive(Debug, Clone, PartialEq, Eq, Copy, Hash)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum ParseErrorKind {
     /// Given field is out of permitted range.
     OutOfRange,
@@ -510,7 +476,7 @@ const BAD_FORMAT: ParseError = ParseError(ParseErrorKind::BadFormat);
 /// # Example
 ///
 /// ```
-/// use chrono::Weekday;
+/// use blog_format_date_time::Weekday;
 ///
 /// assert_eq!("Sunday".parse::<Weekday>(), Ok(Weekday::Sun));
 /// assert!("any day".parse::<Weekday>().is_err());
@@ -519,14 +485,14 @@ const BAD_FORMAT: ParseError = ParseError(ParseErrorKind::BadFormat);
 /// The parsing is case-insensitive.
 ///
 /// ```
-/// # use chrono::Weekday;
+/// # use blog_format_date_time::Weekday;
 /// assert_eq!("mON".parse::<Weekday>(), Ok(Weekday::Mon));
 /// ```
 ///
 /// Only the shortest form (e.g. `sun`) and the longest form (e.g. `sunday`) is accepted.
 ///
 /// ```
-/// # use chrono::Weekday;
+/// # use blog_format_date_time::Weekday;
 /// assert!("thurs".parse::<Weekday>().is_err());
 /// ```
 impl FromStr for Weekday {
@@ -546,7 +512,7 @@ impl FromStr for Weekday {
 /// # Example
 ///
 /// ```
-/// use chrono::Month;
+/// use blog_format_date_time::Month;
 ///
 /// assert_eq!("January".parse::<Month>(), Ok(Month::January));
 /// assert!("any day".parse::<Month>().is_err());
@@ -555,14 +521,14 @@ impl FromStr for Weekday {
 /// The parsing is case-insensitive.
 ///
 /// ```
-/// # use chrono::Month;
+/// # use blog_format_date_time::Month;
 /// assert_eq!("fEbruARy".parse::<Month>(), Ok(Month::February));
 /// ```
 ///
 /// Only the shortest form (e.g. `jan`) and the longest form (e.g. `january`) is accepted.
 ///
 /// ```
-/// # use chrono::Month;
+/// # use blog_format_date_time::Month;
 /// assert!("septem".parse::<Month>().is_err());
 /// assert!("Augustin".parse::<Month>().is_err());
 /// ```

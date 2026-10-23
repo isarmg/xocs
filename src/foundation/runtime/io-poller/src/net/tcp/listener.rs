@@ -31,8 +31,8 @@ use crate::{event, sys, Interest, Registry, Token};
 #[cfg_attr(not(feature = "os-poll"), doc = "```ignore")]
 /// # use std::error::Error;
 /// # fn main() -> Result<(), Box<dyn Error>> {
-/// use mio::{Events, Interest, Poll, Token};
-/// use mio::net::TcpListener;
+/// use blog_runtime_io_poller::{Events, Interest, Poll, Token};
+/// use blog_runtime_io_poller::net::TcpListener;
 /// use std::time::Duration;
 ///
 /// let mut listener = TcpListener::bind("127.0.0.1:34255".parse()?)?;

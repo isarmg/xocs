@@ -33,8 +33,6 @@ pub const DOUBLE_EXPONENT_BITS: u32 = 11;
 pub const DOUBLE_BIAS: i32 = 1023;
 pub const DOUBLE_POW5_INV_BITCOUNT: i32 = 125;
 pub const DOUBLE_POW5_BITCOUNT: i32 = 125;
-
-#[cfg_attr(feature = "no-panic", inline)]
 pub fn decimal_length17(v: u64) -> u32 {
     // This is slightly faster than a loop.
     // The average output length is 16.38 digits, so we check high-to-low.
@@ -86,8 +84,6 @@ pub struct FloatingDecimal64 {
     // inclusive, and can fit in i16 if needed.
     pub exponent: i32,
 }
-
-#[cfg_attr(feature = "no-panic", inline)]
 pub fn d2d(ieee_mantissa: u64, ieee_exponent: u32) -> FloatingDecimal64 {
     let (e2, m2) = if ieee_exponent == 0 {
         (

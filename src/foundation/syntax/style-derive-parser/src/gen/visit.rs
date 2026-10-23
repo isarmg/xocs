@@ -36,10 +36,7 @@ pub trait Visit<'ast> {
         visit_abi(self, i);
     }
     #[cfg(any(feature = "derive", feature = "full"))]
-    fn visit_angle_bracketed_generic_arguments(
-        &mut self,
-        i: &'ast AngleBracketedGenericArguments,
-    ) {
+    fn visit_angle_bracketed_generic_arguments(&mut self, i: &'ast AngleBracketedGenericArguments) {
         visit_angle_bracketed_generic_arguments(self, i);
     }
     #[cfg(feature = "full")]
@@ -497,10 +494,7 @@ pub trait Visit<'ast> {
         visit_nested_meta(self, i);
     }
     #[cfg(any(feature = "derive", feature = "full"))]
-    fn visit_parenthesized_generic_arguments(
-        &mut self,
-        i: &'ast ParenthesizedGenericArguments,
-    ) {
+    fn visit_parenthesized_generic_arguments(&mut self, i: &'ast ParenthesizedGenericArguments) {
         visit_parenthesized_generic_arguments(self, i);
     }
     #[cfg(feature = "full")]
@@ -789,8 +783,7 @@ where
 pub fn visit_angle_bracketed_generic_arguments<'ast, V>(
     v: &mut V,
     node: &'ast AngleBracketedGenericArguments,
-)
-where
+) where
     V: Visit<'ast> + ?Sized,
 {
     if let Some(it) = &node.colon2_token {
@@ -1213,8 +1206,6 @@ where
         Expr::Yield(_binding_0) => {
             full!(v.visit_expr_yield(_binding_0));
         }
-        #[cfg(syn_no_non_exhaustive)]
-        _ => unreachable!(),
     }
 }
 #[cfg(feature = "full")]
@@ -1902,8 +1893,6 @@ where
         ForeignItem::Verbatim(_binding_0) => {
             skip!(_binding_0);
         }
-        #[cfg(syn_no_non_exhaustive)]
-        _ => unreachable!(),
     }
 }
 #[cfg(feature = "full")]
@@ -1986,10 +1975,7 @@ where
     }
 }
 #[cfg(feature = "full")]
-pub fn visit_generic_method_argument<'ast, V>(
-    v: &mut V,
-    node: &'ast GenericMethodArgument,
-)
+pub fn visit_generic_method_argument<'ast, V>(v: &mut V, node: &'ast GenericMethodArgument)
 where
     V: Visit<'ast> + ?Sized,
 {
@@ -2068,8 +2054,6 @@ where
         ImplItem::Verbatim(_binding_0) => {
             skip!(_binding_0);
         }
-        #[cfg(syn_no_non_exhaustive)]
-        _ => unreachable!(),
     }
 }
 #[cfg(feature = "full")]
@@ -2204,8 +2188,6 @@ where
         Item::Verbatim(_binding_0) => {
             skip!(_binding_0);
         }
-        #[cfg(syn_no_non_exhaustive)]
-        _ => unreachable!(),
     }
 }
 #[cfg(feature = "full")]
@@ -2583,27 +2565,33 @@ where
 pub fn visit_lit_byte<'ast, V>(v: &mut V, node: &'ast LitByte)
 where
     V: Visit<'ast> + ?Sized,
-{}
+{
+}
 pub fn visit_lit_byte_str<'ast, V>(v: &mut V, node: &'ast LitByteStr)
 where
     V: Visit<'ast> + ?Sized,
-{}
+{
+}
 pub fn visit_lit_char<'ast, V>(v: &mut V, node: &'ast LitChar)
 where
     V: Visit<'ast> + ?Sized,
-{}
+{
+}
 pub fn visit_lit_float<'ast, V>(v: &mut V, node: &'ast LitFloat)
 where
     V: Visit<'ast> + ?Sized,
-{}
+{
+}
 pub fn visit_lit_int<'ast, V>(v: &mut V, node: &'ast LitInt)
 where
     V: Visit<'ast> + ?Sized,
-{}
+{
+}
 pub fn visit_lit_str<'ast, V>(v: &mut V, node: &'ast LitStr)
 where
     V: Visit<'ast> + ?Sized,
-{}
+{
+}
 #[cfg(feature = "full")]
 pub fn visit_local<'ast, V>(v: &mut V, node: &'ast Local)
 where
@@ -2736,8 +2724,7 @@ where
 pub fn visit_parenthesized_generic_arguments<'ast, V>(
     v: &mut V,
     node: &'ast ParenthesizedGenericArguments,
-)
-where
+) where
     V: Visit<'ast> + ?Sized,
 {
     tokens_helper(v, &node.paren_token.span);
@@ -2804,8 +2791,6 @@ where
         Pat::Wild(_binding_0) => {
             v.visit_pat_wild(_binding_0);
         }
-        #[cfg(syn_no_non_exhaustive)]
-        _ => unreachable!(),
     }
 }
 #[cfg(feature = "full")]
@@ -3191,7 +3176,8 @@ where
 pub fn visit_span<'ast, V>(v: &mut V, node: &Span)
 where
     V: Visit<'ast> + ?Sized,
-{}
+{
+}
 #[cfg(feature = "full")]
 pub fn visit_stmt<'ast, V>(v: &mut V, node: &'ast Stmt)
 where
@@ -3260,8 +3246,6 @@ where
         TraitItem::Verbatim(_binding_0) => {
             skip!(_binding_0);
         }
-        #[cfg(syn_no_non_exhaustive)]
-        _ => unreachable!(),
     }
 }
 #[cfg(feature = "full")]
@@ -3389,8 +3373,6 @@ where
         Type::Verbatim(_binding_0) => {
             skip!(_binding_0);
         }
-        #[cfg(syn_no_non_exhaustive)]
-        _ => unreachable!(),
     }
 }
 #[cfg(any(feature = "derive", feature = "full"))]

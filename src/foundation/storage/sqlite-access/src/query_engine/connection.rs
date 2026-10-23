@@ -1,7 +1,6 @@
 use crate::query_engine::database::{Database, HasStatementCache};
 use crate::query_engine::error::Error;
 
-use crate::query_engine::config;
 use crate::query_engine::sql_str::SqlSafeStr;
 use crate::query_engine::transaction::{Transaction, TransactionManager};
 use futures::future::BoxFuture;
@@ -269,13 +268,5 @@ pub trait ConnectOptions: 'static + Send + Sync + FromStr<Err = Error> + Debug +
     fn disable_statement_logging(self) -> Self {
         self.log_statements(LevelFilter::Off)
             .log_slow_statements(LevelFilter::Off, Duration::default())
-    }
-
-    #[doc(hidden)]
-    fn __unstable_apply_driver_config(
-        self,
-        _config: &config::drivers::Config,
-    ) -> crate::query_engine::Result<Self> {
-        Ok(self)
     }
 }

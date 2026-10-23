@@ -2771,7 +2771,7 @@ pub fn extract_programs<'a>(
     module: &mut Module,
     program_storage: &'a mut Vec<Vec<u8>>,
 ) -> Result<Vec<decode::Program<'a>>, Error> {
-    let my_version = wasm_bindgen_shared::version();
+    let my_version = wasm_bindgen_shared::SCHEMA_VERSION;
     assert!(program_storage.is_empty());
 
     while let Some(raw) = module.customs.remove_raw("__wasm_bindgen_unstable") {
@@ -2786,49 +2786,18 @@ pub fn extract_programs<'a>(
     for program in program_storage.iter() {
         let mut payload = &program[..];
         while let Some(data) = get_remaining(&mut payload) {
-            // Historical versions of wasm-bindgen have used JSON as the custom
-            // data section format. Newer versions, however, are using a custom
-            // serialization protocol that looks much more like the Wasm spec.
-            //
-            // We, however, want a sanity check to ensure that if we're running
-            // against the wrong wasm-bindgen we get a nicer error than an
-            // internal decode error. To that end we continue to verify a tiny
-            // bit of json at the beginning of each blob before moving to the
-            // next blob. This should keep us compatible with older wasm-bindgen
-            // instances as well as forward-compatible for now.
-            //
-            // Note, though, that as `wasm-pack` picks up steam it's hoped we
-            // can just delete this entirely. The `wasm-pack` project already
-            // manages versions for us, so we in theory should need this check
-            // less and less over time.
+            // Check the wire schema before interpreting the encoded program.
+            // A stale macro or builder must fail before adapter generation.
             if let Some(their_version) = verify_schema_matches(data)? {
                 let binary_path = match std::env::current_exe() {
                     Ok(path) => format!("\n               this binary path: {}", path.display()),
                     Err(_) => String::new(),
                 };
                 bail!(
-                    "it looks like the Rust project used to create this Wasm file was linked against
-version of wasm-bindgen that uses a different bindgen format than this binary:
-
-  rust Wasm file schema version: {their_version}
-     this binary schema version: {my_version}{binary_path}
-
-Currently the bindgen format is unstable enough that these two schema versions
-must exactly match. You can accomplish this by either updating this binary or
-the wasm-bindgen dependency in the Rust project.
-
-You should be able to update the wasm-bindgen dependency with:
-
-    cargo update -p wasm-bindgen --precise {my_version}
-
-don't forget to recompile your Wasm file! Alternatively, you can update the
-binary with:
-
-    cargo install -f wasm-bindgen-cli --version {their_version}
-
-if this warning fails to go away though and you're not sure what to do feel free
-to open an issue at https://github.com/wasm-bindgen/wasm-bindgen/issues!
-"
+                    "Browser binding schema mismatch:\n\n\
+                     Wasm module: {their_version}\n\
+                     Asset builder: {my_version}{binary_path}\n\n\
+                     Rebuild the browser Wasm and blog-assets from the same repository source."
                 );
             }
             let next = get_remaining(&mut payload).unwrap();
@@ -2906,16 +2875,7 @@ fn verify_schema_matches(data: &[u8]) -> Result<Option<&str>, Error> {
     if their_schema_version == wasm_bindgen_shared::SCHEMA_VERSION {
         return Ok(None);
     }
-    let needle = "\"version\":\"";
-    let rest = match data.find(needle) {
-        Some(i) => &data[i + needle.len()..],
-        None => bad!(),
-    };
-    let their_version = match rest.find('"') {
-        Some(i) => &rest[..i],
-        None => bad!(),
-    };
-    Ok(Some(their_version))
+    Ok(Some(their_schema_version))
 }
 
 fn concatenate_comments(comments: &[&str]) -> String {

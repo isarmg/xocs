@@ -41,9 +41,6 @@ pub use hybrid_array as array;
 use array::{Array, ArraySize, typenum::Sum};
 use core::{fmt, mem::MaybeUninit, ptr, slice};
 
-#[cfg(feature = "zeroize")]
-use zeroize::{Zeroize, ZeroizeOnDrop};
-
 mod read;
 mod sealed;
 
@@ -416,26 +413,6 @@ impl<BS: BlockSizes> BlockBuffer<BS, Eager> {
         self.digest_pad(0x80, &data_len.to_be_bytes(), compress);
     }
 }
-
-#[cfg(feature = "zeroize")]
-impl<BS: BlockSizes, K: BufferKind> Zeroize for BlockBuffer<BS, K> {
-    #[inline]
-    fn zeroize(&mut self) {
-        self.buffer.zeroize();
-        self.pos.zeroize();
-    }
-}
-
-impl<BS: BlockSizes, K: BufferKind> Drop for BlockBuffer<BS, K> {
-    #[inline]
-    fn drop(&mut self) {
-        #[cfg(feature = "zeroize")]
-        self.zeroize();
-    }
-}
-
-#[cfg(feature = "zeroize")]
-impl<BS: BlockSizes, K: BufferKind> ZeroizeOnDrop for BlockBuffer<BS, K> {}
 
 /// Resets the referenced buffer on drop.
 struct ResetGuard<'a, BS: BlockSizes, K: BufferKind>(&'a mut BlockBuffer<BS, K>);

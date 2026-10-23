@@ -6,8 +6,7 @@ use crate::reactivity::{
     owner::Owner,
 };
 use futures::StreamExt;
-#[cfg(any())]
-use std::sync::Mutex;
+
 use std::{
     fmt::Debug,
     future::{Future, IntoFuture},
@@ -26,8 +25,6 @@ use std::{
 /// Unless you are implementing a rendering framework, or require one of these two characteristics,
 /// it is unlikely you will use render effects directly.
 ///
-/// Like an [`Effect`](super::Effect), a render effect runs only with the `effects` feature
-/// enabled.
 #[must_use = "A RenderEffect will be canceled when it is dropped. Creating a \
               RenderEffect that is not stored in some other data structure or \
               leaked will drop it immediately, and it will not react to \
@@ -48,38 +45,13 @@ impl<T> Debug for RenderEffect<T> {
     }
 }
 
-#[cfg(any())]
-type CurrentHotPtr = Box<dyn Fn() -> Option<subsecond::HotFnPtr> + Send + Sync>;
-
 impl<T> RenderEffect<T>
 where
     T: 'static,
 {
     /// Creates a new render effect, which immediately runs `fun`.
     pub fn new(fun: impl FnMut(Option<T>) -> T + 'static) -> Self {
-        #[cfg(any())]
-        let (hot_fn_ptr, fun) = {
-            let fun = Arc::new(Mutex::new(subsecond::HotFn::current(fun)));
-            (
-                {
-                    let fun = Arc::downgrade(&fun);
-                    let wrapped = crate::thread_bound::SendWrapper::new(move || {
-                        fun.upgrade().map(|n| n.lock().or_poisoned().ptr_address())
-                    });
-                    // it's not redundant, it's due to the SendWrapper deref
-                    #[allow(clippy::redundant_closure)]
-                    Box::new(move || wrapped())
-                },
-                move |prev| fun.lock().or_poisoned().call((prev,)),
-            )
-        };
-
-        Self::new_with_value_erased(
-            Box::new(fun),
-            None,
-            #[cfg(any())]
-            hot_fn_ptr,
-        )
+        Self::new_with_value_erased(Box::new(fun), None)
     }
 
     /// Creates a new render effect with an initial value.
@@ -87,29 +59,7 @@ where
         fun: impl FnMut(Option<T>) -> T + 'static,
         initial_value: Option<T>,
     ) -> Self {
-        #[cfg(any())]
-        let (hot_fn_ptr, fun) = {
-            let fun = Arc::new(Mutex::new(subsecond::HotFn::current(fun)));
-            (
-                {
-                    let fun = Arc::downgrade(&fun);
-                    let wrapped = crate::thread_bound::SendWrapper::new(move || {
-                        fun.upgrade().map(|n| n.lock().or_poisoned().ptr_address())
-                    });
-                    // it's not redundant, it's due to the SendWrapper deref
-                    #[allow(clippy::redundant_closure)]
-                    Box::new(move || wrapped())
-                },
-                move |prev| fun.lock().or_poisoned().call((prev,)),
-            )
-        };
-
-        Self::new_with_value_erased(
-            Box::new(fun),
-            initial_value,
-            #[cfg(any())]
-            hot_fn_ptr,
-        )
+        Self::new_with_value_erased(Box::new(fun), initial_value)
     }
 
     /// Creates a new render effect, which immediately runs `fun`.
@@ -117,11 +67,6 @@ where
         fun: impl FnMut(Option<T>) -> T + 'static,
         value: impl IntoFuture<Output = T> + 'static,
     ) -> Self {
-        #[cfg(any())]
-        let mut fun = subsecond::HotFn::current(fun);
-        #[cfg(any())]
-        let fun = move |prev| fun.call((prev,));
-
         Self::new_with_async_value_erased(Box::new(fun), Box::pin(value.into_future())).await
     }
 
@@ -130,9 +75,6 @@ where
         initial_value: Option<T>,
         // this argument can be used to invalidate individual effects in the future
         // in present experiments, I have found that it is not actually granular enough to make a difference
-        #[allow(unused)]
-        #[cfg(any())]
-        hot_fn_ptr: CurrentHotPtr,
     ) -> Self {
         // codegen optimisation:
         fn prep() -> (
@@ -154,57 +96,8 @@ where
 
         let value = Arc::new(RwLock::new(None::<T>));
 
-        #[cfg(any())]
-        {
-            let _ = initial_value;
-            let _ = owner;
-            let _ = &mut rx;
-            let _ = fun;
-        }
-
         {
             let subscriber = inner.to_any_subscriber();
-
-            #[cfg(any())]
-            let mut fun = {
-                use crate::reactivity::graph::ReactiveNode;
-                use rustc_hash::FxHashMap;
-                use std::sync::{Arc, LazyLock, Mutex};
-                use subsecond::HotFnPtr;
-
-                static HOT_RELOAD_SUBSCRIBERS: LazyLock<
-                    Mutex<FxHashMap<AnySubscriber, (HotFnPtr, CurrentHotPtr)>>,
-                > = LazyLock::new(|| {
-                    subsecond::register_handler(Arc::new(|| {
-                        HOT_RELOAD_SUBSCRIBERS.lock().or_poisoned().retain(
-                            |subscriber, (prev_ptr, hot_fn_ptr)| match hot_fn_ptr() {
-                                None => false,
-                                Some(curr_hot_ptr) => {
-                                    if curr_hot_ptr != *prev_ptr {
-                                        crate::reactivity::log_warning(format_args!(
-                                            "{prev_ptr:?} <> \
-                                                 {curr_hot_ptr:?}",
-                                        ));
-                                        *prev_ptr = curr_hot_ptr;
-
-                                        subscriber.mark_dirty();
-                                    }
-                                    true
-                                }
-                            },
-                        );
-                    }));
-                    Default::default()
-                });
-
-                let mut fun = subsecond::HotFn::current(fun);
-                let initial_ptr = hot_fn_ptr().unwrap();
-                HOT_RELOAD_SUBSCRIBERS
-                    .lock()
-                    .or_poisoned()
-                    .insert(subscriber.clone(), (initial_ptr, hot_fn_ptr));
-                move |prev| fun.call((prev,))
-            };
 
             *value.write().or_poisoned() =
                 Some(owner.with(|| subscriber.with_observer(|| fun(initial_value))));
@@ -256,14 +149,6 @@ where
 
         let value = Arc::new(RwLock::new(None::<T>));
 
-        #[cfg(any())]
-        {
-            drop(initial_value);
-            let _ = owner;
-            let _ = &mut rx;
-            let _ = &mut fun;
-        }
-
         {
             use crate::reactivity::computed::ScopedFuture;
 
@@ -312,13 +197,8 @@ impl<T> RenderEffect<T>
 where
     T: Send + Sync + 'static,
 {
-    /// Creates a render effect that will run whether the `effects` feature is enabled or not.
-    pub fn new_isomorphic(fun: impl FnMut(Option<T>) -> T + Send + Sync + 'static) -> Self {
-        #[cfg(any())]
-        let mut fun = subsecond::HotFn::current(fun);
-        #[cfg(any())]
-        let fun = move |prev| fun.call((prev,));
-
+    /// Creates a render effect whose updates may run on any executor thread.
+    pub fn new_sync(fun: impl FnMut(Option<T>) -> T + Send + Sync + 'static) -> Self {
         fn erased<T: Send + Sync + 'static>(
             mut fun: Box<dyn FnMut(Option<T>) -> T + Send + Sync + 'static>,
         ) -> RenderEffect<T> {

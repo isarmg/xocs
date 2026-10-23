@@ -24,78 +24,19 @@ use crate::query_engine::type_info::TypeInfo;
 
 mod non_zero;
 
-#[cfg(feature = "bstr")]
-#[cfg_attr(docsrs, doc(cfg(feature = "bstr")))]
-pub mod bstr;
-
 #[cfg(feature = "json")]
-#[cfg_attr(docsrs, doc(cfg(feature = "json")))]
 mod json;
-
 mod text;
-
-#[cfg(feature = "uuid")]
-#[cfg_attr(docsrs, doc(cfg(feature = "uuid")))]
-#[doc(no_inline)]
-pub use uuid::{self, Uuid};
-
-#[cfg(feature = "chrono")]
-#[cfg_attr(docsrs, doc(cfg(feature = "chrono")))]
-pub mod chrono {
-    #[doc(no_inline)]
-    pub use chrono::{
-        DateTime, FixedOffset, Local, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc,
-    };
-}
-
-#[cfg(feature = "bit-vec")]
-#[cfg_attr(docsrs, doc(cfg(feature = "bit-vec")))]
-#[doc(no_inline)]
-pub use bit_vec::BitVec;
-
-#[cfg(feature = "time")]
-#[cfg_attr(docsrs, doc(cfg(feature = "time")))]
-pub mod time {
-    #[doc(no_inline)]
-    pub use time::{Date, OffsetDateTime, PrimitiveDateTime, Time, UtcOffset};
-}
-
-#[cfg(feature = "bigdecimal")]
-#[cfg_attr(docsrs, doc(cfg(feature = "bigdecimal")))]
-#[doc(no_inline)]
-pub use bigdecimal::BigDecimal;
-#[cfg(feature = "rust_decimal")]
-#[cfg_attr(docsrs, doc(cfg(feature = "rust_decimal")))]
-#[doc(no_inline)]
-pub use rust_decimal::Decimal;
-
-#[cfg(feature = "ipnet")]
-#[cfg_attr(docsrs, doc(cfg(feature = "ipnet")))]
-pub mod ipnet {
-    #[doc(no_inline)]
-    pub use ipnet::{IpNet, Ipv4Net, Ipv6Net};
-}
-
-#[cfg(feature = "ipnetwork")]
-#[cfg_attr(docsrs, doc(cfg(feature = "ipnetwork")))]
-pub mod ipnetwork {
-    #[doc(no_inline)]
-    pub use ipnetwork::{IpNetwork, Ipv4Network, Ipv6Network};
-}
-
-#[cfg(feature = "mac_address")]
-#[cfg_attr(docsrs, doc(cfg(feature = "mac_address")))]
-pub mod mac_address {
-    #[doc(no_inline)]
-    pub use mac_address::MacAddress;
-}
-
 #[cfg(feature = "json")]
 pub use json::{Json, JsonRawValue, JsonValue};
 pub use text::Text;
 
-#[cfg(feature = "bstr")]
-pub use bstr::{BStr, BString};
+#[cfg(feature = "chrono")]
+pub mod chrono {
+    pub use chrono::{
+        DateTime, FixedOffset, Local, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc,
+    };
+}
 
 /// Indicates that a SQL type is supported for a database.
 ///

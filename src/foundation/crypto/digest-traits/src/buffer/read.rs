@@ -178,17 +178,6 @@ impl<BS: BlockSizes> ReadBuffer<BS> {
     }
 }
 
-#[cfg(feature = "zeroize")]
-impl<BS: BlockSizes> Drop for ReadBuffer<BS> {
-    fn drop(&mut self) {
-        use zeroize::Zeroize;
-        self.buffer.zeroize();
-    }
-}
-
-#[cfg(feature = "zeroize")]
-impl<BS: BlockSizes> zeroize::ZeroizeOnDrop for ReadBuffer<BS> {}
-
 /// Resets the referenced buffer on drop.
 struct ResetGuard<'a, BS: BlockSizes>(&'a mut ReadBuffer<BS>);
 

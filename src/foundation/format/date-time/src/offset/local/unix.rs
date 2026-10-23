@@ -24,7 +24,10 @@ pub(super) fn offset_from_local_datetime(local: &NaiveDateTime) -> MappedLocalTi
 
 fn offset(d: &NaiveDateTime, local: bool) -> MappedLocalTime<FixedOffset> {
     TZ_INFO.with(|maybe_cache| {
-        maybe_cache.borrow_mut().get_or_insert_with(Cache::default).offset(*d, local)
+        maybe_cache
+            .borrow_mut()
+            .get_or_insert_with(Cache::default)
+            .offset(*d, local)
     })
 }
 
@@ -58,7 +61,9 @@ impl Source {
                 Err(_) => {
                     // as above, now() should be a better default than some constant
                     // TODO: see if we can improve caching in the case where the fallback is a valid timezone
-                    Source::LocalTime { mtime: SystemTime::now() }
+                    Source::LocalTime {
+                        mtime: SystemTime::now(),
+                    }
                 }
             },
         }
@@ -71,18 +76,11 @@ struct Cache {
     last_checked: SystemTime,
 }
 
-#[cfg(target_os = "aix")]
-const TZDB_LOCATION: &str = "/usr/share/lib/zoneinfo";
-
-#[cfg(not(any(target_os = "android", target_os = "aix", target_env = "ohos")))]
 const TZDB_LOCATION: &str = "/usr/share/zoneinfo";
 
 fn fallback_timezone() -> Option<TimeZone> {
     let tz_name = iana_time_zone::get_timezone().ok()?;
-    #[cfg(not(any(target_os = "android", target_env = "ohos")))]
     let bytes = fs::read(format!("{TZDB_LOCATION}/{tz_name}")).ok()?;
-    #[cfg(any(target_os = "android", target_env = "ohos"))]
-    let bytes = crate::offset::local::tz_data::for_zone(&tz_name).ok()??;
     TimeZone::from_tz_data(&bytes).ok()
 }
 
@@ -100,7 +98,10 @@ impl Default for Cache {
 }
 
 fn current_zone(var: Option<&str>) -> TimeZone {
-    TimeZone::local(var).ok().or_else(fallback_timezone).unwrap_or_else(TimeZone::utc)
+    TimeZone::local(var)
+        .ok()
+        .or_else(fallback_timezone)
+        .unwrap_or_else(TimeZone::utc)
 }
 
 impl Cache {

@@ -1,5 +1,5 @@
 //! Regression contracts for the browser kernel after its libraries became modules.
-use blog_interface::{html_escaping, prelude::*, slots::SlotMap};
+use blog_interface::{prelude::*, slots::SlotMap};
 
 #[test]
 fn reused_slots_never_resurrect_a_disposed_key() {
@@ -165,19 +165,6 @@ fn new_owners_inherit_the_current_parents_pause_state() {
 }
 
 #[test]
-fn escaping_keeps_text_and_quoted_attribute_boundaries() {
-    let input = "<script data-x=\"'&\">";
-    assert_eq!(
-        html_escaping::encode_text(input),
-        "&lt;script data-x=\"'&amp;\"&gt;"
-    );
-    assert_eq!(
-        html_escaping::encode_double_quoted_attribute(input),
-        "&lt;script data-x=&quot;'&amp;&quot;&gt;"
-    );
-}
-
-#[test]
 fn lazy_groups_keep_equal_keys_and_buffer_unconsumed_previous_groups() {
     use blog_interface::iterators::Itertools;
     let grouped = [1, 1, 2, 2, 1].into_iter().chunk_by(|value| *value);
@@ -194,37 +181,79 @@ fn lazy_groups_keep_equal_keys_and_buffer_unconsumed_previous_groups() {
 }
 
 #[test]
-fn tuple_template_class_and_style_skip_empty_fragments() {
-    use blog_interface::tachys::view::{Position, ToTemplate};
-    struct Empty;
-    struct First;
-    struct Last;
-    macro_rules! fragment {
-        ($name:ident, $class:literal, $style:literal) => {
-            impl ToTemplate for $name {
-                const CLASS: &'static str = $class;
-                const STYLE: &'static str = $style;
-                fn to_template(
-                    _: &mut String,
-                    _: &mut String,
-                    _: &mut String,
-                    _: &mut String,
-                    _: &mut Position,
-                ) {
-                }
-            }
-        };
+fn erased_render_only_views_retain_state_across_updates_and_drop_it_once() {
+    use blog_interface::view_tree::{
+        renderer::types::{Element, Node},
+        view::{DomView, Mountable, Render, any_view::IntoAny},
+    };
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
+
+    // A renderable resource has no element attributes. Erasing it must not
+    // require an attribute adapter or rebuild its retained resource on update.
+    struct ResourceView {
+        value: usize,
+        current: Arc<AtomicUsize>,
+        builds: Arc<AtomicUsize>,
+        drops: Arc<AtomicUsize>,
     }
-    fragment!(Empty, "", "");
-    fragment!(First, "red", "color:red");
-    fragment!(Last, "selected", "display:block");
-    type Mixed = (Empty, First, Empty, Last, Empty);
-    assert_eq!(Mixed::CLASS, "red selected");
-    assert_eq!(Mixed::STYLE, "color:red;display:block");
-    type Blank = (Empty, Empty);
-    assert_eq!(Blank::CLASS, "");
-    assert_eq!(Blank::STYLE, "");
-    type Single = (Empty, First, Empty);
-    assert_eq!(Single::CLASS, "red");
-    assert_eq!(Single::STYLE, "color:red");
+    struct ResourceState {
+        current: Arc<AtomicUsize>,
+        drops: Arc<AtomicUsize>,
+    }
+    impl Drop for ResourceState {
+        fn drop(&mut self) {
+            self.drops.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+    impl Mountable for ResourceState {
+        fn unmount(&mut self) {}
+        fn mount(&mut self, _: &Element, _: Option<&Node>) {}
+        fn insert_before_this(&self, _: &mut dyn Mountable) -> bool {
+            false
+        }
+        fn elements(&self) -> Vec<Element> {
+            Vec::new()
+        }
+    }
+    impl Render for ResourceView {
+        type State = ResourceState;
+        fn build(self) -> Self::State {
+            self.builds.fetch_add(1, Ordering::Relaxed);
+            self.current.store(self.value, Ordering::Relaxed);
+            ResourceState {
+                current: self.current,
+                drops: self.drops,
+            }
+        }
+        fn rebuild(self, state: &mut Self::State) {
+            state.current.store(self.value, Ordering::Relaxed);
+        }
+    }
+    impl DomView for ResourceView {
+        type Owned = Self;
+        fn into_owned(self) -> Self {
+            self
+        }
+    }
+
+    let current = Arc::new(AtomicUsize::new(0));
+    let builds = Arc::new(AtomicUsize::new(0));
+    let drops = Arc::new(AtomicUsize::new(0));
+    let view = |value| ResourceView {
+        value,
+        current: current.clone(),
+        builds: builds.clone(),
+        drops: drops.clone(),
+    };
+    let mut state = view(1).into_view().into_any().build();
+    assert_eq!(current.load(Ordering::Relaxed), 1);
+    view(2).into_view().into_any().rebuild(&mut state);
+    assert_eq!(current.load(Ordering::Relaxed), 2);
+    assert_eq!(builds.load(Ordering::Relaxed), 1);
+    assert_eq!(drops.load(Ordering::Relaxed), 0);
+    drop(state);
+    assert_eq!(drops.load(Ordering::Relaxed), 1);
 }

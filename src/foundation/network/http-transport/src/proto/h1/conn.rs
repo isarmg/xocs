@@ -70,8 +70,6 @@ where
                 #[cfg(feature = "server")]
                 timer: Time::Empty,
                 preserve_header_case: false,
-                #[cfg(feature = "ffi")]
-                preserve_header_order: false,
                 title_case_headers: false,
                 h09_responses: false,
                 #[cfg(feature = "client")]
@@ -126,11 +124,6 @@ where
 
     pub(crate) fn set_preserve_header_case(&mut self) {
         self.state.preserve_header_case = true;
-    }
-
-    #[cfg(feature = "ffi")]
-    pub(crate) fn set_preserve_header_order(&mut self) {
-        self.state.preserve_header_order = true;
     }
 
     #[cfg(feature = "client")]
@@ -255,8 +248,6 @@ where
                 h1_max_headers: self.state.h1_max_headers,
                 h1_max_header_size: self.state.h1_max_header_size,
                 preserve_header_case: self.state.preserve_header_case,
-                #[cfg(feature = "ffi")]
-                preserve_header_order: self.state.preserve_header_order,
                 h09_responses: self.state.h09_responses,
                 #[cfg(feature = "client")]
                 on_informational: &mut self.state.on_informational,
@@ -971,8 +962,6 @@ struct State {
     #[cfg(feature = "server")]
     timer: Time,
     preserve_header_case: bool,
-    #[cfg(feature = "ffi")]
-    preserve_header_order: bool,
     title_case_headers: bool,
     h09_responses: bool,
     /// If set, called with each 1xx informational response received for

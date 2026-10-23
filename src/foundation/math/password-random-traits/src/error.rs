@@ -11,18 +11,26 @@
 use core::fmt;
 use core::num::NonZeroU32;
 
-#[cfg(feature = "std")] use std::boxed::Box;
+#[cfg(feature = "std")]
+use std::boxed::Box;
 
 /// Error type of random number generators
 ///
 /// In order to be compatible with `std` and `no_std`, this type has two
 /// possible implementations: with `std` a boxed `Error` trait object is stored,
-/// while with `no_std` we merely store an error code.
+/// while `no_std` stores numeric application errors or the complete system entropy error.
 pub struct Error {
     #[cfg(feature = "std")]
     inner: Box<dyn std::error::Error + Send + Sync + 'static>,
     #[cfg(not(feature = "std"))]
-    code: NonZeroU32,
+    inner: NoStdError,
+}
+
+#[cfg(not(feature = "std"))]
+enum NoStdError {
+    Code(NonZeroU32),
+    #[cfg(feature = "getrandom")]
+    Entropy(getrandom::Error),
 }
 
 impl Error {
@@ -32,13 +40,11 @@ impl Error {
     /// This has a fixed value of `(1 << 31) + (1 << 30) = 0xC000_0000`,
     /// therefore the number of values available for custom codes is `1 << 30`.
     ///
-    /// This is identical to [`getrandom::Error::CUSTOM_START`](https://docs.rs/getrandom/latest/getrandom/struct.Error.html#associatedconstant.CUSTOM_START).
     pub const CUSTOM_START: u32 = (1 << 31) + (1 << 30);
     /// Codes below this point represent OS Errors (i.e. positive i32 values).
     /// Codes at or above this point, but below [`Error::CUSTOM_START`] are
     /// reserved for use by the `rand` and `getrandom` crates.
     ///
-    /// This is identical to [`getrandom::Error::INTERNAL_START`](https://docs.rs/getrandom/latest/getrandom/struct.Error.html#associatedconstant.INTERNAL_START).
     pub const INTERNAL_START: u32 = 1 << 31;
 
     /// Construct from any type supporting `std::error::Error`
@@ -47,7 +53,7 @@ impl Error {
     ///
     /// See also `From<NonZeroU32>`, which is available with and without `std`.
     #[cfg(feature = "std")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     #[inline]
     pub fn new<E>(err: E) -> Self
     where
@@ -61,7 +67,7 @@ impl Error {
     /// When configured with `std`, this is a trivial operation and never
     /// panics. Without `std`, this method is simply unavailable.
     #[cfg(feature = "std")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     #[inline]
     pub fn inner(&self) -> &(dyn std::error::Error + Send + Sync + 'static) {
         &*self.inner
@@ -72,7 +78,7 @@ impl Error {
     /// When configured with `std`, this is a trivial operation and never
     /// panics. Without `std`, this method is simply unavailable.
     #[cfg(feature = "std")]
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "std")))]
+    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     #[inline]
     pub fn take_inner(self) -> Box<dyn std::error::Error + Send + Sync + 'static> {
         self.inner
@@ -90,6 +96,14 @@ impl Error {
             if let Some(e) = self.inner.downcast_ref::<std::io::Error>() {
                 return e.raw_os_error();
             }
+            #[cfg(feature = "getrandom")]
+            if let Some(e) = self.inner.downcast_ref::<getrandom::Error>() {
+                return e.raw_os_error();
+            }
+        }
+        #[cfg(all(feature = "getrandom", not(feature = "std")))]
+        if let NoStdError::Entropy(error) = &self.inner {
+            return error.raw_os_error();
         }
         match self.code() {
             Some(code) if u32::from(code) < Self::INTERNAL_START => Some(u32::from(code) as i32),
@@ -100,8 +114,8 @@ impl Error {
     /// Retrieve the error code, if any.
     ///
     /// If this `Error` was constructed via `From<NonZeroU32>`, then this method
-    /// will return this `NonZeroU32` code (for `no_std` this is always the
-    /// case). Otherwise, this method will return `None`.
+    /// will return this `NonZeroU32` code. System entropy and other wrapped
+    /// errors return `None`; use `raw_os_error()` to inspect their OS error.
     #[inline]
     pub fn code(&self) -> Option<NonZeroU32> {
         #[cfg(feature = "std")]
@@ -110,7 +124,11 @@ impl Error {
         }
         #[cfg(not(feature = "std"))]
         {
-            Some(self.code)
+            match &self.inner {
+                NoStdError::Code(code) => Some(*code),
+                #[cfg(feature = "getrandom")]
+                NoStdError::Entropy(_) => None,
+            }
         }
     }
 }
@@ -121,13 +139,11 @@ impl fmt::Debug for Error {
         {
             write!(f, "Error {{ inner: {:?} }}", self.inner)
         }
-        #[cfg(all(feature = "getrandom", not(feature = "std")))]
-        {
-            getrandom::Error::from(self.code).fmt(f)
-        }
-        #[cfg(not(feature = "getrandom"))]
-        {
-            write!(f, "Error {{ code: {} }}", self.code)
+        #[cfg(not(feature = "std"))]
+        match &self.inner {
+            NoStdError::Code(code) => f.debug_struct("Error").field("code", code).finish(),
+            #[cfg(feature = "getrandom")]
+            NoStdError::Entropy(error) => fmt::Debug::fmt(error, f),
         }
     }
 }
@@ -138,13 +154,11 @@ impl fmt::Display for Error {
         {
             write!(f, "{}", self.inner)
         }
-        #[cfg(all(feature = "getrandom", not(feature = "std")))]
-        {
-            getrandom::Error::from(self.code).fmt(f)
-        }
-        #[cfg(not(feature = "getrandom"))]
-        {
-            write!(f, "error code {}", self.code)
+        #[cfg(not(feature = "std"))]
+        match &self.inner {
+            NoStdError::Code(code) => write!(f, "error code {code}"),
+            #[cfg(feature = "getrandom")]
+            NoStdError::Entropy(error) => fmt::Display::fmt(error, f),
         }
     }
 }
@@ -160,7 +174,9 @@ impl From<NonZeroU32> for Error {
         }
         #[cfg(not(feature = "std"))]
         {
-            Error { code }
+            Error {
+                inner: NoStdError::Code(code),
+            }
         }
     }
 }
@@ -177,7 +193,9 @@ impl From<getrandom::Error> for Error {
         }
         #[cfg(not(feature = "std"))]
         {
-            Error { code: error.code() }
+            Error {
+                inner: NoStdError::Entropy(error),
+            }
         }
     }
 }
@@ -186,7 +204,7 @@ impl From<getrandom::Error> for Error {
 impl std::error::Error for Error {
     #[inline]
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        self.inner.source()
+        Some(&*self.inner)
     }
 }
 
@@ -218,11 +236,29 @@ impl std::error::Error for ErrorCode {}
 
 #[cfg(test)]
 mod test {
+    use super::*;
+    #[cfg(feature = "std")]
+    use std::string::ToString;
+
+    #[test]
+    fn numeric_application_error_preserves_code() {
+        let code = NonZeroU32::new(13).unwrap();
+        let error = Error::from(code);
+        assert_eq!(error.code(), Some(code));
+        assert_eq!(error.raw_os_error(), Some(13));
+    }
+
     #[cfg(feature = "getrandom")]
     #[test]
-    fn test_error_codes() {
-        // Make sure the values are the same as in `getrandom`.
-        assert_eq!(super::Error::CUSTOM_START, getrandom::Error::CUSTOM_START);
-        assert_eq!(super::Error::INTERNAL_START, getrandom::Error::INTERNAL_START);
+    fn entropy_failure_retains_its_error_instead_of_a_legacy_numeric_code() {
+        let source = getrandom::Error::UNEXPECTED;
+        let error = Error::from(source);
+        assert_eq!(error.code(), None);
+        assert_eq!(error.raw_os_error(), source.raw_os_error());
+        #[cfg(feature = "std")]
+        {
+            assert_eq!(error.to_string(), source.to_string());
+            assert!(std::error::Error::source(&error).is_some());
+        }
     }
 }

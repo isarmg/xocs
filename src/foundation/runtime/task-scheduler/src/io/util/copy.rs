@@ -87,11 +87,10 @@ impl CopyBuffer {
             feature = "fs",
             feature = "io-std",
             feature = "net",
-            feature = "process",
             feature = "rt",
             feature = "signal",
             feature = "sync",
-            feature = "time",
+            feature = "time"
         ))]
         // Keep track of task budget
         let coop = ready!(crate::task::coop::poll_proceed(cx));
@@ -105,11 +104,10 @@ impl CopyBuffer {
                             feature = "fs",
                             feature = "io-std",
                             feature = "net",
-                            feature = "process",
                             feature = "rt",
                             feature = "signal",
                             feature = "sync",
-                            feature = "time",
+                            feature = "time"
                         ))]
                         coop.made_progress();
                     }
@@ -118,11 +116,10 @@ impl CopyBuffer {
                             feature = "fs",
                             feature = "io-std",
                             feature = "net",
-                            feature = "process",
                             feature = "rt",
                             feature = "signal",
                             feature = "sync",
-                            feature = "time",
+                            feature = "time"
                         ))]
                         coop.made_progress();
                         return Poll::Ready(Err(err));
@@ -139,11 +136,10 @@ impl CopyBuffer {
                                     feature = "fs",
                                     feature = "io-std",
                                     feature = "net",
-                                    feature = "process",
                                     feature = "rt",
                                     feature = "signal",
                                     feature = "sync",
-                                    feature = "time",
+                                    feature = "time"
                                 ))]
                                 coop.made_progress();
                                 self.need_flush = false;
@@ -162,11 +158,10 @@ impl CopyBuffer {
                     feature = "fs",
                     feature = "io-std",
                     feature = "net",
-                    feature = "process",
                     feature = "rt",
                     feature = "signal",
                     feature = "sync",
-                    feature = "time",
+                    feature = "time"
                 ))]
                 coop.made_progress();
                 if i == 0 {
@@ -201,11 +196,10 @@ impl CopyBuffer {
                     feature = "fs",
                     feature = "io-std",
                     feature = "net",
-                    feature = "process",
                     feature = "rt",
                     feature = "signal",
                     feature = "sync",
-                    feature = "time",
+                    feature = "time"
                 ))]
                 coop.made_progress();
                 return Poll::Ready(Ok(self.amt));

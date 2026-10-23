@@ -8,37 +8,9 @@ where
     V: InnerHtmlValue + 'static,
     V::State: 'static,
 {
-    type AsyncOutput = V::AsyncOutput;
     type State = RenderEffect<V::State>;
     type Cloneable = SharedReactiveFunction<V>;
     type CloneableOwned = SharedReactiveFunction<V>;
-
-    fn html_len(&self) -> usize {
-        0
-    }
-
-    fn to_html(mut self, buf: &mut String) {
-        let value = self.invoke();
-        value.to_html(buf);
-    }
-
-    fn to_template(_buf: &mut String) {}
-
-    fn hydrate<const FROM_SERVER: bool>(
-        mut self,
-        el: &crate::view_tree::renderer::types::Element,
-    ) -> Self::State {
-        let el = el.to_owned();
-        RenderEffect::new(move |prev| {
-            let value = self.invoke();
-            if let Some(mut state) = prev {
-                value.rebuild(&mut state);
-                state
-            } else {
-                value.hydrate::<FROM_SERVER>(&el)
-            }
-        })
-    }
 
     fn build(mut self, el: &crate::view_tree::renderer::types::Element) -> Self::State {
         let el = el.to_owned();
@@ -76,14 +48,6 @@ where
     fn into_cloneable_owned(self) -> Self::CloneableOwned {
         self.into_shared()
     }
-
-    fn dry_resolve(&mut self) {
-        self.invoke();
-    }
-
-    async fn resolve(mut self) -> Self::AsyncOutput {
-        self.invoke().resolve().await
-    }
 }
 
 macro_rules! inner_html_reactive {
@@ -96,28 +60,10 @@ macro_rules! inner_html_reactive {
             <$v as InnerHtmlValue>::State: 'static,
             $($where_clause)*
         {
-            type AsyncOutput = Self;
+
             type State = RenderEffect<<$v as InnerHtmlValue>::State>;
             type Cloneable = Self;
             type CloneableOwned = Self;
-
-            fn html_len(&self) -> usize {
-                0
-            }
-
-            fn to_html(self, buf: &mut String) {
-                let value = self.get();
-                value.to_html(buf);
-            }
-
-            fn to_template(_buf: &mut String) {}
-
-            fn hydrate<const FROM_SERVER: bool>(
-                self,
-                el: &crate::view_tree::renderer::types::Element,
-            ) -> Self::State {
-                (move || self.get()).hydrate::<FROM_SERVER>(el)
-            }
 
             fn build(
                 self,
@@ -138,22 +84,11 @@ macro_rules! inner_html_reactive {
                 self
             }
 
-            fn dry_resolve(&mut self) {
-                if $dry_resolve {
-                    _ = self.get();
-                }
-            }
-
-            async fn resolve(self) -> Self::AsyncOutput {
-                self
-            }
         }
     };
 }
 
 mod stable {
-    #[allow(deprecated)]
-    use crate::reactivity::wrappers::read::MaybeSignal;
     use crate::reactivity::{
         computed::{ArcMemo, Memo},
         effect::RenderEffect,
@@ -200,102 +135,8 @@ mod stable {
         S: Storage<V> + Storage<Option<V>>,
         S: Send + Sync + 'static,
     );
-    inner_html_reactive!(
-        MaybeSignal,
-        <V, S>,
-        V,
-        true,
-        MaybeSignal<V, S>: Get<Value = V>,
-        S: Storage<V> + Storage<Option<V>>,
-        S: Send + Sync + 'static,
-    );
     inner_html_reactive!(ArcRwSignal, <V>, V, false, ArcRwSignal<V>: Get<Value = V>);
     inner_html_reactive!(ArcReadSignal, <V>, V, false, ArcReadSignal<V>: Get<Value = V>);
     inner_html_reactive!(ArcMemo, <V>, V, true, ArcMemo<V>: Get<Value = V>);
     inner_html_reactive!(ArcSignal, <V>, V, true, ArcSignal<V>: Get<Value = V>);
-}
-
-#[cfg(any())]
-mod reactive_stores {
-    #[allow(deprecated)]
-    use crate::reactivity::{effect::RenderEffect, owner::Storage, traits::Get};
-    use crate::view_tree::html::element::InnerHtmlValue;
-    use reactive_stores::{
-        ArcField, ArcStore, AtIndex, AtKeyed, DerefedField, Field, KeyedSubfield, Store,
-        StoreField, Subfield,
-    };
-    use std::ops::{Deref, DerefMut, Index, IndexMut};
-
-    inner_html_reactive!(
-        Subfield,
-        <Inner, Prev, V>,
-        V,
-        false,
-        Subfield<Inner, Prev, V>: Get<Value = V>,
-        Prev: Send + Sync + 'static,
-        Inner: Send + Sync + Clone + 'static,
-    );
-
-    inner_html_reactive!(
-        AtKeyed,
-        <Inner, Prev, K, V>,
-        V,
-        false,
-        AtKeyed<Inner, Prev, K, V>: Get<Value = V>,
-        Prev: Send + Sync + 'static,
-        Inner: Send + Sync + Clone + 'static,
-        K: Send + Sync + std::fmt::Debug + Clone + 'static,
-        for<'a> &'a V: IntoIterator,
-    );
-
-    inner_html_reactive!(
-        KeyedSubfield,
-        <Inner, Prev, K, V>,
-        V,
-        false,
-        KeyedSubfield<Inner, Prev, K, V>: Get<Value = V>,
-        Prev: Send + Sync + 'static,
-        Inner: Send + Sync + Clone + 'static,
-        K: Send + Sync + std::fmt::Debug + Clone + 'static,
-        for<'a> &'a V: IntoIterator,
-    );
-
-    inner_html_reactive!(
-        DerefedField,
-        <S>,
-        <S::Value as Deref>::Target,
-        false,
-        S: Clone + StoreField + Send + Sync + 'static,
-        <S as StoreField>::Value: Deref + DerefMut
-    );
-
-    inner_html_reactive!(
-        AtIndex,
-        <Inner, Prev>,
-        <Prev as Index<usize>>::Output,
-        false,
-        AtIndex<Inner, Prev>: Get<Value = Prev::Output>,
-        Prev: Send + Sync + IndexMut<usize> + 'static,
-        Inner: Send + Sync + Clone + 'static,
-    );
-    inner_html_reactive!(
-        Store,
-        <V, S>,
-        V,
-        false,
-        Store<V, S>: Get<Value = V>,
-        S: Storage<V> + Storage<Option<V>>,
-        S: Send + Sync + 'static,
-    );
-    inner_html_reactive!(
-        Field,
-        <V, S>,
-        V,
-        false,
-        Field<V, S>: Get<Value = V>,
-        S: Storage<V> + Storage<Option<V>>,
-        S: Send + Sync + 'static,
-    );
-    inner_html_reactive!(ArcStore, <V>, V, false, ArcStore<V>: Get<Value = V>);
-    inner_html_reactive!(ArcField, <V>, V, false, ArcField<V>: Get<Value = V>);
 }

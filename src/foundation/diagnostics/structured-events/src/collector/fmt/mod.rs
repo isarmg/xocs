@@ -840,51 +840,6 @@ impl<T, F, W> SubscriberBuilder<format::JsonFields, format::Format<format::Json,
     }
 }
 
-#[cfg(any())]
-#[cfg_attr(docsrs, doc(cfg(any())))]
-impl<N, E, W> SubscriberBuilder<N, E, crate::collector::EnvFilter, W>
-where
-    Formatter<N, E, W>: tracing::primitives::Subscriber + 'static,
-{
-    /// Configures the subscriber being built to allow filter reloading at
-    /// runtime.
-    pub fn with_filter_reloading(
-        self,
-    ) -> SubscriberBuilder<
-        N,
-        E,
-        crate::collector::reload::Layer<crate::collector::EnvFilter, Formatter<N, E, W>>,
-        W,
-    > {
-        let (filter, _) = crate::collector::reload::Layer::new(self.filter);
-        SubscriberBuilder {
-            filter,
-            inner: self.inner,
-        }
-    }
-}
-
-#[cfg(any())]
-#[cfg_attr(docsrs, doc(cfg(any())))]
-impl<N, E, W>
-    SubscriberBuilder<
-        N,
-        E,
-        crate::collector::reload::Layer<crate::collector::EnvFilter, Formatter<N, E, W>>,
-        W,
-    >
-where
-    Formatter<N, E, W>: tracing::primitives::Subscriber + 'static,
-{
-    /// Returns a `Handle` that may be used to reload the constructed subscriber's
-    /// filter.
-    pub fn reload_handle(
-        &self,
-    ) -> crate::collector::reload::Handle<crate::collector::EnvFilter, Formatter<N, E, W>> {
-        self.filter.handle()
-    }
-}
-
 impl<N, E, F, W> SubscriberBuilder<N, E, F, W> {
     /// Sets the field formatter that the subscriber being built will use to record
     /// fields.
@@ -913,70 +868,6 @@ impl<N, E, F, W> SubscriberBuilder<N, E, F, W> {
         SubscriberBuilder {
             filter: self.filter,
             inner: self.inner.fmt_fields(fmt_fields),
-        }
-    }
-
-    /// Sets the [`EnvFilter`] that the subscriber will use to determine if
-    /// a span or event is enabled.
-    ///
-    /// Note that this method requires the "env-filter" feature flag to be enabled.
-    ///
-    /// If a filter was previously set, or a maximum level was set by the
-    /// [`with_max_level`] method, that value is replaced by the new filter.
-    ///
-    /// # Examples
-    ///
-    /// Setting a filter based on the value of the `RUST_LOG` environment
-    /// variable:
-    /// ```rust
-    /// use tracing::collector::{fmt, EnvFilter};
-    ///
-    /// fmt()
-    ///     .with_env_filter(EnvFilter::from_default_env())
-    ///     .init();
-    /// ```
-    ///
-    /// Setting a filter based on a pre-set filter directive string:
-    /// ```rust
-    /// use tracing::collector::fmt;
-    ///
-    /// fmt()
-    ///     .with_env_filter("my_crate=info,my_crate::collector::my_mod=debug,[my_span]=trace")
-    ///     .init();
-    /// ```
-    ///
-    /// Adding additional directives to a filter constructed from an env var:
-    /// ```rust
-    /// use tracing::collector::{fmt, filter::{EnvFilter, LevelFilter}};
-    ///
-    /// # fn filter() -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-    /// let filter = EnvFilter::try_from_env("MY_CUSTOM_FILTER_ENV_VAR")?
-    ///     // Set the base level when not matched by other directives to WARN.
-    ///     .add_directive(LevelFilter::WARN.into())
-    ///     // Set the max level for `my_crate::collector::my_mod` to DEBUG, overriding
-    ///     // any directives parsed from the env variable.
-    ///     .add_directive("my_crate::collector::my_mod=debug".parse()?);
-    ///
-    /// fmt()
-    ///     .with_env_filter(filter)
-    ///     .try_init()?;
-    /// # Ok(())}
-    /// ```
-    /// [`EnvFilter`]: super::filter::EnvFilter
-    /// [`with_max_level`]: SubscriberBuilder::with_max_level()
-    #[cfg(any())]
-    #[cfg_attr(docsrs, doc(cfg(any())))]
-    pub fn with_env_filter(
-        self,
-        filter: impl Into<crate::collector::EnvFilter>,
-    ) -> SubscriberBuilder<N, E, crate::collector::EnvFilter, W>
-    where
-        Formatter<N, E, W>: tracing::primitives::Subscriber + 'static,
-    {
-        let filter = filter.into();
-        SubscriberBuilder {
-            filter,
-            inner: self.inner,
         }
     }
 
@@ -1211,9 +1102,6 @@ impl<N, E, F, W> SubscriberBuilder<N, E, F, W> {
 /// [`RUST_LOG` environment variable]: crate::collector::filter::EnvFilter::DEFAULT_ENV
 pub fn try_init() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     let builder = Subscriber::builder();
-
-    #[cfg(any())]
-    let builder = builder.with_env_filter(crate::collector::EnvFilter::from_default_env());
 
     // If `env-filter` is disabled, remove the default max level filter from the
     // subscriber; it will be added to the `Targets` filter instead if no filter

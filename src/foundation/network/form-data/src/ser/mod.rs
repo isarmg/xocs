@@ -5,13 +5,13 @@ mod pair;
 mod part;
 mod value;
 
-use url_encoding::form::Serializer as UrlEncodedSerializer;
-use url_encoding::form::Target as UrlEncodedTarget;
 use serde::ser;
 use std::borrow::Cow;
 use std::error;
 use std::fmt;
 use std::str;
+use url_encoding::form::Serializer as UrlEncodedSerializer;
+use url_encoding::form::Target as UrlEncodedTarget;
 
 /// Serializes a value into a `application/x-www-form-urlencoded` `String` buffer.
 ///
@@ -46,13 +46,9 @@ pub struct Serializer<'input, 'output, Target: UrlEncodedTarget> {
     urlencoder: &'output mut UrlEncodedSerializer<'input, Target>,
 }
 
-impl<'input, 'output, Target: 'output + UrlEncodedTarget>
-    Serializer<'input, 'output, Target>
-{
+impl<'input, 'output, Target: 'output + UrlEncodedTarget> Serializer<'input, 'output, Target> {
     /// Returns a new `Serializer`.
-    pub fn new(
-        urlencoder: &'output mut UrlEncodedSerializer<'input, Target>,
-    ) -> Self {
+    pub fn new(urlencoder: &'output mut UrlEncodedSerializer<'input, Target>) -> Self {
         Serializer { urlencoder }
     }
 }
@@ -74,21 +70,6 @@ impl fmt::Display for Error {
 }
 
 impl error::Error for Error {
-    fn description(&self) -> &str {
-        match *self {
-            Error::Custom(ref msg) => msg,
-            Error::Utf8(ref err) => error::Error::description(err),
-        }
-    }
-
-    /// The lower-level cause of this error, in the case of a `Utf8` error.
-    fn cause(&self) -> Option<&dyn error::Error> {
-        match *self {
-            Error::Custom(_) => None,
-            Error::Utf8(ref err) => Some(err),
-        }
-    }
-
     /// The lower-level source of this error, in the case of a `Utf8` error.
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match *self {
@@ -148,8 +129,7 @@ pub struct StructVariantSerializer<'input, 'output, T: UrlEncodedTarget> {
     inner: ser::Impossible<&'output mut UrlEncodedSerializer<'input, T>, Error>,
 }
 
-impl<'input, 'output, Target> ser::Serializer
-    for Serializer<'input, 'output, Target>
+impl<'input, 'output, Target> ser::Serializer for Serializer<'input, 'output, Target>
 where
     Target: 'output + UrlEncodedTarget,
 {
@@ -158,12 +138,10 @@ where
     type SerializeSeq = SeqSerializer<'input, 'output, Target>;
     type SerializeTuple = TupleSerializer<'input, 'output, Target>;
     type SerializeTupleStruct = TupleStructSerializer<'input, 'output, Target>;
-    type SerializeTupleVariant =
-        TupleVariantSerializer<'input, 'output, Target>;
+    type SerializeTupleVariant = TupleVariantSerializer<'input, 'output, Target>;
     type SerializeMap = MapSerializer<'input, 'output, Target>;
     type SerializeStruct = StructSerializer<'input, 'output, Target>;
-    type SerializeStructVariant =
-        StructVariantSerializer<'input, 'output, Target>;
+    type SerializeStructVariant = StructVariantSerializer<'input, 'output, Target>;
 
     /// Returns an error.
     fn serialize_bool(self, _v: bool) -> Result<Self::Ok, Error> {
@@ -241,10 +219,7 @@ where
     }
 
     /// Returns `Ok`.
-    fn serialize_unit_struct(
-        self,
-        _name: &'static str,
-    ) -> Result<Self::Ok, Error> {
+    fn serialize_unit_struct(self, _name: &'static str) -> Result<Self::Ok, Error> {
         Ok(self.urlencoder)
     }
 
@@ -284,28 +259,19 @@ where
     }
 
     /// Serializes the given value.
-    fn serialize_some<T: ?Sized + ser::Serialize>(
-        self,
-        value: &T,
-    ) -> Result<Self::Ok, Error> {
+    fn serialize_some<T: ?Sized + ser::Serialize>(self, value: &T) -> Result<Self::Ok, Error> {
         value.serialize(self)
     }
 
     /// Serialize a sequence, given length (if any) is ignored.
-    fn serialize_seq(
-        self,
-        _len: Option<usize>,
-    ) -> Result<Self::SerializeSeq, Error> {
+    fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq, Error> {
         Ok(SeqSerializer {
             urlencoder: self.urlencoder,
         })
     }
 
     /// Returns an error.
-    fn serialize_tuple(
-        self,
-        _len: usize,
-    ) -> Result<Self::SerializeTuple, Error> {
+    fn serialize_tuple(self, _len: usize) -> Result<Self::SerializeTuple, Error> {
         Ok(TupleSerializer {
             urlencoder: self.urlencoder,
         })
@@ -332,10 +298,7 @@ where
     }
 
     /// Serializes a map, given length is ignored.
-    fn serialize_map(
-        self,
-        _len: Option<usize>,
-    ) -> Result<Self::SerializeMap, Error> {
+    fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap, Error> {
         Ok(MapSerializer {
             urlencoder: self.urlencoder,
             key: None,
@@ -365,18 +328,14 @@ where
     }
 }
 
-impl<'input, 'output, Target> ser::SerializeSeq
-    for SeqSerializer<'input, 'output, Target>
+impl<'input, 'output, Target> ser::SerializeSeq for SeqSerializer<'input, 'output, Target>
 where
     Target: 'output + UrlEncodedTarget,
 {
     type Ok = &'output mut UrlEncodedSerializer<'input, Target>;
     type Error = Error;
 
-    fn serialize_element<T: ?Sized + ser::Serialize>(
-        &mut self,
-        value: &T,
-    ) -> Result<(), Error> {
+    fn serialize_element<T: ?Sized + ser::Serialize>(&mut self, value: &T) -> Result<(), Error> {
         value.serialize(pair::PairSerializer::new(self.urlencoder))
     }
 
@@ -385,18 +344,14 @@ where
     }
 }
 
-impl<'input, 'output, Target> ser::SerializeTuple
-    for TupleSerializer<'input, 'output, Target>
+impl<'input, 'output, Target> ser::SerializeTuple for TupleSerializer<'input, 'output, Target>
 where
     Target: 'output + UrlEncodedTarget,
 {
     type Ok = &'output mut UrlEncodedSerializer<'input, Target>;
     type Error = Error;
 
-    fn serialize_element<T: ?Sized + ser::Serialize>(
-        &mut self,
-        value: &T,
-    ) -> Result<(), Error> {
+    fn serialize_element<T: ?Sized + ser::Serialize>(&mut self, value: &T) -> Result<(), Error> {
         value.serialize(pair::PairSerializer::new(self.urlencoder))
     }
 
@@ -413,10 +368,7 @@ where
     type Ok = &'output mut UrlEncodedSerializer<'input, Target>;
     type Error = Error;
 
-    fn serialize_field<T: ?Sized + ser::Serialize>(
-        &mut self,
-        value: &T,
-    ) -> Result<(), Error> {
+    fn serialize_field<T: ?Sized + ser::Serialize>(&mut self, value: &T) -> Result<(), Error> {
         self.inner.serialize_field(value)
     }
 
@@ -433,10 +385,7 @@ where
     type Ok = &'output mut UrlEncodedSerializer<'input, Target>;
     type Error = Error;
 
-    fn serialize_field<T: ?Sized + ser::Serialize>(
-        &mut self,
-        value: &T,
-    ) -> Result<(), Error> {
+    fn serialize_field<T: ?Sized + ser::Serialize>(&mut self, value: &T) -> Result<(), Error> {
         self.inner.serialize_field(value)
     }
 
@@ -445,18 +394,14 @@ where
     }
 }
 
-impl<'input, 'output, Target> ser::SerializeMap
-    for MapSerializer<'input, 'output, Target>
+impl<'input, 'output, Target> ser::SerializeMap for MapSerializer<'input, 'output, Target>
 where
     Target: 'output + UrlEncodedTarget,
 {
     type Ok = &'output mut UrlEncodedSerializer<'input, Target>;
     type Error = Error;
 
-    fn serialize_entry<
-        K: ?Sized + ser::Serialize,
-        V: ?Sized + ser::Serialize,
-    >(
+    fn serialize_entry<K: ?Sized + ser::Serialize, V: ?Sized + ser::Serialize>(
         &mut self,
         key: &K,
         value: &V,
@@ -471,20 +416,14 @@ where
         key.serialize(entry_serializer)
     }
 
-    fn serialize_key<T: ?Sized + ser::Serialize>(
-        &mut self,
-        key: &T,
-    ) -> Result<(), Error> {
+    fn serialize_key<T: ?Sized + ser::Serialize>(&mut self, key: &T) -> Result<(), Error> {
         let key_sink = key::KeySink::new(|key| Ok(key.into()));
         let key_serializer = part::PartSerializer::new(key_sink);
         self.key = Some(key.serialize(key_serializer)?);
         Ok(())
     }
 
-    fn serialize_value<T: ?Sized + ser::Serialize>(
-        &mut self,
-        value: &T,
-    ) -> Result<(), Error> {
+    fn serialize_value<T: ?Sized + ser::Serialize>(&mut self, value: &T) -> Result<(), Error> {
         {
             let key = self.key.as_ref().ok_or_else(Error::no_key)?;
             let value_sink = value::ValueSink::new(self.urlencoder, &key);
@@ -499,8 +438,7 @@ where
     }
 }
 
-impl<'input, 'output, Target> ser::SerializeStruct
-    for StructSerializer<'input, 'output, Target>
+impl<'input, 'output, Target> ser::SerializeStruct for StructSerializer<'input, 'output, Target>
 where
     Target: 'output + UrlEncodedTarget,
 {

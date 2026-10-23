@@ -1,0 +1,45 @@
+{
+  "baseline_revision": "75b525a5",
+  "profile": "web-release",
+  "target": "wasm32-unknown-unknown",
+  "measurement": "Actual before/after WASM files; Python gzip.compress(compresslevel=9, mtime=0).",
+  "baseline_source": "Pre-refactor web/pkg/blog_browser_bg.wasm preserved before rebuilding.",
+  "current_source": "web/pkg/blog_browser_bg.wasm",
+  "before": {
+    "bytes": 3286591,
+    "gzip_bytes": 1004177,
+    "sha256": "0a9140b26f6302f96d3d741504692a641c9d21b5a877c17e51766874342b17fd"
+  },
+  "after": {
+    "bytes": 3264287,
+    "gzip_bytes": 998303,
+    "sha256": "1809bffb18d25d0d0470f46ffb4c3eab3b5a39f4e969895b0701776607057959"
+  },
+  "delta": {
+    "bytes": -22304,
+    "gzip_bytes": -5874
+  },
+  "source": {
+    "scope": "Rust files under src/interface/dom",
+    "baseline_revision": "75b525a5",
+    "before": {
+      "files": 213,
+      "bytes": 2226730,
+      "lines": 70609
+    },
+    "after": {
+      "files": 187,
+      "bytes": 1642672,
+      "lines": 51231
+    },
+    "delta_bytes": -584058,
+    "delta_lines": -19378,
+    "bytes_reduction_percent": 26.23,
+    "dom_and_interface_native_tests_passed": 52,
+    "doctests_passed": 438,
+    "doctests_ignored": 4,
+    "browser_native_tests_passed": 18,
+    "browser_domain_tests_passed": 13
+  },
+  "scope_note": "WASM comparison includes the full concurrent repository optimization, not an isolated CSR-only benchmark. Source reductions refer only to src/interface/dom Rust files."
+}

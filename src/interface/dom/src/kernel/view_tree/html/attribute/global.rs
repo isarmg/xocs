@@ -8,7 +8,7 @@ use crate::view_tree::{
         property::{prop, IntoProperty, Property},
         style::{style, IntoStyle, Style},
     },
-    prelude::RenderHtml,
+    prelude::DomView,
     view::add_attr::AddAnyAttr,
 };
 use core::convert::From;
@@ -29,7 +29,7 @@ impl<E, At, Ch, C> ClassAttribute<C> for HtmlElement<E, At, Ch>
 where
     E: ElementType + Send,
     At: Attribute + Send,
-    Ch: RenderHtml + Send,
+    Ch: DomView + Send,
     C: IntoClass,
 {
     type Output = <Self as AddAnyAttr>::Output<Class<C>>;
@@ -55,7 +55,7 @@ impl<E, At, Ch, K, P> PropAttribute<K, P> for HtmlElement<E, At, Ch>
 where
     E: ElementType + Send,
     At: Attribute + Send,
-    Ch: RenderHtml + Send,
+    Ch: DomView + Send,
     K: AsRef<str> + Send,
     P: IntoProperty,
 {
@@ -82,7 +82,7 @@ impl<E, At, Ch, S> StyleAttribute<S> for HtmlElement<E, At, Ch>
 where
     E: ElementType + Send,
     At: Attribute + Send,
-    Ch: RenderHtml + Send,
+    Ch: DomView + Send,
     S: IntoStyle,
 {
     type Output = <Self as AddAnyAttr>::Output<Style<S>>;
@@ -105,7 +105,7 @@ impl<El, At, Ch, E, F> OnAttribute<E, F> for HtmlElement<El, At, Ch>
 where
     El: ElementType + Send,
     At: Attribute + Send,
-    Ch: RenderHtml + Send,
+    Ch: DomView + Send,
     E: EventDescriptor + Send + 'static,
     E::EventType: 'static,
     E::EventType: From<crate::view_tree::renderer::types::Event>,
@@ -131,7 +131,7 @@ impl<El, At, Ch, E, F> OnTargetAttribute<E, F, Self> for HtmlElement<El, At, Ch>
 where
     El: ElementType + Send,
     At: Attribute + Send,
-    Ch: RenderHtml + Send,
+    Ch: DomView + Send,
     E: EventDescriptor + Send + 'static,
     E::EventType: 'static,
     E::EventType: From<crate::view_tree::renderer::types::Event>,
@@ -303,7 +303,7 @@ impl<El, At, Ch, V> GlobalAttributes<V> for HtmlElement<El, At, Ch>
 where
     El: ElementType + Send,
     At: Attribute + Send,
-    Ch: RenderHtml + Send,
+    Ch: DomView + Send,
     V: AttributeValue,
 {
 }
@@ -477,7 +477,7 @@ impl<El, At, Ch, V> GlobalOnAttributes<V> for HtmlElement<El, At, Ch>
 where
     El: ElementType + Send,
     At: Attribute + Send,
-    Ch: RenderHtml + Send,
+    Ch: DomView + Send,
     V: AttributeValue,
 {
 }

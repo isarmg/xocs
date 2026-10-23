@@ -11,9 +11,10 @@
 // Disallow warnings in examples.
 #![doc(test(attr(deny(warnings))))]
 
-//! Mio is a fast, low-level I/O library for Rust focusing on non-blocking APIs
-//! and event notification for building high performance I/O apps with as little
-//! overhead as possible over the OS abstractions.
+//! Non-blocking I/O and readiness notification for Linux AMD64 GNU/glibc.
+//!
+//! This maintained Mio implementation uses epoll for polling and eventfd for waking.
+//! Its platform support follows the repository's native target policy.
 //!
 //! # Usage
 //!
@@ -22,15 +23,8 @@
 //!
 //! For more detail, see [`Poll`].
 //!
-//! [`Poll`]: ../mio/struct.Poll.html
-//! [`Events`]: ../mio/event/struct.Events.html
-//!
-//! ## Examples
-//!
-//! Examples can be found in the `examples` directory of the source code, or [on
-//! GitHub].
-//!
-//! [on GitHub]: https://github.com/tokio-rs/mio/tree/master/examples
+//! [`Poll`]: crate::Poll
+//! [`Events`]: crate::Events
 //!
 //! ## Guide
 //!
@@ -40,8 +34,15 @@
 //!
 //! The available features are described in the [`features`] module.
 
-#[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
-compile_error!("This wasm target is unsupported by mio. If using Tokio, disable the net feature.");
+#[cfg(not(all(
+    target_os = "linux",
+    target_arch = "x86_64",
+    target_env = "gnu",
+    target_pointer_width = "64"
+)))]
+compile_error!(
+    "blog-runtime-io-poller supports only Linux amd64 GNU; browser code must not enable OS I/O."
+);
 
 // macros used internally
 #[macro_use]
@@ -51,7 +52,6 @@ mod interest;
 mod poll;
 mod sys;
 mod token;
-#[cfg(not(any(target_os = "horizon", target_os = "wasi")))]
 mod waker;
 
 pub mod event;
@@ -69,7 +69,6 @@ pub use event::Events;
 pub use interest::Interest;
 pub use poll::{Poll, Registry};
 pub use token::Token;
-#[cfg(not(any(target_os = "horizon", target_os = "wasi")))]
 pub use waker::Waker;
 
 #[cfg(all(unix, feature = "os-ext"))]
@@ -86,30 +85,6 @@ pub mod unix {
     }
 
     pub use crate::sys::SourceFd;
-}
-
-#[cfg(all(target_os = "hermit", feature = "os-ext"))]
-#[cfg_attr(docsrs, doc(cfg(all(target_os = "hermit", feature = "os-ext"))))]
-pub mod hermit {
-    //! Hermit only extensions.
-
-    pub use crate::sys::SourceFd;
-}
-
-#[cfg(all(target_os = "wasi", not(target_env = "p1"), feature = "os-ext"))]
-#[cfg_attr(docsrs, doc(cfg(all(target_os = "wasi", feature = "os-ext"))))]
-pub mod wasi {
-    //! WASI-only extensions.
-
-    pub use crate::sys::SourceFd;
-}
-
-#[cfg(all(windows, feature = "os-ext"))]
-#[cfg_attr(docsrs, doc(cfg(all(windows, feature = "os-ext"))))]
-pub mod windows {
-    //! Windows only extensions.
-
-    pub use crate::sys::named_pipe::NamedPipe;
 }
 
 pub mod features {
@@ -129,8 +104,7 @@ pub mod features {
     #![cfg_attr(feature = "os-ext", doc = "## `os-ext` (enabled)")]
     #![cfg_attr(not(feature = "os-ext"), doc = "## `os-ext` (disabled)")]
     //!
-    //! `os-ext` enables additional OS specific facilities. These facilities can
-    //! be found in the `unix` and `windows` module.
+    //! `os-ext` enables file-descriptor registration and pipes in the `unix` module.
     //!
     #![cfg_attr(feature = "net", doc = "## Network types (enabled)")]
     #![cfg_attr(not(feature = "net"), doc = "## Network types (disabled)")]
@@ -161,7 +135,7 @@ pub mod guide {
     //!
     #![cfg_attr(feature = "os-poll", doc = "```")]
     #![cfg_attr(not(feature = "os-poll"), doc = "```ignore")]
-    //! # use mio::{Poll, Events};
+    //! # use blog_runtime_io_poller::{Poll, Events};
     //! # fn main() -> std::io::Result<()> {
     //! // `Poll` allows for polling of readiness events.
     //! let poll = Poll::new()?;
@@ -185,9 +159,8 @@ pub mod guide {
     //! After we've created a [`Poll`] instance that monitors events from the OS
     //! for us, we need to provide it with a source of events. This is done by
     //! registering an [event source]. As the name “event source” suggests it is
-    //! a source of events which can be polled using a `Poll` instance. On Unix
-    //! systems this is usually a file descriptor, or a socket/handle on
-    //! Windows.
+    //! a source of events which can be polled using a `Poll` instance. On Linux,
+    //! these sources are represented by file descriptors.
     //!
     //! In the example below we'll use a [`TcpListener`] for which we'll receive
     //! an event (from [`Poll`]) once a connection is ready to be accepted.
@@ -196,8 +169,8 @@ pub mod guide {
     //!
     #![cfg_attr(all(feature = "os-poll", feature = "net"), doc = "```")]
     #![cfg_attr(not(all(feature = "os-poll", feature = "net")), doc = "```ignore")]
-    //! # use mio::net::TcpListener;
-    //! # use mio::{Poll, Token, Interest};
+    //! # use blog_runtime_io_poller::net::TcpListener;
+    //! # use blog_runtime_io_poller::{Poll, Token, Interest};
     //! # fn main() -> std::io::Result<()> {
     //! # let poll = Poll::new()?;
     //! # let address = "127.0.0.1:0".parse().unwrap();
@@ -237,8 +210,8 @@ pub mod guide {
     #![cfg_attr(not(all(feature = "os-poll", feature = "net")), doc = "```ignore")]
     //! # use std::io;
     //! # use std::time::Duration;
-    //! # use mio::net::TcpListener;
-    //! # use mio::{Poll, Token, Interest, Events};
+    //! # use blog_runtime_io_poller::net::TcpListener;
+    //! # use blog_runtime_io_poller::{Poll, Token, Interest, Events};
     //! # fn main() -> io::Result<()> {
     //! # let mut poll = Poll::new()?;
     //! # let mut events = Events::with_capacity(128);

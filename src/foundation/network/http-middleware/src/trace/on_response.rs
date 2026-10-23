@@ -121,41 +121,6 @@ impl<B> OnResponse<B> for DefaultOnResponse {
     }
 }
 
-fn status<B>(res: &Response<B>) -> Option<i32> {
-    use crate::classify::grpc_errors_as_failures::ParsedGrpcStatus;
-
-    // gRPC-over-HTTP2 uses the "application/grpc[+format]" content type, and gRPC-Web uses
-    // "application/grpc-web[+format]" or "application/grpc-web-text[+format]", where "format" is
-    // the message format, e.g. +proto, +json.
-    //
-    // So, valid grpc content types include (but are not limited to):
-    //  - application/grpc
-    //  - application/grpc+proto
-    //  - application/grpc-web+proto
-    //  - application/grpc-web-text+proto
-    //
-    // For simplicity, we simply check that the content type starts with "application/grpc".
-    let is_grpc = res
-        .headers()
-        .get(http::header::CONTENT_TYPE)
-        .map_or(false, |value| {
-            value.as_bytes().starts_with("application/grpc".as_bytes())
-        });
-
-    if is_grpc {
-        match crate::classify::grpc_errors_as_failures::classify_grpc_metadata(
-            res.headers(),
-            crate::classify::GrpcCode::Ok.into_bitmask(),
-        ) {
-            ParsedGrpcStatus::Success
-            | ParsedGrpcStatus::HeaderNotString
-            | ParsedGrpcStatus::HeaderNotInt => Some(0),
-            ParsedGrpcStatus::NonSuccess(status) => Some(status.get()),
-            // if `grpc-status` is missing then its a streaming response and there is no status
-            // _yet_, so its neither success nor error
-            ParsedGrpcStatus::GrpcStatusHeaderMissing => None,
-        }
-    } else {
-        Some(res.status().as_u16().into())
-    }
+fn status<B>(res: &Response<B>) -> i32 {
+    res.status().as_u16().into()
 }

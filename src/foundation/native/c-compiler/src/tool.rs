@@ -55,27 +55,6 @@ pub struct Tool {
 }
 
 impl Tool {
-    pub(crate) fn from_find_msvc_tools(
-        tool: ::find_msvc_tools::Tool,
-        inherited_env: EnvSnapshot,
-    ) -> Self {
-        let mut cc_tool = Self::with_family(
-            tool.path().into(),
-            ToolFamily::Msvc {
-                clang_cl: tool.is_clang_cl(),
-            },
-            inherited_env,
-        );
-
-        cc_tool.env = tool
-            .env()
-            .into_iter()
-            .map(|(k, v)| (k.clone(), v.clone()))
-            .collect();
-
-        cc_tool
-    }
-
     pub(crate) fn new(
         path: PathBuf,
         env: &BuildEnv,

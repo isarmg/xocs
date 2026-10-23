@@ -51,25 +51,21 @@ pub trait UnparkHandleT {
 }
 
 cfg_if! {
-    if #[cfg(any(target_os = "linux", target_os = "android"))] {
+    if #[cfg(all(target_os = "linux", target_arch = "x86_64", target_env = "gnu"))] {
         #[path = "linux.rs"]
-        mod imp;
-    } else if #[cfg(unix)] {
-        #[path = "unix.rs"]
         mod imp;
     } else if #[cfg(all(
         feature = "nightly",
-        target_family = "wasm",
+        all(target_arch = "wasm32", target_os = "unknown"),
         target_feature = "atomics"
     ))] {
         #[path = "wasm_atomic.rs"]
         mod imp;
-    } else if #[cfg(target_family = "wasm")] {
+    } else if #[cfg(all(target_arch = "wasm32", target_os = "unknown"))] {
         #[path = "wasm.rs"]
         mod imp;
     } else {
-        #[path = "generic.rs"]
-        mod imp;
+        compile_error!("thread parking supports Linux amd64 GNU and browser wasm32 only");
     }
 }
 

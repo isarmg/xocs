@@ -1,30 +1,20 @@
 #![allow(missing_docs)]
 
-//! See [`Renderer`](crate::view_tree::renderer::Renderer) and [`Rndr`](crate::view_tree::renderer::Rndr) for additional information.
+//! Direct browser DOM operations for the CSR view tree.
 
 use super::{CastFrom, RemoveEventHandler};
 use crate::view_tree::{
     dom::{document, window},
     ok_or_debug, or_debug,
-    view::{Mountable, ToTemplate},
+    view::Mountable,
 };
-use rustc_hash::FxHashSet;
-use std::{
-    any::TypeId,
-    borrow::Cow,
-    cell::{LazyCell, RefCell},
-};
+use std::cell::{Cell, LazyCell, RefCell};
 use wasm_bindgen::{intern, prelude::Closure, JsCast, JsValue};
-use web_sys::{AddEventListenerOptions, Comment, HtmlTemplateElement};
+use web_sys::{AddEventListenerOptions, Comment};
 
-/// A [`Renderer`](crate::view_tree::renderer::Renderer) that uses `web-sys` to manipulate DOM elements in the browser.
+/// Browser DOM operations backed by `web-sys`.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Dom;
-
-thread_local! {
-    pub(crate) static GLOBAL_EVENTS: RefCell<FxHashSet<Cow<'static, str>>> = Default::default();
-    pub static TEMPLATE_CACHE: RefCell<Vec<(Cow<'static, str>, web_sys::Element)>> = Default::default();
-}
 
 pub type Node = web_sys::Node;
 pub type Text = web_sys::Text;
@@ -33,7 +23,6 @@ pub type Placeholder = web_sys::Comment;
 pub type Event = wasm_bindgen::JsValue;
 pub type ClassList = web_sys::DomTokenList;
 pub type CssStyleDeclaration = web_sys::CssStyleDeclaration;
-pub type TemplateElement = web_sys::HtmlTemplateElement;
 
 /// A microtask is a short function which will run after the current task has
 /// completed its work and when there is no other code waiting to be run before
@@ -54,23 +43,30 @@ pub fn queue_microtask(task: impl FnOnce() + 'static) {
     _ = queue_microtask.call1(&JsValue::UNDEFINED, &task);
 }
 
+thread_local! {
+    static DOM_TASK_PENDING: Cell<bool> = const { Cell::new(false) };
+    static DOM_TASKS: RefCell<Vec<Box<dyn FnOnce()>>> = const { RefCell::new(Vec::new()) };
+}
+
 fn queue(fun: Box<dyn FnOnce()>) {
-    use std::cell::{Cell, RefCell};
+    enqueue_dom_task(fun, queue_microtask);
+}
 
-    thread_local! {
-        static PENDING: Cell<bool> = const { Cell::new(false) };
-        static QUEUE: RefCell<Vec<Box<dyn FnOnce()>>> = RefCell::new(Vec::new());
+fn enqueue_dom_task(fun: Box<dyn FnOnce()>, schedule: impl FnOnce(fn())) {
+    DOM_TASKS.with_borrow_mut(|tasks| tasks.push(fun));
+    if !DOM_TASK_PENDING.replace(true) {
+        schedule(flush_dom_tasks);
     }
+}
 
-    QUEUE.with_borrow_mut(|q| q.push(fun));
-    if !PENDING.replace(true) {
-        queue_microtask(|| {
-            let tasks = QUEUE.take();
-            for task in tasks {
-                task();
-            }
-            PENDING.set(false);
-        })
+fn flush_dom_tasks() {
+    let tasks = DOM_TASKS.take();
+    // Setters can synchronously run user code that queues another DOM write.
+    // Release both the queue borrow and its pending flag before those callbacks,
+    // so nested writes schedule the next microtask even if a callback panics.
+    DOM_TASK_PENDING.set(false);
+    for task in tasks {
+        task();
     }
 }
 
@@ -252,7 +248,7 @@ impl Dom {
         el: &Element,
         name: &str,
         cb: Box<dyn FnMut(Event)>,
-    ) -> RemoveEventHandler<Element> {
+    ) -> RemoveEventHandler {
         let cb = wasm_bindgen::closure::Closure::wrap(cb);
         let name = intern(name);
         or_debug!(
@@ -285,7 +281,7 @@ impl Dom {
         el: &Element,
         name: &str,
         cb: Box<dyn FnMut(Event)>,
-    ) -> RemoveEventHandler<Element> {
+    ) -> RemoveEventHandler {
         let cb = wasm_bindgen::closure::Closure::wrap(cb);
         let name = intern(name);
         let options = AddEventListenerOptions::new();
@@ -333,94 +329,6 @@ impl Dom {
         T::cast_from(el).expect("incorrect element type")
     }
 
-    pub fn add_event_listener_delegated(
-        el: &Element,
-        name: Cow<'static, str>,
-        delegation_key: Cow<'static, str>,
-        cb: Box<dyn FnMut(Event)>,
-    ) -> RemoveEventHandler<Element> {
-        let cb = Closure::wrap(cb);
-        let key = intern(&delegation_key);
-        or_debug!(
-            js_sys::Reflect::set(el, &JsValue::from_str(key), cb.as_ref()),
-            el,
-            "set property"
-        );
-
-        GLOBAL_EVENTS.with_borrow_mut(|events| {
-            if !events.contains(&name) {
-                // create global handler
-                let key = JsValue::from_str(key);
-                let handler = move |ev: web_sys::Event| {
-                    let target = ev.target();
-                    let node = ev.composed_path().get(0);
-                    let mut node = if node.is_undefined() || node.is_null() {
-                        JsValue::from(target)
-                    } else {
-                        node
-                    };
-
-                    // TODO reverse Shadow DOM retargetting
-                    // TODO simulate currentTarget
-
-                    while !node.is_null() {
-                        let node_is_disabled =
-                            js_sys::Reflect::get(&node, &JsValue::from_str("disabled"))
-                                .unwrap()
-                                .is_truthy();
-                        if !node_is_disabled {
-                            let maybe_handler = js_sys::Reflect::get(&node, &key).unwrap();
-                            if !maybe_handler.is_undefined() {
-                                let f = maybe_handler.unchecked_ref::<js_sys::Function>();
-                                let _ = f.call1(&node, &ev);
-
-                                if ev.cancel_bubble() {
-                                    return;
-                                }
-                            }
-                        }
-
-                        // navigate up tree
-                        if let Some(parent) = node.unchecked_ref::<web_sys::Node>().parent_node() {
-                            node = parent.into()
-                        } else if let Some(root) = node.dyn_ref::<web_sys::ShadowRoot>() {
-                            node = root.host().unchecked_into();
-                        } else {
-                            node = JsValue::null()
-                        }
-                    }
-                };
-
-                let handler = Box::new(handler) as Box<dyn FnMut(web_sys::Event)>;
-                let handler = Closure::wrap(handler).into_js_value();
-                window()
-                    .add_event_listener_with_callback(&name, handler.unchecked_ref())
-                    .unwrap();
-
-                // register that we've created handler
-                events.insert(name);
-            }
-        });
-
-        // return the remover
-        RemoveEventHandler::new({
-            let key = key.to_owned();
-            let el = el.clone();
-            // safe to construct this here, because it will only run in the browser
-            // so it will always be accessed or dropped from the main thread
-            let el_cb = crate::thread_bound::SendWrapper::new((el, cb));
-            move || {
-                let (el, cb) = el_cb.take();
-                drop(cb);
-                or_debug!(
-                    js_sys::Reflect::delete_property(&el, &JsValue::from_str(&key)),
-                    &el,
-                    "delete property"
-                );
-            }
-        })
-    }
-
     pub fn class_list(el: &Element) -> ClassList {
         el.class_list()
     }
@@ -455,101 +363,6 @@ impl Dom {
 
     pub fn set_inner_html(el: &Element, html: &str) {
         el.set_inner_html(html);
-    }
-
-    pub fn get_template<V>() -> TemplateElement
-    where
-        V: ToTemplate + 'static,
-    {
-        thread_local! {
-            static TEMPLATE_ELEMENT: LazyCell<HtmlTemplateElement> =
-                LazyCell::new(|| document().create_element(Dom::intern("template")).unwrap().unchecked_into());
-            static TEMPLATES: RefCell<Vec<(TypeId, HtmlTemplateElement)>> = Default::default();
-        }
-
-        TEMPLATES.with_borrow_mut(|t| {
-            let id = TypeId::of::<V>();
-            t.iter()
-                .find_map(|entry| (entry.0 == id).then(|| entry.1.clone()))
-                .unwrap_or_else(|| {
-                    let tpl = TEMPLATE_ELEMENT.with(|t| {
-                        t.clone_node()
-                            .unwrap()
-                            .unchecked_into::<HtmlTemplateElement>()
-                    });
-                    let mut buf = String::new();
-                    V::to_template(
-                        &mut buf,
-                        &mut String::new(),
-                        &mut String::new(),
-                        &mut String::new(),
-                        &mut Default::default(),
-                    );
-                    tpl.set_inner_html(&buf);
-                    t.push((id, tpl.clone()));
-                    tpl
-                })
-        })
-    }
-
-    pub fn clone_template(tpl: &TemplateElement) -> Element {
-        tpl.content()
-            .clone_node_with_deep(true)
-            .unwrap()
-            .unchecked_into()
-    }
-
-    pub fn create_element_from_html(html: Cow<'static, str>) -> Element {
-        let tpl = TEMPLATE_CACHE.with_borrow_mut(|cache| {
-            if let Some(tpl_content) = cache.iter().find_map(|(key, tpl)| {
-                (html == *key).then_some(Self::clone_template(tpl.unchecked_ref()))
-            }) {
-                tpl_content
-            } else {
-                let tpl = document().create_element(Self::intern("template")).unwrap();
-                tpl.set_inner_html(&html);
-                let tpl_content = Self::clone_template(tpl.unchecked_ref());
-                cache.push((html, tpl));
-                tpl_content
-            }
-        });
-        tpl.first_element_child().unwrap_or(tpl)
-    }
-
-    pub fn create_svg_element_from_html(html: Cow<'static, str>) -> Element {
-        let tpl = TEMPLATE_CACHE.with_borrow_mut(|cache| {
-            if let Some(tpl_content) = cache.iter().find_map(|(key, tpl)| {
-                (html == *key).then_some(Self::clone_template(tpl.unchecked_ref()))
-            }) {
-                tpl_content
-            } else {
-                let tpl = document().create_element(Self::intern("template")).unwrap();
-                let svg = document()
-                    .create_element_ns(
-                        Some(Self::intern("http://www.w3.org/2000/svg")),
-                        Self::intern("svg"),
-                    )
-                    .unwrap();
-                let g = document()
-                    .create_element_ns(
-                        Some(Self::intern("http://www.w3.org/2000/svg")),
-                        Self::intern("g"),
-                    )
-                    .unwrap();
-                g.set_inner_html(&html);
-                svg.append_child(&g).unwrap();
-                tpl.unchecked_ref::<TemplateElement>()
-                    .content()
-                    .append_child(&svg)
-                    .unwrap();
-                let tpl_content = Self::clone_template(tpl.unchecked_ref());
-                cache.push((html, tpl));
-                tpl_content
-            }
-        });
-
-        let svg = tpl.first_element_child().unwrap();
-        svg.first_element_child().unwrap_or(svg)
     }
 }
 
@@ -690,5 +503,81 @@ where
 {
     fn cast_from(source: Element) -> Option<Self> {
         source.dyn_into::<T>().ok()
+    }
+}
+
+#[cfg(test)]
+mod queue_tests {
+    use super::enqueue_dom_task;
+    use std::{cell::RefCell, collections::VecDeque, panic::AssertUnwindSafe, rc::Rc};
+
+    type Microtasks = Rc<RefCell<VecDeque<fn()>>>;
+
+    fn schedule_into(tasks: &Microtasks) -> impl FnOnce(fn()) {
+        let tasks = Rc::clone(tasks);
+        move |task| tasks.borrow_mut().push_back(task)
+    }
+
+    fn run_next(tasks: &Microtasks) {
+        let task = tasks.borrow_mut().pop_front().expect("scheduled microtask");
+        task();
+    }
+
+    #[test]
+    fn dom_writes_batch_and_reentrant_writes_run_on_the_next_microtask() {
+        let tasks = Microtasks::default();
+        let trace = Rc::new(RefCell::new(Vec::new()));
+        enqueue_dom_task(
+            Box::new({
+                let trace = Rc::clone(&trace);
+                let tasks = Rc::clone(&tasks);
+                move || {
+                    trace.borrow_mut().push("first");
+                    enqueue_dom_task(
+                        Box::new(move || trace.borrow_mut().push("nested")),
+                        schedule_into(&tasks),
+                    );
+                }
+            }),
+            schedule_into(&tasks),
+        );
+        enqueue_dom_task(
+            Box::new({
+                let trace = Rc::clone(&trace);
+                move || trace.borrow_mut().push("second")
+            }),
+            schedule_into(&tasks),
+        );
+        assert_eq!(tasks.borrow().len(), 1, "synchronous writes share a batch");
+        run_next(&tasks);
+        assert_eq!(*trace.borrow(), ["first", "second"]);
+        assert_eq!(
+            tasks.borrow().len(),
+            1,
+            "nested writes schedule another batch"
+        );
+        run_next(&tasks);
+        assert_eq!(*trace.borrow(), ["first", "second", "nested"]);
+        assert!(tasks.borrow().is_empty());
+    }
+
+    #[test]
+    fn panicking_dom_callback_does_not_wedge_future_writes() {
+        let tasks = Microtasks::default();
+        enqueue_dom_task(Box::new(|| panic!("setter failed")), schedule_into(&tasks));
+        assert!(std::panic::catch_unwind(AssertUnwindSafe(|| run_next(&tasks))).is_err());
+
+        let applied = Rc::new(RefCell::new(false));
+        enqueue_dom_task(
+            Box::new({
+                let applied = Rc::clone(&applied);
+                move || *applied.borrow_mut() = true
+            }),
+            schedule_into(&tasks),
+        );
+        assert_eq!(tasks.borrow().len(), 1);
+        run_next(&tasks);
+        assert!(*applied.borrow());
+        assert!(tasks.borrow().is_empty());
     }
 }

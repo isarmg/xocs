@@ -11297,6 +11297,367 @@
           "reason": "Remove the unused SQLite stream-adapter dependency; no current manifest or source consumer remains."
         }
       ]
+    },
+    {
+      "id": "linux-amd64-retire-unused-backends",
+      "reason": "Specialize the product for AMD64 Linux GNU and browser WASM, remove unused native discovery and proxy support, and unify actual entropy consumers. Preserve immutable provenance and licenses.",
+      "from": [
+        {
+          "directory": "src/foundation/cli/terminal-probe",
+          "name": "blog-cli-terminal-probe",
+          "version": "0.0.0",
+          "origins": [
+            "is_terminal_polyfill@1.70.2"
+          ]
+        },
+        {
+          "directory": "src/foundation/native/system-library-discovery",
+          "name": "blog-native-system-library-discovery",
+          "version": "0.0.0",
+          "origins": [
+            "pkg-config@0.3.34"
+          ]
+        },
+        {
+          "directory": "src/foundation/native/windows-compiler",
+          "name": "blog-native-windows-compiler",
+          "version": "0.0.0",
+          "origins": [
+            "find-msvc-tools@0.1.14"
+          ]
+        },
+        {
+          "directory": "src/foundation/native/windows-library-discovery",
+          "name": "blog-native-windows-library-discovery",
+          "version": "0.0.0",
+          "origins": [
+            "vcpkg@0.2.15"
+          ]
+        },
+        {
+          "directory": "src/foundation/network/http-client",
+          "name": "blog-network-http-client",
+          "version": "0.0.0",
+          "origins": [
+            "reqwest@0.13.5"
+          ]
+        },
+        {
+          "directory": "src/foundation/platform/compiler-entropy",
+          "name": "blog-platform-compiler-entropy",
+          "version": "0.0.0",
+          "origins": [
+            "getrandom@0.3.4"
+          ]
+        },
+        {
+          "directory": "src/foundation/platform/ip-addresses",
+          "name": "blog-platform-ip-addresses",
+          "version": "0.0.0",
+          "origins": [
+            "ipnet@2.12.2"
+          ]
+        }
+      ],
+      "to": [],
+      "retired_origins": [
+        {
+          "id": "find-msvc-tools@0.1.14",
+          "reason": "Restrict native compiler discovery to the supported AMD64 Linux GNU host; no product Windows compiler consumer remains."
+        },
+        {
+          "id": "getrandom@0.3.4",
+          "reason": "Use the existing system-entropy implementation for keyed-hash seeds; remove the unused compiler declaration and duplicate entropy implementation."
+        },
+        {
+          "id": "ipnet@2.12.2",
+          "reason": "Remove proxy discovery and IP-network matching support after the sole transport proxy consumer was retired; no remaining source consumer uses ipnet."
+        },
+        {
+          "id": "is_terminal_polyfill@1.70.2",
+          "reason": "Remove the configuration parser terminal tracer, which referenced a nonexistent debug feature and was never an enabled product path; no remaining consumer uses terminal probing."
+        },
+        {
+          "id": "pkg-config@0.3.34",
+          "reason": "Build the repository SQLite implementation directly; no product consumer requires external pkg-config discovery."
+        },
+        {
+          "id": "reqwest@0.13.5",
+          "reason": "The loopback development proxy now directly uses the existing Hyper HTTP/1 pool with explicit streaming, header and deadline contracts; no general-purpose reqwest consumer remains."
+        },
+        {
+          "id": "vcpkg@0.2.15",
+          "reason": "Build repository SQLite on the supported Linux host; no product consumer requires vcpkg or Windows library discovery."
+        }
+      ]
+    },
+    {
+      "id": "split-independent-js-css-pipelines",
+      "reason": "Split independent JavaScript and CSS compilation pipelines into directly consumed packages after controlled cold and single-pipeline-edit build measurements; keep exact origin ownership and remove no provenance.",
+      "from": [
+        {
+          "directory": "src/foundation/assets/compiler",
+          "name": "blog-assets-compiler",
+          "version": "0.0.0",
+          "origins": [
+            "bytecount@0.6.9",
+            "cow-utils@0.1.3",
+            "cssparser-color@0.1.0",
+            "cssparser@0.33.0",
+            "dtoa-short@0.3.5",
+            "dtoa@1.0.11",
+            "json-escape-simd@3.1.2",
+            "lightningcss@1.0.0-alpha.71",
+            "nonmax@0.5.5",
+            "oxc-browserslist@5.0.1",
+            "oxc@0.153.0",
+            "oxc_allocator@0.153.0",
+            "oxc_ast@0.153.0",
+            "oxc_ast_visit@0.153.0",
+            "oxc_codegen@0.153.0",
+            "oxc_compat@0.153.0",
+            "oxc_data_structures@0.153.0",
+            "oxc_diagnostics@0.153.0",
+            "oxc_ecmascript@0.153.0",
+            "oxc_estree@0.153.0",
+            "oxc_index@5.0.0",
+            "oxc_mangler@0.153.0",
+            "oxc_minifier@0.153.0",
+            "oxc_parser@0.153.0",
+            "oxc_regular_expression@0.153.0",
+            "oxc_semantic@0.153.0",
+            "oxc_sourcemap@9.0.0",
+            "oxc_span@0.153.0",
+            "oxc_str@0.153.0",
+            "oxc_syntax@0.153.0",
+            "oxc_traverse@0.153.0",
+            "parcel_selectors@0.28.2",
+            "pathdiff@0.2.3",
+            "precomputed-hash@0.1.1",
+            "unicode-id-start@1.5.0"
+          ]
+        }
+      ],
+      "to": [
+        {
+          "directory": "src/foundation/assets/compiler",
+          "name": "blog-assets-compiler",
+          "version": "0.0.0",
+          "origins": [
+            "bytecount@0.6.9",
+            "cow-utils@0.1.3",
+            "json-escape-simd@3.1.2",
+            "nonmax@0.5.5",
+            "oxc-browserslist@5.0.1",
+            "oxc@0.153.0",
+            "oxc_allocator@0.153.0",
+            "oxc_ast@0.153.0",
+            "oxc_ast_visit@0.153.0",
+            "oxc_codegen@0.153.0",
+            "oxc_compat@0.153.0",
+            "oxc_data_structures@0.153.0",
+            "oxc_diagnostics@0.153.0",
+            "oxc_ecmascript@0.153.0",
+            "oxc_estree@0.153.0",
+            "oxc_index@5.0.0",
+            "oxc_mangler@0.153.0",
+            "oxc_minifier@0.153.0",
+            "oxc_parser@0.153.0",
+            "oxc_regular_expression@0.153.0",
+            "oxc_semantic@0.153.0",
+            "oxc_sourcemap@9.0.0",
+            "oxc_span@0.153.0",
+            "oxc_str@0.153.0",
+            "oxc_syntax@0.153.0",
+            "oxc_traverse@0.153.0",
+            "unicode-id-start@1.5.0"
+          ]
+        },
+        {
+          "directory": "src/foundation/assets/style-compiler",
+          "name": "blog-assets-style-compiler",
+          "version": "0.0.0",
+          "origins": [
+            "cssparser-color@0.1.0",
+            "cssparser@0.33.0",
+            "dtoa-short@0.3.5",
+            "dtoa@1.0.11",
+            "lightningcss@1.0.0-alpha.71",
+            "parcel_selectors@0.28.2",
+            "pathdiff@0.2.3",
+            "precomputed-hash@0.1.1"
+          ]
+        }
+      ],
+      "retired_origins": []
+    },
+    {
+      "id": "remove-html-only-dom-support",
+      "reason": "Specialize the DOM view protocol for actual client-side rendering; remove unused HTML escaping and compile-time HTML template concatenation implementations while preserving original archives, licenses and integration history.",
+      "from": [
+        {
+          "directory": "src/interface/dom",
+          "name": "blog-dom",
+          "version": "0.0.0",
+          "origins": [
+            "any_spawner@0.3.0",
+            "console_error_panic_hook@0.1.7",
+            "const_str_slice_concat@0.1.0",
+            "drain_filter_polyfill@0.1.3",
+            "either_of@0.1.9",
+            "erased@0.1.2",
+            "gloo-events@0.2.0",
+            "gloo-timers@0.3.0",
+            "guardian@1.3.0",
+            "html-escape@0.2.15",
+            "itertools@0.14.0",
+            "leptos_dom@0.8.8",
+            "next_tuple@0.1.0",
+            "oco_ref@0.2.1",
+            "or_poisoned@0.1.0",
+            "reactive_graph@0.2.16",
+            "send_wrapper@0.6.0",
+            "slotmap@1.1.1",
+            "tachys@0.2.19",
+            "throw_error@0.3.1",
+            "typed-builder@0.23.2"
+          ]
+        }
+      ],
+      "to": [
+        {
+          "directory": "src/interface/dom",
+          "name": "blog-dom",
+          "version": "0.0.0",
+          "origins": [
+            "any_spawner@0.3.0",
+            "console_error_panic_hook@0.1.7",
+            "drain_filter_polyfill@0.1.3",
+            "either_of@0.1.9",
+            "erased@0.1.2",
+            "gloo-events@0.2.0",
+            "gloo-timers@0.3.0",
+            "guardian@1.3.0",
+            "itertools@0.14.0",
+            "leptos_dom@0.8.8",
+            "next_tuple@0.1.0",
+            "oco_ref@0.2.1",
+            "or_poisoned@0.1.0",
+            "reactive_graph@0.2.16",
+            "send_wrapper@0.6.0",
+            "slotmap@1.1.1",
+            "tachys@0.2.19",
+            "throw_error@0.3.1",
+            "typed-builder@0.23.2"
+          ]
+        }
+      ],
+      "retired_origins": [
+        {
+          "id": "const_str_slice_concat@0.1.0",
+          "reason": "No remaining implementation or consumer after removal of server HTML and template rendering."
+        },
+        {
+          "id": "html-escape@0.2.15",
+          "reason": "No remaining implementation or consumer after removal of server HTML and template rendering."
+        }
+      ]
+    },
+    {
+      "id": "unify-sqlite-worker-fair-mutex",
+      "reason": "The SQLite worker was the sole intrusive-futures consumer; use the existing Tokio FIFO mutex while preserving lock queueing, worker hand-off and cancellation behavior.",
+      "from": [
+        {
+          "directory": "src/foundation/runtime/intrusive-futures",
+          "name": "blog-runtime-intrusive-futures",
+          "version": "0.0.0",
+          "origins": [
+            "futures-intrusive@0.5.0"
+          ]
+        }
+      ],
+      "to": [],
+      "retired_origins": [
+        {
+          "id": "futures-intrusive@0.5.0",
+          "reason": "No remaining implementation or consumer after SQLite worker synchronization moved to Tokio."
+        }
+      ]
+    },
+    {
+      "id": "unify-password-system-entropy",
+      "reason": "Password OsRng now consumes the maintained Linux/browser system entropy implementation directly with lossless errors; remove the duplicate random-seed platform implementation.",
+      "from": [
+        {
+          "directory": "src/foundation/platform/random-seed",
+          "name": "blog-platform-random-seed",
+          "version": "0.0.0",
+          "origins": [
+            "getrandom@0.2.17"
+          ]
+        }
+      ],
+      "to": [],
+      "retired_origins": [
+        {
+          "id": "getrandom@0.2.17",
+          "reason": "No remaining implementation or consumer after password OsRng moved to the maintained system-entropy source."
+        }
+      ]
+    },
+    {
+      "id": "retire-unused-embedded-binary-streams",
+      "reason": "The product serializes bounded in-memory records; remove unused embedded-I/O 0.4 and 0.6 adapters and their otherwise unconsumed implementations.",
+      "from": [
+        {
+          "directory": "src/foundation/io/portable-stream",
+          "name": "blog-io-portable-stream",
+          "version": "0.0.0",
+          "origins": [
+            "embedded-io@0.6.1"
+          ]
+        },
+        {
+          "directory": "src/foundation/io/record-stream",
+          "name": "blog-io-record-stream",
+          "version": "0.0.0",
+          "origins": [
+            "embedded-io@0.4.0"
+          ]
+        }
+      ],
+      "to": [],
+      "retired_origins": [
+        {
+          "id": "embedded-io@0.6.1",
+          "reason": "No remaining consumer after removing unused embedded stream adapters from binary-record."
+        },
+        {
+          "id": "embedded-io@0.4.0",
+          "reason": "No remaining consumer after removing unused embedded stream adapters from binary-record."
+        }
+      ]
+    },
+    {
+      "id": "retire-obsolete-compiler-version-probe",
+      "reason": "All consumers now target the fixed repository toolchain; no remaining consumer needs the old compiler-version probe.",
+      "from": [
+        {
+          "directory": "src/foundation/native/compiler-probe",
+          "name": "blog-native-compiler-probe",
+          "version": "0.0.0",
+          "origins": [
+            "version_check@0.9.5"
+          ]
+        }
+      ],
+      "to": [],
+      "retired_origins": [
+        {
+          "id": "version_check@0.9.5",
+          "reason": "No remaining implementation or consumer after deleting old compiler feature probes."
+        }
+      ]
     }
   ]
 }

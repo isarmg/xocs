@@ -1,17 +1,12 @@
 use crate::shared_value::Oco;
 use crate::view_tree::{
     html::{
-        attribute::{any_attribute::AnyAttribute, AttributeValue},
-        class::IntoClass,
-        element::InnerHtmlValue,
-        property::IntoProperty,
-        style::IntoStyle,
+        attribute::AttributeValue, class::IntoClass, element::InnerHtmlValue,
+        property::IntoProperty, style::IntoStyle,
     },
-    hydration::Cursor,
     no_attrs,
-    prelude::{Mountable, Render, RenderHtml},
+    prelude::{DomView, Mountable, Render},
     renderer::Rndr,
-    view::{strings::StrState, Position, PositionState, ToTemplate},
 };
 use wasm_bindgen::JsValue;
 
@@ -40,63 +35,11 @@ impl Render for Oco<'static, str> {
 
 no_attrs!(Oco<'static, str>);
 
-impl RenderHtml for Oco<'static, str> {
-    type AsyncOutput = Self;
+impl DomView for Oco<'static, str> {
     type Owned = Self;
 
-    const MIN_LENGTH: usize = 0;
-
-    fn dry_resolve(&mut self) {}
-
-    async fn resolve(self) -> Self::AsyncOutput {
+    fn into_owned(self) -> <Self as DomView>::Owned {
         self
-    }
-
-    fn to_html_with_buf(
-        self,
-        buf: &mut String,
-        position: &mut Position,
-        escape: bool,
-        mark_branches: bool,
-        extra_attrs: Vec<AnyAttribute>,
-    ) {
-        <&str as RenderHtml>::to_html_with_buf(
-            &self,
-            buf,
-            position,
-            escape,
-            mark_branches,
-            extra_attrs,
-        )
-    }
-
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        cursor: &Cursor,
-        position: &PositionState,
-    ) -> Self::State {
-        let this: &str = self.as_ref();
-        let StrState { node, .. } =
-            <&str as RenderHtml>::hydrate::<FROM_SERVER>(this, cursor, position);
-        OcoStrState { node, str: self }
-    }
-
-    fn into_owned(self) -> <Self as RenderHtml>::Owned {
-        self
-    }
-}
-
-impl ToTemplate for Oco<'static, str> {
-    const TEMPLATE: &'static str = <&str as ToTemplate>::TEMPLATE;
-
-    fn to_template(
-        buf: &mut String,
-        class: &mut String,
-        style: &mut String,
-        inner_html: &mut String,
-        position: &mut Position,
-    ) {
-        <&str as ToTemplate>::to_template(buf, class, style, inner_html, position)
     }
 }
 
@@ -123,32 +66,12 @@ impl Mountable for OcoStrState {
 }
 
 impl AttributeValue for Oco<'static, str> {
-    type AsyncOutput = Self;
     type State = (
         crate::view_tree::renderer::types::Element,
         Oco<'static, str>,
     );
     type Cloneable = Self;
     type CloneableOwned = Self;
-
-    fn html_len(&self) -> usize {
-        self.as_str().len()
-    }
-
-    fn to_html(self, key: &str, buf: &mut String) {
-        <&str as AttributeValue>::to_html(self.as_str(), key, buf);
-    }
-
-    fn to_template(_key: &str, _buf: &mut String) {}
-
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        key: &str,
-        el: &crate::view_tree::renderer::types::Element,
-    ) -> Self::State {
-        let (el, _) = <&str as AttributeValue>::hydrate::<FROM_SERVER>(self.as_str(), key, el);
-        (el, self)
-    }
 
     fn build(self, el: &crate::view_tree::renderer::types::Element, key: &str) -> Self::State {
         Rndr::set_attribute(el, key, &self);
@@ -174,37 +97,12 @@ impl AttributeValue for Oco<'static, str> {
         self.upgrade_inplace();
         self
     }
-
-    fn dry_resolve(&mut self) {}
-
-    async fn resolve(self) -> Self::AsyncOutput {
-        self
-    }
 }
 
 impl IntoClass for Oco<'static, str> {
-    type AsyncOutput = Self;
     type State = (crate::view_tree::renderer::types::Element, Self);
     type Cloneable = Self;
     type CloneableOwned = Self;
-
-    fn html_len(&self) -> usize {
-        self.as_str().len()
-    }
-
-    fn to_html(self, class: &mut String) {
-        IntoClass::to_html(self.as_str(), class);
-    }
-
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        el: &crate::view_tree::renderer::types::Element,
-    ) -> Self::State {
-        if !FROM_SERVER {
-            Rndr::set_attribute(el, "class", &self);
-        }
-        (el.clone(), self)
-    }
 
     fn build(self, el: &crate::view_tree::renderer::types::Element) -> Self::State {
         Rndr::set_attribute(el, "class", &self);
@@ -231,12 +129,6 @@ impl IntoClass for Oco<'static, str> {
         self
     }
 
-    fn dry_resolve(&mut self) {}
-
-    async fn resolve(self) -> Self::AsyncOutput {
-        self
-    }
-
     fn reset(state: &mut Self::State) {
         let (el, _prev) = state;
         Rndr::remove_attribute(el, "class");
@@ -247,16 +139,6 @@ impl IntoProperty for Oco<'static, str> {
     type State = (crate::view_tree::renderer::types::Element, JsValue);
     type Cloneable = Self;
     type CloneableOwned = Self;
-
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        el: &crate::view_tree::renderer::types::Element,
-        key: &str,
-    ) -> Self::State {
-        let value = JsValue::from_str(self.as_ref());
-        Rndr::set_property_or_value(el, key, &value);
-        (el.clone(), value)
-    }
 
     fn build(self, el: &crate::view_tree::renderer::types::Element, key: &str) -> Self::State {
         let value = JsValue::from_str(self.as_ref());
@@ -281,22 +163,9 @@ impl IntoProperty for Oco<'static, str> {
 }
 
 impl IntoStyle for Oco<'static, str> {
-    type AsyncOutput = Self;
     type State = (crate::view_tree::renderer::types::Element, Self);
     type Cloneable = Self;
     type CloneableOwned = Self;
-
-    fn to_html(self, style: &mut String) {
-        style.push_str(&self);
-        style.push(';');
-    }
-
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        el: &crate::view_tree::renderer::types::Element,
-    ) -> Self::State {
-        (el.clone(), self)
-    }
 
     fn build(self, el: &crate::view_tree::renderer::types::Element) -> Self::State {
         Rndr::set_attribute(el, "style", &self);
@@ -319,12 +188,6 @@ impl IntoStyle for Oco<'static, str> {
         self
     }
 
-    fn dry_resolve(&mut self) {}
-
-    async fn resolve(self) -> Self::AsyncOutput {
-        self
-    }
-
     fn reset(state: &mut Self::State) {
         let (el, _prev) = state;
         Rndr::remove_attribute(el, "style");
@@ -332,30 +195,9 @@ impl IntoStyle for Oco<'static, str> {
 }
 
 impl InnerHtmlValue for Oco<'static, str> {
-    type AsyncOutput = Self;
     type State = (crate::view_tree::renderer::types::Element, Self);
     type Cloneable = Self;
     type CloneableOwned = Self;
-
-    fn html_len(&self) -> usize {
-        self.len()
-    }
-
-    fn to_html(self, buf: &mut String) {
-        buf.push_str(&self);
-    }
-
-    fn to_template(_buf: &mut String) {}
-
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        el: &crate::view_tree::renderer::types::Element,
-    ) -> Self::State {
-        if !FROM_SERVER {
-            Rndr::set_inner_html(el, &self);
-        }
-        (el.clone(), self)
-    }
 
     fn build(self, el: &crate::view_tree::renderer::types::Element) -> Self::State {
         Rndr::set_inner_html(el, &self);
@@ -378,12 +220,6 @@ impl InnerHtmlValue for Oco<'static, str> {
     fn into_cloneable_owned(mut self) -> Self::CloneableOwned {
         // ensure it's reference-counted
         self.upgrade_inplace();
-        self
-    }
-
-    fn dry_resolve(&mut self) {}
-
-    async fn resolve(self) -> Self::AsyncOutput {
         self
     }
 }

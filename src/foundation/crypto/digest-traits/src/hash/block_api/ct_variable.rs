@@ -167,14 +167,6 @@ where
     }
 }
 
-#[cfg(feature = "zeroize")]
-impl<T, OutSize> zeroize::ZeroizeOnDrop for CtOutWrapper<T, OutSize>
-where
-    T: VariableOutputCore + zeroize::ZeroizeOnDrop,
-    OutSize: ArraySize + IsLessOrEqual<T::OutputSize, Output = True>,
-{
-}
-
 impl<T, OutSize> fmt::Debug for CtOutWrapper<T, OutSize>
 where
     T: VariableOutputCore + AlgorithmName,

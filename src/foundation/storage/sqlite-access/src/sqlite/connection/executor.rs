@@ -1,13 +1,13 @@
+use crate::query_engine::error::Error;
+use crate::query_engine::executor::{Execute, Executor};
+use crate::query_engine::sql_str::SqlStr;
+use crate::query_engine::Either;
 use crate::sqlite::{
     Sqlite, SqliteConnection, SqliteQueryResult, SqliteRow, SqliteStatement, SqliteTypeInfo,
 };
 use futures::future::BoxFuture;
 use futures::stream::BoxStream;
 use futures::{stream, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
-use crate::query_engine::error::Error;
-use crate::query_engine::executor::{Execute, Executor};
-use crate::query_engine::sql_str::SqlStr;
-use crate::query_engine::Either;
 use std::{future, pin::pin};
 
 impl<'c> Executor<'c> for &'c mut SqliteConnection {
@@ -85,17 +85,5 @@ impl<'c> Executor<'c> for &'c mut SqliteConnection {
 
             Ok(statement)
         })
-    }
-
-    #[doc(hidden)]
-    #[cfg(feature = "offline")]
-    fn describe<'e>(
-        self,
-        sql: SqlStr,
-    ) -> BoxFuture<'e, Result<crate::query_engine::describe::Describe<Sqlite>, Error>>
-    where
-        'c: 'e,
-    {
-        Box::pin(async move { self.worker.describe(sql).await })
     }
 }

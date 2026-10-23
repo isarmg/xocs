@@ -43,10 +43,6 @@ impl<T> StatementCache<T> {
         self.inner.len()
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.inner.is_empty()
-    }
-
     /// Removes the least recently used item from the cache.
     pub fn remove_lru(&mut self) -> Option<T> {
         self.inner.remove_lru().map(|(_, v)| v)
@@ -68,7 +64,6 @@ impl<T> StatementCache<T> {
     }
 
     /// Returns true if the cache capacity is more than 0.
-    #[allow(dead_code)] // Only used for some `cfg`s
     pub fn is_enabled(&self) -> bool {
         self.capacity() > 0
     }

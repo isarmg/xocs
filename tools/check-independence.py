@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -12,8 +13,10 @@ import tomllib
 
 SKIP_ROOTS = {'.git', 'target', 'compliance', '.local-run', 'web/node_modules', 'web/dist', 'web/pkg'}
 ROOT = Path(__file__).resolve().parents[1]
-WORKSPACES = [('Cargo.toml', target) for target in
-              ('x86_64-unknown-linux-gnu', 'wasm32-unknown-unknown')]
+spec = importlib.util.spec_from_file_location('blog_source_manager', ROOT / 'tools/rust-sources/manage.py')
+source_manager = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(source_manager)
+WORKSPACES = [('Cargo.toml', target) for target in sorted(source_manager.TARGETS)]
 DEPENDENCIES = ('dependencies', 'dev-dependencies', 'build-dependencies')
 
 
@@ -57,9 +60,11 @@ def check_declarations() -> None:
     root_manifest = tomllib.loads((ROOT / 'Cargo.toml').read_text())
     require('workspace' in root_manifest, 'The root Cargo.toml must declare the sole workspace')
     workspace_dependencies = root_manifest['workspace'].get('dependencies', {})
+    documents = {}
     for path in manifests():
         local_path(path, 'Cargo manifest')
         manifest = tomllib.loads(path.read_text())
+        documents[path.relative_to(ROOT).as_posix()] = manifest
         require(path == ROOT / 'Cargo.toml' or 'workspace' not in manifest,
                 f'Nested Cargo workspace is forbidden: {path}')
         package = manifest.get('package', {})
@@ -96,6 +101,9 @@ def check_declarations() -> None:
                 declaration(name, value)
         for name, value in manifest.get('replace', {}).items():
             declaration(name, value)
+    policy = ROOT / source_manager.POLICY
+    require(policy.is_file(), 'The current source policy is required')
+    source_manager.verify_platform_guard(ROOT, source_manager.read_json(policy), documents)
     lock = ROOT / 'Cargo.lock'
     if lock.exists():
         local_path(lock, 'Cargo lockfile')
@@ -104,8 +112,9 @@ def check_declarations() -> None:
                     f'Root lockfile contains an external source: {package.get("name")}')
 
 
-def check_graph(manifest: str, target: str, offline: bool = True) -> dict:
+def check_graph(manifest: str, target: str) -> dict:
     require(manifest == 'Cargo.toml', 'Only the root Cargo workspace may be resolved')
+    require(target in source_manager.TARGETS, f'Unsupported source graph target: {target}')
     command = ['cargo', '+1.99.0', 'metadata', '--offline', '--locked', '--format-version', '1',
                '--manifest-path', str(ROOT / manifest), '--filter-platform', target]
     completed = subprocess.run(command, cwd=ROOT, text=True, stdout=subprocess.PIPE, check=True)
@@ -125,8 +134,6 @@ def check_graph(manifest: str, target: str, offline: bool = True) -> dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--offline', action='store_true',
-                        help='Compatibility flag; Cargo metadata is always locked and offline')
     parser.parse_args()
     check_declarations()
     graphs = [check_graph(manifest, target) for manifest, target in WORKSPACES]
@@ -138,6 +145,6 @@ def main() -> int:
 if __name__ == '__main__':
     try:
         raise SystemExit(main())
-    except (OSError, RuntimeError, subprocess.CalledProcessError) as error:
+    except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as error:
         print(f'check-independence: {error}', file=sys.stderr)
         raise SystemExit(1)

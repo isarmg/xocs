@@ -60,7 +60,10 @@ impl<K, V> AHashMap<K, V, RandomState> {
     /// This creates a hashmap with the specified capacity using [RandomState::new].
     /// See the documentation in [RandomSource] for notes about key strength.
     pub fn with_capacity(capacity: usize) -> Self {
-        AHashMap(HashMap::with_capacity_and_hasher(capacity, RandomState::new()))
+        AHashMap(HashMap::with_capacity_and_hasher(
+            capacity,
+            RandomState::new(),
+        ))
     }
 }
 
@@ -407,7 +410,7 @@ where
 /// NOTE: For safety this trait impl is only available if either of the flags `runtime-rng` (on by default) or
 /// `compile-time-rng` are enabled. This is to prevent weakly keyed maps from being accidentally created. Instead one of
 /// constructors for [RandomState] must be used.
-#[cfg(any(feature = "compile-time-rng", feature = "runtime-rng", feature = "no-rng"))]
+#[cfg(any(feature = "runtime-rng", feature = "no-rng"))]
 impl<K, V> Default for AHashMap<K, V, RandomState> {
     #[inline]
     fn default() -> AHashMap<K, V, RandomState> {
@@ -437,7 +440,10 @@ where
         hash_map.map(|hash_map| Self(hash_map))
     }
 
-    fn deserialize_in_place<D: Deserializer<'de>>(deserializer: D, place: &mut Self) -> Result<(), D::Error> {
+    fn deserialize_in_place<D: Deserializer<'de>>(
+        deserializer: D,
+        place: &mut Self,
+    ) -> Result<(), D::Error> {
         use serde::de::{MapAccess, Visitor};
 
         struct MapInPlaceVisitor<'a, K: 'a, V: 'a>(&'a mut AHashMap<K, V>);
@@ -489,7 +495,8 @@ mod test {
         map.insert("for".to_string(), 0);
         map.insert("bar".to_string(), 1);
         let mut serialization = serde_json::to_string(&map).unwrap();
-        let mut deserialization: AHashMap<String, u64> = serde_json::from_str(&serialization).unwrap();
+        let mut deserialization: AHashMap<String, u64> =
+            serde_json::from_str(&serialization).unwrap();
         assert_eq!(deserialization, map);
 
         map.insert("baz".to_string(), 2);

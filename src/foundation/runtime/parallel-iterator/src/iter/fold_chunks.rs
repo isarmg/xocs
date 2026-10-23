@@ -1,7 +1,6 @@
 use std::fmt::{self, Debug};
 
 use super::chunks::ChunkProducer;
-use super::plumbing::*;
 use super::*;
 
 /// `FoldChunks` is an iterator that groups elements of an underlying iterator and applies a

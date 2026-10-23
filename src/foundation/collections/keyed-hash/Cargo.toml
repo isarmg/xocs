@@ -43,19 +43,14 @@ package = "blog-native-target-conditions"
 
 [dependencies.getrandom]
 optional = true
-path = "../../platform/compiler-entropy"
-package = "blog-platform-compiler-entropy"
+path = "../../platform/system-entropy"
+package = "blog-platform-system-entropy"
 
 [dependencies.zerocopy]
 features = ["simd"]
 default-features = false
 path = "../../memory/byte-layout"
 package = "blog-memory-byte-layout"
-
-
-[build-dependencies.version_check]
-path = "../../native/compiler-probe"
-package = "blog-native-compiler-probe"
 
 
 [features]
@@ -70,7 +65,3 @@ features = ["alloc"]
 default-features = false
 path = "../../sync/initialization"
 package = "blog-sync-initialization"
-
-[lints.rust.unexpected_cfgs]
-level = "warn"
-check-cfg = ["cfg(feature, values(\"atomic-polyfill\", \"compile-time-rng\"))"]

@@ -48,8 +48,6 @@ macro_rules! mathml_elements {
                 /// A MathML element.
                 #[track_caller]
                 pub fn $tag() -> HtmlElement<[<$tag:camel>], (), ()>
-                where
-
                 {
                     HtmlElement {
                         #[cfg(any(debug_assertions, leptos_debuginfo))]
@@ -114,7 +112,7 @@ macro_rules! mathml_elements {
 
                     const TAG: &'static str = stringify!($tag);
                     const SELF_CLOSING: bool = false;
-                    const ESCAPE_CHILDREN: bool = true;
+
                     const NAMESPACE: Option<&'static str> = Some("http://www.w3.org/1998/Math/MathML");
 
                     #[inline(always)]

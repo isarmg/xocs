@@ -61,3 +61,7 @@ unused_qualifications = "allow"
 [lints.rust.unexpected_cfgs]
 level = "warn"
 check-cfg = ["cfg(feature, values(\"rustc-dep-of-std\"))"]
+
+[[test]]
+name = "linux_abi"
+path = "tests/linux_abi.rs"

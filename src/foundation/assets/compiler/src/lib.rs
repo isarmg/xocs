@@ -1,24 +1,17 @@
-//! Host asset compiler: JavaScript/CSS AST, semantic analysis, linking and minification.
+//! Host asset compiler: JavaScript AST, semantic analysis and minification.
 #![recursion_limit = "512"]
 extern crate alloc;
-#[macro_use]
-extern crate bitflags;
-#[macro_use]
-extern crate log;
 extern crate self as blog_assets_compiler;
-#[path = "../parts/style_color/lib.rs"]
-pub mod style_color;
-#[path = "../parts/style_optimizer/src/lib.rs"]
-pub mod style_optimizer;
-#[path = "../parts/style_parser/src/lib.rs"]
-#[macro_use]
-pub mod style_parser;
-#[path = "../parts/style_selectors/lib.rs"]
-pub mod style_selectors;
+#[path = "../parts/borrowed_text/src/lib.rs"]
+pub mod borrowed_text;
+#[path = "../parts/bounded_index/src/lib.rs"]
+pub mod bounded_index;
 #[path = "../parts/browser_compatibility/src/lib.rs"]
 pub mod browser_compatibility;
 #[path = "../parts/browser_targets/src/lib.rs"]
 pub mod browser_targets;
+#[path = "../parts/byte_count/src/lib.rs"]
+pub mod byte_count;
 #[path = "../parts/code_generator/src/lib.rs"]
 pub mod code_generator;
 #[path = "../parts/compiler_collections/src/lib.rs"]
@@ -27,6 +20,8 @@ pub mod compiler_collections;
 pub mod compiler_errors;
 #[path = "../parts/compiler_strings/src/lib.rs"]
 pub mod compiler_strings;
+#[path = "../parts/json_escaping/src/lib.rs"]
+pub mod json_escaping;
 #[path = "../parts/language_semantics/src/lib.rs"]
 pub mod language_semantics;
 #[path = "../parts/name_compaction/src/lib.rs"]
@@ -39,6 +34,8 @@ pub mod parser;
 pub mod regular_expression;
 #[path = "../parts/scope_analysis/src/lib.rs"]
 pub mod scope_analysis;
+#[path = "../parts/script_identifiers/src/lib.rs"]
+pub mod script_identifiers;
 #[path = "../parts/source_location/src/lib.rs"]
 pub mod source_location;
 #[path = "../parts/source_map/src/lib.rs"]
@@ -59,21 +56,3 @@ pub mod toolkit;
 pub mod tree_traversal;
 #[path = "../parts/typed_index/src/lib.rs"]
 pub mod typed_index;
-#[path = "../parts/cached_hash/src/lib.rs"]
-pub mod cached_hash;
-#[path = "../parts/byte_count/src/lib.rs"]
-pub mod byte_count;
-#[path = "../parts/float_format/src/lib.rs"]
-pub mod float_format;
-#[path = "../parts/json_escaping/src/lib.rs"]
-pub mod json_escaping;
-#[path = "../parts/short_float_format/src/lib.rs"]
-pub mod short_float_format;
-#[path = "../parts/relative_path/src/lib.rs"]
-pub mod relative_path;
-#[path = "../parts/bounded_index/src/lib.rs"]
-pub mod bounded_index;
-#[path = "../parts/borrowed_text/src/lib.rs"]
-pub mod borrowed_text;
-#[path = "../parts/script_identifiers/src/lib.rs"]
-pub mod script_identifiers;

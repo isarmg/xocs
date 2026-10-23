@@ -1,5 +1,5 @@
 use super::{Latency, DEFAULT_MESSAGE_LEVEL};
-use crate::{classify::grpc_errors_as_failures::ParsedGrpcStatus, LatencyUnit};
+use crate::LatencyUnit;
 use http::header::HeaderMap;
 use std::time::Duration;
 use tracing::{Level, Span};
@@ -84,24 +84,11 @@ impl DefaultOnEos {
 }
 
 impl OnEos for DefaultOnEos {
-    fn on_eos(self, trailers: Option<&HeaderMap>, stream_duration: Duration, _span: &Span) {
+    fn on_eos(self, _trailers: Option<&HeaderMap>, stream_duration: Duration, _span: &Span) {
         let stream_duration = Latency {
             unit: self.latency_unit,
             duration: stream_duration,
         };
-        let status = trailers.and_then(|trailers| {
-            match crate::classify::grpc_errors_as_failures::classify_grpc_metadata(
-                trailers,
-                crate::classify::GrpcCode::Ok.into_bitmask(),
-            ) {
-                ParsedGrpcStatus::Success
-                | ParsedGrpcStatus::HeaderNotString
-                | ParsedGrpcStatus::HeaderNotInt => Some(0),
-                ParsedGrpcStatus::NonSuccess(status) => Some(status.get()),
-                ParsedGrpcStatus::GrpcStatusHeaderMissing => None,
-            }
-        });
-
-        event_dynamic_lvl!(self.level, %stream_duration, status, "end of stream");
+        event_dynamic_lvl!(self.level, %stream_duration, "end of stream");
     }
 }

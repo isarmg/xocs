@@ -28,8 +28,5 @@ package = "blog-crypto-password-digest-traits"
 [features]
 default = ["std"]
 reset = []
-simd = []
-simd_asm = ["simd_opt"]
-simd_opt = ["simd"]
 size_opt = []
 std = ["digest/std"]

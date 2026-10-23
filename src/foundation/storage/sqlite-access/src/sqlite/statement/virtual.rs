@@ -148,15 +148,12 @@ fn prepare(
 ) -> Result<Option<StatementHandle>, Error> {
     let mut flags = 0;
 
-    // For some reason, when building with the `sqlcipher` feature enabled
-    // `SQLITE_PREPARE_PERSISTENT` ends up being `i32` instead of `u32`. Crazy, right?
-    #[allow(trivial_casts, clippy::unnecessary_cast)]
     if persistent {
         // SQLITE_PREPARE_PERSISTENT
         //  The SQLITE_PREPARE_PERSISTENT flag is a hint to the query
         //  planner that the prepared statement will be retained for a long time
         //  and probably reused many times.
-        flags |= SQLITE_PREPARE_PERSISTENT as u32;
+        flags |= SQLITE_PREPARE_PERSISTENT;
     }
 
     while !query.is_empty() {

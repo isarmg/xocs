@@ -346,20 +346,6 @@ impl Runtime {
 
     #[track_caller]
     fn block_on_inner<F: Future>(&self, future: F, _meta: SpawnMeta<'_>) -> F::Output {
-        #[cfg(all(
-            tokio_unstable,
-            feature = "taskdump",
-            feature = "rt",
-            target_os = "linux",
-            any(
-                target_arch = "aarch64",
-                target_arch = "x86",
-                target_arch = "x86_64",
-                target_arch = "s390x"
-            )
-        ))]
-        let future = super::task::trace::Trace::root(future);
-
         #[cfg(all(tokio_unstable, feature = "tracing"))]
         let future = crate::util::trace::task(
             future,

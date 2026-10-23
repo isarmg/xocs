@@ -33,14 +33,11 @@ publish = false
 __internal_bench = []
 alloc = []
 core-error = []
-default = ["clock", "std", "oldtime", "wasmbind"]
-libc = []
+default = ["clock", "std", "wasmbind"]
 now = ["std"]
-oldtime = []
 std = ["alloc"]
-clock = ["winapi", "iana-time-zone", "now"]
+clock = ["iana-time-zone", "now"]
 wasmbind = ["wasm-bindgen", "js-sys"]
-winapi = []
 
 [lib]
 name = "blog_format_date_time"
@@ -59,7 +56,6 @@ package = "blog-format-data-model"
 
 
 [target."cfg(unix)".dependencies.iana-time-zone]
-features = ["fallback"]
 optional = true
 path = "../../platform/local-time-zone"
 package = "blog-platform-local-time-zone"
@@ -70,7 +66,6 @@ package = "blog-platform-local-time-zone"
 js-sys = { optional = true, path = "../../interface/javascript-api",package = "blog-interface-javascript-api"}
 wasm-bindgen = { optional = true, path = "../../wasm/browser-bridge",package = "blog-wasm-browser-bridge"}
 
-[target."cfg(windows)"]
 [lints.rust.unexpected_cfgs]
 level = "warn"
-check-cfg = ["cfg(feature, values(\"clock\", \"defmt\", \"rkyv\", \"rkyv-16\", \"rkyv-32\", \"rkyv-64\", \"rkyv-validation\", \"unstable-locales\", \"wasmbind\", \"winapi\"))"]
+check-cfg = ["cfg(feature, values(\"clock\", \"unstable-locales\", \"wasmbind\"))"]

@@ -28,7 +28,7 @@ where
     type Output = web_sys::HtmlElement;
 
     const SELF_CLOSING: bool = false;
-    const ESCAPE_CHILDREN: bool = true;
+
     const TAG: &'static str = "";
     const NAMESPACE: Option<&'static str> = None;
 

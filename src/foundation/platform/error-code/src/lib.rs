@@ -1,4 +1,4 @@
-//! Cross-platform interface to the `errno` variable.
+//! Linux interface to the thread-local `errno` variable.
 //!
 //! # Examples
 //! ```
@@ -19,10 +19,9 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg_attr(unix, path = "unix.rs")]
-#[cfg_attr(windows, path = "windows.rs")]
-#[cfg_attr(target_os = "wasi", path = "wasi.rs")]
-#[cfg_attr(target_os = "hermit", path = "hermit.rs")]
+#[cfg(not(all(target_os = "linux", target_arch = "x86_64", target_env = "gnu")))]
+compile_error!("errno access is a Linux amd64 GNU native dependency");
+#[path = "unix.rs"]
 mod sys;
 
 use core::fmt;
@@ -33,12 +32,8 @@ use std::io;
 
 /// Wraps a platform-specific error code.
 ///
-/// The `Display` instance maps the code to a human-readable string. It
-/// calls [`strerror_r`][1] under POSIX, and [`FormatMessageW`][2] on
-/// Windows.
-///
-/// [1]: http://pubs.opengroup.org/onlinepubs/009695399/functions/strerror.html
-/// [2]: https://msdn.microsoft.com/en-us/library/windows/desktop/ms679351%28v=vs.85%29.aspx
+/// The `Display` instance maps the code to a human-readable string using
+/// [`strerror_r`](https://pubs.opengroup.org/onlinepubs/009695399/functions/strerror.html).
 #[derive(Copy, Clone, Eq, Ord, PartialEq, PartialOrd, Hash)]
 pub struct Errno(pub i32);
 
@@ -75,13 +70,7 @@ impl From<Errno> for i32 {
 }
 
 #[cfg(feature = "std")]
-impl Error for Errno {
-    // TODO: Remove when MSRV >= 1.27
-    #[allow(deprecated)]
-    fn description(&self) -> &str {
-        "system error"
-    }
-}
+impl Error for Errno {}
 
 #[cfg(feature = "std")]
 impl From<Errno> for io::Error {
@@ -116,27 +105,8 @@ fn it_works_with_to_string() {
 #[cfg(feature = "std")]
 #[test]
 fn check_description() {
-    let expect = if cfg!(windows) {
-        "Incorrect function."
-    } else if cfg!(target_os = "illumos") {
-        "Not owner"
-    } else if cfg!(target_os = "wasi") || cfg!(target_os = "emscripten") {
-        "Argument list too long"
-    } else if cfg!(target_os = "haiku") {
-        "Operation not allowed"
-    } else if cfg!(target_os = "vxworks") {
-        "operation not permitted"
-    } else {
-        "Operation not permitted"
-    };
-
-    let errno_code = if cfg!(target_os = "haiku") {
-        -2147483633
-    } else if cfg!(target_os = "hurd") {
-        1073741825
-    } else {
-        1
-    };
+    let expect = "Operation not permitted";
+    let errno_code = libc::EPERM;
     set_errno(Errno(errno_code));
 
     assert_eq!(errno().to_string(), expect);

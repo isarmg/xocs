@@ -509,7 +509,7 @@ macro_rules! impl_integer_for_isize {
                 // Assuming two's complement, the number created by the shift
                 // is positive for all numbers except gcd = abs(min value)
                 // The call to .abs() causes a panic in debug mode
-                if m == Self::min_value() || n == Self::min_value() {
+                if m == Self::MIN || n == Self::MIN {
                     return (1 << shift).abs();
                 }
 
@@ -714,8 +714,8 @@ macro_rules! impl_integer_for_isize {
 
             #[test]
             fn test_gcd_min_val() {
-                let min = <$T>::min_value();
-                let max = <$T>::max_value();
+                let min = <$T>::MIN;
+                let max = <$T>::MAX;
                 let max_pow2 = max / 2 + 1;
                 assert_eq!(min.gcd(&max), 1 as $T);
                 assert_eq!(max.gcd(&min), 1 as $T);
@@ -728,21 +728,21 @@ macro_rules! impl_integer_for_isize {
             #[test]
             #[should_panic]
             fn test_gcd_min_val_min_val() {
-                let min = <$T>::min_value();
+                let min = <$T>::MIN;
                 assert!(min.gcd(&min) >= 0);
             }
 
             #[test]
             #[should_panic]
             fn test_gcd_min_val_0() {
-                let min = <$T>::min_value();
+                let min = <$T>::MIN;
                 assert!(min.gcd(&0) >= 0);
             }
 
             #[test]
             #[should_panic]
             fn test_gcd_0_min_val() {
-                let min = <$T>::min_value();
+                let min = <$T>::MIN;
                 assert!((0 as $T).gcd(&min) >= 0);
             }
 
@@ -829,7 +829,7 @@ macro_rules! impl_integer_for_isize {
 
             #[test]
             fn test_multiple_of_one_limits() {
-                for x in &[<$T>::min_value(), <$T>::max_value()] {
+                for x in &[<$T>::MIN, <$T>::MAX] {
                     for one in &[1, -1] {
                         assert_eq!(Integer::next_multiple_of(x, one), *x);
                         assert_eq!(Integer::prev_multiple_of(x, one), *x);

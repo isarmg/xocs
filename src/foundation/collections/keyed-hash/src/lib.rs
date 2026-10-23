@@ -13,10 +13,7 @@
 //! But this also means that different computers or computers using different versions of ahash may observe different
 //! hash values for the same input.
 #![cfg_attr(
-    all(
-        feature = "std",
-        any(feature = "compile-time-rng", feature = "runtime-rng", feature = "no-rng")
-    ),
+    all(feature = "std", any(feature = "runtime-rng", feature = "no-rng")),
     doc = r##"
 # Basic Usage
 AHash provides an implementation of the [Hasher] trait.
@@ -32,7 +29,7 @@ map.insert(12, 34);
 ### Randomness
 
 The above requires a source of randomness to generate keys for the hashmap. By default this obtained from the OS.
-It is also possible to have randomness supplied via the `compile-time-rng` flag, or manually.
+Callers can also supply keys explicitly.
 
 ### If randomness is not available
 
@@ -97,7 +94,6 @@ Note the import of [HashMapExt]. This is needed for the constructor.
 #![deny(clippy::correctness, clippy::complexity, clippy::perf)]
 #![allow(clippy::pedantic, clippy::cast_lossless, clippy::unreadable_literal)]
 #![cfg_attr(all(not(test), not(feature = "std")), no_std)]
-#![cfg_attr(specialize, feature(min_specialization))]
 #![cfg_attr(feature = "nightly-arm-aes", feature(stdarch_arm_neon_intrinsics))]
 
 #[macro_use]
@@ -218,9 +214,8 @@ where
 /// [HashMap]: std::collections::HashMap
 impl Default for AHasher {
     /// Constructs a new [AHasher] with fixed keys.
-    /// If `std` is enabled these will be generated upon first invocation.
-    /// Otherwise if the `compile-time-rng`feature is enabled these will be generated at compile time.
-    /// If neither of these features are available, hardcoded constants will be used.
+    /// With `runtime-rng`, keys are generated from system entropy on first use.
+    /// Without that feature, hardcoded constants are used.
     ///
     /// Because the values are fixed, different hashers will all hash elements the same way.
     /// This could make hash values predictable, if DOS attacks are a concern. If this behaviour is

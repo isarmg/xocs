@@ -87,10 +87,6 @@ impl QueryLogger {
         self.rows_affected += n;
     }
 
-    pub fn sql(&self) -> &SqlStr {
-        &self.sql
-    }
-
     pub fn finish(&self) {
         let elapsed = self.start.elapsed();
 
@@ -125,7 +121,7 @@ impl QueryLogger {
                         db.statement = sql,
                         rows_affected = self.rows_affected,
                         rows_returned = self.rows_returned,
-                        // Human-friendly - includes units (usually ms). Also kept for backward compatibility
+                        // Human-readable duration alongside the numeric metric.
                         ?elapsed,
                         // Search friendly - numeric
                         elapsed_secs = elapsed.as_secs_f64(),
@@ -143,7 +139,7 @@ impl QueryLogger {
                         db.statement = sql,
                         rows_affected = self.rows_affected,
                         rows_returned = self.rows_returned,
-                        // Human-friendly - includes units (usually ms). Also kept for backward compatibility
+                        // Human-readable duration alongside the numeric metric.
                         ?elapsed,
                         // Search friendly - numeric
                         elapsed_secs = elapsed.as_secs_f64(),

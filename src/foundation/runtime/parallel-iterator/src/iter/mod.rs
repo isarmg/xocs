@@ -2292,7 +2292,7 @@ pub trait ParallelIterator: Sized + Send {
     /// let result: Vec<_> = (0_usize..100)
     ///     .into_par_iter()
     ///     .take_any_while(|&x| {
-    ///         quota.fetch_update(Relaxed, Relaxed, |q| q.checked_sub(x))
+    ///         quota.try_update(Relaxed, Relaxed, |q| q.checked_sub(x))
     ///             .is_ok()
     ///     })
     ///     .collect();

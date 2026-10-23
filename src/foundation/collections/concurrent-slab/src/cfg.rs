@@ -136,11 +136,7 @@ pub(crate) const fn next_pow2(n: usize) -> usize {
 impl Config for DefaultConfig {
     const INITIAL_PAGE_SIZE: usize = 32;
 
-    #[cfg(target_pointer_width = "64")]
     const MAX_THREADS: usize = 4096;
-    #[cfg(target_pointer_width = "32")]
-    // TODO(eliza): can we find enough bits to give 32-bit platforms more threads?
-    const MAX_THREADS: usize = 128;
 
     const MAX_PAGES: usize = WIDTH / 2;
 }
@@ -172,7 +168,6 @@ mod tests {
     use crate::Slab;
 
     #[test]
-    #[cfg_attr(loom, ignore)]
     #[should_panic]
     fn validates_max_refs() {
         struct GiantGenConfig;
@@ -190,7 +185,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(loom, ignore)]
     fn big() {
         let slab = Slab::new();
 
@@ -202,7 +196,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(loom, ignore)]
     fn custom_page_sz() {
         let slab = Slab::new_with_config::<test_util::TinyConfig>();
 

@@ -1,8 +1,5 @@
 use core::fmt;
 
-#[cfg(any(feature = "rkyv", feature = "rkyv-16", feature = "rkyv-32", feature = "rkyv-64"))]
-use rkyv::{Archive, Deserialize, Serialize};
-
 use crate::OutOfRange;
 
 /// The day of week.
@@ -13,7 +10,7 @@ use crate::OutOfRange;
 ///
 /// # Example
 /// ```
-/// use chrono::Weekday;
+/// use blog_format_date_time::Weekday;
 ///
 /// let monday = "Monday".parse::<Weekday>().unwrap();
 /// assert_eq!(monday, Weekday::Mon);
@@ -30,15 +27,6 @@ use crate::OutOfRange;
 /// assert_eq!(sunday.pred(), Weekday::Sat);
 /// ```
 #[derive(PartialEq, Eq, Copy, Clone, Debug, Hash)]
-#[cfg_attr(
-    any(feature = "rkyv", feature = "rkyv-16", feature = "rkyv-32", feature = "rkyv-64"),
-    derive(Archive, Deserialize, Serialize),
-    archive(compare(PartialEq)),
-    archive_attr(derive(Clone, Copy, PartialEq, Eq, Debug, Hash))
-)]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-#[cfg_attr(all(feature = "arbitrary", feature = "std"), derive(arbitrary::Arbitrary))]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Weekday {
     /// Monday.
     Mon = 0,
@@ -125,7 +113,7 @@ impl Weekday {
     ///
     /// ```
     /// # #[cfg(feature = "clock")] {
-    /// # use chrono::{Local, Datelike};
+    /// # use blog_format_date_time::{Local, Datelike};
     /// // MTWRFSU is occasionally used as a single-letter abbreviation of the weekdays.
     /// // Use `num_days_from_monday` to index into the array.
     /// const MTWRFSU: [char; 7] = ['M', 'T', 'W', 'R', 'F', 'S', 'U'];
@@ -154,7 +142,7 @@ impl Weekday {
     /// # Examples
     ///
     /// ```
-    /// use chrono::Weekday::*;
+    /// use blog_format_date_time::Weekday::*;
     /// assert_eq!(Mon.days_since(Mon), 0);
     /// assert_eq!(Sun.days_since(Tue), 5);
     /// assert_eq!(Wed.days_since(Sun), 3);
@@ -162,7 +150,11 @@ impl Weekday {
     pub const fn days_since(&self, other: Weekday) -> u32 {
         let lhs = *self as u32;
         let rhs = other as u32;
-        if lhs < rhs { 7 + lhs - rhs } else { lhs - rhs }
+        if lhs < rhs {
+            7 + lhs - rhs
+        } else {
+            lhs - rhs
+        }
     }
 }
 
@@ -257,13 +249,6 @@ impl fmt::Debug for ParseWeekdayError {
     }
 }
 
-#[cfg(feature = "defmt")]
-impl defmt::Format for ParseWeekdayError {
-    fn format(&self, fmt: defmt::Formatter) {
-        defmt::write!(fmt, "ParseWeekdayError {{ .. }}")
-    }
-}
-
 // the actual `FromStr` implementation is in the `format` module to leverage the existing code
 
 #[cfg(feature = "serde")]
@@ -294,7 +279,9 @@ mod weekday_serde {
         where
             E: de::Error,
         {
-            value.parse().map_err(|_| E::custom("short or long weekday names expected"))
+            value
+                .parse()
+                .map_err(|_| E::custom("short or long weekday names expected"))
         }
     }
 
@@ -317,8 +304,14 @@ mod tests {
         for i in 0..7 {
             let base_day = Weekday::try_from(i).unwrap();
 
-            assert_eq!(base_day.num_days_from_monday(), base_day.days_since(Weekday::Mon));
-            assert_eq!(base_day.num_days_from_sunday(), base_day.days_since(Weekday::Sun));
+            assert_eq!(
+                base_day.num_days_from_monday(),
+                base_day.days_since(Weekday::Mon)
+            );
+            assert_eq!(
+                base_day.num_days_from_sunday(),
+                base_day.days_since(Weekday::Sun)
+            );
 
             assert_eq!(base_day.days_since(base_day), 0);
 
@@ -326,15 +319,27 @@ mod tests {
             assert_eq!(base_day.days_since(base_day.pred().pred()), 2);
             assert_eq!(base_day.days_since(base_day.pred().pred().pred()), 3);
             assert_eq!(base_day.days_since(base_day.pred().pred().pred().pred()), 4);
-            assert_eq!(base_day.days_since(base_day.pred().pred().pred().pred().pred()), 5);
-            assert_eq!(base_day.days_since(base_day.pred().pred().pred().pred().pred().pred()), 6);
+            assert_eq!(
+                base_day.days_since(base_day.pred().pred().pred().pred().pred()),
+                5
+            );
+            assert_eq!(
+                base_day.days_since(base_day.pred().pred().pred().pred().pred().pred()),
+                6
+            );
 
             assert_eq!(base_day.days_since(base_day.succ()), 6);
             assert_eq!(base_day.days_since(base_day.succ().succ()), 5);
             assert_eq!(base_day.days_since(base_day.succ().succ().succ()), 4);
             assert_eq!(base_day.days_since(base_day.succ().succ().succ().succ()), 3);
-            assert_eq!(base_day.days_since(base_day.succ().succ().succ().succ().succ()), 2);
-            assert_eq!(base_day.days_since(base_day.succ().succ().succ().succ().succ().succ()), 1);
+            assert_eq!(
+                base_day.days_since(base_day.succ().succ().succ().succ().succ()),
+                2
+            );
+            assert_eq!(
+                base_day.days_since(base_day.succ().succ().succ().succ().succ().succ()),
+                1
+            );
         }
     }
 
@@ -351,8 +356,8 @@ mod tests {
     #[test]
     #[cfg(feature = "serde")]
     fn test_serde_serialize() {
-        use Weekday::*;
         use serde_json::to_string;
+        use Weekday::*;
 
         let cases: Vec<(Weekday, &str)> = vec![
             (Mon, "\"Mon\""),
@@ -373,8 +378,8 @@ mod tests {
     #[test]
     #[cfg(feature = "serde")]
     fn test_serde_deserialize() {
-        use Weekday::*;
         use serde_json::from_str;
+        use Weekday::*;
 
         let cases: Vec<(&str, Weekday)> = vec![
             ("\"mon\"", Mon),
@@ -400,20 +405,17 @@ mod tests {
             assert_eq!(weekday, expected_weekday);
         }
 
-        let errors: Vec<&str> =
-            vec!["\"not a weekday\"", "\"monDAYs\"", "\"mond\"", "mon", "\"thur\"", "\"thurs\""];
+        let errors: Vec<&str> = vec![
+            "\"not a weekday\"",
+            "\"monDAYs\"",
+            "\"mond\"",
+            "mon",
+            "\"thur\"",
+            "\"thurs\"",
+        ];
 
         for str in errors {
             from_str::<Weekday>(str).unwrap_err();
         }
-    }
-
-    #[test]
-    #[cfg(feature = "rkyv-validation")]
-    fn test_rkyv_validation() {
-        let mon = Weekday::Mon;
-        let bytes = rkyv::to_bytes::<_, 1>(&mon).unwrap();
-
-        assert_eq!(rkyv::from_bytes::<Weekday>(&bytes).unwrap(), mon);
     }
 }

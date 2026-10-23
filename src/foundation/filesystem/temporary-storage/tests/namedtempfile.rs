@@ -345,10 +345,6 @@ fn test_temp_path_resolve_missing_cwd() {
     std::env::set_current_dir(&tmpdir).expect("failed to change to the temporary directory");
     tmpdir.close().unwrap();
 
-    #[allow(deprecated)]
-    let path = TempPath::from_path("foo");
-    assert_eq!(&*path, Path::new("foo"));
-
     TempPath::try_from_path("foo").expect_err("should have failed to make path absolute file");
 }
 
@@ -368,13 +364,8 @@ fn test_temp_path_resolve_existing_cwd() {
         tmpdir.path().to_owned()
     };
 
-    #[allow(deprecated)]
-    let path = TempPath::from_path("foo");
+    let path = TempPath::try_from_path("foo").unwrap();
     assert_eq!(&*path, cwd.join("foo"));
-
-    #[allow(deprecated)]
-    let path = TempPath::from_path("");
-    assert_eq!(&*path, Path::new(""));
 
     TempPath::try_from_path("").expect_err("empty paths should fail");
 }

@@ -73,9 +73,6 @@
 #[cfg(feature = "serde")]
 extern crate serde;
 
-#[cfg(feature = "zeroize")]
-extern crate zeroize;
-
 #[cfg(test)]
 extern crate bincode;
 
@@ -87,12 +84,9 @@ mod impls;
 #[cfg(feature = "serde")]
 mod impl_serde;
 
-#[cfg(feature = "zeroize")]
-mod impl_zeroize;
-
 use core::iter::FromIterator;
 use core::marker::PhantomData;
-use core::mem::{MaybeUninit, ManuallyDrop};
+use core::mem::{ManuallyDrop, MaybeUninit};
 use core::ops::{Deref, DerefMut};
 use core::{mem, ptr, slice};
 use typenum::bit::{B0, B1};
@@ -232,8 +226,11 @@ impl<T, N: ArrayLength<T>> ArrayBuilder<T, N> {
     /// to mark how many elements have been created.
     #[doc(hidden)]
     #[inline]
-    pub unsafe fn iter_position(&mut self) -> (slice::IterMut<T>, &mut usize) {
-        ((&mut *self.array.as_mut_ptr()).iter_mut(), &mut self.position)
+    pub unsafe fn iter_position(&mut self) -> (slice::IterMut<'_, T>, &mut usize) {
+        (
+            (&mut *self.array.as_mut_ptr()).iter_mut(),
+            &mut self.position,
+        )
     }
 
     /// When done writing (assuming all elements have been written to),
@@ -287,7 +284,7 @@ impl<T, N: ArrayLength<T>> ArrayConsumer<T, N> {
     /// Increment the position as you iterate to mark off consumed elements
     #[doc(hidden)]
     #[inline]
-    pub unsafe fn iter_position(&mut self) -> (slice::Iter<T>, &mut usize) {
+    pub unsafe fn iter_position(&mut self) -> (slice::Iter<'_, T>, &mut usize) {
         (self.array.iter(), &mut self.position)
     }
 }

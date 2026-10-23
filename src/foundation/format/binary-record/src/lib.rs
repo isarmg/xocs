@@ -6,59 +6,10 @@
 pub mod accumulator;
 mod de;
 
-mod eio;
-
 mod error;
 pub mod fixint;
 mod ser;
 mod varint;
-
-// Still experimental! Don't make pub pub.
-pub(crate) mod max_size;
-
-/// # Experimental Postcard Features
-///
-/// Items inside this module require various feature flags, and are not
-/// subject to SemVer stability. Items may be removed or deprecated at
-/// any point.
-///
-/// ## Derive
-///
-/// The `experimental-derive` feature enables one experimental feature:
-///
-/// * Max size calculation
-///
-/// ### Max Size Calculation
-///
-/// This features enables calculation of the Max serialized size of a message as
-/// an associated `usize` constant called `POSTCARD_MAX_SIZE`. It also provides a
-/// `#[derive(MaxSize)]` macro that can be used for calculating user types.
-///
-/// This is useful for determining the maximum buffer size needed when receiving
-/// or sending a message that has been serialized.
-///
-/// NOTE: This only covers the size of "plain" flavored messages, e.g. not with COBS
-/// or any other Flavors applied. The overhead for these flavors must be calculated
-/// separately.
-///
-/// Please report any missing types, or any incorrectly calculated values.
-///
-/// ### Message Schema Generation
-///
-/// This now lives in the `postcard-schema` crate.
-pub mod experimental {
-    /// Compile time max-serialization size calculation
-    #[cfg(feature = "experimental-derive")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "experimental-derive")))]
-    pub mod max_size {
-        // NOTE: This is the trait...
-        pub use crate::max_size::MaxSize;
-        // NOTE: ...and this is the derive macro
-        pub use postcard_derive::MaxSize;
-    }
-
-    pub use crate::ser::serialized_size;
-}
 
 pub use de::deserializer::Deserializer;
 pub use de::flavors as de_flavors;
@@ -69,12 +20,6 @@ pub use ser::{serialize_with_flavor, serializer::Serializer, to_extend, to_slice
 
 #[cfg(feature = "heapless")]
 pub use ser::{to_vec, to_vec_cobs};
-
-#[cfg(any(feature = "embedded-io-04", feature = "embedded-io-06"))]
-pub use ser::to_eio;
-
-#[cfg(any(feature = "embedded-io-04", feature = "embedded-io-06"))]
-pub use de::from_eio;
 
 #[cfg(feature = "use-std")]
 pub use ser::{to_io, to_stdvec, to_stdvec_cobs};
@@ -108,3 +53,6 @@ mod test {
         assert_eq!(deser, x);
     }
 }
+
+#[cfg(test)]
+mod consumer_tests;

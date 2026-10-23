@@ -110,14 +110,9 @@ impl AHasher {
     #[inline(always)]
     fn large_update(&mut self, new_data: u128) {
         let block: [u64; 2] = new_data.convert();
-        let combined = folded_multiply(block[0] ^ self.extra_keys[0], block[1] ^ self.extra_keys[1]);
+        let combined =
+            folded_multiply(block[0] ^ self.extra_keys[0], block[1] ^ self.extra_keys[1]);
         self.buffer = (self.buffer.wrapping_add(self.pad) ^ combined).rotate_left(ROT);
-    }
-
-    #[inline]
-    #[cfg(specialize)]
-    fn short_finish(&self) -> u64 {
-        folded_multiply(self.buffer, self.pad)
     }
 }
 
@@ -151,19 +146,8 @@ impl Hasher for AHasher {
     }
 
     #[inline]
-    #[cfg(any(
-        target_pointer_width = "64",
-        target_pointer_width = "32",
-        target_pointer_width = "16"
-    ))]
     fn write_usize(&mut self, i: usize) {
         self.write_u64(i as u64);
-    }
-
-    #[inline]
-    #[cfg(target_pointer_width = "128")]
-    fn write_usize(&mut self, i: usize) {
-        self.write_u128(i as u128);
     }
 
     #[inline]
@@ -199,146 +183,6 @@ impl Hasher for AHasher {
     }
 }
 
-#[cfg(specialize)]
-pub(crate) struct AHasherU64 {
-    pub(crate) buffer: u64,
-    pub(crate) pad: u64,
-}
-
-/// A specialized hasher for only primitives under 64 bits.
-#[cfg(specialize)]
-impl Hasher for AHasherU64 {
-    #[inline]
-    fn finish(&self) -> u64 {
-        folded_multiply(self.buffer, self.pad)
-        //self.buffer
-    }
-
-    #[inline]
-    fn write(&mut self, _bytes: &[u8]) {
-        unreachable!("Specialized hasher was called with a different type of object")
-    }
-
-    #[inline]
-    fn write_u8(&mut self, i: u8) {
-        self.write_u64(i as u64);
-    }
-
-    #[inline]
-    fn write_u16(&mut self, i: u16) {
-        self.write_u64(i as u64);
-    }
-
-    #[inline]
-    fn write_u32(&mut self, i: u32) {
-        self.write_u64(i as u64);
-    }
-
-    #[inline]
-    fn write_u64(&mut self, i: u64) {
-        self.buffer = folded_multiply(i ^ self.buffer, MULTIPLE);
-    }
-
-    #[inline]
-    fn write_u128(&mut self, _i: u128) {
-        unreachable!("Specialized hasher was called with a different type of object")
-    }
-
-    #[inline]
-    fn write_usize(&mut self, _i: usize) {
-        unreachable!("Specialized hasher was called with a different type of object")
-    }
-}
-
-#[cfg(specialize)]
-pub(crate) struct AHasherFixed(pub AHasher);
-
-/// A specialized hasher for fixed size primitives larger than 64 bits.
-#[cfg(specialize)]
-impl Hasher for AHasherFixed {
-    #[inline]
-    fn finish(&self) -> u64 {
-        self.0.short_finish()
-    }
-
-    #[inline]
-    fn write(&mut self, bytes: &[u8]) {
-        self.0.write(bytes)
-    }
-
-    #[inline]
-    fn write_u8(&mut self, i: u8) {
-        self.write_u64(i as u64);
-    }
-
-    #[inline]
-    fn write_u16(&mut self, i: u16) {
-        self.write_u64(i as u64);
-    }
-
-    #[inline]
-    fn write_u32(&mut self, i: u32) {
-        self.write_u64(i as u64);
-    }
-
-    #[inline]
-    fn write_u64(&mut self, i: u64) {
-        self.0.write_u64(i);
-    }
-
-    #[inline]
-    fn write_u128(&mut self, i: u128) {
-        self.0.write_u128(i);
-    }
-
-    #[inline]
-    fn write_usize(&mut self, i: usize) {
-        self.0.write_usize(i);
-    }
-}
-
-#[cfg(specialize)]
-pub(crate) struct AHasherStr(pub AHasher);
-
-/// A specialized hasher for a single string
-/// Note that the other types don't panic because the hash impl for String tacks on an unneeded call. (As does vec)
-#[cfg(specialize)]
-impl Hasher for AHasherStr {
-    #[inline]
-    fn finish(&self) -> u64 {
-        self.0.finish()
-    }
-
-    #[inline]
-    fn write(&mut self, bytes: &[u8]) {
-        if bytes.len() > 8 {
-            self.0.write(bytes)
-        } else {
-            let value = read_small(bytes);
-            self.0.buffer = folded_multiply(value[0] ^ self.0.buffer, value[1] ^ self.0.extra_keys[1]);
-            self.0.pad = self.0.pad.wrapping_add(bytes.len() as u64);
-        }
-    }
-
-    #[inline]
-    fn write_u8(&mut self, _i: u8) {}
-
-    #[inline]
-    fn write_u16(&mut self, _i: u16) {}
-
-    #[inline]
-    fn write_u32(&mut self, _i: u32) {}
-
-    #[inline]
-    fn write_u64(&mut self, _i: u64) {}
-
-    #[inline]
-    fn write_u128(&mut self, _i: u128) {}
-
-    #[inline]
-    fn write_usize(&mut self, _i: usize) {}
-}
-
 #[cfg(test)]
 mod tests {
     use crate::fallback_hash::*;
@@ -355,6 +199,6 @@ mod tests {
         let result2 = hasher.buffer;
         let result: [u8; 8] = result.convert();
         let result2: [u8; 8] = result2.convert();
-        assert_ne!(hex::encode(result), hex::encode(result2));
+        assert_ne!(result, result2);
     }
 }

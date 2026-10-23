@@ -1,0 +1,117 @@
+[package]
+build = "../../../../tools/assets/src/platform_contract.rs"
+name = "blog-assets-style-compiler"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+description = "宿主 CSS 解析、层叠样式优化和序列化"
+license = "MIT AND MPL-2.0 AND Apache-2.0 AND BSD-3-Clause AND Unicode-3.0"
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+[lib]
+name = "blog_assets_style_compiler"
+path = "src/lib.rs"
+[dependencies]
+[dependencies.ahash]
+package = "blog-collections-keyed-hash"
+path = "../../collections/keyed-hash"
+features = []
+default-features = true
+
+[dependencies.bitflags]
+package = "blog-collections-bit-set"
+path = "../../collections/bit-set"
+features = []
+default-features = true
+
+[dependencies.const_str]
+package = "blog-text-compile-time-text"
+path = "../../text/compile-time-text"
+features = []
+default-features = true
+
+[dependencies.data_encoding]
+package = "blog-encoding-radix-codecs"
+path = "../../encoding/radix-codecs"
+features = []
+default-features = true
+
+[dependencies.indexmap]
+package = "blog-collections-ordered-map"
+path = "../../collections/ordered-map"
+features = ["serde"]
+default-features = true
+
+[dependencies.itertools]
+package = "blog-syntax-style-iterators"
+path = "../../syntax/style-iterators"
+features = []
+default-features = true
+
+[dependencies.lazy_static]
+package = "blog-sync-lazy-global"
+path = "../../sync/lazy-global"
+features = []
+default-features = true
+
+[dependencies.lightningcss_derive]
+package = "blog-assets-style-value-derive"
+path = "../style-value-derive"
+features = []
+default-features = true
+
+[dependencies.pastey]
+package = "blog-syntax-token-concat"
+path = "../../syntax/token-concat"
+features = []
+default-features = true
+
+[dependencies.smallvec]
+package = "blog-collections-inline-vector"
+path = "../../collections/inline-vector"
+features = ["serde", "union"]
+default-features = true
+
+[dependencies.cssparser_macros]
+package = "blog-assets-style-token-macros"
+path = "../style-token-macros"
+features = []
+default-features = true
+
+[dependencies.itoa]
+package = "blog-encoding-integer-format"
+path = "../../encoding/integer-format"
+features = []
+default-features = true
+
+[dependencies.phf]
+package = "blog-lookup-style-table"
+path = "../../lookup/style-table"
+features = ["macros"]
+default-features = true
+
+[dependencies.log]
+package = "blog-diagnostics-event-facade"
+path = "../../diagnostics/event-facade"
+features = []
+default-features = true
+
+[dependencies.rustc_hash]
+package = "blog-collections-compiler-hash"
+path = "../../collections/compiler-hash"
+features = []
+default-features = true
+
+[dependencies.serde]
+package = "blog-format-data-model"
+path = "../../format/data-model"
+features = ["derive"]
+default-features = true
+
+[dependencies.serde_json]
+package = "blog-format-json"
+path = "../../format/json"
+features = []
+default-features = true

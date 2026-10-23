@@ -4,16 +4,12 @@ use crate::f2s_intrinsics::{
     mul_pow5_div_pow2, mul_pow5_inv_div_pow2, multiple_of_power_of_2_32, multiple_of_power_of_5_32,
 };
 use crate::parse::Error;
-#[cfg(feature = "no-panic")]
-use no_panic::no_panic;
 
 const FLOAT_EXPONENT_BIAS: usize = 127;
 
 fn floor_log2(value: u32) -> u32 {
     31_u32.wrapping_sub(value.leading_zeros())
 }
-
-#[cfg_attr(feature = "no-panic", no_panic)]
 pub fn s2f(buffer: &[u8]) -> Result<f32, Error> {
     let len = buffer.len();
     if len == 0 {

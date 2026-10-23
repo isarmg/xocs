@@ -108,7 +108,7 @@ pub trait CheckedRem: Sized + Rem<Self, Output = Self> {
     ///
     /// ```
     /// use num_traits::CheckedRem;
-    /// use std::i32::MIN;
+    /// const MIN: i32 = <i32>::MIN;
     ///
     /// assert_eq!(CheckedRem::checked_rem(&10, &7), Some(3));
     /// assert_eq!(CheckedRem::checked_rem(&10, &-7), Some(3));
@@ -157,7 +157,7 @@ pub trait CheckedNeg: Sized {
     ///
     /// ```
     /// use num_traits::CheckedNeg;
-    /// use std::i32::MIN;
+    /// const MIN: i32 = <i32>::MIN;
     ///
     /// assert_eq!(CheckedNeg::checked_neg(&1_i32), Some(-1));
     /// assert_eq!(CheckedNeg::checked_neg(&-1_i32), Some(1));

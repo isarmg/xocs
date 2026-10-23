@@ -16,7 +16,8 @@
 
 - [开发与验证](development.md)：源码构建、自动化检查与发行输入。
 - [用途架构与定制](maintained-design.md)：当前目录、内部版本、SQLite/CSR 定制与优化边界。
-- [依赖分析与深度定制](dependency-customization.md)：按真实消费者定制实现、评估合并代价与验证优化收益。
+- [依赖分析与深度定制](dependency-customization.md)：按真实消费者定制实现、评估编译边界与验证优化收益。
+- [Linux AMD64 优化报告](optimization-linux-amd64.md)：本轮范围、正确性修复、测量和验收记录。
 - [Rust 源码管理](rust-sources.md)、[维护规则](RUST_SOURCE_MAINTENANCE.md)：来源、完整文件收据和显式迁移。
 - [生成的用途关系](RUST_SOURCE_ARCHITECTURE.md)、[原始来源清单](THIRD_PARTY_RUST_SOURCES.md)：实际包映射、入口和依赖关系。
 - [历史 xocs Web 迁移记录](xcss-web-migration.md)：改名前的实现与当时验证，当前结构见独立实现说明。

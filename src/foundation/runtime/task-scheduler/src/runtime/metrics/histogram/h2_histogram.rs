@@ -381,7 +381,6 @@ mod test {
                         prop_assert!(size >= prev_size, "Bucket sizes are not monotonically increasing: This size {size} (previous: {prev_size}). Bucket: {bucket}");
                     }
 
-
                     // 4. Assert that the size of the buckets is always within the error bound of 2^-p
                     if bucket > 0 && bucket < histogram.num_buckets - 1 {
                         let p = histogram.p as f64;

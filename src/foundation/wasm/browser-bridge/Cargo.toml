@@ -32,12 +32,9 @@ publish = false
 default = ["std"]
 enable-interning = ["std"]
 gg-alloc = []
-msrv = []
-rustversion = []
 spans = []
 std = []
 strict-macro = ["wasm-bindgen-macro/strict-macro"]
-xxx_debug_only_print_generated_code = []
 
 [lib]
 name = "blog_wasm_browser_bridge"
@@ -64,11 +61,6 @@ package = "blog-wasm-browser-bridge-entry"
 [dependencies.wasm-bindgen-shared]
 path = "../browser-bridge-schema"
 package = "blog-wasm-browser-bridge-schema"
-
-
-[build-dependencies.rustversion-compat]
-package = "blog-native-compiler-conditions"
-path = "../../native/compiler-conditions"
 
 
 [lints.clippy]

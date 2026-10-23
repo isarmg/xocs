@@ -405,7 +405,6 @@ cfg_rt! {
         }
     }
 
-
     #[track_caller]
     pub(super) fn spawn_local_inner<F>(future: F, meta: SpawnMeta<'_>) -> JoinHandle<F::Output>
     where F: Future + 'static,
@@ -423,19 +422,6 @@ cfg_rt! {
 
                 let future = future.take().unwrap();
 
-                #[cfg(all(
-                    tokio_unstable,
-                    feature = "taskdump",
-                    feature = "rt",
-                    target_os = "linux",
-                    any(
-                        target_arch = "aarch64",
-                        target_arch = "x86",
-                        target_arch = "x86_64",
-                        target_arch = "s390x"
-                    )
-                ))]
-                let future = task::trace::Trace::root(future);
                 let id = task::Id::next();
                 let task = crate::util::trace::task(future, "task", meta, id.as_u64());
 
@@ -1262,7 +1248,7 @@ impl LocalState {
     fn assert_called_from_owner_thread(&self) {
         // FreeBSD has some weirdness around thread-local destruction.
         // TODO: remove this hack when thread id is cleaned up
-        #[cfg(not(any(target_os = "openbsd", target_os = "freebsd")))]
+        #[cfg(not(target_os = "openbsd"))]
         debug_assert!(
             // if we couldn't get the thread ID because we're dropping the local
             // data, skip the assertion --- the `Drop` impl is not going to be

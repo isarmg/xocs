@@ -191,7 +191,7 @@ where
 {
     /// Create a new `ReseedingCore`.
     fn new(rng: R, threshold: u64, reseeder: Rsdr) -> Self {
-        use ::core::i64::MAX;
+        const MAX: i64 = <i64>::MAX;
         fork::register_fork_handler();
 
         // Because generating more values than `i64::MAX` takes centuries on
@@ -239,7 +239,9 @@ where
 
     #[inline(never)]
     fn reseed_and_generate(
-        &mut self, results: &mut <Self as BlockRngCore>::Results, global_fork_counter: usize,
+        &mut self,
+        results: &mut <Self as BlockRngCore>::Results,
+        global_fork_counter: usize,
     ) {
         let num_bytes = results.as_ref().len() * size_of::<<R as BlockRngCore>::Item>();
 
@@ -276,7 +278,6 @@ where
 {
 }
 
-
 #[cfg(all(unix, not(target_os = "emscripten")))]
 mod fork {
     use core::sync::atomic::{AtomicUsize, Ordering};
@@ -310,11 +311,9 @@ mod fork {
         static REGISTER: Once = Once::new();
         REGISTER.call_once(|| {
             // Bump the counter before and after forking (see #1169):
-            let ret = unsafe { libc::pthread_atfork(
-                Some(fork_handler),
-                Some(fork_handler),
-                Some(fork_handler),
-            ) };
+            let ret = unsafe {
+                libc::pthread_atfork(Some(fork_handler), Some(fork_handler), Some(fork_handler))
+            };
             if ret != 0 {
                 panic!("libc::pthread_atfork failed with code {}", ret);
             }
@@ -329,7 +328,6 @@ mod fork {
     }
     pub fn register_fork_handler() {}
 }
-
 
 #[cfg(feature = "std_rng")]
 #[cfg(test)]

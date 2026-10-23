@@ -1062,14 +1062,12 @@ impl<'a> ParseBuffer<'a> {
     }
 }
 
-#[cfg_attr(doc_cfg, doc(cfg(feature = "parsing")))]
 impl<T: Parse> Parse for Box<T> {
     fn parse(input: ParseStream) -> Result<Self> {
         input.parse().map(Box::new)
     }
 }
 
-#[cfg_attr(doc_cfg, doc(cfg(feature = "parsing")))]
 impl<T: Parse + Token> Parse for Option<T> {
     fn parse(input: ParseStream) -> Result<Self> {
         if T::peek(input.cursor()) {
@@ -1080,14 +1078,12 @@ impl<T: Parse + Token> Parse for Option<T> {
     }
 }
 
-#[cfg_attr(doc_cfg, doc(cfg(feature = "parsing")))]
 impl Parse for TokenStream {
     fn parse(input: ParseStream) -> Result<Self> {
         input.step(|cursor| Ok((cursor.token_stream(), Cursor::empty())))
     }
 }
 
-#[cfg_attr(doc_cfg, doc(cfg(feature = "parsing")))]
 impl Parse for TokenTree {
     fn parse(input: ParseStream) -> Result<Self> {
         input.step(|cursor| match cursor.token_tree() {
@@ -1097,7 +1093,6 @@ impl Parse for TokenTree {
     }
 }
 
-#[cfg_attr(doc_cfg, doc(cfg(feature = "parsing")))]
 impl Parse for Group {
     fn parse(input: ParseStream) -> Result<Self> {
         input.step(|cursor| {
@@ -1113,7 +1108,6 @@ impl Parse for Group {
     }
 }
 
-#[cfg_attr(doc_cfg, doc(cfg(feature = "parsing")))]
 impl Parse for Punct {
     fn parse(input: ParseStream) -> Result<Self> {
         input.step(|cursor| match cursor.punct() {
@@ -1123,7 +1117,6 @@ impl Parse for Punct {
     }
 }
 
-#[cfg_attr(doc_cfg, doc(cfg(feature = "parsing")))]
 impl Parse for Literal {
     fn parse(input: ParseStream) -> Result<Self> {
         input.step(|cursor| match cursor.literal() {
@@ -1193,7 +1186,7 @@ pub trait Parser: Sized {
     }
 }
 
-fn tokens_to_parse_buffer(tokens: &TokenBuffer) -> ParseBuffer {
+fn tokens_to_parse_buffer(tokens: &TokenBuffer) -> ParseBuffer<'_> {
     let scope = Span::call_site();
     let cursor = tokens.begin();
     let unexpected = Rc::new(Cell::new(Unexpected::None));
@@ -1288,7 +1281,6 @@ impl Parse for Nothing {
 }
 
 #[cfg(feature = "extra-traits")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "extra-traits")))]
 impl Debug for Nothing {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str("Nothing")
@@ -1296,11 +1288,9 @@ impl Debug for Nothing {
 }
 
 #[cfg(feature = "extra-traits")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "extra-traits")))]
 impl Eq for Nothing {}
 
 #[cfg(feature = "extra-traits")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "extra-traits")))]
 impl PartialEq for Nothing {
     fn eq(&self, _other: &Self) -> bool {
         true
@@ -1308,7 +1298,6 @@ impl PartialEq for Nothing {
 }
 
 #[cfg(feature = "extra-traits")]
-#[cfg_attr(doc_cfg, doc(cfg(feature = "extra-traits")))]
 impl Hash for Nothing {
     fn hash<H: Hasher>(&self, _state: &mut H) {}
 }

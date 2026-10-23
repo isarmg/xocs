@@ -56,8 +56,6 @@ mod u128_ext;
 use core::hint;
 use core::mem::{self, MaybeUninit};
 use core::str;
-#[cfg(feature = "no-panic")]
-use no_panic::no_panic;
 
 /// A correctly sized stack allocation for the formatted integer to be written
 /// into.
@@ -94,7 +92,6 @@ impl Buffer {
     /// This is a cheap operation; you don't need to worry about reusing buffers
     /// for efficiency.
     #[inline]
-    #[cfg_attr(feature = "no-panic", no_panic)]
     pub fn new() -> Buffer {
         let bytes = [MaybeUninit::<u8>::uninit(); i128::MAX_STR_LEN];
         Buffer { bytes }
@@ -102,7 +99,6 @@ impl Buffer {
 
     /// Print an integer into this buffer and return a reference to its string
     /// representation within the buffer.
-    #[cfg_attr(feature = "no-panic", no_panic)]
     pub fn format<I: Integer>(&mut self, i: I) -> &str {
         let buf_ptr = self.bytes.as_mut_ptr().cast::<I::Buffer>();
         let string = i.write(unsafe { &mut *buf_ptr });
@@ -148,7 +144,6 @@ macro_rules! impl_Integer {
             type Buffer = [MaybeUninit<u8>; Self::MAX_STR_LEN];
 
             #[inline]
-            #[cfg_attr(feature = "no-panic", no_panic)]
             fn write(self, buf: &mut Self::Buffer) -> &str {
                 let offset = Unsigned::fmt(self, buf);
                 // SAFETY: Starting from `offset`, all elements of the slice have been set.
@@ -164,7 +159,6 @@ macro_rules! impl_Integer {
             type Buffer = [MaybeUninit<u8>; Self::MAX_STR_LEN];
 
             #[inline]
-            #[cfg_attr(feature = "no-panic", no_panic)]
             fn write(self, buf: &mut Self::Buffer) -> &str {
                 let mut offset = Self::MAX_STR_LEN - $Unsigned::MAX_STR_LEN;
                 offset += Unsigned::fmt(
@@ -200,7 +194,6 @@ macro_rules! impl_Integer_size {
             type Buffer = <$primitive as private::Sealed>::Buffer;
 
             #[inline]
-            #[cfg_attr(feature = "no-panic", no_panic)]
             fn write(self, buf: &mut Self::Buffer) -> &str {
                 (self as $primitive).write(buf)
             }
@@ -243,7 +236,6 @@ fn divmod100(value: u32) -> (u32, u32) {
 ///
 /// `buf` content starting from `offset` index MUST BE initialized and MUST BE
 /// ascii characters.
-#[cfg_attr(feature = "no-panic", no_panic)]
 unsafe fn slice_buffer_to_str(buf: &[MaybeUninit<u8>], offset: usize) -> &str {
     // SAFETY: `offset` is always included between 0 and `buf`'s length.
     let written = unsafe { buf.get_unchecked(offset..) };
@@ -259,7 +251,6 @@ trait Unsigned: Integer {
 macro_rules! impl_Unsigned {
     ($Unsigned:ident) => {
         impl Unsigned for $Unsigned {
-            #[cfg_attr(feature = "no-panic", no_panic)]
             fn fmt(self, buf: &mut Self::Buffer) -> usize {
                 // Count the number of bytes in buf that are not initialized.
                 let mut offset = buf.len();
@@ -332,7 +323,6 @@ impl_Unsigned!(u32);
 impl_Unsigned!(u64);
 
 impl Unsigned for u128 {
-    #[cfg_attr(feature = "no-panic", no_panic)]
     fn fmt(self, buf: &mut Self::Buffer) -> usize {
         // Optimize common-case zero, which would also need special treatment due to
         // its "leading" zero.
@@ -404,7 +394,6 @@ impl Unsigned for u128 {
 }
 
 // Encodes the 16 least-significant decimals of n into `buf[OFFSET..OFFSET + 16]`.
-#[cfg_attr(feature = "no-panic", no_panic)]
 fn enc_16lsd<const OFFSET: usize>(buf: &mut [MaybeUninit<u8>], n: u64) {
     // Consume the least-significant decimals from a working copy.
     let mut remain = n;
@@ -446,7 +435,6 @@ fn enc_16lsd<const OFFSET: usize>(buf: &mut [MaybeUninit<u8>], n: u64) {
 //   in Proc. of the SIGPLAN94 Conference on Programming Language Design and
 //   Implementation, 1994, pp. 61–72
 //
-#[cfg_attr(feature = "no-panic", no_panic)]
 fn div_rem_1e16(n: u128) -> (u128, u64) {
     const D: u128 = 1_0000_0000_0000_0000;
     // The check inlines well with the caller flow.

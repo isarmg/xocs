@@ -5,6 +5,7 @@ rust-version = "1.99"
 license = "Apache-2.0"
 publish = false
 description = "认证、SQLite 持久化、安装契约和资产响应"
+build = "../../tools/assets/src/platform_contract.rs"
 
 [features]
 default = ["tracing"]
@@ -25,9 +26,9 @@ tokio = {  features = ["fs", "io-util", "macros", "net", "rt-multi-thread", "sig
 serde = {  features = ["derive", "error-path"], path = "../foundation/format/data-model",package = "blog-format-data-model",default-features = true,optional = false}
 serde_json = {  path = "../foundation/format/json",package = "blog-format-json"}
 async-trait = {  path = "../foundation/syntax/async-trait",package = "blog-syntax-async-trait"}
-sqlx = {  default-features = false, features = ["runtime-tokio", "sqlite-bundled"], path = "../foundation/storage/sqlite-access",package = "blog-storage-sqlite-access"}
+sqlx = {  default-features = false, path = "../foundation/storage/sqlite-access",package = "blog-storage-sqlite-access"}
 rustix = {  features = ["event", "fs", "process"], path = "../foundation/platform/system-calls",package = "blog-platform-system-calls"}
-libsqlite3-sys = {  features = ["bundled"], path = "../foundation/storage/sqlite-native",package = "blog-storage-sqlite-native"}
+libsqlite3-sys = {  path = "../foundation/storage/sqlite-native",package = "blog-storage-sqlite-native"}
 tempfile = {  path = "../foundation/filesystem/temporary-storage",package = "blog-filesystem-temporary-storage"}
 libc = { path = "../foundation/platform/system-abi",package = "blog-platform-system-abi"}
 tokio-util = {  features = ["rt"], path = "../foundation/runtime/scheduled-io",package = "blog-runtime-scheduled-io"}

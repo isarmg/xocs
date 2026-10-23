@@ -1,4 +1,3 @@
-use super::plumbing::*;
 use super::*;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -102,7 +101,7 @@ struct SkipAnyFolder<'f, C> {
 }
 
 fn checked_decrement(u: &AtomicUsize) -> bool {
-    u.fetch_update(Ordering::Relaxed, Ordering::Relaxed, |u| u.checked_sub(1))
+    u.try_update(Ordering::Relaxed, Ordering::Relaxed, |u| u.checked_sub(1))
         .is_ok()
 }
 

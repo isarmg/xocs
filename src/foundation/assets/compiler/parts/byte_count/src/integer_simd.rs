@@ -1,7 +1,4 @@
-#[cfg(not(any()))]
-use core::{mem, ptr, usize};
-#[cfg(any())]
-use std::{mem, ptr, usize};
+use core::{mem, ptr};
 
 fn splat(byte: u8) -> usize {
     let lo = usize::MAX / 0xFF;
@@ -10,11 +7,15 @@ fn splat(byte: u8) -> usize {
 
 unsafe fn usize_load_unchecked(bytes: &[u8], offset: usize) -> usize {
     let mut output = 0;
-    ptr::copy_nonoverlapping(
-        bytes.as_ptr().add(offset),
-        &mut output as *mut usize as *mut u8,
-        mem::size_of::<usize>(),
-    );
+    // SAFETY: the caller ensures a full word remains after `offset`. `output`
+    // is a separate initialized word; copying bytes does not require alignment.
+    unsafe {
+        ptr::copy_nonoverlapping(
+            bytes.as_ptr().add(offset),
+            &mut output as *mut usize as *mut u8,
+            mem::size_of::<usize>(),
+        );
+    }
     output
 }
 

@@ -330,11 +330,9 @@
 //! - `io-util`: Enables the IO based `Ext` traits.
 //! - `io-std`: Enable `Stdout`, `Stdin` and `Stderr` types.
 //! - `net`: Enables `tokio::net` types such as `TcpStream`, `UnixStream` and
-//!   `UdpSocket`, as well as (on Unix-like systems) `AsyncFd` and (on
-//!   FreeBSD) `PollAio`.
+//!   `UdpSocket`, as well as `AsyncFd` on Linux.
 //! - `time`: Enables `tokio::time` types and allows the schedulers to enable
 //!   the built-in timer.
-//! - `process`: Enables `tokio::process` types.
 //! - `macros`: Enables `#[tokio::main]` and `#[tokio::test]` macros.
 //! - `sync`: Enables all `tokio::sync` types.
 //! - `signal`: Enables all `tokio::signal` types.
@@ -355,8 +353,6 @@
 //!
 //! - `tracing`: Enables tracing events.
 //! - `schedule-latency`: Allows measurement of task scheduling latencies.
-//! - `io-uring`: Enables `io-uring` (Linux only).
-//! - `taskdump`: Enables `taskdump` (Linux only).
 //!
 //! Likewise, this flag enables access to unstable APIs.
 //!
@@ -471,36 +467,11 @@ compile_error! {
         feature = "fs",
         feature = "io-std",
         feature = "net",
-        feature = "process",
         feature = "rt-multi-thread",
         feature = "signal"
     )
 ))]
 compile_error!("Only features sync,macros,io-util,rt,time are supported on wasm.");
-
-#[cfg(all(not(tokio_unstable), feature = "io-uring"))]
-compile_error!("The `io-uring` feature requires `--cfg tokio_unstable`.");
-
-#[cfg(all(not(tokio_unstable), feature = "taskdump"))]
-compile_error!("The `taskdump` feature requires `--cfg tokio_unstable`.");
-
-#[cfg(all(
-    feature = "taskdump",
-    not(doc),
-    not(all(
-        target_os = "linux",
-        any(
-            target_arch = "aarch64",
-            target_arch = "x86",
-            target_arch = "x86_64",
-            target_arch = "s390x"
-        )
-    ))
-))]
-compile_error!(
-    "The `taskdump` feature is only currently supported on \
-linux, on `aarch64`, `x86`, `x86_64` and `s390x`."
-);
 
 #[cfg(all(not(tokio_unstable), feature = "schedule-latency"))]
 compile_error!("The `schedule-latency` feature requires `--cfg tokio_unstable`.");
@@ -530,16 +501,7 @@ pub mod net;
 
 mod loom;
 
-cfg_process! {
-    pub mod process;
-}
-
-#[cfg(any(
-    feature = "fs",
-    feature = "io-std",
-    feature = "net",
-    all(windows, feature = "process"),
-))]
+#[cfg(any(feature = "fs", feature = "io-std", feature = "net"))]
 mod blocking;
 
 cfg_rt! {
@@ -582,16 +544,11 @@ cfg_time! {
 }
 
 mod trace {
-    cfg_taskdump! {
-        pub(crate) use crate::runtime::task::trace::trace_leaf;
-    }
 
-    cfg_not_taskdump! {
-        #[inline(always)]
-        #[allow(dead_code)]
-        pub(crate) fn trace_leaf(_: &mut std::task::Context<'_>) -> std::task::Poll<()> {
-            std::task::Poll::Ready(())
-        }
+    #[inline(always)]
+    #[allow(dead_code)]
+    pub(crate) fn trace_leaf(_: &mut std::task::Context<'_>) -> std::task::Poll<()> {
+        std::task::Poll::Ready(())
     }
 
     #[cfg_attr(not(feature = "sync"), allow(dead_code))]

@@ -8,9 +8,7 @@ use crate::arch::aarch64::neon::packedpair as neon;
 #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
 use crate::arch::wasm32::simd128::packedpair as simd128;
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-use crate::arch::x86_64::{
-    avx2::packedpair as avx2, sse2::packedpair as sse2,
-};
+use crate::arch::x86_64::{avx2::packedpair as avx2, sse2::packedpair as sse2};
 
 /// A "meta" substring searcher.
 ///
@@ -60,7 +58,9 @@ impl Searcher {
                 debug_assert_eq!(1, needle.len());
                 Searcher {
                     call: searcher_kind_one_byte,
-                    kind: SearcherKind { one_byte: needle[0] },
+                    kind: SearcherKind {
+                        one_byte: needle[0],
+                    },
                     rabinkarp,
                 }
             };
@@ -80,7 +80,11 @@ impl Searcher {
                 if do_packed_search(needle) {
                     trace!("building x86_64 AVX2 substring searcher");
                     let kind = SearcherKind { avx2: pp };
-                    Searcher { call: searcher_kind_avx2, kind, rabinkarp }
+                    Searcher {
+                        call: searcher_kind_avx2,
+                        kind,
+                        rabinkarp,
+                    }
                 } else if prefilter.is_none() {
                     Searcher::twoway(needle, rabinkarp, None)
                 } else {
@@ -91,7 +95,11 @@ impl Searcher {
                 if do_packed_search(needle) {
                     trace!("building x86_64 SSE2 substring searcher");
                     let kind = SearcherKind { sse2: pp };
-                    Searcher { call: searcher_kind_sse2, kind, rabinkarp }
+                    Searcher {
+                        call: searcher_kind_sse2,
+                        kind,
+                        rabinkarp,
+                    }
                 } else if prefilter.is_none() {
                     Searcher::twoway(needle, rabinkarp, None)
                 } else {
@@ -115,7 +123,11 @@ impl Searcher {
                 if do_packed_search(needle) {
                     trace!("building wasm32 simd128 substring searcher");
                     let kind = SearcherKind { simd128: pp };
-                    Searcher { call: searcher_kind_simd128, kind, rabinkarp }
+                    Searcher {
+                        call: searcher_kind_simd128,
+                        kind,
+                        rabinkarp,
+                    }
                 } else if prefilter.is_none() {
                     Searcher::twoway(needle, rabinkarp, None)
                 } else {
@@ -135,7 +147,11 @@ impl Searcher {
                 if do_packed_search(needle) {
                     trace!("building aarch64 neon substring searcher");
                     let kind = SearcherKind { neon: pp };
-                    Searcher { call: searcher_kind_neon, kind, rabinkarp }
+                    Searcher {
+                        call: searcher_kind_neon,
+                        kind,
+                        rabinkarp,
+                    }
                 } else if prefilter.is_none() {
                     Searcher::twoway(needle, rabinkarp, None)
                 } else {
@@ -181,16 +197,21 @@ impl Searcher {
             None => {
                 trace!("building scalar two-way substring searcher");
                 let kind = SearcherKind { two_way: finder };
-                Searcher { call: searcher_kind_two_way, kind, rabinkarp }
+                Searcher {
+                    call: searcher_kind_two_way,
+                    kind,
+                    rabinkarp,
+                }
             }
             Some(prestrat) => {
                 trace!(
                     "building scalar two-way \
                      substring searcher with a prefilter"
                 );
-                let two_way_with_prefilter =
-                    TwoWayWithPrefilter { finder, prestrat };
-                let kind = SearcherKind { two_way_with_prefilter };
+                let two_way_with_prefilter = TwoWayWithPrefilter { finder, prestrat };
+                let kind = SearcherKind {
+                    two_way_with_prefilter,
+                };
                 Searcher {
                     call: searcher_kind_two_way_with_prefilter,
                     kind,
@@ -345,8 +366,10 @@ unsafe fn searcher_kind_two_way_with_prefilter(
     if rabinkarp::is_fast(haystack, needle) {
         searcher.rabinkarp.find(haystack, needle)
     } else {
-        let TwoWayWithPrefilter { ref finder, ref prestrat } =
-            searcher.kind.two_way_with_prefilter;
+        let TwoWayWithPrefilter {
+            ref finder,
+            ref prestrat,
+        } = searcher.kind.two_way_with_prefilter;
         let pre = Pre { prestate, prestrat };
         finder.find_with_prefilter(Some(pre), haystack, needle)
     }
@@ -490,19 +513,13 @@ impl SearcherRev {
     /// needle. The needle given should be the same as the needle that this
     /// finder was initialized with.
     #[inline]
-    pub(crate) fn rfind(
-        &self,
-        haystack: &[u8],
-        needle: &[u8],
-    ) -> Option<usize> {
+    pub(crate) fn rfind(&self, haystack: &[u8], needle: &[u8]) -> Option<usize> {
         if haystack.len() < needle.len() {
             return None;
         }
         match self.kind {
             SearcherRevKind::Empty => Some(haystack.len()),
-            SearcherRevKind::OneByte { needle } => {
-                crate::memrchr(needle, haystack)
-            }
+            SearcherRevKind::OneByte { needle } => crate::memrchr(needle, haystack),
             SearcherRevKind::TwoWay { ref finder } => {
                 if rabinkarp::is_fast(haystack, needle) {
                     self.rabinkarp.rfind(haystack, needle)
@@ -630,11 +647,15 @@ impl Prefilter {
         if rarest_rank > MAX_FALLBACK_RANK {
             None
         } else {
-            let finder =
-                crate::arch::all::packedpair::Finder::with_pair(needle, pair)?;
+            let finder = crate::arch::all::packedpair::Finder::with_pair(needle, pair)?;
             let call = prefilter_kind_fallback;
             let kind = PrefilterKind { fallback: finder };
-            Some(Prefilter { call, kind, rarest_byte, rarest_offset })
+            Some(Prefilter {
+                call,
+                kind,
+                rarest_byte,
+                rarest_offset,
+            })
         }
     }
 
@@ -771,8 +792,7 @@ union PrefilterKind {
 ///
 /// When using a function of this type, callers must ensure that the correct
 /// function is paired with the value populated in `PrefilterKind` union.
-type PrefilterKindFn =
-    unsafe fn(strat: &Prefilter, haystack: &[u8]) -> Option<usize>;
+type PrefilterKindFn = unsafe fn(strat: &Prefilter, haystack: &[u8]) -> Option<usize>;
 
 /// Reads from the `fallback` field of `PrefilterKind` to execute the fallback
 /// prefilter. Works on all platforms.
@@ -780,10 +800,7 @@ type PrefilterKindFn =
 /// # Safety
 ///
 /// Callers must ensure that the `strat.kind.fallback` union field is set.
-unsafe fn prefilter_kind_fallback(
-    strat: &Prefilter,
-    haystack: &[u8],
-) -> Option<usize> {
+unsafe fn prefilter_kind_fallback(strat: &Prefilter, haystack: &[u8]) -> Option<usize> {
     strat.kind.fallback.find_prefilter(haystack)
 }
 
@@ -794,10 +811,7 @@ unsafe fn prefilter_kind_fallback(
 ///
 /// Callers must ensure that the `strat.kind.sse2` union field is set.
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-unsafe fn prefilter_kind_sse2(
-    strat: &Prefilter,
-    haystack: &[u8],
-) -> Option<usize> {
+unsafe fn prefilter_kind_sse2(strat: &Prefilter, haystack: &[u8]) -> Option<usize> {
     let finder = &strat.kind.sse2;
     if haystack.len() < finder.min_haystack_len() {
         strat.find_simple(haystack)
@@ -813,10 +827,7 @@ unsafe fn prefilter_kind_sse2(
 ///
 /// Callers must ensure that the `strat.kind.avx2` union field is set.
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
-unsafe fn prefilter_kind_avx2(
-    strat: &Prefilter,
-    haystack: &[u8],
-) -> Option<usize> {
+unsafe fn prefilter_kind_avx2(strat: &Prefilter, haystack: &[u8]) -> Option<usize> {
     let finder = &strat.kind.avx2;
     if haystack.len() < finder.min_haystack_len() {
         strat.find_simple(haystack)
@@ -832,10 +843,7 @@ unsafe fn prefilter_kind_avx2(
 ///
 /// Callers must ensure that the `strat.kind.simd128` union field is set.
 #[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
-unsafe fn prefilter_kind_simd128(
-    strat: &Prefilter,
-    haystack: &[u8],
-) -> Option<usize> {
+unsafe fn prefilter_kind_simd128(strat: &Prefilter, haystack: &[u8]) -> Option<usize> {
     let finder = &strat.kind.simd128;
     if haystack.len() < finder.min_haystack_len() {
         strat.find_simple(haystack)
@@ -851,10 +859,7 @@ unsafe fn prefilter_kind_simd128(
 ///
 /// Callers must ensure that the `strat.kind.neon` union field is set.
 #[cfg(target_arch = "aarch64")]
-unsafe fn prefilter_kind_neon(
-    strat: &Prefilter,
-    haystack: &[u8],
-) -> Option<usize> {
+unsafe fn prefilter_kind_neon(strat: &Prefilter, haystack: &[u8]) -> Option<usize> {
     let finder = &strat.kind.neon;
     if haystack.len() < finder.min_haystack_len() {
         strat.find_simple(haystack)
@@ -901,7 +906,10 @@ impl PrefilterState {
     /// Create a fresh prefilter state.
     #[inline]
     pub(crate) fn new() -> PrefilterState {
-        PrefilterState { skips: 1, skipped: 0 }
+        PrefilterState {
+            skips: 1,
+            skipped: 0,
+        }
     }
 
     /// Update this state with the number of bytes skipped on the last
@@ -913,7 +921,7 @@ impl PrefilterState {
         // `skipped` to overflow a `u32`. (And we use a `u32` to reduce the
         // size of a prefilter state.)
         self.skipped = match u32::try_from(skipped) {
-            Err(_) => core::u32::MAX,
+            Err(_) => u32::MAX,
             Ok(skipped) => self.skipped.saturating_add(skipped),
         };
     }

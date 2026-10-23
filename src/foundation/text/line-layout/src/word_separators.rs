@@ -18,9 +18,9 @@ use alloc::boxed::Box;
 #[cfg(any(feature = "unicode-linebreak", test))]
 use alloc::vec::Vec;
 
-use crate::core::Word;
 #[cfg(feature = "unicode-linebreak")]
 use crate::core::skip_ansi_escape_sequence;
+use crate::core::Word;
 
 #[cfg(feature = "unicode-linebreak")]
 thread_local! {
@@ -29,14 +29,7 @@ thread_local! {
         use icu_segmenter::LineSegmenter;
 
         let options = LineBreakOptions::default();
-        #[cfg(feature = "unicode-linebreak-complex")]
-        {
-            LineSegmenter::new_auto(options)
-        }
-        #[cfg(not(feature = "unicode-linebreak-complex"))]
-        {
-            LineSegmenter::new_for_non_complex_scripts(options)
-        }
+        LineSegmenter::new_for_non_complex_scripts(options)
     };
 }
 

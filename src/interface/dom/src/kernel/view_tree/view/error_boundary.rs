@@ -1,10 +1,8 @@
-use super::{add_attr::AddAnyAttr, Position, PositionState, RenderHtml};
+use super::{add_attr::AddAnyAttr, DomView};
 use crate::alternatives::Either;
 use crate::view_errors::{Error as AnyError, ErrorHook};
 use crate::view_tree::{
-    html::attribute::{any_attribute::AnyAttribute, Attribute},
-    hydration::Cursor,
-    ssr::StreamBuilder,
+    html::attribute::Attribute,
     view::{iterators::OptionState, Mountable, Render},
 };
 use std::sync::Arc;
@@ -123,125 +121,18 @@ where
 
     fn add_any_attr<NewAttr: Attribute>(self, attr: NewAttr) -> Self::Output<NewAttr>
     where
-        Self::Output<NewAttr>: RenderHtml,
+        Self::Output<NewAttr>: DomView,
     {
         self.map(|inner| inner.add_any_attr(attr))
     }
 }
 
-impl<T, E> RenderHtml for Result<T, E>
+impl<T, E> DomView for Result<T, E>
 where
-    T: RenderHtml,
+    T: DomView,
     E: Into<AnyError> + Send + 'static,
 {
-    type AsyncOutput = Result<T::AsyncOutput, E>;
     type Owned = Result<T::Owned, E>;
-
-    const MIN_LENGTH: usize = T::MIN_LENGTH;
-
-    fn dry_resolve(&mut self) {
-        if let Ok(inner) = self.as_mut() {
-            inner.dry_resolve()
-        }
-    }
-
-    async fn resolve(self) -> Self::AsyncOutput {
-        match self {
-            Ok(view) => Ok(view.resolve().await),
-            Err(e) => Err(e),
-        }
-    }
-
-    fn html_len(&self) -> usize {
-        match self {
-            Ok(i) => i.html_len() + 3,
-            Err(_) => 0,
-        }
-    }
-
-    fn to_html_with_buf(
-        self,
-        buf: &mut String,
-        position: &mut super::Position,
-        escape: bool,
-        mark_branches: bool,
-        extra_attrs: Vec<AnyAttribute>,
-    ) {
-        match self {
-            Ok(inner) => {
-                inner.to_html_with_buf(buf, position, escape, mark_branches, extra_attrs);
-            }
-            Err(e) => {
-                buf.push_str("<!>");
-                crate::view_errors::throw(e);
-            }
-        }
-    }
-
-    fn to_html_async_with_buf<const OUT_OF_ORDER: bool>(
-        self,
-        buf: &mut StreamBuilder,
-        position: &mut Position,
-        escape: bool,
-        mark_branches: bool,
-        extra_attrs: Vec<AnyAttribute>,
-    ) where
-        Self: Sized,
-    {
-        match self {
-            Ok(inner) => inner.to_html_async_with_buf::<OUT_OF_ORDER>(
-                buf,
-                position,
-                escape,
-                mark_branches,
-                extra_attrs,
-            ),
-            Err(e) => {
-                buf.push_sync("<!>");
-                crate::view_errors::throw(e);
-            }
-        }
-    }
-
-    fn hydrate<const FROM_SERVER: bool>(
-        self,
-        cursor: &Cursor,
-        position: &PositionState,
-    ) -> Self::State {
-        let hook = crate::view_errors::get_error_hook();
-        let (state, error) = match self {
-            Ok(view) => (
-                Either::Left(view.hydrate::<FROM_SERVER>(cursor, position)),
-                None,
-            ),
-            Err(e) => {
-                let state = RenderHtml::hydrate::<FROM_SERVER>((), cursor, position);
-                (
-                    Either::Right(state),
-                    Some(crate::view_errors::throw(e.into())),
-                )
-            }
-        };
-        ResultState { state, error, hook }
-    }
-
-    async fn hydrate_async(self, cursor: &Cursor, position: &PositionState) -> Self::State {
-        let hook = crate::view_errors::get_error_hook();
-        let (state, error) = match self {
-            Ok(view) => (
-                Either::Left(view.hydrate_async(cursor, position).await),
-                None,
-            ),
-            Err(e) => {
-                let state = RenderHtml::hydrate_async((), cursor, position).await;
-                (
-                    Either::Right(state),
-                    Some(crate::view_errors::throw(e.into())),
-                )
-            }
-        };
-        ResultState { state, error, hook }
-    }
 
     fn into_owned(self) -> Self::Owned {
         match self {

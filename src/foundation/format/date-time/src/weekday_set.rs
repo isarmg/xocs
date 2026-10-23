@@ -19,8 +19,8 @@ impl WeekdaySet {
     ///
     /// # Example
     /// ```
-    /// # use chrono::WeekdaySet;
-    /// use chrono::Weekday::*;
+    /// # use blog_format_date_time::WeekdaySet;
+    /// use blog_format_date_time::Weekday::*;
     /// assert_eq!(WeekdaySet::EMPTY, WeekdaySet::from_array([]));
     /// assert_eq!(WeekdaySet::single(Mon), WeekdaySet::from_array([Mon]));
     /// assert_eq!(WeekdaySet::ALL, WeekdaySet::from_array([Mon, Tue, Wed, Thu, Fri, Sat, Sun]));
@@ -54,8 +54,8 @@ impl WeekdaySet {
     ///
     /// # Example
     /// ```
-    /// # use chrono::WeekdaySet;
-    /// use chrono::Weekday::*;
+    /// # use blog_format_date_time::WeekdaySet;
+    /// use blog_format_date_time::Weekday::*;
     /// assert_eq!(WeekdaySet::single(Mon).single_day(), Some(Mon));
     /// assert_eq!(WeekdaySet::from_array([Mon, Tue]).single_day(), None);
     /// assert_eq!(WeekdaySet::EMPTY.single_day(), None);
@@ -80,8 +80,8 @@ impl WeekdaySet {
     ///
     /// # Example
     /// ```
-    /// # use chrono::WeekdaySet;
-    /// use chrono::Weekday::*;
+    /// # use blog_format_date_time::WeekdaySet;
+    /// use blog_format_date_time::Weekday::*;
     /// let mut weekdays = WeekdaySet::single(Mon);
     /// assert!(weekdays.insert(Tue));
     /// assert!(!weekdays.insert(Tue));
@@ -101,8 +101,8 @@ impl WeekdaySet {
     ///
     /// # Example
     /// ```
-    /// # use chrono::WeekdaySet;
-    /// use chrono::Weekday::*;
+    /// # use blog_format_date_time::WeekdaySet;
+    /// use blog_format_date_time::Weekday::*;
     /// let mut weekdays = WeekdaySet::single(Mon);
     /// assert!(weekdays.remove(Mon));
     /// assert!(!weekdays.remove(Mon));
@@ -120,8 +120,8 @@ impl WeekdaySet {
     ///
     /// # Example
     /// ```
-    /// # use chrono::WeekdaySet;
-    /// use chrono::Weekday::*;
+    /// # use blog_format_date_time::WeekdaySet;
+    /// use blog_format_date_time::Weekday::*;
     /// assert!(WeekdaySet::single(Mon).is_subset(WeekdaySet::ALL));
     /// assert!(!WeekdaySet::single(Mon).is_subset(WeekdaySet::EMPTY));
     /// assert!(WeekdaySet::EMPTY.is_subset(WeekdaySet::single(Mon)));
@@ -134,8 +134,8 @@ impl WeekdaySet {
     ///
     /// # Example
     /// ```
-    /// # use chrono::WeekdaySet;
-    /// use chrono::Weekday::*;
+    /// # use blog_format_date_time::WeekdaySet;
+    /// use blog_format_date_time::Weekday::*;
     /// assert_eq!(WeekdaySet::single(Mon).intersection(WeekdaySet::single(Mon)), WeekdaySet::single(Mon));
     /// assert_eq!(WeekdaySet::single(Mon).intersection(WeekdaySet::single(Tue)), WeekdaySet::EMPTY);
     /// assert_eq!(WeekdaySet::ALL.intersection(WeekdaySet::single(Mon)), WeekdaySet::single(Mon));
@@ -149,8 +149,8 @@ impl WeekdaySet {
     ///
     /// # Example
     /// ```
-    /// # use chrono::WeekdaySet;
-    /// use chrono::Weekday::*;
+    /// # use blog_format_date_time::WeekdaySet;
+    /// use blog_format_date_time::Weekday::*;
     /// assert_eq!(WeekdaySet::single(Mon).union(WeekdaySet::single(Mon)), WeekdaySet::single(Mon));
     /// assert_eq!(WeekdaySet::single(Mon).union(WeekdaySet::single(Tue)), WeekdaySet::from_array([Mon, Tue]));
     /// assert_eq!(WeekdaySet::ALL.union(WeekdaySet::single(Mon)), WeekdaySet::ALL);
@@ -164,8 +164,8 @@ impl WeekdaySet {
     ///
     /// # Example
     /// ```
-    /// # use chrono::WeekdaySet;
-    /// use chrono::Weekday::*;
+    /// # use blog_format_date_time::WeekdaySet;
+    /// use blog_format_date_time::Weekday::*;
     /// assert_eq!(WeekdaySet::single(Mon).symmetric_difference(WeekdaySet::single(Mon)), WeekdaySet::EMPTY);
     /// assert_eq!(WeekdaySet::single(Mon).symmetric_difference(WeekdaySet::single(Tue)), WeekdaySet::from_array([Mon, Tue]));
     /// assert_eq!(
@@ -182,8 +182,8 @@ impl WeekdaySet {
     ///
     /// # Example
     /// ```
-    /// # use chrono::WeekdaySet;
-    /// use chrono::Weekday::*;
+    /// # use blog_format_date_time::WeekdaySet;
+    /// use blog_format_date_time::Weekday::*;
     /// assert_eq!(WeekdaySet::single(Mon).difference(WeekdaySet::single(Mon)), WeekdaySet::EMPTY);
     /// assert_eq!(WeekdaySet::single(Mon).difference(WeekdaySet::single(Tue)), WeekdaySet::single(Mon));
     /// assert_eq!(WeekdaySet::EMPTY.difference(WeekdaySet::single(Mon)), WeekdaySet::EMPTY);
@@ -198,8 +198,8 @@ impl WeekdaySet {
     ///
     /// # Example
     /// ```
-    /// # use chrono::WeekdaySet;
-    /// use chrono::Weekday::*;
+    /// # use blog_format_date_time::WeekdaySet;
+    /// use blog_format_date_time::Weekday::*;
     /// assert_eq!(WeekdaySet::single(Mon).first(), Some(Mon));
     /// assert_eq!(WeekdaySet::single(Tue).first(), Some(Tue));
     /// assert_eq!(WeekdaySet::ALL.first(), Some(Mon));
@@ -222,8 +222,8 @@ impl WeekdaySet {
     ///
     /// # Example
     /// ```
-    /// # use chrono::WeekdaySet;
-    /// use chrono::Weekday::*;
+    /// # use blog_format_date_time::WeekdaySet;
+    /// use blog_format_date_time::Weekday::*;
     /// assert_eq!(WeekdaySet::single(Mon).last(), Some(Mon));
     /// assert_eq!(WeekdaySet::single(Sun).last(), Some(Sun));
     /// assert_eq!(WeekdaySet::from_array([Mon, Tue]).last(), Some(Tue));
@@ -257,8 +257,8 @@ impl WeekdaySet {
     ///
     /// # Example
     /// ```
-    /// # use chrono::WeekdaySet;
-    /// use chrono::Weekday::*;
+    /// # use blog_format_date_time::WeekdaySet;
+    /// use blog_format_date_time::Weekday::*;
     /// let weekdays = WeekdaySet::from_array([Mon, Wed, Fri]);
     /// let mut iter = weekdays.iter(Wed);
     /// assert_eq!(iter.next(), Some(Wed));
@@ -274,8 +274,8 @@ impl WeekdaySet {
     ///
     /// # Example
     /// ```
-    /// # use chrono::WeekdaySet;
-    /// use chrono::Weekday::*;
+    /// # use blog_format_date_time::WeekdaySet;
+    /// use blog_format_date_time::Weekday::*;
     /// assert!(WeekdaySet::single(Mon).contains(Mon));
     /// assert!(WeekdaySet::from_array([Mon, Tue]).contains(Tue));
     /// assert!(!WeekdaySet::single(Mon).contains(Tue));
@@ -288,7 +288,7 @@ impl WeekdaySet {
     ///
     /// # Example
     /// ```
-    /// # use chrono::{Weekday, WeekdaySet};
+    /// # use blog_format_date_time::{Weekday, WeekdaySet};
     /// assert!(WeekdaySet::EMPTY.is_empty());
     /// assert!(!WeekdaySet::single(Weekday::Mon).is_empty());
     /// ```
@@ -299,8 +299,8 @@ impl WeekdaySet {
     ///
     /// # Example
     /// ```
-    /// # use chrono::WeekdaySet;
-    /// use chrono::Weekday::*;
+    /// # use blog_format_date_time::WeekdaySet;
+    /// use blog_format_date_time::Weekday::*;
     /// assert_eq!(WeekdaySet::single(Mon).len(), 1);
     /// assert_eq!(WeekdaySet::from_array([Mon, Wed, Fri]).len(), 3);
     /// assert_eq!(WeekdaySet::ALL.len(), 7);
@@ -319,8 +319,8 @@ impl WeekdaySet {
 ///
 /// # Example
 /// ```
-/// # use chrono::WeekdaySet;
-/// use chrono::Weekday::*;
+/// # use blog_format_date_time::WeekdaySet;
+/// use blog_format_date_time::Weekday::*;
 /// assert_eq!(format!("{:?}", WeekdaySet::single(Mon)), "WeekdaySet(0000001)");
 /// assert_eq!(format!("{:?}", WeekdaySet::single(Tue)), "WeekdaySet(0000010)");
 /// assert_eq!(format!("{:?}", WeekdaySet::ALL), "WeekdaySet(1111111)");
@@ -328,23 +328,6 @@ impl WeekdaySet {
 impl Debug for WeekdaySet {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "WeekdaySet({:0>7b})", self.0)
-    }
-}
-
-#[cfg(feature = "defmt")]
-impl defmt::Format for WeekdaySet {
-    fn format(&self, f: defmt::Formatter<'_>) {
-        defmt::write!(
-            f,
-            "WeekdaySet({}{}{}{}{}{}{})",
-            0x1 & (self.0 >> 6),
-            0x1 & (self.0 >> 5),
-            0x1 & (self.0 >> 4),
-            0x1 & (self.0 >> 3),
-            0x1 & (self.0 >> 2),
-            0x1 & (self.0 >> 1),
-            0x1 & (self.0 >> 0),
-        )
     }
 }
 
@@ -407,8 +390,8 @@ impl FusedIterator for WeekdaySetIter {}
 ///
 /// # Example
 /// ```
-/// # use chrono::WeekdaySet;
-/// use chrono::Weekday::*;
+/// # use blog_format_date_time::WeekdaySet;
+/// use blog_format_date_time::Weekday::*;
 /// assert_eq!("[]", WeekdaySet::EMPTY.to_string());
 /// assert_eq!("[Mon]", WeekdaySet::single(Mon).to_string());
 /// assert_eq!("[Mon, Fri, Sun]", WeekdaySet::from_array([Mon, Fri, Sun]).to_string());
@@ -429,7 +412,9 @@ impl fmt::Display for WeekdaySet {
 
 impl FromIterator<Weekday> for WeekdaySet {
     fn from_iter<T: IntoIterator<Item = Weekday>>(iter: T) -> Self {
-        iter.into_iter().map(Self::single).fold(Self::EMPTY, Self::union)
+        iter.into_iter()
+            .map(Self::single)
+            .fold(Self::EMPTY, Self::union)
     }
 }
 
@@ -448,12 +433,18 @@ mod tests {
 
     /// Panics if the 8-th bit of `self` is not 0.
     fn assert_8th_bit_invariant(days: WeekdaySet) {
-        assert!(days.0 & 0b1000_0000 == 0, "the 8-th bit of {days:?} is not 0");
+        assert!(
+            days.0 & 0b1000_0000 == 0,
+            "the 8-th bit of {days:?} is not 0"
+        );
     }
 
     #[test]
     fn debug_prints_8th_bit_if_not_zero() {
-        assert_eq!(format!("{:?}", WeekdaySet(0b1000_0000)), "WeekdaySet(10000000)");
+        assert_eq!(
+            format!("{:?}", WeekdaySet(0b1000_0000)),
+            "WeekdaySet(10000000)"
+        );
     }
 
     #[test]

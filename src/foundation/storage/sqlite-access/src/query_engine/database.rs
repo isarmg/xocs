@@ -1,57 +1,4 @@
-//! Traits to represent a database driver.
-//!
-//! # Support
-//!
-//! ## Tier 1
-//!
-//! Tier 1 support can be thought of as "guaranteed to work". Automated testing is setup to
-//! ensure a high level of stability and functionality.
-//!
-//! | Database | Version | Driver |
-//! | - | - | - |
-//! | [MariaDB] | 10.1+ | [`mysql`] |
-//! | [Microsoft SQL Server] | 2019 | [`mssql`] (Pending a full rewrite) |
-//! | [MySQL] | 5.6, 5.7, 8.0 | [`mysql`] |
-//! | [PostgreSQL] | 13+ | [`postgres`] |
-//! | [SQLite] | 3.20.1+ | [`sqlite`] |
-//!
-//! [MariaDB]: https://mariadb.com/
-//! [MySQL]: https://www.mysql.com/
-//! [Microsoft SQL Server]: https://www.microsoft.com/en-us/sql-server
-//! [PostgreSQL]: https://www.postgresql.org/
-//! [SQLite]: https://www.sqlite.org/
-//!
-//! [`mysql`]: crate::query_engine::mysql
-//! [`postgres`]: crate::query_engine::postgres
-//! [`mssql`]: crate::query_engine::mssql
-//! [`sqlite`]: crate::query_engine::sqlite
-//!
-//! ## Tier 2
-//!
-//! Tier 2 support can be thought as "should work". No specific automated testing is done,
-//! at this time, but there are efforts to ensure compatibility. Tier 2 support also includes
-//! database distributions that provide protocols that closely match a database from Tier 1.
-//!
-//! _No databases are in tier 2 at this time._
-//!
-//! # `Any`
-//!
-//! Selecting a database driver is, by default, a compile-time decision. SQLx is designed this way
-//! to take full advantage of the performance and type safety made available by Rust.
-//!
-//! We recognize that you may wish to make a runtime decision to decide the database driver. The
-//! [`Any`](crate::query_engine::any) driver is provided for that purpose.
-//!
-//! ## Example
-//!
-//! ```rust,ignore
-//! // connect to SQLite
-//! let conn = AnyConnection::connect("sqlite://file.db").await?;
-//!
-//! // connect to Postgres, no code change
-//! // required, decided by the scheme of the URL
-//! let conn = AnyConnection::connect("postgres://localhost/sqlx").await?;
-//! ```
+//! Associated types shared by SQLite query, row and connection abstractions.
 
 use std::fmt::Debug;
 
@@ -65,10 +12,7 @@ use crate::query_engine::transaction::TransactionManager;
 use crate::query_engine::type_info::TypeInfo;
 use crate::query_engine::value::{Value, ValueRef};
 
-/// A database driver.
-///
-/// This trait encapsulates a complete set of traits that implement a driver for a
-/// specific database (e.g., MySQL, PostgreSQL).
+/// The associated types used by the maintained SQLite query interfaces.
 pub trait Database: 'static + Sized + Send + Debug {
     /// The concrete `Connection` implementation for this database.
     type Connection: Connection<Database = Self>;
@@ -105,9 +49,6 @@ pub trait Database: 'static + Sized + Send + Debug {
 
     /// The display name for this database driver.
     const NAME: &'static str;
-
-    /// The schemes for database URLs that should match this driver.
-    const URL_SCHEMES: &'static [&'static str];
 }
 
 /// A [`Database`] that maintains a client-side cache of prepared statements.

@@ -29,7 +29,7 @@ fn rk(i: usize) -> u32 {
     // On x86 targets 32-bit constants can be encoded using immediate argument on the `add`
     // instruction, so it's more efficient to inline them.
     cfg_if::cfg_if! {
-        if #[cfg(any(target_arch = "x86", target_arch = "x86_64"))] {
+        if #[cfg(target_arch = "x86_64")] {
             use core::ptr::read as r;
         } else {
             use core::ptr::read_volatile as r;

@@ -243,13 +243,7 @@ impl<L: Link> fmt::Debug for LinkedList<L> {
     }
 }
 
-#[cfg(any(
-    feature = "fs",
-    feature = "rt",
-    all(unix, feature = "process"),
-    feature = "signal",
-    feature = "sync",
-))]
+#[cfg(any(feature = "fs", feature = "rt", feature = "signal", feature = "sync"))]
 impl<L: Link> LinkedList<L> {
     pub(crate) fn last(&self) -> Option<&L::Target> {
         let tail = self.tail.as_ref()?;
@@ -308,30 +302,10 @@ cfg_io_driver_impl! {
     }
 }
 
-cfg_taskdump! {
-    impl<L: Link> LinkedList<L> {
-        pub(crate) fn for_each<F>(&mut self, mut f: F)
-        where
-            F: FnMut(&L::Handle),
-        {
-            let mut next = self.head;
-
-            while let Some(curr) = next {
-                unsafe {
-                    let handle = ManuallyDrop::new(L::from_raw(curr));
-                    f(&handle);
-                    next = L::pointers(curr).as_ref().get_next();
-                }
-            }
-        }
-    }
-}
-
 // ===== impl GuardedLinkedList =====
 
 feature! {
     #![any(
-        feature = "process",
         feature = "sync",
         feature = "rt",
         feature = "signal",

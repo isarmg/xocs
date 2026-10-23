@@ -1,4 +1,3 @@
-use either::Either;
 use futures::stream::BoxStream;
 use futures::{StreamExt, TryFutureExt, TryStreamExt};
 
@@ -95,28 +94,6 @@ where
         O: 'e,
     {
         self.inner.fetch(executor).map_ok(|it| it.0).boxed()
-    }
-
-    /// Execute multiple queries and return the generated results as a stream
-    /// from each query, in a stream.
-    #[inline]
-    #[deprecated = "Only the SQLite driver supports multiple statements in one prepared statement and that behavior is deprecated. Use `sqlx::raw_sql()` instead. See https://github.com/launchbadge/sqlx/issues/3108 for discussion."]
-    pub fn fetch_many<'e, 'c: 'e, E>(
-        self,
-        executor: E,
-    ) -> BoxStream<'e, Result<Either<DB::QueryResult, O>, Error>>
-    where
-        'q: 'e,
-        E: 'e + Executor<'c, Database = DB>,
-        DB: 'e,
-        A: 'e,
-        O: 'e,
-    {
-        #[allow(deprecated)]
-        self.inner
-            .fetch_many(executor)
-            .map_ok(|v| v.map_right(|it| it.0))
-            .boxed()
     }
 
     /// Execute the query and return all the resulting rows collected into a [`Vec`].

@@ -20,7 +20,6 @@ macro_rules! erased {
             drop: fn(ErasedBox),
         }
 
-
         impl $name {
             /// Create a new type-erased item.
             pub fn new<T: $($new_t_params)*>(item: T) -> Self {

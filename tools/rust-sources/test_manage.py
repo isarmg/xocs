@@ -11,10 +11,12 @@ import subprocess
 import tarfile
 import tempfile
 import unittest
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location('blog_source_manager', Path(__file__).with_name('manage.py'))
 manage = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(manage)
+PLATFORM_SOURCE = (Path(__file__).resolve().parents[1] / 'assets/src/platform_contract.rs').read_text()
 
 
 class Sources(unittest.TestCase):
@@ -30,6 +32,8 @@ edition = "2024"
 third = { path = "../foundation/third-1.0.0" }
 ''')
         self.write('src/server/src/lib.rs', 'pub fn result() -> u32 { third::value() }\n')
+        self.write('src/server/platform_contract.rs', PLATFORM_SOURCE)
+        self.write('src/server/build.rs', '#[path = "platform_contract.rs"]\nmod platform_contract;\nfn main() { platform_contract::check(); }\n')
         self.write('.cargo/config.toml', '''[net]
 offline = true
 [source.crates-io]
@@ -39,6 +43,7 @@ directory = "compliance/empty-registry"
 ''')
         self.write('compliance/empty-registry/README.txt', 'No registry packages.\n')
         policy = dict(schema=1, foundation='src/foundation', owned_sources=[dict(directory='src/server')],
+                      platform_guard='src/server/platform_contract.rs',
                       profiles=[dict(id='native', target='x86_64-unknown-linux-gnu', role='runtime', manifests=['src/server/Cargo.toml']),
                                 dict(id='web-release', target='wasm32-unknown-unknown', role='runtime', manifests=['src/server/Cargo.toml'])])
         self.write(manage.POLICY, json.dumps(policy))
@@ -83,7 +88,7 @@ directory = "compliance/empty-registry"
             members.append(directory)
             policy['owned_sources'].append(dict(directory=directory))
             self.write(directory + '/Cargo.toml',
-                       f'[package]\nname = "module-{index}"\nversion = "0.0.0"\nedition = "2024"\n')
+                       f'[package]\nname = "module-{index}"\nversion = "0.0.0"\nedition = "2024"\nbuild = "../../src/server/platform_contract.rs"\n')
             self.write(directory + '/src/lib.rs', 'pub fn maintained() {}\n')
         self.write('Cargo.toml', '[workspace]\nresolver = "3"\nmembers = ' + json.dumps(members) +
                    '\nexclude = ["src/foundation"]\n')
@@ -107,6 +112,63 @@ directory = "compliance/empty-registry"
         self.assertEqual([row['target'] for row in catalog['resolutions']],
                          ['x86_64-unknown-linux-gnu', 'wasm32-unknown-unknown'])
         self.assertIn('src/foundation/third-1.0.0', catalog['resolutions'][0]['packages'])
+
+    def enable_platform_guard(self):
+        policy = manage.read_json(self.root / manage.POLICY)
+        manifest = self.root / 'src/server/Cargo.toml'
+        manifest.write_text(manifest.read_text().replace('[package]', '[package]\nbuild = "platform_contract.rs"'))
+        return policy
+
+    def test_current_policy_requires_platform_guard(self):
+        policy = manage.read_json(self.root / manage.POLICY)
+        for value in (None, False, ''):
+            policy['platform_guard'] = value
+            self.write(manage.POLICY, json.dumps(policy))
+            with self.assertRaisesRegex(ValueError, 'must declare the shared platform guard'):
+                manage.refresh(self.root)
+        del policy['platform_guard']
+        self.write(manage.POLICY, json.dumps(policy))
+        with self.assertRaisesRegex(ValueError, 'must declare the shared platform guard'):
+            manage.refresh(self.root)
+
+    def test_platform_guard_is_owned_hashed_and_cannot_be_disabled(self):
+        policy = self.enable_platform_guard()
+        manage.refresh(self.root)
+        receipt = manage.read_json(self.root / manage.CATALOG)
+        self.assertIn(policy['platform_guard'], receipt['platform_guard_sha256'])
+        self.assertIn('platform_contract.rs', receipt['packages']['src/server']['files_sha256'])
+        self.write(policy['platform_guard'], PLATFORM_SOURCE + '\n// Source drift.\n')
+        with self.assertRaisesRegex(ValueError, 'receipt drift'):
+            manage.verify(self.root)
+        manifest = self.root / 'src/server/Cargo.toml'
+        manifest.write_text(manifest.read_text().replace('build = "platform_contract.rs"', 'build = false'))
+        with self.assertRaisesRegex(ValueError, 'disables its platform guard'):
+            manage.refresh(self.root)
+
+    def test_existing_build_script_must_call_owned_shared_guard_first(self):
+        self.enable_platform_guard()
+        manifest = self.root / 'src/server/Cargo.toml'
+        manifest.write_text(manifest.read_text().replace('build = "platform_contract.rs"', 'build = "build.rs"'))
+        self.write('src/server/build.rs', '#[path = "platform_contract.rs"]\nmod platform_contract;\nfn main() { platform_contract::check(); }\n')
+        manage.refresh(self.root)
+        manage.verify(self.root, metadata=True)
+        self.write('src/server/build.rs', '#[path = "platform_contract.rs"]\nmod platform_contract;\nfn main() {}\n')
+        with self.assertRaisesRegex(ValueError, 'invoke the shared platform guard first'):
+            manage.refresh(self.root)
+
+    def test_platform_guard_cannot_live_outside_owned_sources(self):
+        policy = self.enable_platform_guard()
+        policy['platform_guard'] = 'tools/unowned.rs'
+        self.write(policy['platform_guard'], 'fn main() {}\n')
+        self.write(manage.POLICY, json.dumps(policy))
+        with self.assertRaisesRegex(ValueError, 'needs a current project source owner'):
+            manage.refresh(self.root)
+
+    def test_metadata_rejects_unsupported_target_before_invoking_cargo(self):
+        with patch.object(manage.subprocess, 'run') as run:
+            with self.assertRaisesRegex(ValueError, 'unsupported source graph target'):
+                manage.cargo_metadata(self.root, 'aarch64-unknown-linux-gnu', self.root / 'cargo-home')
+            run.assert_not_called()
 
     def test_test_profile_includes_development_only_dependency(self):
         manifest = self.root / 'src/server/Cargo.toml'
@@ -261,9 +323,13 @@ class GeneratedOutputs(unittest.TestCase):
         for index, directory in enumerate(self.directories):
             self.write(directory + '/Cargo.toml', '[package]\nname = "owned-' + str(index) + '"\nversion = "1.0.0"\n')
             self.write(directory + '/src/lib.rs', 'pub fn retained() {}\n')
+            relative_guard = os.path.relpath(self.root / 'tools/web-build/platform_contract.rs', self.root / directory)
+            self.write(directory + '/build.rs', f'#[path = "{relative_guard}"]\nmod platform_contract;\nfn main() {{ platform_contract::check(); }}\n')
+        self.write('tools/web-build/platform_contract.rs', PLATFORM_SOURCE)
         self.write('src/foundation/third-1.0.0/Cargo.toml', '[package]\nname = "third"\nversion = "1.0.0"\n')
         self.write('src/foundation/third-1.0.0/src/target/real.rs', 'pub const REAL_SOURCE: bool = true;\n')
         self.policy = dict(foundation='src/foundation',
+                           platform_guard='tools/web-build/platform_contract.rs',
                            owned_sources=[dict(directory=item) for item in self.directories],
                            profiles=[dict(id='native', target='x86_64-unknown-linux-gnu', role='runtime', manifests=['tools/web-build/Cargo.toml']),
                                      dict(id='web-release', target='wasm32-unknown-unknown', role='runtime', manifests=['web/app/domain-tests/Cargo.toml'])])
@@ -401,6 +467,7 @@ class Migrations(unittest.TestCase):
         path.write_text(path.read_text().replace('name = "blog"', 'name = "blog-service"').replace('version = "1.0.1"\n', ''))
         self.write('Cargo.toml', '[workspace]\nresolver = "3"\nmembers = ["src/service"]\nexclude = ["src/foundation"]\n')
         policy['owned_sources'][0]['directory'] = new['directory']
+        policy['platform_guard'] = new['directory'] + '/platform_contract.rs'
         for profile in policy['profiles']:
             profile['manifests'] = ['src/service/Cargo.toml']
         ledger['events'][0]['from'].append(old)
@@ -555,7 +622,7 @@ class Migrations(unittest.TestCase):
             manage.source_migrations(self.root, {'a@1.0.0': {}, 'b@1.0.0': {}})
 
     def test_historical_patch_paths_survive_owned_tool_merge(self):
-        self.write('tools/legacy-binding/Cargo.toml', '[package]\nname="legacy-binding"\nversion="0.2.129"\nedition="2024"\n')
+        self.write('tools/legacy-binding/Cargo.toml', '[package]\nname="legacy-binding"\nversion="0.2.129"\nedition="2024"\nbuild="../../src/server/platform_contract.rs"\n')
         self.write('tools/legacy-binding/src/lib.rs', 'pub fn binding() {}\n')
         self.write('Cargo.toml', '[workspace]\nresolver="3"\nmembers=["src/server","tools/legacy-binding"]\nexclude=["src/foundation"]\n')
         policy = manage.read_json(self.root / manage.POLICY)
@@ -577,6 +644,7 @@ class Migrations(unittest.TestCase):
         self.write('tools/assets/Cargo.toml', '[package]\nname="blog-assets"\npublish=false\nedition="2024"\n[dependencies]\nthird={path="../../src/foundation/third-1.0.0"}\n')
         self.write('Cargo.toml', '[workspace]\nresolver="3"\nmembers=["tools/assets"]\nexclude=["src/foundation"]\n')
         policy['owned_sources'] = [dict(directory='tools/assets', layer='build', purpose='资产构建并整合浏览器绑定生成')]
+        policy['platform_guard'] = 'tools/assets/platform_contract.rs'
         for profile in policy['profiles']:
             profile['manifests'] = ['tools/assets/Cargo.toml']
         product = dict(directory='tools/assets', name='blog-assets', version='0.0.0', origins=[])

@@ -115,8 +115,6 @@ mod tests;
 
 #[cfg(feature = "drain_keep_rest")]
 use core::mem::ManuallyDrop;
-#[cfg(feature = "malloc_size_of")]
-use malloc_size_of::{MallocShallowSizeOf, MallocSizeOf, MallocSizeOfOps};
 #[cfg(feature = "serde")]
 use serde::{
     de::{Deserialize, Deserializer, SeqAccess, Visitor},
@@ -2202,32 +2200,6 @@ where
     }
 }
 
-#[cfg(feature = "malloc_size_of")]
-impl<A: Array> MallocShallowSizeOf for SmallVec<A> {
-    fn shallow_size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        if self.spilled() {
-            unsafe { ops.malloc_size_of(self.as_ptr()) }
-        } else {
-            0
-        }
-    }
-}
-
-#[cfg(feature = "malloc_size_of")]
-impl<A> MallocSizeOf for SmallVec<A>
-where
-    A: Array,
-    A::Item: MallocSizeOf,
-{
-    fn size_of(&self, ops: &mut MallocSizeOfOps) -> usize {
-        let mut n = self.shallow_size_of(ops);
-        for elem in self.iter() {
-            n += elem.size_of(ops);
-        }
-        n
-    }
-}
-
 #[cfg(feature = "specialization")]
 trait SpecFrom<A: Array, S> {
     fn spec_from(slice: S) -> SmallVec<A>;
@@ -2235,9 +2207,6 @@ trait SpecFrom<A: Array, S> {
 
 #[cfg(feature = "specialization")]
 mod specialization;
-
-#[cfg(feature = "arbitrary")]
-mod arbitrary;
 
 #[cfg(feature = "specialization")]
 impl<'a, A: Array> SpecFrom<A, &'a [A::Item]> for SmallVec<A>

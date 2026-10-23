@@ -5,7 +5,6 @@ ast_struct! {
     /// Data structure sent to a `proc_macro_derive` macro.
     ///
     /// *This type is available only if Syn is built with the `"derive"` feature.*
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "derive")))]
     pub struct DeriveInput {
         /// Attributes tagged on the whole struct or enum.
         pub attrs: Vec<Attribute>,
@@ -34,7 +33,6 @@ ast_enum_of_structs! {
     /// This type is a [syntax tree enum].
     ///
     /// [syntax tree enum]: Expr#syntax-tree-enums
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "derive")))]
     pub enum Data {
         /// A struct input to a `proc_macro_derive` macro.
         Struct(DataStruct),
@@ -54,7 +52,6 @@ ast_struct! {
     ///
     /// *This type is available only if Syn is built with the `"derive"`
     /// feature.*
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "derive")))]
     pub struct DataStruct {
         pub struct_token: Token![struct],
         pub fields: Fields,
@@ -67,7 +64,6 @@ ast_struct! {
     ///
     /// *This type is available only if Syn is built with the `"derive"`
     /// feature.*
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "derive")))]
     pub struct DataEnum {
         pub enum_token: Token![enum],
         pub brace_token: token::Brace,
@@ -80,7 +76,6 @@ ast_struct! {
     ///
     /// *This type is available only if Syn is built with the `"derive"`
     /// feature.*
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "derive")))]
     pub struct DataUnion {
         pub union_token: Token![union],
         pub fields: FieldsNamed,
@@ -92,7 +87,6 @@ pub mod parsing {
     use super::*;
     use crate::parse::{Parse, ParseStream, Result};
 
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "parsing")))]
     impl Parse for DeriveInput {
         fn parse(input: ParseStream) -> Result<Self> {
             let attrs = input.call(Attribute::parse_outer)?;
@@ -228,7 +222,6 @@ mod printing {
     use proc_macro2::TokenStream;
     use quote::ToTokens;
 
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "printing")))]
     impl ToTokens for DeriveInput {
         fn to_tokens(&self, tokens: &mut TokenStream) {
             for attr in self.attrs.outer() {

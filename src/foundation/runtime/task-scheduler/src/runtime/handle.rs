@@ -350,20 +350,6 @@ impl Handle {
 
     #[track_caller]
     fn block_on_inner<F: Future>(&self, future: F, _meta: SpawnMeta<'_>) -> F::Output {
-        #[cfg(all(
-            tokio_unstable,
-            feature = "taskdump",
-            feature = "rt",
-            target_os = "linux",
-            any(
-                target_arch = "aarch64",
-                target_arch = "x86",
-                target_arch = "x86_64",
-                target_arch = "s390x"
-            )
-        ))]
-        let future = super::task::trace::Trace::root(future);
-
         #[cfg(all(tokio_unstable, feature = "tracing"))]
         let future =
             crate::util::trace::task(future, "block_on", _meta, super::task::Id::next().as_u64());
@@ -382,19 +368,7 @@ impl Handle {
         F::Output: Send + 'static,
     {
         let id = crate::runtime::task::Id::next();
-        #[cfg(all(
-            tokio_unstable,
-            feature = "taskdump",
-            feature = "rt",
-            target_os = "linux",
-            any(
-                target_arch = "aarch64",
-                target_arch = "x86",
-                target_arch = "x86_64",
-                target_arch = "s390x"
-            )
-        ))]
-        let future = super::task::trace::Trace::root(future);
+
         #[cfg(all(tokio_unstable, feature = "tracing"))]
         let future = crate::util::trace::task(future, "task", meta, id.as_u64());
         self.inner.spawn(future, id, meta.spawned_at)
@@ -416,19 +390,7 @@ impl Handle {
         F::Output: 'static,
     {
         let id = crate::runtime::task::Id::next();
-        #[cfg(all(
-            tokio_unstable,
-            feature = "taskdump",
-            feature = "rt",
-            target_os = "linux",
-            any(
-                target_arch = "aarch64",
-                target_arch = "x86",
-                target_arch = "x86_64",
-                target_arch = "s390x"
-            )
-        ))]
-        let future = super::task::trace::Trace::root(future);
+
         #[cfg(all(tokio_unstable, feature = "tracing"))]
         let future = crate::util::trace::task(future, "task", meta, id.as_u64());
         unsafe { self.inner.spawn_local(future, id, meta.spawned_at) }
@@ -520,172 +482,6 @@ impl Handle {
 impl std::panic::UnwindSafe for Handle {}
 
 impl std::panic::RefUnwindSafe for Handle {}
-
-cfg_taskdump! {
-    impl Handle {
-        /// Captures a snapshot of the runtime's state.
-        ///
-        /// If you only want to capture a snapshot of a single future's state, you can use
-        /// [`Trace::capture`][crate::runtime::dump::Trace].
-        ///
-        /// This functionality is experimental, and comes with a number of
-        /// requirements and limitations.
-        ///
-        /// # Examples
-        ///
-        /// This can be used to get call traces of each task in the runtime.
-        /// Calls to `Handle::dump` should usually be enclosed in a
-        /// [timeout][crate::time::timeout], so that dumping does not escalate a
-        /// single blocked runtime thread into an entirely blocked runtime.
-        ///
-        /// ```
-        /// # use tokio::runtime::Runtime;
-        /// # fn dox() {
-        /// # let rt = Runtime::new().unwrap();
-        /// # rt.spawn(async {
-        /// use tokio::runtime::Handle;
-        /// use tokio::time::{timeout, Duration};
-        ///
-        /// // Inside an async block or function.
-        /// let handle = Handle::current();
-        /// if let Ok(dump) = timeout(Duration::from_secs(2), handle.dump()).await {
-        ///     for (i, task) in dump.tasks().iter().enumerate() {
-        ///         let trace = task.trace();
-        ///         println!("TASK {i}:");
-        ///         println!("{trace}\n");
-        ///     }
-        /// }
-        /// # });
-        /// # }
-        /// ```
-        ///
-        /// This produces highly detailed traces of tasks; e.g.:
-        ///
-        /// ```plain
-        /// TASK 0:
-        /// ╼ dump::main::{{closure}}::a::{{closure}} at /tokio/examples/dump.rs:18:20
-        /// └╼ dump::main::{{closure}}::b::{{closure}} at /tokio/examples/dump.rs:23:20
-        ///    └╼ dump::main::{{closure}}::c::{{closure}} at /tokio/examples/dump.rs:28:24
-        ///       └╼ tokio::sync::barrier::Barrier::wait::{{closure}} at /tokio/tokio/src/sync/barrier.rs:129:10
-        ///          └╼ <tokio::util::trace::InstrumentedAsyncOp<F> as core::future::future::Future>::poll at /tokio/tokio/src/util/trace.rs:77:46
-        ///             └╼ tokio::sync::barrier::Barrier::wait_internal::{{closure}} at /tokio/tokio/src/sync/barrier.rs:183:36
-        ///                └╼ tokio::sync::watch::Receiver<T>::changed::{{closure}} at /tokio/tokio/src/sync/watch.rs:604:55
-        ///                   └╼ tokio::sync::watch::changed_impl::{{closure}} at /tokio/tokio/src/sync/watch.rs:755:18
-        ///                      └╼ <tokio::sync::notify::Notified as core::future::future::Future>::poll at /tokio/tokio/src/sync/notify.rs:1103:9
-        ///                         └╼ tokio::sync::notify::Notified::poll_notified at /tokio/tokio/src/sync/notify.rs:996:32
-        /// ```
-        ///
-        /// # Requirements
-        ///
-        /// ## Debug Info Must Be Available
-        ///
-        /// To produce task traces, the application must **not** be compiled
-        /// with `split debuginfo`. On Linux, including `debuginfo` within the
-        /// application binary is the (correct) default. You can further ensure
-        /// this behavior with the following directive in your `Cargo.toml`:
-        ///
-        /// ```toml
-        /// [profile.*]
-        /// split-debuginfo = "off"
-        /// ```
-        ///
-        /// ## Unstable Features
-        ///
-        /// This functionality is **unstable**, and requires both the
-        /// `--cfg tokio_unstable` and cargo feature `taskdump` to be set.
-        ///
-        /// You can do this by setting the `RUSTFLAGS` environment variable
-        /// before invoking `cargo`; e.g.:
-        /// ```bash
-        /// RUSTFLAGS="--cfg tokio_unstable" cargo run --example dump
-        /// ```
-        ///
-        /// Or by [configuring][cargo-config] `rustflags` in
-        /// `.cargo/config.toml`:
-        /// ```text
-        /// [build]
-        /// rustflags = ["--cfg", "tokio_unstable"]
-        /// ```
-        ///
-        /// [cargo-config]:
-        ///     https://doc.rust-lang.org/cargo/reference/config.html
-        ///
-        /// ## Platform Requirements
-        ///
-        /// Task dumps are supported on Linux atop `aarch64`, `x86`, `x86_64` and `s390x`.
-        ///
-        /// ## Current Thread Runtime Requirements
-        ///
-        /// On the `current_thread` runtime, task dumps may only be requested
-        /// from *within* the context of the runtime being dumped. Do not, for
-        /// example, await `Handle::dump()` on a different runtime.
-        ///
-        /// # Limitations
-        ///
-        /// ## Performance
-        ///
-        /// Although enabling the `taskdump` feature imposes virtually no
-        /// additional runtime overhead, actually calling `Handle::dump` is
-        /// expensive. The runtime must synchronize and pause its workers, then
-        /// re-poll every task in a special tracing mode. Avoid requesting dumps
-        /// often.
-        ///
-        /// ## Local Executors
-        ///
-        /// Tasks managed by local executors (e.g., `FuturesUnordered` and
-        /// [`LocalSet`][crate::task::LocalSet]) may not appear in task dumps.
-        ///
-        /// ## Non-Termination When Workers Are Blocked
-        ///
-        /// The future produced by `Handle::dump` may never produce `Ready` if
-        /// another runtime worker is blocked for more than 250ms. This may
-        /// occur if a dump is requested during shutdown, or if another runtime
-        /// worker is infinite looping or synchronously deadlocked. For these
-        /// reasons, task dumping should usually be paired with an explicit
-        /// [timeout][crate::time::timeout].
-        pub async fn dump(&self) -> crate::runtime::Dump {
-            match &self.inner {
-                scheduler::Handle::CurrentThread(handle) => handle.dump(),
-                #[cfg(all(feature = "rt-multi-thread", not(target_os = "wasi")))]
-                scheduler::Handle::MultiThread(handle) => {
-                    // perform the trace in a separate thread so that the
-                    // trace itself does not appear in the taskdump.
-                    let handle = handle.clone();
-                    spawn_thread(async {
-                        let handle = handle;
-                        handle.dump().await
-                    }).await
-                },
-            }
-        }
-
-        /// Produces `true` if the current task is being traced for a dump;
-        /// otherwise false. This function is only public for integration
-        /// testing purposes. Do not rely on it.
-        #[doc(hidden)]
-        pub fn is_tracing() -> bool {
-            super::task::trace::Context::is_tracing()
-        }
-    }
-
-    cfg_rt_multi_thread! {
-        /// Spawn a new thread and asynchronously await on its result.
-        async fn spawn_thread<F>(f: F) -> <F as Future>::Output
-        where
-            F: Future + Send + 'static,
-            <F as Future>::Output: Send + 'static
-        {
-            let (tx, rx) = crate::sync::oneshot::channel();
-            crate::loom::thread::spawn(|| {
-                let rt = crate::runtime::Builder::new_current_thread().build().unwrap();
-                rt.block_on(async {
-                    let _ = tx.send(f.await);
-                });
-            });
-            rx.await.unwrap()
-        }
-    }
-}
 
 /// Error returned by `try_current` when no Runtime has been started
 #[derive(Debug)]

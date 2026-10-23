@@ -14,17 +14,15 @@ use std::{fmt, io};
 use crate::sys::IoSourceState;
 use crate::{event, Interest, Registry, Token};
 
-/// Adapter for a [`RawFd`] or [`RawSocket`] providing an [`event::Source`]
+/// Adapter for a Linux [`RawFd`] providing an [`event::Source`]
 /// implementation.
 ///
 /// `IoSource` enables registering any FD or socket wrapper with [`Poll`].
 ///
-/// While only implementations for TCP, UDP, and UDS (Unix only) are provided,
-/// Mio supports registering any FD or socket that can be registered with the
-/// underlying OS selector. `IoSource` provides the necessary bridge.
+/// Implementations are provided for TCP, UDP, and Unix-domain sockets. Other file descriptors
+/// eligible for Linux epoll can be registered through this adapter.
 ///
 /// [`RawFd`]: std::os::fd::RawFd
-/// [`RawSocket`]: std::os::windows::io::RawSocket
 ///
 /// # Notes
 ///

@@ -1,14 +1,4 @@
 //! `futures::task::AtomicWaker` extracted into its own crate.
-//!
-//! # Features
-//!
-//! This crate adds a feature, `portable-atomic`, which uses a polyfill
-//! from the [`portable-atomic`] crate in order to provide functionality
-//! to targets without atomics. See the [`README`] for the [`portable-atomic`]
-//! crate for more information on how to use it.
-//!
-//! [`portable-atomic`]: https://crates.io/crates/portable-atomic
-//! [`README`]: https://github.com/taiki-e/portable-atomic/blob/main/README.md#optional-cfg
 
 #![no_std]
 #![doc(
@@ -23,10 +13,7 @@ use core::fmt;
 use core::sync::atomic::Ordering::{AcqRel, Acquire, Release};
 use core::task::Waker;
 
-#[cfg(not(feature = "portable-atomic"))]
 use core::sync::atomic::AtomicUsize;
-#[cfg(feature = "portable-atomic")]
-use portable_atomic::AtomicUsize;
 
 /// A synchronization primitive for task wakeup.
 ///
@@ -219,13 +206,15 @@ const REGISTERING: usize = 0b01;
 /// The waker currently registered with the `AtomicWaker` cell is being woken.
 const WAKING: usize = 0b10;
 
+// The waker is accessed from threads synchronized through `state`.
+const _: fn() = || {
+    fn assert_sync<T: Sync>() {}
+    assert_sync::<Waker>();
+};
+
 impl AtomicWaker {
     /// Create an `AtomicWaker`.
     pub const fn new() -> Self {
-        // Make sure that task is Sync
-        trait AssertSync: Sync {}
-        impl AssertSync for Waker {}
-
         AtomicWaker {
             state: AtomicUsize::new(WAITING),
             waker: UnsafeCell::new(None),

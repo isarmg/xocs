@@ -31,8 +31,8 @@ use crate::{event, Interest, Registry, Token};
 /// # fn main() -> Result<(), Box<dyn Error>> {
 /// let address: SocketAddr = "127.0.0.1:0".parse()?;
 /// let listener = TcpListener::bind(address)?;
-/// use mio::{Events, Interest, Poll, Token};
-/// use mio::net::TcpStream;
+/// use blog_runtime_io_poller::{Events, Interest, Poll, Token};
+/// use blog_runtime_io_poller::net::TcpStream;
 /// use std::time::Duration;
 ///
 /// let mut stream = TcpStream::connect(listener.local_addr()?)?;
@@ -143,11 +143,6 @@ impl TcpStream {
     /// sufficient amount to send out, thereby avoiding the frequent sending of
     /// small packets.
     ///
-    /// # Notes
-    ///
-    /// On Windows make sure the stream is connected before calling this method,
-    /// by receiving an (writable) event. Trying to set `nodelay` on an
-    /// unconnected `TcpStream` is unspecified behavior.
     pub fn set_nodelay(&self, nodelay: bool) -> io::Result<()> {
         self.inner.set_nodelay(nodelay)
     }
@@ -158,11 +153,6 @@ impl TcpStream {
     ///
     /// [link]: #method.set_nodelay
     ///
-    /// # Notes
-    ///
-    /// On Windows make sure the stream is connected before calling this method,
-    /// by receiving an (writable) event. Trying to get `nodelay` on an
-    /// unconnected `TcpStream` is unspecified behavior.
     pub fn nodelay(&self) -> io::Result<bool> {
         self.inner.nodelay()
     }
@@ -172,11 +162,6 @@ impl TcpStream {
     /// This value sets the time-to-live field that is used in every packet sent
     /// from this socket.
     ///
-    /// # Notes
-    ///
-    /// On Windows make sure the stream is connected before calling this method,
-    /// by receiving an (writable) event. Trying to set `ttl` on an
-    /// unconnected `TcpStream` is unspecified behavior.
     pub fn set_ttl(&self, ttl: u32) -> io::Result<()> {
         self.inner.set_ttl(ttl)
     }
@@ -185,11 +170,6 @@ impl TcpStream {
     ///
     /// For more information about this option, see [`set_ttl`][link].
     ///
-    /// # Notes
-    ///
-    /// On Windows make sure the stream is connected before calling this method,
-    /// by receiving an (writable) event. Trying to get `ttl` on an
-    /// unconnected `TcpStream` is unspecified behavior.
     ///
     /// [link]: #method.set_ttl
     pub fn ttl(&self) -> io::Result<u32> {
@@ -230,17 +210,13 @@ impl TcpStream {
     ///
     /// # Examples
     ///
-    #[cfg_attr(unix, doc = "```no_run")]
-    #[cfg_attr(windows, doc = "```ignore")]
+    /// ```no_run
     /// # use std::error::Error;
     /// #
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use std::io;
-    /// #[cfg(any(unix, target_os = "wasi"))]
     /// use std::os::fd::AsRawFd;
-    /// #[cfg(windows)]
-    /// use std::os::windows::io::AsRawSocket;
-    /// use mio::net::TcpStream;
+    /// use blog_runtime_io_poller::net::TcpStream;
     ///
     /// let address = "127.0.0.1:8080".parse().unwrap();
     /// let stream = TcpStream::connect(address)?;
@@ -252,10 +228,7 @@ impl TcpStream {
     /// let mut buf = [0; 512];
     /// let n = stream.try_io(|| {
     ///     let buf_ptr = &mut buf as *mut _ as *mut _;
-    ///     #[cfg(unix)]
     ///     let res = unsafe { libc::recv(stream.as_raw_fd(), buf_ptr, buf.len(), 0) };
-    ///     #[cfg(windows)]
-    ///     let res = unsafe { libc::recvfrom(stream.as_raw_socket() as usize, buf_ptr, buf.len() as i32, 0, std::ptr::null_mut(), std::ptr::null_mut()) };
     ///     if res != -1 {
     ///         Ok(res as usize)
     ///     } else {

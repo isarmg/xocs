@@ -1,18 +1,6 @@
 //! Linux-specific definitions for linux-like values
 use crate::prelude::*;
-use crate::{
-    __s16,
-    __s32,
-    __u16,
-    __u32,
-    __u64,
-    __u8,
-    sock_filter,
-    _IO,
-    _IOR,
-    _IOW,
-    _IOWR,
-};
+use crate::{__s16, __s32, __u16, __u32, __u64, __u8, sock_filter, _IO, _IOR, _IOW, _IOWR};
 
 pub type dev_t = u64;
 pub type socklen_t = u32;
@@ -3820,18 +3808,7 @@ cfg_if! {
     }
 }
 
-cfg_if! {
-    if #[cfg(target_env = "uclibc")] {
-        mod uclibc;
-        pub use self::uclibc::*;
-    } else if #[cfg(any(target_env = "musl", target_env = "ohos"))] {
-        mod musl;
-        pub use self::musl::*;
-    } else if #[cfg(target_env = "gnu")] {
-        mod gnu;
-        pub use self::gnu::*;
-    }
-}
-
+mod gnu;
+pub use self::gnu::*;
 mod arch;
 pub use self::arch::*;

@@ -56,7 +56,7 @@ pub fn low_bits_of_byte(byte: u8) -> u8 {
 #[doc(hidden)]
 #[inline]
 pub fn low_bits_of_u64(val: u64) -> u8 {
-    let byte = val & (std::u8::MAX as u64);
+    let byte = val & (u8::MAX as u64);
     low_bits_of_byte(byte as u8)
 }
 
@@ -532,7 +532,7 @@ mod tests {
         for i in -513..513 {
             inner(i);
         }
-        inner(std::i64::MIN);
+        inner(i64::MIN);
     }
 
     #[test]

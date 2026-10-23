@@ -114,11 +114,6 @@ impl SqliteArguments {
 }
 
 impl SqliteArgumentsBuffer {
-    #[allow(dead_code)] // clippy incorrectly reports this as unused
-    pub(crate) fn new(values: Vec<SqliteArgumentValue>) -> SqliteArgumentsBuffer {
-        Self(values)
-    }
-
     pub(crate) fn push(&mut self, value: SqliteArgumentValue) {
         self.0.push(value);
     }

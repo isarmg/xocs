@@ -192,19 +192,6 @@ cfg_rt! {
     {
         use crate::runtime::{context, task};
 
-        #[cfg(all(
-            tokio_unstable,
-            feature = "taskdump",
-            feature = "rt",
-            target_os = "linux",
-            any(
-                target_arch = "aarch64",
-                target_arch = "x86",
-                target_arch = "x86_64",
-                target_arch = "s390x"
-            )
-        ))]
-        let future = task::trace::Trace::root(future);
         let id = task::Id::next();
         let task = crate::util::trace::task(future, "task", meta, id.as_u64());
 

@@ -13,30 +13,6 @@ pub async fn rename(from: impl AsRef<Path>, to: impl AsRef<Path>) -> io::Result<
     let from = from.as_ref();
     let to = to.as_ref();
 
-    #[cfg(all(
-        tokio_unstable,
-        feature = "io-uring",
-        feature = "rt",
-        feature = "fs",
-        target_os = "linux",
-    ))]
-    {
-        use crate::io::uring::rename::Rename;
-        use crate::runtime::driver::op::Op;
-
-        let handle = crate::runtime::Handle::current();
-        let driver_handle = handle.inner.driver().io();
-
-        type RenameOp = Op<Rename>;
-
-        if driver_handle
-            .check_and_init(io_uring::opcode::RenameAt::CODE)
-            .await?
-        {
-            return RenameOp::rename(from, to)?.await;
-        }
-    }
-
     rename_blocking(from, to).await
 }
 

@@ -238,20 +238,6 @@ impl<T: OutputSizeUser> fmt::Debug for CtOutput<T> {
     }
 }
 
-impl<T: OutputSizeUser> Drop for CtOutput<T> {
-    #[inline]
-    fn drop(&mut self) {
-        #[cfg(feature = "zeroize")]
-        {
-            use zeroize::Zeroize;
-            self.bytes.zeroize();
-        }
-    }
-}
-
-#[cfg(feature = "zeroize")]
-impl<T: OutputSizeUser> zeroize::ZeroizeOnDrop for CtOutput<T> {}
-
 /// Error type for when the [`Output`] of a [`Mac`]
 /// is not equal to the expected value.
 #[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]

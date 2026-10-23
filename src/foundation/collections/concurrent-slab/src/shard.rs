@@ -2,12 +2,9 @@ use crate::{
     cfg::{self, CfgPrivate},
     clear::Clear,
     page,
-    sync::{
-        alloc,
-        atomic::{
-            AtomicPtr, AtomicUsize,
-            Ordering::{self, *},
-        },
+    sync::atomic::{
+        AtomicPtr, AtomicUsize,
+        Ordering::{self, *},
     },
     tid::Tid,
     Pack,
@@ -56,7 +53,7 @@ pub(crate) struct Array<T, C: cfg::Config> {
 }
 
 #[derive(Debug)]
-struct Ptr<T, C: cfg::Config>(AtomicPtr<alloc::Track<Shard<T, C>>>);
+struct Ptr<T, C: cfg::Config>(AtomicPtr<Shard<T, C>>);
 
 #[derive(Debug)]
 pub(crate) struct IterMut<'a, T: 'a, C: cfg::Config + 'a>(slice::IterMut<'a, Ptr<T, C>>);
@@ -302,7 +299,7 @@ where
         // It's okay for this to be relaxed. The value is only ever stored by
         // the thread that corresponds to the index, and we are that thread.
         let shard = self.shards[idx].load(Relaxed).unwrap_or_else(|| {
-            let ptr = Box::into_raw(Box::new(alloc::Track::new(Shard::new(idx))));
+            let ptr = Box::into_raw(Box::new(Shard::new(idx)));
             test_println!("-> allocated new shard for index {} at {:p}", idx, ptr);
             self.shards[idx].set(ptr);
             let mut max = self.max.load(Acquire);
@@ -317,7 +314,6 @@ where
                 // Safety: we just put it there!
                 &*ptr
             }
-            .get_ref()
         });
         (tid, shard)
     }
@@ -383,7 +379,7 @@ impl<T, C: cfg::Config> Ptr<T, C> {
             test_println!("---> null");
             return None;
         }
-        let track = unsafe {
+        let shard = unsafe {
             // Safety: The returned reference will have the same lifetime as the
             // reference to the shard pointer, which (morally, if not actually)
             // owns the shard. The shard is only deallocated when the shard
@@ -395,11 +391,11 @@ impl<T, C: cfg::Config> Ptr<T, C> {
             &*ptr
         };
 
-        Some(track.get_ref())
+        Some(shard)
     }
 
     #[inline]
-    fn set(&self, new: *mut alloc::Track<Shard<T, C>>) {
+    fn set(&self, new: *mut Shard<T, C>) {
         self.0
             .compare_exchange(ptr::null_mut(), new, AcqRel, Acquire)
             .expect("a shard can only be inserted by the thread that owns it, this is a bug!");

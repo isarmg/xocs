@@ -119,8 +119,8 @@ use crate::{event, Interest, Registry, Token};
 /// ```
 /// use std::io::{self, Read, Write};
 ///
-/// use mio::{Poll, Events, Interest, Token};
-/// use mio::unix::pipe;
+/// use blog_runtime_io_poller::{Poll, Events, Interest, Token};
+/// use blog_runtime_io_poller::unix::pipe;
 ///
 /// // Unique tokens for the two ends of the channel.
 /// const PIPE_RECV: Token = Token(0);
@@ -174,8 +174,8 @@ use crate::{event, Interest, Registry, Token};
 /// ```
 /// # use std::io;
 /// #
-/// # use mio::{Poll, Events, Interest, Token};
-/// # use mio::unix::pipe;
+/// # use blog_runtime_io_poller::{Poll, Events, Interest, Token};
+/// # use blog_runtime_io_poller::unix::pipe;
 /// #
 /// # const PIPE_RECV: Token = Token(0);
 /// # const PIPE_SEND: Token = Token(1);
@@ -249,7 +249,7 @@ impl Sender {
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use std::io;
     /// use std::os::fd::AsRawFd;
-    /// use mio::unix::pipe;
+    /// use blog_runtime_io_poller::unix::pipe;
     ///
     /// let (sender, receiver) = pipe::new()?;
     ///
@@ -434,7 +434,7 @@ impl Receiver {
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use std::io;
     /// use std::os::fd::AsRawFd;
-    /// use mio::unix::pipe;
+    /// use blog_runtime_io_poller::unix::pipe;
     ///
     /// let (sender, receiver) = pipe::new()?;
     ///

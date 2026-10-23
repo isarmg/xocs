@@ -48,9 +48,6 @@
 //!
 //! This version of itertools requires Rust 1.63.0 or later.
 
-#[cfg(any())]
-extern crate core as std;
-
 use alloc::{collections::VecDeque, string::String, vec::Vec};
 
 pub use either::Either;
@@ -99,8 +96,6 @@ pub mod structs {
     pub use crate::iterators::exactly_one_err::ExactlyOneError;
     pub use crate::iterators::flatten_ok::FlattenOk;
     pub use crate::iterators::format::{Format, FormatWith};
-    #[allow(deprecated)]
-    pub use crate::iterators::groupbylazy::GroupBy;
 
     pub use crate::iterators::groupbylazy::{Chunk, ChunkBy, Chunks, Group, Groups, IntoChunks};
 
@@ -125,8 +120,7 @@ pub mod structs {
 
     pub use crate::iterators::rciter_impl::RcIter;
     pub use crate::iterators::repeatn::RepeatN;
-    #[allow(deprecated)]
-    pub use crate::iterators::sources::{Iterate, Unfold};
+    pub use crate::iterators::sources::Iterate;
     pub use crate::iterators::take_while_inclusive::TakeWhileInclusive;
 
     pub use crate::iterators::tee::Tee;
@@ -157,9 +151,7 @@ pub use crate::iterators::minmax::MinMaxResult;
 pub use crate::iterators::peeking_take_while::PeekingNext;
 pub use crate::iterators::process_results_impl::process_results;
 pub use crate::iterators::repeatn::repeat_n;
-#[allow(deprecated)]
-pub use crate::iterators::sources::{iterate, unfold};
-#[allow(deprecated)]
+pub use crate::iterators::sources::iterate;
 pub use crate::iterators::structs::*;
 pub use crate::iterators::unziptuple::{multiunzip, MultiUnzip};
 pub use crate::iterators::with_position::Position;
@@ -684,17 +676,6 @@ pub trait Itertools: Iterator {
         K: PartialEq,
     {
         groupbylazy::new(self, key)
-    }
-
-    /// See [`.chunk_by()`](Itertools::chunk_by).
-    #[deprecated(note = "Use .chunk_by() instead", since = "0.13.0")]
-    fn group_by<K, F>(self, key: F) -> ChunkBy<K, Self, F>
-    where
-        Self: Sized,
-        F: FnMut(&Self::Item) -> K,
-        K: PartialEq,
-    {
-        self.chunk_by(key)
     }
 
     /// Return an *iterable* that can chunk the iterator.
@@ -2570,30 +2551,6 @@ pub trait Itertools: Iterator {
         Some(start)
     }
 
-    /// Accumulator of the elements in the iterator.
-    ///
-    /// Like `.fold()`, without a base case. If the iterator is
-    /// empty, return `None`. With just one element, return it.
-    /// Otherwise elements are accumulated in sequence using the closure `f`.
-    ///
-    /// ```
-    /// use blog_dom::iterators::Itertools;
-    ///
-    /// assert_eq!((0..10).fold1(|x, y| x + y).unwrap_or(0), 45);
-    /// assert_eq!((0..0).fold1(|x, y| x * y), None);
-    /// ```
-    #[deprecated(
-        note = "Use [`Iterator::reduce`](https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.reduce) instead",
-        since = "0.10.2"
-    )]
-    fn fold1<F>(mut self, f: F) -> Option<Self::Item>
-    where
-        F: FnMut(Self::Item, Self::Item) -> Self::Item,
-        Self: Sized,
-    {
-        self.next().map(move |x| self.fold(x, f))
-    }
-
     /// Accumulate the elements in the iterator in a tree-like manner.
     ///
     /// You can think of it as, while there's more than one item, repeatedly
@@ -2744,16 +2701,6 @@ pub trait Itertools: Iterator {
             Err(x) => x,
             _ => unreachable!(),
         }
-    }
-
-    /// See [`.tree_reduce()`](Itertools::tree_reduce).
-    #[deprecated(note = "Use .tree_reduce() instead", since = "0.13.0")]
-    fn tree_fold1<F>(self, f: F) -> Option<Self::Item>
-    where
-        F: FnMut(Self::Item, Self::Item) -> Self::Item,
-        Self: Sized,
-    {
-        self.tree_reduce(f)
     }
 
     /// An iterator method that applies a function, producing a single, final value.

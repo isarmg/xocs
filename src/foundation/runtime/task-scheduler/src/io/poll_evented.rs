@@ -125,33 +125,22 @@ impl<E: Source> PollEvented<E> {
     }
 
     /// Returns a reference to the registration.
-    #[cfg(any(feature = "net", all(feature = "process", target_os = "linux")))]
+    #[cfg(feature = "net")]
     pub(crate) fn registration(&self) -> &Registration {
         &self.registration
     }
 
     /// Deregisters the inner io from the registration and returns a Result containing the inner io.
-    #[cfg(any(feature = "net", feature = "process"))]
+    #[cfg(feature = "net")]
     pub(crate) fn into_inner(mut self) -> io::Result<E> {
         let mut inner = self.io.take().unwrap(); // As io shouldn't ever be None, just unwrap here.
         self.registration.deregister(&mut inner)?;
         Ok(inner)
     }
-
-    /// Re-register under new runtime with `interest`.
-    #[cfg(all(feature = "process", target_os = "linux"))]
-    pub(crate) fn reregister(&mut self, interest: Interest) -> io::Result<()> {
-        let io = self.io.as_mut().unwrap(); // As io shouldn't ever be None, just unwrap here.
-        let _ = self.registration.deregister(io);
-        self.registration =
-            Registration::new_with_interest_and_handle(io, interest, scheduler::Handle::current())?;
-
-        Ok(())
-    }
 }
 
 feature! {
-    #![any(feature = "net", all(unix, feature = "process"))]
+    #![feature = "net"]
 
     use crate::io::ReadBuf;
     use std::task::{Context, Poll};
@@ -187,27 +176,7 @@ feature! {
                         //
                         // Read more:
                         // https://github.com/tokio-rs/tokio/issues/5866
-                        #[cfg(all(
-                            // keep in sync with poll_write
-                            not(mio_unsupported_force_poll_poll),
-                            any(
-                                // epoll
-                                target_os = "android",
-                                target_os = "illumos",
-                                target_os = "linux",
-                                target_os = "redox",
-                                // kqueue
-                                target_os = "dragonfly",
-                                target_os = "freebsd",
-                                target_os = "ios",
-                                target_os = "macos",
-                                target_os = "netbsd",
-                                target_os = "openbsd",
-                                target_os = "tvos",
-                                target_os = "visionos",
-                                target_os = "watchos",
-                            )
-                        ))]
+                        #[cfg(all(not(mio_unsupported_force_poll_poll), any(target_os = "android", target_os = "illumos", target_os = "linux", target_os = "redox", target_os = "dragonfly", target_os = "ios", target_os = "macos", target_os = "netbsd", target_os = "openbsd", target_os = "tvos", target_os = "visionos", target_os = "watchos")))]
                         if 0 < n && n < len {
                             self.registration.clear_readiness(evt);
                         }
@@ -241,27 +210,7 @@ feature! {
                         // that the socket buffer is full.  Unfortunately this assumption
                         // fails for level-triggered selectors (like on Windows or poll even for
                         // UNIX): https://github.com/tokio-rs/tokio/issues/5866
-                        #[cfg(all(
-                            // keep in sync with poll_read
-                            not(mio_unsupported_force_poll_poll),
-                            any(
-                                // epoll
-                                target_os = "android",
-                                target_os = "illumos",
-                                target_os = "linux",
-                                target_os = "redox",
-                                // kqueue
-                                target_os = "dragonfly",
-                                target_os = "freebsd",
-                                target_os = "ios",
-                                target_os = "macos",
-                                target_os = "netbsd",
-                                target_os = "openbsd",
-                                target_os = "tvos",
-                                target_os = "visionos",
-                                target_os = "watchos",
-                            )
-                        ))]
+                        #[cfg(all(not(mio_unsupported_force_poll_poll), any(target_os = "android", target_os = "illumos", target_os = "linux", target_os = "redox", target_os = "dragonfly", target_os = "ios", target_os = "macos", target_os = "netbsd", target_os = "openbsd", target_os = "tvos", target_os = "visionos", target_os = "watchos")))]
                         if 0 < n && n < buf.len() {
                             self.registration.clear_readiness(evt);
                         }
@@ -276,7 +225,7 @@ feature! {
             }
         }
 
-        #[cfg(any(feature = "net", feature = "process"))]
+        #[cfg(feature = "net")]
         pub(crate) fn poll_write_vectored<'a>(
             &'a self,
             cx: &mut Context<'_>,

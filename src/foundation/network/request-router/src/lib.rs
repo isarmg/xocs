@@ -517,9 +517,6 @@ pub use self::form::Form;
 #[doc(inline)]
 pub use crate::kernel::{BoxError, Error, RequestExt, RequestPartsExt};
 
-#[cfg(any())]
-pub use axum_macros::{debug_handler, debug_middleware};
-
 #[cfg(all(feature = "tokio", feature = "http1"))]
 #[doc(inline)]
 pub use self::serve::serve;

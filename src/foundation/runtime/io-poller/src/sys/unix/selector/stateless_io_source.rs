@@ -1,4 +1,4 @@
-//! Both `kqueue(2)` and `epoll(2)` don't need to hold any user space state.
+//! Linux `epoll(2)` does not require user-space state for each I/O source.
 
 use std::io;
 use std::os::fd::RawFd;

@@ -15,7 +15,7 @@
 
 原始来源和可维护实现分开记录：`compliance/` 保存固定上游来源、原始许可证和摘要，派生映射与修改记录说明本地整合。MIT、Apache-2.0 和字体许可按原文保留；根 LICENSE 继续保留原版权，不因改名改写历史作者。来源中出现 xcss 不代表构建时依赖该仓库，也不能删除来源记录来制造“独立”结论。
 
-所有 Rust 包现统一使用根 workspace 和唯一根 Cargo.lock，基础源码按用途纳入 `src/foundation/<layer>/<purpose>`。当前受管源码 243 个包由 234 个基础包和 9 个项目包组成，根锁完整图为 242 包，数量仅作为观察指标，250 不是硬上限；重命名、合并、拆分与退役由不可改写历史的显式迁移日志记录。内部版本与原始发布身份分开，详见[用途架构与定制](maintained-design.md)。`python3 tools/rust-sources/manage.py verify --metadata` 在临时空 Cargo home 中核验来源及原生/WASM 本地图；`python3 tools/check-independence.py` 独立拒绝外部 Git/registry 输入、越界路径、嵌套 workspace/lock/Git 和非空 Cargo source。默认离线，不要求预装 wasm-bindgen CLI 或注册表源码缓存。详见[源码管理说明](rust-sources.md)。
+所有 Rust 包现统一使用根 workspace 和唯一根 Cargo.lock，基础源码按用途纳入 `src/foundation/<layer>/<purpose>`。当前包数、来源映射与完整解析图见[生成清单](THIRD_PARTY_RUST_SOURCES.md)；重命名、合并、拆分与退役由不可改写历史的显式迁移日志记录。内部版本与原始发布身份分开，详见[用途架构与定制](maintained-design.md)。`python3 tools/rust-sources/manage.py verify --metadata` 在临时空 Cargo home 中核验来源及原生/WASM 本地图；`python3 tools/check-independence.py` 独立拒绝外部 Git/registry 输入、越界路径、嵌套 workspace/lock/Git 和非空 Cargo source。默认离线，不要求预装 wasm-bindgen CLI 或注册表源码缓存。详见[源码管理说明](rust-sources.md)。
 
 这些检查证明受检 Rust 源码的闭包边界，不表示全部平台、原生依赖、Node 测试工具已内置，也不表示新的漏洞审计或浏览器验收已通过。改名不能替代实际实现整合、来源保存与行为验证。
 

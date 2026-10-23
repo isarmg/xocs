@@ -49,14 +49,6 @@ impl From<Oco<'static, str>> for TextProp {
 }
 
 // TODO
-/*impl<T> From<T> for MaybeProp<TextProp>
-where
-    T: Into<Oco<'static, str>>,
-{
-    fn from(s: T) -> Self {
-        Self(Some(MaybeSignal::from(Some(s.into().into()))))
-    }
-}*/
 
 impl<F, S> From<F> for TextProp
 where
@@ -104,8 +96,6 @@ macro_rules! textprop_reactive {
 // Stable Rust closure conversion is the maintained implementation.
 mod stable {
     use super::TextProp;
-    #[allow(deprecated)]
-    use crate::reactivity::wrappers::read::MaybeSignal;
     use crate::reactivity::{
         computed::{ArcMemo, Memo},
         owner::Storage,
@@ -145,14 +135,6 @@ mod stable {
         <V, S>,
         V,
         Signal<V, S>: Get<Value = V>,
-        S: Storage<V> + Storage<Option<V>>,
-        S: Send + Sync + 'static,
-    );
-    textprop_reactive!(
-        MaybeSignal,
-        <V, S>,
-        V,
-        MaybeSignal<V, S>: Get<Value = V>,
         S: Storage<V> + Storage<Option<V>>,
         S: Send + Sync + 'static,
     );

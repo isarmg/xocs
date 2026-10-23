@@ -9,7 +9,6 @@ pub fn create(
     disable_cleanup: bool,
 ) -> io::Result<TempDir> {
     let mut dir_options = std::fs::DirBuilder::new();
-    #[cfg(not(target_os = "wasi"))]
     {
         use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
         if let Some(p) = permissions {

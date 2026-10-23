@@ -370,8 +370,6 @@
 //!
 //! - [`TraceLayer::new_for_http`] classifies based on the status code. It doesn't consider
 //!   streaming responses.
-//! - [`TraceLayer::new_for_grpc`] classifies based on the gRPC protocol and supports streaming
-//!   responses.
 //!
 //! [tracing]: https://crates.io/crates/tracing
 //! [`Service`]: tower::Service
@@ -401,15 +399,12 @@ pub use self::{
     service::Trace,
 };
 use crate::{
-    classify::{GrpcErrorsAsFailures, ServerErrorsAsFailures, SharedClassifier},
+    classify::{ServerErrorsAsFailures, SharedClassifier},
     LatencyUnit,
 };
 
 /// MakeClassifier for HTTP requests.
 pub type HttpMakeClassifier = SharedClassifier<ServerErrorsAsFailures>;
-
-/// MakeClassifier for gRPC requests.
-pub type GrpcMakeClassifier = SharedClassifier<GrpcErrorsAsFailures>;
 
 macro_rules! event_dynamic_lvl {
     ( $(target: $target:expr,)? $(parent: $parent:expr,)? $lvl:expr, $($tt:tt)* ) => {

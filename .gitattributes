@@ -1,3 +1,2 @@
-# Preserve hash-verified third-party source bytes, including upstream whitespace.
-web/xcss-web/vendor/xcss-web/vendor/xcss-web-core/** whitespace=-trailing-space,-blank-at-eof
-web/xcss-web/vendor/xcss-web/vendor/xcss-web-macro/** whitespace=-trailing-space,-blank-at-eof
+# Unified diff context for an empty line contains one required space.
+docs/measurements/compiler-split/snapshot-cache.patch whitespace=-blank-at-eol

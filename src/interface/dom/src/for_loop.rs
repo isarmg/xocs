@@ -4,10 +4,7 @@ use crate::reactivity::{
     signal::{ArcRwSignal, ReadSignal},
     traits::Set,
 };
-use crate::view_tree::{
-    reactive_graph::OwnedView,
-    view::keyed::{keyed, SerializableKey},
-};
+use crate::view_tree::{reactive_graph::OwnedView, view::keyed::keyed};
 use blog_component_macros::component;
 use std::hash::Hash;
 
@@ -40,7 +37,7 @@ where
     EF: Fn(T) -> N + Send + Clone + 'static,
     N: IntoView + 'static,
     KF: Fn(&T) -> K + Send + Clone + 'static,
-    K: Eq + Hash + SerializableKey + 'static,
+    K: Eq + Hash + 'static,
     T: Send + 'static,
 {
     // this takes the owner of the For itself
@@ -77,7 +74,7 @@ where
     EF: Fn(ReadSignal<usize>, T) -> N + Send + Clone + 'static,
     N: IntoView + 'static,
     KF: Fn(&T) -> K + Send + Clone + 'static,
-    K: Eq + Hash + SerializableKey + 'static,
+    K: Eq + Hash + 'static,
     T: Send + 'static,
 {
     // this takes the owner of the For itself

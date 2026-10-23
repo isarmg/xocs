@@ -303,12 +303,7 @@ cfg_rt! {
 }
 
 cfg_not_rt! {
-    #[cfg(any(
-        feature = "net",
-        all(unix, feature = "process"),
-        all(unix, feature = "signal"),
-        feature = "time",
-    ))]
+    #[cfg(any(feature = "net", all(unix, feature = "signal"), feature = "time"))]
     impl Handle {
         #[track_caller]
         pub(crate) fn current() -> Handle {

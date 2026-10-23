@@ -2,9 +2,9 @@
 
 根 Cargo.toml 为虚拟 workspace，服务端包位于 `src/server`。所有 Rust 包使用唯一根 workspace 和 Cargo.lock，依赖声明使用本仓库内的 `path` 或继承根 workspace 的本地路径。`src/foundation/<layer>/<purpose>` 保存按产品用途维护的基础 Rust 源码，不通过下载缓存、相邻仓库或 registry/Git 源解析。根默认成员覆盖 `blog`、`blog-application` 与 `blog-setup`；`blog-browser` 使用 WASM 目标，集成绑定生成的 `blog-assets` 使用原生目标。
 
-当前维护树由 407 包基线迁移为 243 包：234 个用途基础包与 9 个项目包。根锁完整图为 242 包；仍有 optional 声明的 `cli/terminal-probe` 当前未被选中，保留在受管源码计数中。46 个原始来源已明确退役，397 份原始归档及法律材料仍保留；兼容版本与宏/工具实现的合并不会删除来源。当前职责、已做定制与证据边界见[用途架构与定制](maintained-design.md)，精确映射见[自动生成的用途架构](RUST_SOURCE_ARCHITECTURE.md)。
+当前职责和支持面见[用途架构与定制](maintained-design.md)，包数量、来源身份和依赖映射统一由[源码清单](THIRD_PARTY_RUST_SOURCES.md)及[用途关系](RUST_SOURCE_ARCHITECTURE.md)生成。原始归档和法律材料始终保留；兼容版本、宏与工具实现的合并不会删除来源。
 
-包数量只作为观察指标，250 是约数，不设置强制上限。全部受管源码和每个目标的完整 metadata 图仍被核验，包含正常依赖、构建脚本、派生宏和测试；入口未选中或仅 optional 的维护源码也保留计数。按实际实现收益决定合并或拆分，原始归档不冒充活动源码包。
+全部受管源码和每个目标的完整 metadata 图均被核验，包含正常依赖、构建脚本、派生宏和测试。入口未选中或仅 optional 的维护源码也必须有明确所有者；包数不设硬上限。
 
 当前内部包与上游发布版本分开管理。维护包通常省略 manifest 版本，由 Cargo 记为 0.0.0；依赖声明不使用上游版本范围。主产品与维护工具的 1.0.1 是本项目发行身份。原始上游版本保留在 `compliance/` 和来源文档，用于追溯、法律材料和原始身份审计，不作为维护代码的版本约束。
 

@@ -1,4 +1,3 @@
-use super::plumbing::*;
 use super::*;
 
 /// `Take` is an iterator that iterates over the first `n` elements.

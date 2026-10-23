@@ -71,33 +71,6 @@ impl Cmov for u32 {
     }
 }
 
-#[cfg(target_arch = "x86")]
-#[cfg_attr(docsrs, doc(cfg(true)))]
-impl Cmov for u64 {
-    #[inline]
-    fn cmovnz(&mut self, value: &Self, condition: Condition) {
-        let mut lo = (*self & u32::MAX as u64) as u32;
-        let mut hi = (*self >> 32) as u32;
-
-        lo.cmovnz(&((*value & u32::MAX as u64) as u32), condition);
-        hi.cmovnz(&((*value >> 32) as u32), condition);
-
-        *self = (lo as u64) | (hi as u64) << 32;
-    }
-
-    #[inline]
-    fn cmovz(&mut self, value: &Self, condition: Condition) {
-        let mut lo = (*self & u32::MAX as u64) as u32;
-        let mut hi = (*self >> 32) as u32;
-
-        lo.cmovz(&((*value & u32::MAX as u64) as u32), condition);
-        hi.cmovz(&((*value >> 32) as u32), condition);
-
-        *self = (lo as u64) | (hi as u64) << 32;
-    }
-}
-
-#[cfg(target_arch = "x86_64")]
 #[cfg_attr(docsrs, doc(cfg(true)))]
 impl Cmov for u64 {
     #[inline]
@@ -165,33 +138,6 @@ impl CmovEq for u32 {
     }
 }
 
-#[cfg(target_arch = "x86")]
-#[cfg_attr(docsrs, doc(cfg(true)))]
-impl CmovEq for u64 {
-    #[inline]
-    fn cmovne(&self, rhs: &Self, input: Condition, output: &mut Condition) {
-        let lo = (*self & u32::MAX as u64) as u32;
-        let hi = (*self >> 32) as u32;
-
-        let mut tmp = 1u8;
-        lo.cmovne(&((*rhs & u32::MAX as u64) as u32), 0, &mut tmp);
-        hi.cmovne(&((*rhs >> 32) as u32), 0, &mut tmp);
-        tmp.cmoveq(&0, input, output);
-    }
-
-    #[inline]
-    fn cmoveq(&self, rhs: &Self, input: Condition, output: &mut Condition) {
-        let lo = (*self & u32::MAX as u64) as u32;
-        let hi = (*self >> 32) as u32;
-
-        let mut tmp = 1u8;
-        lo.cmovne(&((*rhs & u32::MAX as u64) as u32), 0, &mut tmp);
-        hi.cmovne(&((*rhs >> 32) as u32), 0, &mut tmp);
-        tmp.cmoveq(&1, input, output);
-    }
-}
-
-#[cfg(target_arch = "x86_64")]
 #[cfg_attr(docsrs, doc(cfg(true)))]
 impl CmovEq for u64 {
     #[inline]

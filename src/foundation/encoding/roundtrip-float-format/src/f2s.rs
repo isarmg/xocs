@@ -35,8 +35,6 @@ pub struct FloatingDecimal32 {
     // inclusive, and can fit in i16 if needed.
     pub exponent: i32,
 }
-
-#[cfg_attr(feature = "no-panic", inline)]
 pub fn f2d(ieee_mantissa: u32, ieee_exponent: u32) -> FloatingDecimal32 {
     let (e2, m2) = if ieee_exponent == 0 {
         (

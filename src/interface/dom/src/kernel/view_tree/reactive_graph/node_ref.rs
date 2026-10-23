@@ -164,16 +164,3 @@ where
         self.0.is_disposed()
     }
 }
-
-/// Create a [NodeRef].
-#[inline(always)]
-#[track_caller]
-#[deprecated = "This function is being removed to conform to Rust idioms. \
-                Please use `NodeRef::new()` instead."]
-pub fn create_node_ref<E>() -> NodeRef<E>
-where
-    E: ElementType,
-    E::Output: 'static,
-{
-    NodeRef::new()
-}

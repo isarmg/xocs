@@ -59,7 +59,7 @@
 use crate::loom::sync::{Arc, Mutex};
 use crate::runtime;
 use crate::runtime::scheduler::multi_thread::{
-    idle, park, queue, Counters, Handle, Idle, Overflow, Parker, Stats, TraceStatus, Unparker,
+    idle, park, queue, Counters, Handle, Idle, Overflow, Parker, Stats, Unparker,
 };
 use crate::runtime::scheduler::{inject, Defer, Lock};
 use crate::runtime::task::OwnedTasks;
@@ -77,14 +77,6 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 mod metrics;
-
-cfg_taskdump! {
-    mod taskdump;
-}
-
-cfg_not_taskdump! {
-    mod taskdump_mock;
-}
 
 #[cfg(all(tokio_unstable, feature = "time"))]
 use crate::loom::sync::atomic::AtomicBool;
@@ -137,9 +129,6 @@ struct Core {
     /// True if the scheduler is being shutdown
     is_shutdown: bool,
 
-    /// True if the scheduler is being traced
-    is_traced: bool,
-
     /// Whether or not the worker has just returned from a park in which we
     /// parked on the I/O driver.
     had_driver: park::HadDriver,
@@ -191,9 +180,6 @@ pub(crate) struct Shared {
     /// stolen by a thread that was spawned as part of `block_in_place`.
     #[allow(clippy::vec_box)] // we're moving an already-boxed value
     shutdown_cores: Mutex<Vec<Box<Core>>>,
-
-    /// The number of cores that have observed the trace signal.
-    pub(super) trace_status: TraceStatus,
 
     /// Scheduler configuration options
     config: Config,
@@ -302,7 +288,6 @@ pub(super) fn create(
             time_context: time_alt::LocalContext::new(),
             is_searching: false,
             is_shutdown: false,
-            is_traced: false,
             enable_eager_driver_handoff: config.enable_eager_driver_handoff,
             had_driver: park::HadDriver::No,
             park: Some(park),
@@ -322,7 +307,6 @@ pub(super) fn create(
         .as_ref()
         .map(|_| Instant::now());
 
-    let remotes_len = remotes.len();
     let handle = Arc::new(Handle {
         name,
         task_hooks: TaskHooks::from_config(&config),
@@ -338,7 +322,6 @@ pub(super) fn create(
                 inject_timers: Vec::new(),
             }),
             shutdown_cores: Mutex::new(vec![]),
-            trace_status: TraceStatus::new(remotes_len),
             config,
             scheduler_metrics: SchedulerMetrics::new(),
             worker_metrics: worker_metrics.into_boxed_slice(),
@@ -580,10 +563,6 @@ impl Context {
 
         while !core.is_shutdown {
             self.assert_lifo_enabled_is_correct(&core);
-
-            if core.is_traced {
-                core = self.worker.handle.trace_core(core);
-            }
 
             // Increment the tick
             core.tick();
@@ -827,7 +806,7 @@ impl Context {
         }
 
         if core.transition_to_parked(&self.worker) {
-            while !core.is_shutdown && !core.is_traced {
+            while !core.is_shutdown {
                 core.stats.about_to_park();
                 core.stats
                     .submit(&self.worker.handle.shared.worker_metrics[self.worker.index]);
@@ -1217,7 +1196,7 @@ impl Core {
     /// Returns true if the transition happened, false if there is work to do first.
     fn transition_to_parked(&mut self, worker: &Worker) -> bool {
         // Workers should not park if they have work to do
-        if self.has_tasks() || self.is_traced {
+        if self.has_tasks() {
             return false;
         }
 
@@ -1281,11 +1260,6 @@ impl Core {
             // Check if the scheduler has been shutdown
             let synced = worker.handle.shared.synced.lock();
             self.is_shutdown = worker.inject().is_closed(&synced.inject);
-        }
-
-        if !self.is_traced {
-            // Check if the worker should be tracing.
-            self.is_traced = worker.handle.shared.trace_status.trace_requested();
         }
     }
 

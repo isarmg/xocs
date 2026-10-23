@@ -68,6 +68,7 @@ name = "blog-assets"
 version = "0.0.0"
 dependencies = [
  "blog-assets-compiler",
+ "blog-assets-style-compiler",
  "blog-crypto-secure-hash",
  "blog-diagnostics-error-context",
  "blog-encoding-byte-search",
@@ -76,7 +77,7 @@ dependencies = [
  "blog-format-configuration",
  "blog-format-data-model",
  "blog-format-json",
- "blog-network-http-client",
+ "blog-network-http-transport",
  "blog-network-media-detection",
  "blog-network-request-pipeline",
  "blog-network-request-router",
@@ -90,44 +91,32 @@ dependencies = [
 name = "blog-assets-compiler"
 version = "0.0.0"
 dependencies = [
- "blog-assets-style-token-macros",
- "blog-assets-style-value-derive",
  "blog-collections-bit-set",
  "blog-collections-compiler-hash",
  "blog-collections-hash-table",
  "blog-collections-inline-string",
  "blog-collections-inline-vector",
- "blog-collections-keyed-hash",
- "blog-collections-ordered-map",
  "blog-diagnostics-event-facade",
  "blog-diagnostics-typed-error",
  "blog-encoding-byte-search",
  "blog-encoding-compression",
  "blog-encoding-integer-format",
- "blog-encoding-radix-codecs",
  "blog-encoding-script-float-format",
  "blog-encoding-vector-base-encoding",
  "blog-encoding-vector-escaping",
  "blog-format-binary-record",
  "blog-format-data-model",
  "blog-format-json",
- "blog-interface-javascript-api",
  "blog-javascript-syntax-derive",
  "blog-lookup-script-table",
- "blog-lookup-style-table",
  "blog-math-large-integer",
  "blog-math-numeric-traits",
  "blog-memory-allocator",
  "blog-memory-owned-borrow",
  "blog-network-web-address",
- "blog-platform-compiler-entropy",
  "blog-platform-system-abi",
- "blog-sync-lazy-global",
  "blog-syntax-compiler-iterators",
  "blog-syntax-index-expansion",
- "blog-syntax-style-iterators",
- "blog-syntax-token-concat",
- "blog-text-compile-time-text",
  "blog-text-constant-pattern",
  "blog-text-line-layout",
  "blog-text-terminal-width",
@@ -141,6 +130,29 @@ dependencies = [
  "blog-collections-bit-set",
  "blog-encoding-byte-search",
  "blog-text-case-insensitive-text",
+]
+
+[[package]]
+name = "blog-assets-style-compiler"
+version = "0.0.0"
+dependencies = [
+ "blog-assets-style-token-macros",
+ "blog-assets-style-value-derive",
+ "blog-collections-bit-set",
+ "blog-collections-compiler-hash",
+ "blog-collections-inline-vector",
+ "blog-collections-keyed-hash",
+ "blog-collections-ordered-map",
+ "blog-diagnostics-event-facade",
+ "blog-encoding-integer-format",
+ "blog-encoding-radix-codecs",
+ "blog-format-data-model",
+ "blog-format-json",
+ "blog-lookup-style-table",
+ "blog-sync-lazy-global",
+ "blog-syntax-style-iterators",
+ "blog-syntax-token-concat",
+ "blog-text-compile-time-text",
 ]
 
 [[package]]
@@ -288,9 +300,8 @@ name = "blog-collections-keyed-hash"
 version = "0.0.0"
 dependencies = [
  "blog-memory-byte-layout",
- "blog-native-compiler-probe",
  "blog-native-target-conditions",
- "blog-platform-compiler-entropy",
+ "blog-platform-system-entropy",
  "blog-sync-initialization",
 ]
 
@@ -613,7 +624,6 @@ dependencies = [
  "blog-math-fast-random",
  "blog-platform-system-calls",
  "blog-platform-system-entropy",
- "blog-sync-initialization",
 ]
 
 [[package]]
@@ -622,8 +632,6 @@ version = "0.0.0"
 dependencies = [
  "blog-encoding-framing",
  "blog-format-data-model",
- "blog-io-portable-stream",
- "blog-io-record-stream",
 ]
 
 [[package]]
@@ -744,14 +752,6 @@ dependencies = [
  "blog-runtime-async-toolkit",
  "blog-wasm-browser-bridge",
 ]
-
-[[package]]
-name = "blog-io-portable-stream"
-version = "0.0.0"
-
-[[package]]
-name = "blog-io-record-stream"
-version = "0.0.0"
 
 [[package]]
 name = "blog-javascript-syntax-derive"
@@ -880,7 +880,7 @@ dependencies = [
 name = "blog-math-password-random-traits"
 version = "0.0.0"
 dependencies = [
- "blog-platform-random-seed",
+ "blog-platform-system-entropy",
 ]
 
 [[package]]
@@ -892,7 +892,6 @@ name = "blog-math-typed-array"
 version = "0.0.0"
 dependencies = [
  "blog-math-type-integers",
- "blog-native-compiler-probe",
 ]
 
 [[package]]
@@ -953,7 +952,6 @@ dependencies = [
 name = "blog-native-c-compiler"
 version = "0.0.0"
 dependencies = [
- "blog-native-windows-compiler",
  "blog-text-shell-words",
 ]
 
@@ -966,23 +964,7 @@ name = "blog-native-compiler-conditions"
 version = "0.0.0"
 
 [[package]]
-name = "blog-native-compiler-probe"
-version = "0.0.0"
-
-[[package]]
-name = "blog-native-system-library-discovery"
-version = "0.0.0"
-
-[[package]]
 name = "blog-native-target-conditions"
-version = "0.0.0"
-
-[[package]]
-name = "blog-native-windows-compiler"
-version = "0.0.0"
-
-[[package]]
-name = "blog-native-windows-library-discovery"
 version = "0.0.0"
 
 [[package]]
@@ -1010,30 +992,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "blog-network-http-client"
-version = "0.0.0"
-dependencies = [
- "blog-diagnostics-event-facade",
- "blog-encoding-application-base-encoding",
- "blog-encoding-byte-buffer",
- "blog-interface-browser-api",
- "blog-interface-javascript-api",
- "blog-network-body-stream",
- "blog-network-http-message",
- "blog-network-http-middleware",
- "blog-network-http-transport",
- "blog-network-request-pipeline",
- "blog-network-web-address",
- "blog-runtime-async-toolkit",
- "blog-runtime-scheduled-io",
- "blog-runtime-task-scheduler",
- "blog-sync-exclusive-value",
- "blog-sync-pinned-projection",
- "blog-wasm-browser-bridge",
- "blog-wasm-browser-futures",
-]
-
-[[package]]
 name = "blog-network-http-date"
 version = "0.0.0"
 
@@ -1049,7 +1007,6 @@ dependencies = [
 name = "blog-network-http-middleware"
 version = "0.0.0"
 dependencies = [
- "blog-collections-bit-set",
  "blog-diagnostics-structured-events",
  "blog-encoding-byte-buffer",
  "blog-network-body-stream",
@@ -1076,7 +1033,6 @@ version = "0.0.0"
 dependencies = [
  "blog-collections-inline-vector",
  "blog-diagnostics-structured-events",
- "blog-encoding-application-base-encoding",
  "blog-encoding-byte-buffer",
  "blog-encoding-integer-format",
  "blog-network-body-stream",
@@ -1084,8 +1040,6 @@ dependencies = [
  "blog-network-http-message",
  "blog-network-http-parser",
  "blog-network-request-pipeline",
- "blog-network-web-address",
- "blog-platform-ip-addresses",
  "blog-platform-socket-options",
  "blog-platform-system-abi",
  "blog-runtime-async-toolkit",
@@ -1158,23 +1112,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "blog-platform-compiler-entropy"
-version = "0.0.0"
-dependencies = [
- "blog-native-target-conditions",
- "blog-platform-system-abi",
-]
-
-[[package]]
 name = "blog-platform-error-code"
 version = "0.0.0"
 dependencies = [
  "blog-platform-system-abi",
 ]
-
-[[package]]
-name = "blog-platform-ip-addresses"
-version = "0.0.0"
 
 [[package]]
 name = "blog-platform-linux-abi"
@@ -1184,7 +1126,6 @@ version = "0.0.0"
 name = "blog-platform-local-time-zone"
 version = "0.0.0"
 dependencies = [
- "blog-diagnostics-event-facade",
  "blog-interface-javascript-api",
  "blog-wasm-browser-bridge",
 ]
@@ -1204,14 +1145,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "blog-platform-random-seed"
-version = "0.0.0"
-dependencies = [
- "blog-native-target-conditions",
- "blog-platform-system-abi",
-]
-
-[[package]]
 name = "blog-platform-socket-options"
 version = "0.0.0"
 dependencies = [
@@ -1227,9 +1160,7 @@ name = "blog-platform-system-calls"
 version = "0.0.0"
 dependencies = [
  "blog-collections-bit-set",
- "blog-platform-error-code",
  "blog-platform-linux-abi",
- "blog-platform-system-abi",
 ]
 
 [[package]]
@@ -1257,14 +1188,6 @@ dependencies = [
  "blog-syntax-rust-parser",
  "blog-syntax-token-stream",
  "blog-syntax-token-templates",
-]
-
-[[package]]
-name = "blog-runtime-intrusive-futures"
-version = "0.0.0"
-dependencies = [
- "blog-runtime-async-toolkit",
- "blog-sync-mutex",
 ]
 
 [[package]]
@@ -1376,14 +1299,11 @@ dependencies = [
  "blog-diagnostics-structured-events",
  "blog-diagnostics-typed-error",
  "blog-encoding-byte-buffer",
- "blog-encoding-byte-search",
  "blog-format-data-model",
  "blog-format-date-time",
  "blog-format-json",
- "blog-native-target-conditions",
  "blog-network-web-address",
  "blog-runtime-async-toolkit",
- "blog-runtime-intrusive-futures",
  "blog-runtime-task-scheduler",
  "blog-storage-record-derive",
  "blog-storage-sqlite-native",
@@ -1398,8 +1318,6 @@ name = "blog-storage-sqlite-native"
 version = "0.0.0"
 dependencies = [
  "blog-native-c-compiler",
- "blog-native-system-library-discovery",
- "blog-native-windows-library-discovery",
 ]
 
 [[package]]
@@ -1413,9 +1331,6 @@ version = "0.0.0"
 [[package]]
 name = "blog-sync-exclusive-value"
 version = "0.0.0"
-dependencies = [
- "blog-runtime-async-toolkit",
-]
 
 [[package]]
 name = "blog-sync-initialization"
@@ -1830,7 +1745,6 @@ dependencies = [
 name = "blog-wasm-browser-bridge"
 version = "0.0.0"
 dependencies = [
- "blog-native-compiler-conditions",
  "blog-native-target-conditions",
  "blog-sync-initialization",
  "blog-wasm-browser-bridge-entry",

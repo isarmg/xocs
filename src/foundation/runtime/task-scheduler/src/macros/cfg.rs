@@ -9,7 +9,6 @@
 /// ```no-compile
 /// feature! {
 /// #![any(
-///     feature = "process",
 ///     feature = "sync",
 ///     feature = "rt",
 ///     tokio_unstable
@@ -101,26 +100,8 @@ macro_rules! cfg_block_on {
 macro_rules! cfg_atomic_waker_impl {
     ($($item:item)*) => {
         $(
-            #[cfg(any(
-                feature = "net",
-                feature = "process",
-                feature = "rt",
-                feature = "signal",
-                feature = "time",
-            ))]
+            #[cfg(any(feature = "net", feature = "rt", feature = "signal", feature = "time"))]
             #[cfg(not(loom))]
-            $item
-        )*
-    }
-}
-
-macro_rules! cfg_aio {
-    ($($item:item)*) => {
-        $(
-            #[cfg(all(any(docsrs, target_os = "freebsd"), feature = "net"))]
-            #[cfg_attr(docsrs,
-                doc(cfg(all(target_os = "freebsd", feature = "net")))
-            )]
             $item
         )*
     }
@@ -138,41 +119,15 @@ macro_rules! cfg_fs {
 
 macro_rules! cfg_io_blocking {
     ($($item:item)*) => {
-        $( #[cfg(any(
-                feature = "io-std",
-                feature = "fs",
-                all(windows, feature = "process"),
-        ))] $item )*
+        $( #[cfg(any(feature = "io-std", feature = "fs"))] $item )*
     }
 }
 
 macro_rules! cfg_io_driver {
     ($($item:item)*) => {
         $(
-            #[cfg(any(
-                feature = "net",
-                all(unix, feature = "process"),
-                all(unix, feature = "signal"),
-                all(
-                    tokio_unstable,
-                    feature = "io-uring",
-                    feature = "rt",
-                    feature = "fs",
-                    target_os = "linux"
-                )
-            ))]
-            #[cfg_attr(docsrs, doc(cfg(any(
-                feature = "net",
-                all(unix, feature = "process"),
-                all(unix, feature = "signal"),
-                all(
-                    tokio_unstable,
-                    feature = "io-uring",
-                    feature = "rt",
-                    feature = "fs",
-                    target_os = "linux"
-                )
-            ))))]
+            #[cfg(any(feature = "net", all(unix, feature = "signal")))]
+            #[cfg_attr(docsrs, doc(cfg(any(feature = "net", all(unix, feature = "signal")))))]
             $item
         )*
     }
@@ -181,18 +136,7 @@ macro_rules! cfg_io_driver {
 macro_rules! cfg_io_driver_impl {
     ( $( $item:item )* ) => {
         $(
-            #[cfg(any(
-                feature = "net",
-                all(unix, feature = "process"),
-                all(unix, feature = "signal"),
-                all(
-                    tokio_unstable,
-                    feature = "io-uring",
-                    feature = "rt",
-                    feature = "fs",
-                    target_os = "linux"
-                )
-            ))]
+            #[cfg(any(feature = "net", all(unix, feature = "signal")))]
             $item
         )*
     }
@@ -201,18 +145,7 @@ macro_rules! cfg_io_driver_impl {
 macro_rules! cfg_not_io_driver {
     ($($item:item)*) => {
         $(
-            #[cfg(not(any(
-                feature = "net",
-                all(unix, feature = "process"),
-                all(unix, feature = "signal"),
-                all(
-                    tokio_unstable,
-                    feature = "io-uring",
-                    feature = "rt",
-                    feature = "fs",
-                    target_os = "linux"
-                )
-            )))]
+            #[cfg(not(any(feature = "net", all(unix, feature = "signal"))))]
             $item
         )*
     }
@@ -320,52 +253,11 @@ macro_rules! cfg_not_rt_and_metrics_and_net {
     }
 }
 
-macro_rules! cfg_net_or_process {
-    ($($item:item)*) => {
-        $(
-            #[cfg(any(feature = "net", feature = "process"))]
-            #[cfg_attr(docsrs, doc(cfg(any(feature = "net", feature = "process"))))]
-            $item
-        )*
-    }
-}
-
 macro_rules! cfg_net {
     ($($item:item)*) => {
         $(
             #[cfg(feature = "net")]
             #[cfg_attr(docsrs, doc(cfg(feature = "net")))]
-            $item
-        )*
-    }
-}
-
-macro_rules! cfg_net_or_uring {
-    ($($item:item)*) => {
-        $(
-            #[cfg(any(
-                feature = "net",
-                all(
-                    tokio_unstable,
-                    feature = "io-uring",
-                    feature = "rt",
-                    feature = "fs",
-                    target_os = "linux",
-                )
-            ))]
-            #[cfg_attr(
-                docsrs,
-                doc(cfg(any(
-                    feature = "net",
-                    all(
-                        tokio_unstable,
-                        feature = "io-uring",
-                        feature = "rt",
-                        feature = "fs",
-                        target_os = "linux",
-                    )
-                )))
-            )]
             $item
         )*
     }
@@ -391,35 +283,6 @@ macro_rules! cfg_net_windows {
     }
 }
 
-macro_rules! cfg_process {
-    ($($item:item)*) => {
-        $(
-            #[cfg(feature = "process")]
-            #[cfg_attr(docsrs, doc(cfg(feature = "process")))]
-            #[cfg(not(loom))]
-            #[cfg(not(target_os = "wasi"))]
-            $item
-        )*
-    }
-}
-
-macro_rules! cfg_process_driver {
-    ($($item:item)*) => {
-        #[cfg(unix)]
-        #[cfg(not(loom))]
-        cfg_process! { $($item)* }
-    }
-}
-
-macro_rules! cfg_not_process_driver {
-    ($($item:item)*) => {
-        $(
-            #[cfg(not(all(unix, not(loom), feature = "process")))]
-            $item
-        )*
-    }
-}
-
 macro_rules! cfg_signal {
     ($($item:item)*) => {
         $(
@@ -435,7 +298,7 @@ macro_rules! cfg_signal {
 macro_rules! cfg_signal_internal {
     ($($item:item)*) => {
         $(
-            #[cfg(any(feature = "signal", all(unix, feature = "process")))]
+            #[cfg(feature = "signal")]
             #[cfg(not(loom))]
             $item
         )*
@@ -452,7 +315,7 @@ macro_rules! cfg_signal_internal_and_unix {
 macro_rules! cfg_not_signal_internal {
     ($($item:item)*) => {
         $(
-            #[cfg(any(loom, not(unix), not(any(feature = "signal", all(unix, feature = "process")))))]
+            #[cfg(any(loom, not(unix), not(feature = "signal")))]
             $item
         )*
     }
@@ -504,61 +367,6 @@ macro_rules! cfg_not_rt_multi_thread {
     ($($item:item)*) => {
         $( #[cfg(not(feature = "rt-multi-thread"))] $item )*
     }
-}
-
-macro_rules! cfg_taskdump {
-    ($($item:item)*) => {
-        $(
-            #[cfg(all(
-                tokio_unstable,
-                feature = "taskdump",
-                feature = "rt",
-                target_os = "linux",
-                any(
-                    target_arch = "aarch64",
-                    target_arch = "x86",
-                    target_arch = "x86_64",
-                    target_arch = "s390x"
-                )
-            ))]
-            #[cfg_attr(
-                docsrs,
-                doc(cfg(all(
-                    tokio_unstable,
-                    feature = "taskdump",
-                    feature = "rt",
-                    target_os = "linux",
-                    any(
-                        target_arch = "aarch64",
-                        target_arch = "x86",
-                        target_arch = "x86_64",
-                        target_arch = "s390x"
-                    )
-                )))
-            )]
-            $item
-        )*
-    };
-}
-
-macro_rules! cfg_not_taskdump {
-    ($($item:item)*) => {
-        $(
-            #[cfg(not(all(
-                tokio_unstable,
-                feature = "taskdump",
-                feature = "rt",
-                target_os = "linux",
-                any(
-                    target_arch = "aarch64",
-                    target_arch = "x86",
-                    target_arch = "x86_64",
-                    target_arch = "s390x"
-                )
-            )))]
-            $item
-        )*
-    };
 }
 
 macro_rules! cfg_test_util {
@@ -625,16 +433,7 @@ macro_rules! cfg_not_trace {
 macro_rules! cfg_coop {
     ($($item:item)*) => {
         $(
-            #[cfg(any(
-                    feature = "fs",
-                    feature = "io-std",
-                    feature = "net",
-                    feature = "process",
-                    feature = "rt",
-                    feature = "signal",
-                    feature = "sync",
-                    feature = "time",
-                    ))]
+            #[cfg(any(feature = "fs", feature = "io-std", feature = "net", feature = "rt", feature = "signal", feature = "sync", feature = "time"))]
             $item
         )*
     }
@@ -643,16 +442,7 @@ macro_rules! cfg_coop {
 macro_rules! cfg_not_coop {
     ($($item:item)*) => {
         $(
-            #[cfg(not(any(
-                    feature = "fs",
-                    feature = "io-std",
-                    feature = "net",
-                    feature = "process",
-                    feature = "rt",
-                    feature = "signal",
-                    feature = "sync",
-                    feature = "time",
-                    )))]
+            #[cfg(not(any(feature = "fs", feature = "io-std", feature = "net", feature = "rt", feature = "signal", feature = "sync", feature = "time")))]
             $item
         )*
     }
@@ -733,21 +523,6 @@ macro_rules! cfg_metrics_variant {
             $($unstable_code)*
         }
     }
-}
-
-macro_rules! cfg_io_uring {
-    ($($item:item)*) => {
-        $(
-            #[cfg(all(
-                tokio_unstable,
-                feature = "io-uring",
-                feature = "rt",
-                feature = "fs",
-                target_os = "linux",
-            ))]
-            $item
-        )*
-    };
 }
 
 macro_rules! cfg_schedule_latency {

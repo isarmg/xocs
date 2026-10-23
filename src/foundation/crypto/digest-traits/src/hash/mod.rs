@@ -27,9 +27,6 @@
 //!
 //! [`digest-io`]: https://docs.rs/digest-io
 
-#[cfg(feature = "zeroize")]
-pub use zeroize;
-
 #[cfg(feature = "alloc")]
 use alloc::boxed::Box;
 

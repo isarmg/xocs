@@ -232,18 +232,6 @@ impl<S: 'static> OwnedTasks<S> {
     }
 }
 
-cfg_taskdump! {
-    impl<S: 'static> OwnedTasks<S> {
-        /// Locks the tasks, and calls `f` on an iterator over them.
-        pub(crate) fn for_each<F>(&self, f: F)
-        where
-            F: FnMut(&Task<S>),
-        {
-            self.list.for_each(f);
-        }
-    }
-}
-
 impl<S: 'static> LocalOwnedTasks<S> {
     pub(crate) fn new() -> Self {
         Self {

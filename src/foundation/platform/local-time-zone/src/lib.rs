@@ -10,65 +10,28 @@
 #![warn(unused_qualifications)]
 #![warn(variant_size_differences)]
 
-//! get the IANA time zone for the current system
+//! Discover the current IANA timezone name on Linux AMD64 GNU/glibc and browser WASM.
 //!
-//! This small utility crate provides the
-//! [`get_timezone()`](fn.get_timezone.html) function.
+//! [`get_timezone`] returns the host's timezone name. It does not bundle a timezone database or
+//! convert timestamps; the maintained date-time package handles local calendar conversion.
 //!
 //! ```rust
-//! // Get the current time zone as a string.
-//! let tz_str = iana_time_zone::get_timezone()?;
-//! println!("The current time zone is: {}", tz_str);
-//! # Ok::<(), iana_time_zone::GetTimezoneError>(())
-//! ```
-//!
-//! The resulting string can be parsed to a
-//! [`chrono-tz::Tz`](https://docs.rs/chrono-tz/latest/chrono_tz/enum.Tz.html)
-//! variant like this:
-//! ```rust
-//! let tz_str = iana_time_zone::get_timezone()?;
-//! let tz: chrono_tz::Tz = tz_str.parse()?;
-//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! let timezone = blog_platform_local_time_zone::get_timezone()?;
+//! println!("{timezone}");
+//! # Ok::<(), blog_platform_local_time_zone::GetTimezoneError>(())
 //! ```
 
-#[allow(dead_code)]
-mod ffi_utils;
-
-#[cfg_attr(
-    any(all(target_os = "linux", not(target_env = "ohos")), target_os = "hurd"),
-    path = "tz_linux.rs"
-)]
-#[cfg_attr(all(target_os = "linux", target_env = "ohos"), path = "tz_ohos.rs")]
-#[cfg_attr(target_os = "windows", path = "tz_windows.rs")]
-#[cfg_attr(target_vendor = "apple", path = "tz_darwin.rs")]
-#[cfg_attr(
-    all(target_arch = "wasm32", target_os = "unknown"),
-    path = "tz_wasm32_unknown.rs"
-)]
-#[cfg_attr(
-    all(target_arch = "wasm32", target_os = "emscripten"),
-    path = "tz_wasm32_emscripten.rs"
-)]
-#[cfg_attr(
-    any(target_os = "freebsd", target_os = "dragonfly"),
-    path = "tz_freebsd.rs"
-)]
-#[cfg_attr(
-    any(target_os = "netbsd", target_os = "openbsd"),
-    path = "tz_netbsd.rs"
-)]
-#[cfg_attr(
-    any(target_os = "illumos", target_os = "solaris"),
-    path = "tz_illumos.rs"
-)]
-#[cfg_attr(target_os = "aix", path = "tz_aix.rs")]
-#[cfg_attr(target_os = "android", path = "tz_android.rs")]
-#[cfg_attr(target_os = "haiku", path = "tz_haiku.rs")]
-#[cfg_attr(
-    all(target_arch = "wasm32", target_os = "wasi"),
-    path = "tz_wasm32_wasi.rs"
-)]
+#[cfg(all(target_os = "linux", target_arch = "x86_64", target_env = "gnu"))]
+#[path = "tz_linux.rs"]
 mod platform;
+#[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
+#[path = "tz_wasm32_unknown.rs"]
+mod platform;
+#[cfg(not(any(
+    all(target_os = "linux", target_arch = "x86_64", target_env = "gnu"),
+    all(target_arch = "wasm32", target_os = "unknown")
+)))]
+compile_error!("timezone lookup supports Linux amd64 GNU and browser wasm32");
 
 /// Error types
 #[derive(Debug)]

@@ -4,13 +4,7 @@
 #[cfg(feature = "client-legacy")]
 pub mod legacy;
 
-#[cfg(feature = "client-pool")]
-pub mod pool;
-
-#[cfg(feature = "client-proxy")]
-pub mod proxy;
-
-#[cfg(any(feature = "client-legacy", feature = "client-proxy"))]
+#[cfg(feature = "client-legacy")]
 fn strip_ipv6_brackets(host: &str) -> &str {
     host.strip_prefix('[')
         .and_then(|host| host.strip_suffix(']'))

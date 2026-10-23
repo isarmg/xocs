@@ -1,19 +1,11 @@
 #![no_std]
-#![doc = include_str!("../../../../../docs/upstream/sha2-0.11.0/README.md")]
+#![doc = include_str!("../README.md")]
 #![doc(
     html_logo_url = "https://raw.githubusercontent.com/RustCrypto/media/6ee8e381/logo.svg",
     html_favicon_url = "https://raw.githubusercontent.com/RustCrypto/media/6ee8e381/logo.svg"
 )]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![warn(missing_docs, unreachable_pub)]
-#![cfg_attr(
-    any(
-        sha2_backend = "riscv-zknh",
-        sha2_256_backend = "riscv-zknh",
-        sha2_256_backend = "riscv-zknh",
-    ),
-    feature(riscv_ext_intrinsics)
-)]
 #![allow(clippy::needless_range_loop)]
 
 pub use digest::{self, Digest};
@@ -67,3 +59,6 @@ digest::buffer_fixed!(
     oid: "2.16.840.1.101.3.4.2.6";
     impl: FixedHashTraits;
 );
+
+#[cfg(test)]
+mod standard_vectors;

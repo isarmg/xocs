@@ -7,10 +7,8 @@
     html_logo_url = "https://www.rust-lang.org/logos/rust-logo-128x128-blk.png",
     html_favicon_url = "https://www.rust-lang.org/favicon.ico"
 )]
-#![doc = include_str!("../../../../../docs/upstream/getrandom-0.4.3/README.md")]
+#![doc = include_str!("../README.md")]
 #![cfg_attr(docsrs, feature(doc_cfg))]
-#![cfg_attr(getrandom_backend = "efi_rng", feature(uefi_std))]
-#![cfg_attr(getrandom_backend = "extern_impl", feature(extern_item_impls))]
 
 #[macro_use]
 extern crate cfg_if;
@@ -25,33 +23,6 @@ mod util;
 mod error_std_impls;
 
 pub use crate::error::{Error, RawOsError};
-
-/// Attribute macros for overwriting the core functionality of this crate.
-///
-/// This allows `getrandom` to provide a default implementation and a common interface
-/// for all crates to use, while giving users a safe way to override that default where required.
-///
-/// Must be enabled via the `extern_impl` opt-in backend, as this functionality
-/// is currently limited to nightly.
-///
-/// # Examples
-///
-/// ```rust
-/// # use core::mem::MaybeUninit;
-/// # #[cfg(getrandom_backend = "extern_impl")]
-/// #[getrandom::implementation::fill_uninit]
-/// fn my_fill_uninit_implementation(
-///     dest: &mut [MaybeUninit<u8>]
-/// ) -> Result<(), getrandom::Error> {
-///     // ...
-/// #   let _ = dest;
-/// #   Err(Error::UNSUPPORTED)
-/// }
-/// ```
-#[cfg(getrandom_backend = "extern_impl")]
-pub mod implementation {
-    pub use crate::backends::extern_impl::{fill_uninit, u32, u64};
-}
 
 /// Fill `dest` with random bytes from the system's preferred random number source.
 ///

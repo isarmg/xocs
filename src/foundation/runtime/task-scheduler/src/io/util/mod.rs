@@ -54,9 +54,6 @@ cfg_io_util! {
 
     mod read_to_end;
     mod vec_with_initialized;
-    cfg_process! {
-        pub(crate) use read_to_end::read_to_end;
-    }
 
     mod read_to_string;
     mod read_until;
@@ -82,7 +79,6 @@ cfg_io_util! {
     mod write_all_buf;
     mod write_int;
 
-
     // used by `BufReader` and `BufWriter`
     // https://github.com/rust-lang/rust/blob/main/library/std/src/sys/io/mod.rs#L72
     const DEFAULT_BUF_SIZE: usize = 8 * 1024;
@@ -102,11 +98,4 @@ cfg_io_util! {
     }
 }
 
-cfg_not_io_util! {
-    cfg_process! {
-        mod vec_with_initialized;
-        mod read_to_end;
-        // Used by process
-        pub(crate) use read_to_end::read_to_end;
-    }
-}
+cfg_not_io_util! {}

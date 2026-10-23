@@ -1270,13 +1270,10 @@ impl<'a> Context<'a> {
         }
         let output = crate::wasm2es6js::interface(self.module)?;
 
-        let (memory_doc, memory_param) = if has_memory {
-            (
-                "* @param {WebAssembly.Memory} memory - Deprecated.\n",
-                ", memory?: WebAssembly.Memory",
-            )
+        let memory_param = if has_memory {
+            ", memory?: WebAssembly.Memory"
         } else {
-            ("", "")
+            ""
         };
         let stack_size = if self.threads_enabled {
             ", thread_stack_size?: number"
@@ -1296,12 +1293,11 @@ impl<'a> Context<'a> {
             * Instantiates the given `module`, which can either be bytes or\n\
             * a precompiled `WebAssembly.Module`.\n\
             *\n\
-            * @param {{{{ module: SyncInitInput{memory_param}{stack_size} }}}} module - Passing `SyncInitInput` directly is deprecated.\n\
-            {memory_doc}\
+            * @param {{{{ module: SyncInitInput{memory_param}{stack_size} }}}} options\n\
             *\n\
             * @returns {{InitOutput}}\n\
             */\n\
-            export function initSync(module: {{ module: SyncInitInput{memory_param}{stack_size} }} | SyncInitInput{memory_param}): InitOutput;\n\
+            export function initSync(options: {{ module: SyncInitInput{memory_param}{stack_size} }}): InitOutput;\n\
             "
         );
 
@@ -1342,13 +1338,12 @@ impl<'a> Context<'a> {
             * If `module_or_path` is {{RequestInfo}} or {{URL}}, makes a request and\n\
             * for everything else, calls `WebAssembly.instantiate` directly.\n\
             *\n\
-            * @param {{{{ module_or_path: InitInput | Promise<InitInput>{memory_param}{stack_size} }}}} module_or_path - Passing `InitInput` directly is deprecated.\n\
-            {memory_doc}\
+            * @param {{{{ module_or_path{arg_optional}: InitInput | Promise<InitInput>{memory_param}{stack_size} }}}} options\n\
             *\n\
             * @returns {{Promise<InitOutput>}}\n\
             */\n\
             {setup_function_declaration} \
-                (module_or_path{arg_optional}: {{ module_or_path: InitInput | Promise<InitInput>{memory_param}{stack_size} }} | InitInput | Promise<InitInput>{memory_param}): Promise<InitOutput>;\n",
+                (options{arg_optional}: {{ module_or_path{arg_optional}: InitInput | Promise<InitInput>{memory_param}{stack_size} }}): Promise<InitOutput>;\n",
         ))
     }
 
@@ -1549,17 +1544,13 @@ export const __wbg_memory: WebAssembly.Memory;
                 }}
             }}
 
-            function initSync(module{init_memory_arg}) {{
+            function initSync(options) {{
+                if (options == null || Object.getPrototypeOf(options) !== Object.prototype || arguments.length > 1) {{
+                    throw new TypeError('initSync requires a single options object');
+                }}
                 if (wasm !== undefined) return wasm;
 
-                {init_stack_size}
-                if (module !== undefined) {{
-                    if (Object.getPrototypeOf(module) === Object.prototype) {{
-                        ({{module{init_memory_arg}{init_stack_size_arg}}} = module)
-                    }} else {{
-                        console.warn('using deprecated parameters for `initSync()`; pass a single object instead')
-                    }}
-                }}
+                let {{module{init_memory_arg}{init_stack_size_arg}}} = options;
 
                 const imports = __wbg_get_imports({init_memory_arg_alone});
                 if (!(module instanceof WebAssembly.Module)) {{
@@ -1569,17 +1560,13 @@ export const __wbg_memory: WebAssembly.Memory;
                 return __wbg_finalize_init(instance, module{init_stack_size_arg});
             }}
 
-            async function __wbg_init(module_or_path{init_memory_arg}) {{
+            async function __wbg_init(options = {{}}) {{
+                if (options === null || Object.getPrototypeOf(options) !== Object.prototype || arguments.length > 1) {{
+                    throw new TypeError('init requires a single options object');
+                }}
                 if (wasm !== undefined) return wasm;
 
-                {init_stack_size}
-                if (module_or_path !== undefined) {{
-                    if (Object.getPrototypeOf(module_or_path) === Object.prototype) {{
-                        ({{module_or_path{init_memory_arg}{init_stack_size_arg}}} = module_or_path)
-                    }} else {{
-                        console.warn('using deprecated parameters for the initialization function; pass a single object instead')
-                    }}
-                }}
+                let {{module_or_path{init_memory_arg}{init_stack_size_arg}}} = options;
 
                 {default_module_path}
                 const imports = __wbg_get_imports({init_memory_arg_alone});
@@ -1597,11 +1584,6 @@ export const __wbg_memory: WebAssembly.Memory;
                 "wasm.__wbindgen_start(thread_stack_size);\n"
             } else if needs_manual_start {
                 "wasm.__wbindgen_start();\n"
-            } else {
-                ""
-            },
-            init_stack_size = if self.threads_enabled {
-                "let thread_stack_size"
             } else {
                 ""
             },

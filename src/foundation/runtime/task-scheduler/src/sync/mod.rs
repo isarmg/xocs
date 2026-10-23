@@ -504,10 +504,10 @@ cfg_not_sync! {
         pub(crate) use mutex::Mutex;
     }
 
-    #[cfg(any(feature = "rt", feature = "signal", all(unix, feature = "process")))]
+    #[cfg(any(feature = "rt", feature = "signal"))]
     pub(crate) mod notify;
 
-    #[cfg(any(feature = "rt", all(windows, feature = "process")))]
+    #[cfg(feature = "rt")]
     pub(crate) mod oneshot;
 
     cfg_atomic_waker_impl! {
@@ -515,7 +515,7 @@ cfg_not_sync! {
         pub(crate) use task::AtomicWaker;
     }
 
-    #[cfg(any(feature = "signal", all(unix, feature = "process")))]
+    #[cfg(feature = "signal")]
     pub(crate) mod watch;
 }
 

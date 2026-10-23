@@ -86,7 +86,7 @@ impl<C> Tid<C> {
     #[cold]
     fn poisoned() -> Self {
         Self {
-            id: std::usize::MAX,
+            id: usize::MAX,
             _not_send: PhantomData,
             _cfg: PhantomData,
         }
@@ -94,7 +94,7 @@ impl<C> Tid<C> {
 
     /// Returns true if the local thread ID was accessed while unwinding.
     pub(crate) fn is_poisoned(&self) -> bool {
-        self.id == std::usize::MAX
+        self.id == usize::MAX
     }
 }
 
@@ -177,12 +177,6 @@ impl Registration {
     }
 }
 
-// Reusing thread IDs doesn't work under loom, since this `Drop` impl results in
-// an access to a `loom` lazy_static while the test is shutting down, which
-// panics. T_T
-// Just skip TID reuse and use loom's lazy_static macro to ensure we have a
-// clean initial TID on every iteration, instead.
-#[cfg(not(all(loom, any(feature = "loom", test))))]
 impl Drop for Registration {
     fn drop(&mut self) {
         use std::sync::PoisonError;
@@ -192,19 +186,4 @@ impl Drop for Registration {
             free_list.push_back(id);
         }
     }
-}
-
-#[cfg(all(test, not(loom)))]
-pub(crate) fn with<R>(tid: usize, f: impl FnOnce() -> R) -> R {
-    struct Guard(Option<usize>);
-
-    impl Drop for Guard {
-        fn drop(&mut self) {
-            REGISTRATION.with(|r| r.0.set(self.0.take()));
-        }
-    }
-
-    let prev = REGISTRATION.with(|r| r.0.replace(Some(tid)));
-    let _guard = Guard(prev);
-    f()
 }

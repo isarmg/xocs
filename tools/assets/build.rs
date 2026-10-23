@@ -1,3 +1,5 @@
+#[path = "src/platform_contract.rs"]
+mod platform_contract;
 use sha2::{Digest, Sha256};
 use std::{
     collections::BTreeMap,
@@ -88,6 +90,7 @@ fn collect(repository: &Path, directory: &Path, files: &mut BTreeMap<String, Str
 }
 
 fn main() {
+    platform_contract::check();
     let package = PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").unwrap());
     let repository = package.parent().unwrap().parent().unwrap();
     let mut files = BTreeMap::new();

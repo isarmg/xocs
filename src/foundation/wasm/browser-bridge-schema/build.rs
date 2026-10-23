@@ -2,23 +2,9 @@ use std::collections::hash_map::DefaultHasher;
 use std::env;
 use std::hash::Hasher;
 use std::path::PathBuf;
-use std::process::Command;
 
 fn main() {
     set_schema_version_env_var();
-
-    let rev = Command::new("git")
-        .arg("rev-parse")
-        .arg("HEAD")
-        .output()
-        .ok()
-        .map(|s| s.stdout)
-        .and_then(|s| String::from_utf8(s).ok());
-    if let Some(rev) = rev {
-        if rev.len() >= 9 {
-            println!("cargo:rustc-env=WBG_VERSION={}", &rev[..9]);
-        }
-    }
 }
 
 /// Files whose contents define the macro/CLI wire contract, hashed together
@@ -55,9 +41,6 @@ fn set_schema_version_env_var() {
 
         let schema_file = std::fs::read_to_string(&path)
             .unwrap_or_else(|e| panic!("failed to read schema file {}: {e}", path.display()));
-        #[cfg(windows)]
-        let schema_file = schema_file.replace("\r\n", "\n");
-
         hasher.write(schema_file.as_bytes());
     }
 

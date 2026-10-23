@@ -38,6 +38,10 @@ pub fn compiled_inputs() -> Vec<(&'static str, String)> {
             include_bytes!("../build.rs").as_slice(),
         ),
         (
+            "tools/assets/src/platform_contract.rs",
+            include_bytes!("platform_contract.rs").as_slice(),
+        ),
+        (
             "tools/assets/src/lib.rs",
             include_bytes!("lib.rs").as_slice(),
         ),

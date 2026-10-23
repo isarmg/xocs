@@ -1,10 +1,10 @@
+use crate::query_engine::sql_str::SqlSafeStr;
+use crate::query_engine::Either;
 use crate::sqlite::connection::{ConnectionHandle, ConnectionState};
 use crate::sqlite::error::Error;
 use crate::sqlite::logger::QueryLogger;
 use crate::sqlite::statement::{StatementHandle, VirtualStatement};
 use crate::sqlite::{SqliteArguments, SqliteQueryResult, SqliteRow};
-use crate::query_engine::sql_str::SqlSafeStr;
-use crate::query_engine::Either;
 
 pub struct ExecuteIter<'a> {
     handle: &'a mut ConnectionHandle,
@@ -53,16 +53,6 @@ fn bind(
     }
 
     Ok(n)
-}
-
-impl ExecuteIter<'_> {
-    pub fn finish(self) -> Result<(), Error> {
-        for res in self {
-            let _ = res?;
-        }
-
-        Ok(())
-    }
 }
 
 impl Iterator for ExecuteIter<'_> {

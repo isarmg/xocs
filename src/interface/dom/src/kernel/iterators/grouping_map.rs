@@ -237,15 +237,6 @@ where
         })
     }
 
-    /// See [`.reduce()`](GroupingMap::reduce).
-    #[deprecated(note = "Use .reduce() instead", since = "0.13.0")]
-    pub fn fold_first<FO>(self, operation: FO) -> HashMap<K, V>
-    where
-        FO: FnMut(V, &K, V) -> V,
-    {
-        self.reduce(operation)
-    }
-
     /// Groups elements from the `GroupingMap` source by key and collects the elements of each group in
     /// an instance of `C`. The iteration order is preserved when inserting elements.
     ///

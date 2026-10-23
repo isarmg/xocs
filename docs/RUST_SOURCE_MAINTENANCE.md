@@ -10,9 +10,13 @@
 
 `verify --metadata` 还为 Linux amd64 和 Web WASM 使用临时空 Cargo home 运行 `cargo metadata --locked --offline`，确认所有已解析包 `source=null` 且所有源码和目标路径都在仓库内。闭包按统一 workspace 特性图标注 normal 运行候选和 build/proc-macro 构建用途，是保守超集，不是精确单入口链接结果，也不能作为删除源码的唯一依据。测试入口以布尔字段 `include_dev: true` 明确纳入所选根包的 dev 依赖，再跟踪其 normal/build 依赖；不递归纳入依赖包自身的测试。`workspace-tests` 覆盖全部项目测试根，生产入口保持不选 dev 边。该清单证明测试构建输入的覆盖，不表示这些测试已执行。
 
-包数量是观察指标，250 是早期给出的约数，不设硬上限。snapshot 继续统计全部当前源码包，包括未选中的 optional 包；metadata 核验保留每个目标完整图及入口闭包，正常、build、proc-macro、测试和宿主工具都纳入清单。合理拆分导致包数增加不应让 refresh/verify 失败；来源、摘要、依赖边界与迁移历史的校验继续强制执行。合并和拆分需说明消费者、实现复杂度、编译粒度、支持面及实际验证；数量下降本身不构成优化收益。
+包数量是观察指标，不设硬上限。snapshot 继续统计全部当前源码包，包括未选中的 optional 包；metadata 核验保留每个目标完整图及入口闭包，正常、build、proc-macro、测试和宿主工具都纳入清单。合理拆分导致包数增加不应让 refresh/verify 失败；来源、摘要、依赖边界与迁移历史的校验继续强制执行。合并和拆分需说明消费者、实现复杂度、编译粒度、支持面及实际验证；数量下降本身不构成优化收益。
 
 Rust 工具链（rustc、Cargo、标准库、目标组件、rustfmt、Clippy 等）、C/C++ 编译器以及原生系统构建材料属于单独边界。浏览器 WASM 绑定生成属于 `tools/assets` 的 `blog-assets` 内部模块，与资产工具一起从本地 Rust 源码构建，不另行安装 wasm-bindgen CLI。审计数据库、cargo-audit/cyclonedx、Node/Playwright/浏览器和非 Rust Web 资源应明确标注其独立供应来源；不能把“Rust 源码闭包”描述成整套开发及运行环境无外部依赖。
+
+构建宿主与原生产品统一支持 `x86_64-unknown-linux-gnu`（AMD64 Linux、64 位指针、GNU/glibc ABI），不包含 ARM、GNU x32 或 musl。浏览器界面额外支持 `wasm32-unknown-unknown` 输出，并保留在受支持 Linux 宿主上运行域逻辑和 DOM 单元测试的能力。各项目包的 Cargo build 脚本调用 `tools/assets/src/platform_contract.rs`，直接执行 Cargo 也会验证 HOST/TARGET；浏览器过程宏仍按宿主编译。该共享脚本由 `blog-assets` 包拥有，同时进入源码收据、构建器内嵌摘要和变更监控。`workspaces.json` 必须用 `platform_guard` 声明这条约束；源码管理器和独立性检查拒绝缺少当前策略或守卫的配置，并验证每个项目包的接线，已有 build 脚本必须先执行平台检查再处理产品构建输入。
+
+维护包的公共行为回归可归属于实际产品消费者：TOML 配置契约位于 `tools/assets/tests/configuration_contracts.rs`，复用资产构建器已有的解析和序列化依赖。`scripts/test-maintained.sh` 从根 workspace 执行这些消费者测试和明确可构建的基础包测试；不为排除包另建 workspace 或锁文件。
 
 `compliance/provenance/integrations/` 另存 ZXS 精确历史 Git revision 的输入档案与逐文件摘要，以及 Blog 维护树退役前的独立快照。后者明确标注取样时间，不能冒充早先复制瞬间或原始发布字节。当前输出始终由当前源码收据绑定；改动和消费者验证另行登记。
 

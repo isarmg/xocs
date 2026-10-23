@@ -176,15 +176,10 @@ mod sockaddr;
 mod socket;
 mod sockref;
 
-#[cfg_attr(
-    any(unix, all(target_os = "wasi", not(target_env = "p1"))),
-    path = "sys/unix.rs"
-)]
-#[cfg_attr(windows, path = "sys/windows.rs")]
+#[path = "sys/unix.rs"]
 mod sys;
-
-#[cfg(not(any(windows, unix, all(target_os = "wasi", not(target_env = "p1")))))]
-compile_error!("Socket2 doesn't support the compile target");
+#[cfg(not(all(target_os = "linux", target_arch = "x86_64", target_env = "gnu")))]
+compile_error!("OS sockets are a Linux amd64 GNU native dependency");
 
 use sys::c_int;
 

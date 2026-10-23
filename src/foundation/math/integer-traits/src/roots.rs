@@ -40,15 +40,15 @@ pub trait Roots: Integer {
     /// assert_eq!(x.nth_root(4), 10);
     /// assert_eq!(x.nth_root(13), 2);
     /// assert_eq!(x.nth_root(14), 1);
-    /// assert_eq!(x.nth_root(std::u32::MAX), 1);
+    /// assert_eq!(x.nth_root(<u32>::MAX), 1);
     ///
-    /// assert_eq!(std::i32::MAX.nth_root(30), 2);
-    /// assert_eq!(std::i32::MAX.nth_root(31), 1);
-    /// assert_eq!(std::i32::MIN.nth_root(31), -2);
-    /// assert_eq!((std::i32::MIN + 1).nth_root(31), -1);
+    /// assert_eq!(<i32>::MAX.nth_root(30), 2);
+    /// assert_eq!(<i32>::MAX.nth_root(31), 1);
+    /// assert_eq!(<i32>::MIN.nth_root(31), -2);
+    /// assert_eq!((<i32>::MIN + 1).nth_root(31), -1);
     ///
-    /// assert_eq!(std::u32::MAX.nth_root(31), 2);
-    /// assert_eq!(std::u32::MAX.nth_root(32), 1);
+    /// assert_eq!(<u32>::MAX.nth_root(31), 2);
+    /// assert_eq!(<u32>::MAX.nth_root(32), 1);
     /// ```
     fn nth_root(&self, n: u32) -> Self;
 
@@ -256,7 +256,7 @@ macro_rules! unsigned_roots {
 
                     if bits::<$T>() > 64 {
                         // 128-bit division is slow, so do a bitwise `nth_root` until it's small enough.
-                        return if a <= core::u64::MAX as $T {
+                        return if a <= <u64>::MAX as $T {
                             (a as u64).nth_root(n) as $T
                         } else {
                             let lo = (a >> n).nth_root(n) << 1;
@@ -282,7 +282,7 @@ macro_rules! unsigned_roots {
                     #[inline]
                     fn guess(x: $T, n: u32) -> $T {
                         // for smaller inputs, `f64` doesn't justify its cost.
-                        if bits::<$T>() <= 32 || x <= core::u32::MAX as $T {
+                        if bits::<$T>() <= 32 || x <= <u32>::MAX as $T {
                             1 << ((log2(x) + n - 1) / n)
                         } else {
                             ((x as f64).ln() / f64::from(n)).exp() as $T
@@ -315,7 +315,7 @@ macro_rules! unsigned_roots {
                     if bits::<$T>() > 64 {
                         // 128-bit division is slow in the Babylonian method,
                         // so use 64-bit sqrt and Karatsuba if needed.
-                        return if a <= core::u64::MAX as $T {
+                        return if a <= <u64>::MAX as $T {
                             (a as u64).sqrt() as $T
                         } else {
                             let shift = a.leading_zeros() / 2;
@@ -352,7 +352,7 @@ macro_rules! unsigned_roots {
                 fn go(a: $T) -> $T {
                     if bits::<$T>() > 64 {
                         // 128-bit division is slow, so do a bitwise `cbrt` until it's small enough.
-                        return if a <= core::u64::MAX as $T {
+                        return if a <= <u64>::MAX as $T {
                             (a as u64).cbrt() as $T
                         } else {
                             let lo = (a >> 3u32).cbrt() << 1;
@@ -388,7 +388,7 @@ macro_rules! unsigned_roots {
                     if a < 8 {
                         return (a > 0) as $T;
                     }
-                    if a <= core::u32::MAX as $T {
+                    if a <= <u32>::MAX as $T {
                         return (a as u32).cbrt() as $T;
                     }
 

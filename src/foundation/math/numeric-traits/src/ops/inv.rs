@@ -8,7 +8,7 @@ pub trait Inv {
     /// # Examples
     ///
     /// ```
-    /// use std::f64::INFINITY;
+    /// const INFINITY: f64 = <f64>::INFINITY;
     /// use num_traits::Inv;
     ///
     /// assert_eq!(7.0.inv() * 7.0, 1.0);

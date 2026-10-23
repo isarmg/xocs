@@ -43,23 +43,13 @@ path = "src/lib.rs"
 path = "../../math/fast-random"
 package = "blog-math-fast-random"
 
-[dependencies.once_cell]
-features = ["std"]
-default-features = false
-path = "../../sync/initialization"
-package = "blog-sync-initialization"
-
-
-[target.'cfg(any(unix, target_os = "wasi"))'.dependencies.rustix]
+[dependencies.rustix]
 features = ["fs"]
 path = "../../platform/system-calls"
 package = "blog-platform-system-calls"
 
-[target.'cfg(any(unix, windows, target_os = "wasi"))'.dependencies.getrandom]
+[dependencies.getrandom]
 optional = true
 default-features = false
 path = "../../platform/system-entropy"
 package = "blog-platform-system-entropy"
-
-
-[target."cfg(windows)"]
