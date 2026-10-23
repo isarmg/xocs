@@ -26,3 +26,4 @@ cargo test --locked --offline -p blog-format-binary-record --lib
 cargo test --locked --offline -p blog-collections-keyed-hash --lib -- --skip hash_quality_test::
 cargo test --locked --offline -p blog --test date_time_contracts
 cargo test --locked --offline -p blog-wasm-browser-bridge-schema --lib
+cargo test --locked --offline -p blog-crypto-constant-time-utilities --lib

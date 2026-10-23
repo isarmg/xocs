@@ -396,7 +396,7 @@
     {
       "directory": "src/foundation/crypto/constant-time-utilities",
       "origins": [
-        "ctutils@0.4.3"
+        "ctutils@0.4.4"
       ],
       "layer": "crypto",
       "purpose": "constant time utilities"

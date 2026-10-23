@@ -3279,6 +3279,24 @@
         "src/offset/local/tz_info/timezone.rs"
       ],
       "reason": "Resolve POSIX local time by validating candidate UTC instants against transition rules, order ambiguous instants earliest first, and enforce half-open gap/fold boundaries in TZif transitions. Equal-offset designation changes stay unambiguous; deterministic consumer regressions cover both hemispheres, negative DST and nanosecond boundaries."
+    },
+    {
+      "directory": "src/server",
+      "files": [
+        "Cargo.toml"
+      ],
+      "reason": "Set the product release identity to 1.1.0; no upstream package identity or database schema migration is implied."
+    },
+    {
+      "directory": "tools/setup",
+      "files": [
+        "Cargo.toml"
+      ],
+      "reason": "Set the product release identity to 1.1.0; no upstream package identity or database schema migration is implied."
+    },
+    {
+      "directory": "src/foundation/crypto/constant-time-utilities",
+      "reason": "Replace all implementation files with checksum-verified ctutils 0.4.4 for RUSTSEC-2026-0385, including to_u8 optimization barriers in all mask sizes and non-short-circuiting u128 comparisons on 32-bit WASM; preserve the maintained Cargo identity and local dependency edges."
     }
   ]
 }

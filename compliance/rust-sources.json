@@ -120,6 +120,8 @@
     "compliance/licenses/upstream/cssparser-macros-0.6.1/LICENSE": "fab3dd6bdab226f1c08630b1dd917e11fcb4ec5e1e020e2c16f83a0a13863e85",
     "compliance/licenses/upstream/ctutils-0.4.3/LICENSE-APACHE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
     "compliance/licenses/upstream/ctutils-0.4.3/LICENSE-MIT": "91585c36e4fb9ab4ca0d3dfac5d66d3c0c62cc51f640a0e1196542daf2267eae",
+    "compliance/licenses/upstream/ctutils-0.4.4/LICENSE-APACHE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "compliance/licenses/upstream/ctutils-0.4.4/LICENSE-MIT": "91585c36e4fb9ab4ca0d3dfac5d66d3c0c62cc51f640a0e1196542daf2267eae",
     "compliance/licenses/upstream/data-encoding-2.11.1/LICENSE": "b68ad1a3367b825447089e1f8d6829b97f47a89eb78d2f4ebaef4672f5606186",
     "compliance/licenses/upstream/derive-where-1.7.0/LICENSE-APACHE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
     "compliance/licenses/upstream/derive-where-1.7.0/LICENSE-MIT": "937230c05b5673fe216dda49dfc7c96591c63d0ea4c029e3e1b84aef3a45cbfd",
@@ -691,6 +693,7 @@
     "compliance/provenance/archives/cssparser-color-0.1.0.crate": "556c099a61d85989d7af52b692e35a8d68a57e7df8c6d07563dc0778b3960c9f",
     "compliance/provenance/archives/cssparser-macros-0.6.1.crate": "13b588ba4ac1a99f7f2964d24b3d896ddc6bf847ee3855dbd4366f058cfcd331",
     "compliance/provenance/archives/ctutils-0.4.3.crate": "03bb0e1cc970d482d121d9a1744999169b69a07470b3d644a7894e53fcaf4574",
+    "compliance/provenance/archives/ctutils-0.4.4.crate": "12218662ccac37d9714f2191252553d67585b97df8c839cbe49e0bde278dc865",
     "compliance/provenance/archives/data-encoding-2.11.1.crate": "4583a4551df46e2792f82ceeac45e850d2e2d5debba0b91f102385cda5b11f06",
     "compliance/provenance/archives/derive-where-1.7.0.crate": "2e2b94854e8576378ccda7c8de8a66ed8b4e8acbd2c50ec3418ea6c8aaf4b567",
     "compliance/provenance/archives/digest-0.10.7.crate": "9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292",
@@ -4336,13 +4339,31 @@
           "src/offset/local/tz_info/timezone.rs"
         ],
         "reason": "Resolve POSIX local time by validating candidate UTC instants against transition rules, order ambiguous instants earliest first, and enforce half-open gap/fold boundaries in TZif transitions. Equal-offset designation changes stay unambiguous; deterministic consumer regressions cover both hemispheres, negative DST and nanosecond boundaries."
+      },
+      {
+        "directory": "src/server",
+        "files": [
+          "Cargo.toml"
+        ],
+        "reason": "Set the product release identity to 1.1.0; no upstream package identity or database schema migration is implied."
+      },
+      {
+        "directory": "tools/setup",
+        "files": [
+          "Cargo.toml"
+        ],
+        "reason": "Set the product release identity to 1.1.0; no upstream package identity or database schema migration is implied."
+      },
+      {
+        "directory": "src/foundation/crypto/constant-time-utilities",
+        "reason": "Replace all implementation files with checksum-verified ctutils 0.4.4 for RUSTSEC-2026-0385, including to_u8 optimization barriers in all mask sizes and non-short-circuiting u128 comparisons on 32-bit WASM; preserve the maintained Cargo identity and local dependency edges."
       }
     ],
     "schema": 1
   },
-  "local_modifications_sha256": "9ebedd55bbbe0ad88782f08d7f2d3d2cae6fed43b4e71f841ed91f7e3053a96c",
+  "local_modifications_sha256": "76e38355e772684746944bb23d81f83c7ef20d91fc71d093a575aaa67ed79f7d",
   "lockfiles_sha256": {
-    "Cargo.lock": "b409ed437e41aff6bbbb713d05693f7a18f89126fa5d5d66431f337f95508db2"
+    "Cargo.lock": "983058f5012a1b35e39b5ce989e5a0e894d2b22a711906cd1e77ed8fe5a25593"
   },
   "manifests_sha256": {
     "Cargo.toml": "27a620c02b801f79b9fa8e9b76351717f19f840bda83b54c965806611f5bc79f",
@@ -4571,10 +4592,10 @@
     "src/interface/Cargo.toml": "e5cc7390cae6da1f45695067742413f850e57fd0542d800494246811a8ce11c4",
     "src/interface/dom/Cargo.toml": "320ffaba7e5e1911eb9e3dff661a5a4fc707ef20df8c2b9dfe4b6af9abf4062f",
     "src/interface/macros/Cargo.toml": "3db013a938bdffba9a7976e1e9bf4795a91bbeb49624fdeb447b3f66063f8b61",
-    "src/server/Cargo.toml": "0e88af86fe90165657272ae16a144a25ad1c0a520529a1872808409f3d725b6e",
+    "src/server/Cargo.toml": "6d0b2e424089ebd5435a8e96d3970853a209f29bd83c42d6dce78b9fe6f85d11",
     "test/browser-domain/Cargo.toml": "42552e4737cabc19b224e88e6e5fb9b9949f84d193e7b79feabd71b27e663564",
     "tools/assets/Cargo.toml": "48e630b9079056ca4db8974fd810b3ebc421663be0edfa464f026973182de9d7",
-    "tools/setup/Cargo.toml": "504b7cfdf337f0bbea2d4cb2030bb4bdb6d09d71b5a4700eea65b8ce59847b81"
+    "tools/setup/Cargo.toml": "44d28abedb1e65c5f0ddfbebfe490769d238db82730a044719008f8b58e140e5"
   },
   "origin_records_sha256": {
     "adler2@2.0.1": "615ed473c2d4742df6104debc5b61d60a8790aa81233cb329fd77eb097a883dd",
@@ -4650,6 +4671,7 @@
     "cssparser-macros@0.6.1": "cf4fdc24c493f041fabefc24f967fa2a0b4b02f98157d08ff7ad54f563e061ef",
     "cssparser@0.33.0": "7414a38af1ecdc313e4d40fe8d1cb0f3345fcd3fbe97f69b1882756b712f0305",
     "ctutils@0.4.3": "5505055b87347eba50cfe36b02aaf76935b924acc09fc2e1777efed2b303f0c9",
+    "ctutils@0.4.4": "e2e63e616064832c757a1a30fce9fbd4cddc52fd631b0c0993a8da7bcc3ea3b0",
     "data-encoding@2.11.1": "b44bbb9c5513aefded54dcd9d7b218128cdd6c9b7063af598b712bf041ae1a5c",
     "derive-where@1.7.0": "dfabb3cf15f51a9e27dc66a4b931b2d15c58f173018b5363c6bfe6e80afb6d8b",
     "digest@0.10.7": "c76c7c72cfca264aea13883ebcc8db1577363fd5226a517b61998f9863735bed",
@@ -8575,6 +8597,52 @@
         "version": "0.4.3"
       },
       "version": "0.4.3"
+    },
+    "ctutils@0.4.4": {
+      "changes": [
+        "Import ctutils 0.4.4, verified against the crates.io index checksum, to resolve RUSTSEC-2026-0385.",
+        "Use repository-local package and library identities and path dependencies; centralize upstream documentation and licenses and retain the original archive."
+      ],
+      "directory": "src/foundation/ctutils-0.4.4",
+      "id": "ctutils@0.4.4",
+      "license": "Apache-2.0 OR MIT",
+      "license_materials": [
+        "compliance/licenses/upstream/ctutils-0.4.4/LICENSE-APACHE",
+        "compliance/licenses/upstream/ctutils-0.4.4/LICENSE-MIT"
+      ],
+      "name": "ctutils",
+      "original_files_sha256": {
+        ".cargo_vcs_info.json": "79af273f631faf92ab600892cf556aaf539514ab08b76963f4abc1ff1da1ce98",
+        "CHANGELOG.md": "ce578d46c72a36733739aba7077d47eb9105e851066f9f9c043f69ebf5ac41d7",
+        "Cargo.lock": "68a0e988a37f399b87c82d3ae0a690c11044e658c2e11b8f3645add60b59da10",
+        "Cargo.toml": "0e7a80338f6195bd85c0d0dad3c0d258c626d95da17a29a82307b2f6092902f1",
+        "Cargo.toml.orig": "454330a0bdfcbd411f0e5c7fa94bc660e019da0efff1df45056a18f77d9f9ea3",
+        "LICENSE-APACHE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "LICENSE-MIT": "91585c36e4fb9ab4ca0d3dfac5d66d3c0c62cc51f640a0e1196542daf2267eae",
+        "README.md": "4811de370f75587948eaab5ef2fcb8f3c483e262865a2bd219f057b0dc10bf00",
+        "src/choice.rs": "bf7876cc7427f37c7ae8e90582ae9790faae18f428cde4a4c962fd84afcda5c3",
+        "src/ct_option.rs": "6b80ea46e1d8b2dd8c4e64bf3900ae52d14e6ae274d72776ee54f69435fbd897",
+        "src/lib.rs": "5f270e2f7fbaedd83aea5ce66f45f99fae512a75d40102ebbd8472d414462e0a",
+        "src/traits.rs": "12955969208f4ab71f9ed07d84763a3a9915cbcc5544fcf8e947dcb7b8982a25",
+        "src/traits/ct_assign.rs": "547c3456c64f429087923c1c8be12a059d623de82be60b6c749254d97a17dcb3",
+        "src/traits/ct_eq.rs": "dfd4ea492d3f34909fe3028e12055c432ba2ba8e2f5377bc6fdf87a378f32238",
+        "src/traits/ct_find.rs": "90278cf8778db2e8c3f294c6f87e368450711ce815e55ead5d460fe7cd350e87",
+        "src/traits/ct_gt.rs": "a6e5689cedec6dae260e4302ae9dd427348366ac36209daca8be450f3f24e408",
+        "src/traits/ct_lookup.rs": "e412cefd054ae4a9c2980ddc937a45331ead46fc917cef1fa7aa886496e17611",
+        "src/traits/ct_lt.rs": "51d9e180c659239cac8d7bfaa150d1de2415f128a8d0f8c3ae3a5ae53f18a764",
+        "src/traits/ct_neg.rs": "d22f138b33455971e1a70faf3a25ad67fd43e1c9cac5a5ab8d8ed75e295bef2f",
+        "src/traits/ct_select.rs": "e0832740578f42dcd6d0234dd6cd022620e9c70f180014291e1de534f78500a8",
+        "tests/proptests.rs": "3e23eb642799caa9e9ab2116230367908c0a7355277e1843e45a5b134e0b2e5d"
+      },
+      "repository": "https://github.com/RustCrypto/utils",
+      "upstream": {
+        "archive": "compliance/provenance/archives/ctutils-0.4.4.crate",
+        "archive_sha256": "12218662ccac37d9714f2191252553d67585b97df8c839cbe49e0bde278dc865",
+        "archive_url": "https://static.crates.io/crates/ctutils/ctutils-0.4.4.crate",
+        "name": "ctutils",
+        "version": "0.4.4"
+      },
+      "version": "0.4.4"
     },
     "data-encoding@2.11.1": {
       "changes": [
@@ -34054,25 +34122,25 @@
       "files_sha256": {
         ".cargo_vcs_info.json": "6c504d82941bd1ddc81dccf38df2d798bbe6b4ce24f701e2e8ebb4e88604baa3",
         "Cargo.toml": "6f6b76f4fad26273b1bbc599613e23d904f40897faed888bbd09d1bb94e31ad7",
-        "src/choice.rs": "b9b1bcd6cd4d387599e3dbd5eded57913e258c3d169bc59ae02dd0888c2b4774",
+        "src/choice.rs": "bf7876cc7427f37c7ae8e90582ae9790faae18f428cde4a4c962fd84afcda5c3",
         "src/ct_option.rs": "6b80ea46e1d8b2dd8c4e64bf3900ae52d14e6ae274d72776ee54f69435fbd897",
-        "src/lib.rs": "4ea07821dfa8612e53ccbd73ff7a4cf0e82553eba5496dff839fee8ab6434558",
+        "src/lib.rs": "7e388eeb8725c4d0c039bd3b03133f368e1f0c80cac5812556e830af2ca80062",
         "src/traits.rs": "12955969208f4ab71f9ed07d84763a3a9915cbcc5544fcf8e947dcb7b8982a25",
         "src/traits/ct_assign.rs": "547c3456c64f429087923c1c8be12a059d623de82be60b6c749254d97a17dcb3",
         "src/traits/ct_eq.rs": "dfd4ea492d3f34909fe3028e12055c432ba2ba8e2f5377bc6fdf87a378f32238",
         "src/traits/ct_find.rs": "90278cf8778db2e8c3f294c6f87e368450711ce815e55ead5d460fe7cd350e87",
-        "src/traits/ct_gt.rs": "0ec34871e14b01d7fb255acb8ae6994ce2a3ad64cfdc0aa058fe84a5edf2a010",
+        "src/traits/ct_gt.rs": "a6e5689cedec6dae260e4302ae9dd427348366ac36209daca8be450f3f24e408",
         "src/traits/ct_lookup.rs": "e412cefd054ae4a9c2980ddc937a45331ead46fc917cef1fa7aa886496e17611",
-        "src/traits/ct_lt.rs": "aaf12b75d2b1bfff206a3ceded7a2904c31b5d769197b9d5eb86bff1e7c1eafd",
+        "src/traits/ct_lt.rs": "51d9e180c659239cac8d7bfaa150d1de2415f128a8d0f8c3ae3a5ae53f18a764",
         "src/traits/ct_neg.rs": "d22f138b33455971e1a70faf3a25ad67fd43e1c9cac5a5ab8d8ed75e295bef2f",
         "src/traits/ct_select.rs": "e0832740578f42dcd6d0234dd6cd022620e9c70f180014291e1de534f78500a8",
-        "tests/proptests.rs": "682b21f0d9ab787cc07651a22721cf0c41df617f8615d577dcc6bf260fc55876"
+        "tests/proptests.rs": "3e23eb642799caa9e9ab2116230367908c0a7355277e1843e45a5b134e0b2e5d"
       },
       "layer": "crypto",
       "name": "blog-crypto-constant-time-utilities",
-      "origin": "ctutils@0.4.3",
+      "origin": "ctutils@0.4.4",
       "origins": [
-        "ctutils@0.4.3"
+        "ctutils@0.4.4"
       ],
       "purpose": "constant time utilities",
       "version": "0.0.0"
@@ -46028,7 +46096,7 @@
       ],
       "directory": "src/server",
       "files_sha256": {
-        "Cargo.toml": "0e88af86fe90165657272ae16a144a25ad1c0a520529a1872808409f3d725b6e",
+        "Cargo.toml": "6d0b2e424089ebd5435a8e96d3970853a209f29bd83c42d6dce78b9fe6f85d11",
         "build.rs": "44ee568120c22c5ff9960d8dea896bdd84e6d390133b9fc77e563ec0fc917967",
         "examples/smoke-fixture.rs": "d65c67701c2530c787ab3a2cf984b49d9eaec5093305b6aef391c096e75bec80",
         "schema/initialize-site-author.sql": "fa82753ff3758d95a71df0fd0c0318cfe134b4738137cd7d3f30c93cb2f500af",
@@ -46085,7 +46153,7 @@
       "origin": null,
       "origins": [],
       "purpose": "博客 HTTP 服务、内容业务与管理员 API",
-      "version": "1.0.1"
+      "version": "1.1.0"
     },
     "test/browser-domain": {
       "dependencies": [
@@ -46167,7 +46235,7 @@
       ],
       "directory": "tools/setup",
       "files_sha256": {
-        "Cargo.toml": "504b7cfdf337f0bbea2d4cb2030bb4bdb6d09d71b5a4700eea65b8ce59847b81",
+        "Cargo.toml": "44d28abedb1e65c5f0ddfbebfe490769d238db82730a044719008f8b58e140e5",
         "README.md": "052bd8f844ab1991c6f528481fbfeed4b2c5eb540d1f3ab5614b31cd1f731a78",
         "src/main.rs": "c4aa568381c76e8154dc147d4e3999525f10b4450548ef295e2a706784481919"
       },
@@ -46176,13 +46244,13 @@
       "origin": null,
       "origins": [],
       "purpose": "离线初始化、账户恢复与实例维护",
-      "version": "1.0.1"
+      "version": "1.1.0"
     }
   },
   "platform_guard_sha256": {
     "tools/assets/src/platform_contract.rs": "15520a479cc436a16cd635841b53e91515e50b5fd1039209c6dedf2cd5a797af"
   },
-  "policy_sha256": "bf11c17d6a36539e4ee2b73128977de42ee0242e15f4ece68eb1f54070eced5e",
+  "policy_sha256": "adab180c1d0715f896c8128402630d23982542f41f3e4b6ba7a805b7fed431d4",
   "resolutions": [
     {
       "packages": {
@@ -47858,7 +47926,7 @@
           "roles": [
             "runtime"
           ],
-          "version": "1.0.1"
+          "version": "1.1.0"
         },
         "tools/setup": {
           "features": [],
@@ -47866,7 +47934,7 @@
           "roles": [
             "runtime"
           ],
-          "version": "1.0.1"
+          "version": "1.1.0"
         }
       },
       "profile": "native",
@@ -53458,7 +53526,7 @@
           "roles": [
             "compile"
           ],
-          "version": "1.0.1"
+          "version": "1.1.0"
         },
         "test/browser-domain": {
           "features": [],
@@ -53482,7 +53550,7 @@
           "roles": [
             "compile"
           ],
-          "version": "1.0.1"
+          "version": "1.1.0"
         }
       },
       "profile": "workspace-tests",
@@ -53553,6 +53621,10 @@
     "crc@3.4.0": {
       "event": "unused-optional-source-retirement",
       "reason": "No supported native, browser, build or test graph selects this source; all incoming unused optional declarations have been removed."
+    },
+    "ctutils@0.4.3": {
+      "event": "retire-vulnerable-ctutils-0-4-3",
+      "reason": "Entire implementation replaced by ctutils 0.4.4, including optimization barriers for masks and 32-bit u128 constant-time comparisons."
     },
     "derive-where@1.7.0": {
       "event": "purpose-specialization",
@@ -65403,9 +65475,79 @@
           }
         ],
         "to": []
+      },
+      {
+        "from": [
+          {
+            "directory": "src/server",
+            "name": "blog",
+            "origins": [],
+            "version": "1.0.1"
+          },
+          {
+            "directory": "tools/setup",
+            "name": "blog-setup",
+            "origins": [],
+            "version": "1.0.1"
+          }
+        ],
+        "id": "release-1-1-0",
+        "reason": "Publish the Linux amd64 specialization and maintained-dependency hardening as release 1.1.0; keep upstream source identities and current database structure unchanged.",
+        "retired_origins": [],
+        "to": [
+          {
+            "directory": "src/server",
+            "name": "blog",
+            "origins": [],
+            "version": "1.1.0"
+          },
+          {
+            "directory": "tools/setup",
+            "name": "blog-setup",
+            "origins": [],
+            "version": "1.1.0"
+          }
+        ]
+      },
+      {
+        "from": [
+          {
+            "directory": "src/foundation/crypto/constant-time-utilities",
+            "name": "blog-crypto-constant-time-utilities",
+            "origins": [
+              "ctutils@0.4.3"
+            ],
+            "version": "0.0.0"
+          }
+        ],
+        "id": "retire-vulnerable-ctutils-0-4-3",
+        "reason": "Replace the complete ctutils implementation with verified ctutils 0.4.4 source to resolve RUSTSEC-2026-0385; retain the old immutable archive and license history.",
+        "retired_origins": [
+          {
+            "id": "ctutils@0.4.3",
+            "reason": "Entire implementation replaced by ctutils 0.4.4, including optimization barriers for masks and 32-bit u128 constant-time comparisons."
+          }
+        ],
+        "to": []
+      },
+      {
+        "from": [],
+        "id": "import-fixed-ctutils-0-4-4",
+        "reason": "Import the verified upstream 0.4.4 implementation into its existing maintained owner, with repository-local dependencies and documentation paths.",
+        "retired_origins": [],
+        "to": [
+          {
+            "directory": "src/foundation/crypto/constant-time-utilities",
+            "name": "blog-crypto-constant-time-utilities",
+            "origins": [
+              "ctutils@0.4.4"
+            ],
+            "version": "0.0.0"
+          }
+        ]
       }
     ],
     "schema": 1
   },
-  "source_migrations_sha256": "64335d041f6a2935fe66d98df322f12214583e274ac85d063c19e04b43ada02d"
+  "source_migrations_sha256": "9311f9eba703cdf0fc3c044652cbe1d1a8fef9d85efe4bd0e6aaf2319a83d886"
 }

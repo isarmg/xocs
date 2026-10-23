@@ -11658,6 +11658,76 @@
           "reason": "No remaining implementation or consumer after deleting old compiler feature probes."
         }
       ]
+    },
+    {
+      "id": "release-1-1-0",
+      "reason": "Publish the Linux amd64 specialization and maintained-dependency hardening as release 1.1.0; keep upstream source identities and current database structure unchanged.",
+      "from": [
+        {
+          "directory": "src/server",
+          "name": "blog",
+          "version": "1.0.1",
+          "origins": []
+        },
+        {
+          "directory": "tools/setup",
+          "name": "blog-setup",
+          "version": "1.0.1",
+          "origins": []
+        }
+      ],
+      "to": [
+        {
+          "directory": "src/server",
+          "name": "blog",
+          "version": "1.1.0",
+          "origins": []
+        },
+        {
+          "directory": "tools/setup",
+          "name": "blog-setup",
+          "version": "1.1.0",
+          "origins": []
+        }
+      ],
+      "retired_origins": []
+    },
+    {
+      "id": "retire-vulnerable-ctutils-0-4-3",
+      "reason": "Replace the complete ctutils implementation with verified ctutils 0.4.4 source to resolve RUSTSEC-2026-0385; retain the old immutable archive and license history.",
+      "from": [
+        {
+          "directory": "src/foundation/crypto/constant-time-utilities",
+          "name": "blog-crypto-constant-time-utilities",
+          "version": "0.0.0",
+          "origins": [
+            "ctutils@0.4.3"
+          ]
+        }
+      ],
+      "to": [],
+      "retired_origins": [
+        {
+          "id": "ctutils@0.4.3",
+          "reason": "Entire implementation replaced by ctutils 0.4.4, including optimization barriers for masks and 32-bit u128 constant-time comparisons."
+        }
+      ]
+    },
+    {
+      "id": "import-fixed-ctutils-0-4-4",
+      "reason": "Import the verified upstream 0.4.4 implementation into its existing maintained owner, with repository-local dependencies and documentation paths.",
+      "from": [],
+      "to": [
+        {
+          "directory": "src/foundation/crypto/constant-time-utilities",
+          "name": "blog-crypto-constant-time-utilities",
+          "version": "0.0.0",
+          "origins": [
+            "ctutils@0.4.4"
+          ]
+        }
+      ],
+      "retired_origins": []
     }
   ]
 }

@@ -42,7 +42,7 @@ Rust 工具链、系统原生构建材料、审计数据库和非 Rust 测试工
 | src/foundation/crypto/algorithm-identifiers | blog-crypto-algorithm-identifiers | const-oid@0.10.2 | const-oid@0.10.2: Apache-2.0 OR MIT |
 | src/foundation/crypto/conditional-move | blog-crypto-conditional-move | cmov@0.5.4 | cmov@0.5.4: Apache-2.0 OR MIT |
 | src/foundation/crypto/constant-time-comparison | blog-crypto-constant-time-comparison | subtle@2.6.1 | subtle@2.6.1: BSD-3-Clause |
-| src/foundation/crypto/constant-time-utilities | blog-crypto-constant-time-utilities | ctutils@0.4.3 | ctutils@0.4.3: Apache-2.0 OR MIT |
+| src/foundation/crypto/constant-time-utilities | blog-crypto-constant-time-utilities | ctutils@0.4.4 | ctutils@0.4.4: Apache-2.0 OR MIT |
 | src/foundation/crypto/digest-traits | blog-crypto-digest-traits | block-buffer@0.12.1, crypto-common@0.2.2, digest@0.11.3 | block-buffer@0.12.1: MIT OR Apache-2.0; crypto-common@0.2.2: MIT OR Apache-2.0; digest@0.11.3: MIT OR Apache-2.0 |
 | src/foundation/crypto/memory-hard-hash | blog-crypto-memory-hard-hash | blake2@0.10.6 | blake2@0.10.6: MIT OR Apache-2.0 |
 | src/foundation/crypto/message-authentication | blog-crypto-message-authentication | hmac@0.13.0 | hmac@0.13.0: MIT OR Apache-2.0 |
@@ -265,6 +265,7 @@ Rust 工具链、系统原生构建材料、审计数据库和非 Rust 测试工
 | convert_case_extras@0.2.0 | browser-csr-module-specialization | Replace the unused macro/casing/import support with the scoped CSR component compiler and independent Unicode name conversion; no implementation from this origin remains. |
 | crc-catalog@2.5.0 | unused-optional-source-retirement | No supported native, browser, build or test graph selects this source; all incoming unused optional declarations have been removed. |
 | crc@3.4.0 | unused-optional-source-retirement | No supported native, browser, build or test graph selects this source; all incoming unused optional declarations have been removed. |
+| ctutils@0.4.3 | retire-vulnerable-ctutils-0-4-3 | Entire implementation replaced by ctutils 0.4.4, including optimization barriers for masks and 32-bit u128 constant-time comparisons. |
 | derive-where@1.7.0 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
 | dotenvy@0.15.7 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
 | embedded-io@0.4.0 | retire-unused-embedded-binary-streams | No remaining consumer after removing unused embedded stream adapters from binary-record. |
