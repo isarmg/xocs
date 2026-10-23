@@ -30,9 +30,7 @@ where
     fn build(mut self) -> Self::State {
         let hook = crate::view_errors::get_error_hook();
         RenderEffect::new(move |prev| {
-            let _guard = hook
-                .as_ref()
-                .map(|h| crate::view_errors::set_error_hook(Arc::clone(h)));
+            let _guard = crate::view_errors::set_optional_error_hook(hook.clone());
             let value = self.invoke();
             if let Some(mut state) = prev {
                 value.rebuild(&mut state);

@@ -305,6 +305,11 @@ async fn encoded_markdown_and_json_image_references_cannot_be_deleted() {
     for content in [
         format!("![saved]({percent})"),
         format!("![saved]({entities})"),
+        format!("![saved]({})", path.replace('/', "\\/").replace('.', "\\.")),
+        format!(
+            "![saved][upload]\n\n[upload]: {}",
+            path.replace('/', "\\/").replace('.', "\\.")
+        ),
     ] {
         sqlx::query("INSERT INTO article(id,user_id,sort_id,label_id,article_title,article_content) VALUES(1,1,1,1,'Encoded',?)").bind(content).execute(&pool).await.unwrap();
         assert_eq!(

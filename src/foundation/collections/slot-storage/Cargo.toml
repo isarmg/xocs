@@ -34,3 +34,7 @@ path = "src/lib.rs"
 
 [dependencies]
 serde = { features = ["alloc"], optional = true, default-features = false, path = "../../format/data-model",package = "blog-format-data-model"}
+
+[[test]]
+name = "consumer-contracts"
+path = "tests/consumer_contracts.rs"

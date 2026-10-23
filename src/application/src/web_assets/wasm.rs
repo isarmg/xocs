@@ -1,87 +1,23 @@
 //! Build-time compressed WASM negotiation around the verified asset responder.
-fn quality(value: &str) -> Option<u16> {
-    match value.split_once('.') {
-        None => match value {
-            "0" => Some(0),
-            "1" => Some(1000),
-            _ => None,
-        },
-        Some((whole, fraction))
-            if fraction.len() <= 3 && fraction.bytes().all(|b| b.is_ascii_digit()) =>
-        {
-            if whole == "1" {
-                return fraction.bytes().all(|b| b == b'0').then_some(1000);
-            }
-            if whole != "0" {
-                return None;
-            }
-            let mut digits = fraction.to_owned();
-            while digits.len() < 3 {
-                digits.push('0');
-            }
-            digits.parse().ok()
-        }
-        _ => None,
-    }
-}
-
-fn accepts_gzip(headers: &http::HeaderMap) -> bool {
-    let mut gzip = None;
-    let mut wildcard = None;
-    for header in headers.get_all(http::header::ACCEPT_ENCODING) {
-        let Ok(value) = header.to_str() else {
-            return false;
-        };
-        for entry in value.split(',') {
-            let mut parts = entry.trim().split(';');
-            let encoding = parts.next().unwrap_or_default().trim();
-            if !encoding.eq_ignore_ascii_case("gzip") && encoding != "*" {
-                continue;
-            }
-            let mut weight = 1000;
-            let mut parameters = parts;
-            if let Some(parameter) = parameters.next() {
-                let Some((name, value)) = parameter.trim().split_once('=') else {
-                    return false;
-                };
-                if !name.trim().eq_ignore_ascii_case("q") {
-                    return false;
-                }
-                let Some(q) = quality(value.trim()) else {
-                    return false;
-                };
-                weight = q;
-                if parameters.next().is_some() {
-                    return false;
-                }
-            }
-            let target = if encoding == "*" {
-                &mut wildcard
-            } else {
-                &mut gzip
-            };
-            // Conflicting duplicates are resolved conservatively; explicit gzip
-            // always takes precedence over wildcard, including q=0.
-            *target = Some(target.map_or(weight, |previous: u16| previous.min(weight)));
-        }
-    }
-    gzip.or(wildcard).is_some_and(|q| q > 0)
-}
+use bytes::Bytes;
 
 /// Serve a precompressed WASM variant when the client accepts gzip.
 ///
 /// `serve` remains responsible for safe asset lookup, representation ETags and
-/// GET/HEAD/conditional responses. Other files and methods pass through intact.
-pub fn response<B>(
+/// GET/HEAD/conditional responses. A missing gzip variant may fall back to
+/// identity only when it is acceptable; otherwise an existing resource returns
+/// an empty 406. Other files, missing resources and methods pass through intact.
+pub fn response(
     path: &str,
     method: &http::Method,
     headers: &http::HeaderMap,
-    serve: impl Fn(&str, &http::Method, &http::HeaderMap) -> http::Response<B>,
-) -> http::Response<B> {
+    serve: impl Fn(&str, &http::Method, &http::HeaderMap) -> http::Response<Bytes>,
+) -> http::Response<Bytes> {
     if !path.ends_with(".wasm") || (method != http::Method::GET && method != http::Method::HEAD) {
         return serve(path, method, headers);
     }
-    let mut result = if accepts_gzip(headers) {
+    let accepted = http::header::accepted_encodings(headers);
+    let mut result = if accepted.gzip {
         let compressed = serve(&format!("{path}.gz"), method, headers);
         if compressed.status() == http::StatusCode::OK
             || compressed.status() == http::StatusCode::NOT_MODIFIED
@@ -102,8 +38,23 @@ pub fn response<B>(
     } else {
         serve(path, method, headers)
     };
-    if result.status() == http::StatusCode::OK || result.status() == http::StatusCode::NOT_MODIFIED
+    let successful = result.status() == http::StatusCode::OK
+        || result.status() == http::StatusCode::NOT_MODIFIED;
+    if successful
+        && !result
+            .headers()
+            .contains_key(http::header::CONTENT_ENCODING)
+        && !accepted.identity
     {
+        return http::Response::builder()
+            .status(http::StatusCode::NOT_ACCEPTABLE)
+            .header(http::header::CACHE_CONTROL, "no-store")
+            .header(http::header::CONTENT_LENGTH, "0")
+            .header(http::header::VARY, "Accept-Encoding")
+            .body(Bytes::new())
+            .expect("constant encoding refusal headers");
+    }
+    if successful {
         let already_varies = result
             .headers()
             .get_all(http::header::VARY)
@@ -129,26 +80,6 @@ pub fn response<B>(
 mod tests {
     use super::*;
     #[test]
-    fn gzip_quality_and_explicit_exclusion() {
-        for (value, accepted) in [
-            ("gzip", true),
-            ("br, GZip;q=0.5", true),
-            ("*;q=1, gzip;q=0", false),
-            ("gzip;q=0, gzip;q=1", false),
-            ("identity", false),
-            ("gzip;q=1.001", false),
-            ("gzip;q=NaN", false),
-            ("gzip;q=0.001", true),
-            ("gzip;q=0.000", false),
-            ("*;q=0.8", true),
-        ] {
-            let mut headers = http::HeaderMap::new();
-            headers.insert(http::header::ACCEPT_ENCODING, value.parse().unwrap());
-            assert_eq!(accepts_gzip(&headers), accepted, "{value}");
-        }
-        assert!(!accepts_gzip(&http::HeaderMap::new()));
-    }
-    #[test]
     fn gzip_variant_keeps_representation_etag_head_and_304() {
         let serve = |path: &str, method: &http::Method, headers: &http::HeaderMap| {
             let compressed = path.ends_with(".gz");
@@ -164,13 +95,15 @@ mod tests {
                     http::header::CONTENT_LENGTH,
                     if compressed { "4" } else { "3" },
                 )
-                .body(if unchanged || method == http::Method::HEAD {
-                    ""
-                } else if compressed {
-                    "gzip"
-                } else {
-                    "raw"
-                })
+                .body(Bytes::from_static(
+                    if unchanged || method == http::Method::HEAD {
+                        b""
+                    } else if compressed {
+                        b"gzip"
+                    } else {
+                        b"raw"
+                    },
+                ))
                 .unwrap()
         };
         let mut headers = http::HeaderMap::new();
@@ -179,7 +112,7 @@ mod tests {
             http::HeaderValue::from_static("gzip"),
         );
         let get = response("/assets/app.wasm", &http::Method::GET, &headers, serve);
-        assert_eq!(get.body(), &"gzip");
+        assert_eq!(get.body().as_ref(), b"gzip");
         assert_eq!(
             get.headers()[http::header::CONTENT_TYPE],
             "application/wasm"
@@ -200,7 +133,7 @@ mod tests {
         headers.remove(http::header::ACCEPT_ENCODING);
         let raw = response("/assets/app.wasm", &http::Method::GET, &headers, serve);
         assert_eq!(raw.status(), http::StatusCode::OK);
-        assert_eq!(raw.body(), &"raw");
+        assert_eq!(raw.body().as_ref(), b"raw");
         assert!(!raw.headers().contains_key(http::header::CONTENT_ENCODING));
         assert_ne!(
             raw.headers()[http::header::ETAG],
@@ -217,19 +150,47 @@ mod tests {
         let serve = |path: &str, _: &http::Method, _: &http::HeaderMap| {
             http::Response::builder()
                 .status(if path.ends_with(".gz") { 404 } else { 200 })
-                .body("raw")
+                .body(Bytes::from_static(b"raw"))
                 .unwrap()
         };
         let raw = response("/app.wasm", &http::Method::GET, &headers, serve);
         assert_eq!(raw.status(), http::StatusCode::OK);
         assert!(!raw.headers().contains_key(http::header::CONTENT_ENCODING));
         let missing = response("/missing.wasm", &http::Method::GET, &headers, |_, _, _| {
-            http::Response::builder().status(404).body("").unwrap()
+            http::Response::builder()
+                .status(404)
+                .body(Bytes::new())
+                .unwrap()
         });
         assert_eq!(missing.status(), http::StatusCode::NOT_FOUND);
         let is_encoded = missing
             .headers()
             .contains_key(http::header::CONTENT_ENCODING);
         assert!(!is_encoded);
+    }
+    #[test]
+    fn rejected_identity_is_not_a_compressed_fallback() {
+        for encoding in ["gzip;q=0, identity;q=0", "gzip, identity;q=0", "*;q=0"] {
+            let mut headers = http::HeaderMap::new();
+            headers.insert(http::header::ACCEPT_ENCODING, encoding.parse().unwrap());
+            for method in [&http::Method::GET, &http::Method::HEAD] {
+                let result = response("/app.wasm", method, &headers, |path, _, _| {
+                    http::Response::builder()
+                        .status(if path.ends_with(".gz") { 404 } else { 200 })
+                        .header(http::header::ETAG, "\"raw\"")
+                        .body(Bytes::from_static(b"unencoded payload"))
+                        .unwrap()
+                });
+                assert_eq!(
+                    result.status(),
+                    http::StatusCode::NOT_ACCEPTABLE,
+                    "{encoding}"
+                );
+                assert!(result.body().is_empty());
+                assert_eq!(result.headers()[http::header::CONTENT_LENGTH], "0");
+                assert_eq!(result.headers()[http::header::VARY], "Accept-Encoding");
+                assert!(!result.headers().contains_key(http::header::ETAG));
+            }
+        }
     }
 }

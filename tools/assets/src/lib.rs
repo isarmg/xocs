@@ -170,15 +170,58 @@ fn validate_generated(directory: &Path) -> Result<()> {
     Ok(())
 }
 
+fn receipt_destination(path: &Path, pkg: &Path, dist: &Path) -> Result<PathBuf> {
+    ensure!(
+        path.is_absolute(),
+        "Runtime inventory needs an absolute path"
+    );
+    let parent = path.parent().context("Runtime inventory parent")?;
+    inventory::physical(parent)?;
+    let path = parent
+        .canonicalize()?
+        .join(path.file_name().context("Runtime inventory filename")?);
+    for output in [pkg, dist] {
+        let output = output
+            .parent()
+            .context("Generated output parent")?
+            .canonicalize()?
+            .join(output.file_name().context("Generated output filename")?);
+        ensure!(
+            !path.starts_with(output),
+            "Runtime inventory must be separate from generated output directories"
+        );
+    }
+    Ok(path)
+}
+
 fn replace_pair(
     pkg: &Path,
     stage_pkg: &Path,
     dist: &Path,
     stage_dist: &Path,
     backup: &Path,
+    receipt: Option<(&Path, &[u8])>,
 ) -> Result<()> {
     validate_generated(pkg)?;
     validate_generated(dist)?;
+    let receipt = receipt
+        .map(|(path, bytes)| -> Result<_> {
+            use std::io::Write;
+            let path = receipt_destination(path, pkg, dist)?;
+            let parent = path.parent().expect("Normalized absolute receipt path");
+            let mut builder = tempfile::Builder::new();
+            builder.prefix(".blog-frontend-receipt-");
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                builder.permissions(fs::Permissions::from_mode(0o600));
+            }
+            let mut temporary = builder.tempfile_in(parent)?;
+            temporary.write_all(bytes)?;
+            temporary.as_file().sync_all()?;
+            Ok((temporary, path))
+        })
+        .transpose()?;
     let old_pkg = backup.join("previous-pkg");
     let old_dist = backup.join("previous-dist");
     let had_pkg = pkg.exists();
@@ -201,7 +244,19 @@ fn replace_pair(
         }
         return Err(error.into());
     }
-    if let Err(error) = fs::rename(stage_dist, dist) {
+    let mut published_dist = false;
+    let publish = (|| -> Result<()> {
+        fs::rename(stage_dist, dist)?;
+        published_dist = true;
+        if let Some((temporary, path)) = receipt {
+            temporary.persist_noclobber(path)?;
+        }
+        Ok(())
+    })();
+    if let Err(error) = publish {
+        if published_dist {
+            fs::rename(dist, stage_dist)?;
+        }
         fs::rename(pkg, stage_pkg)?;
         if had_pkg {
             fs::rename(&old_pkg, pkg)?;
@@ -209,7 +264,7 @@ fn replace_pair(
         if had_dist {
             fs::rename(&old_dist, dist)?;
         }
-        return Err(error.into());
+        return Err(error);
     }
     Ok(())
 }
@@ -233,7 +288,9 @@ pub fn build(options: &Options) -> Result<Value> {
     let dist = distribution(options)?;
     validate_generated(&web.join("pkg"))?;
     validate_generated(&dist)?;
-    let inventory_path = env::var_os("BLOG_FRONTEND_METADATA_FILE").map(PathBuf::from);
+    let inventory_path = env::var_os("BLOG_FRONTEND_METADATA_FILE")
+        .map(|path| receipt_destination(Path::new(&path), &web.join("pkg"), &dist))
+        .transpose()?;
     if let Some(path) = &inventory_path {
         ensure!(
             path.is_absolute() && !path.exists(),
@@ -321,20 +378,10 @@ pub fn build(options: &Options) -> Result<Value> {
         &dist,
         &stage_dist,
         stage.path(),
+        inventory_path
+            .as_deref()
+            .map(|path| (path, runtime_bytes.as_slice())),
     )?;
-    if let Some(path) = inventory_path {
-        use std::io::Write;
-        let mut open = fs::OpenOptions::new();
-        open.write(true).create_new(true);
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::OpenOptionsExt;
-            open.mode(0o600);
-        }
-        let mut file = open.open(path)?;
-        file.write_all(&runtime_bytes)?;
-        file.sync_all()?;
-    }
     let summary = json!({"distribution":dist,"files":final_files.len(),"bytes":outputs.values().map(Vec::len).sum::<usize>(),"runtime":runtime});
     println!(
         "Built {} ({} files, {} bytes)",
@@ -378,12 +425,14 @@ mod tests {
         fs::write(dir.path().join("dist/old"), "old dist")?;
         fs::write(dir.path().join("pkg/blog-assets.json"), "{}")?;
         fs::write(dir.path().join("dist/blog-assets.json"), "{}")?;
+        let receipt = dir.path().join("receipt.json");
         let result = replace_pair(
             &dir.path().join("pkg"),
             &dir.path().join("stage-pkg"),
             &dir.path().join("dist"),
             &dir.path().join("missing-dist"),
             &dir.path().join("backups"),
+            Some((&receipt, b"new receipt")),
         );
         assert!(result.is_err());
         assert_eq!(
@@ -391,6 +440,99 @@ mod tests {
             "old package"
         );
         assert_eq!(fs::read_to_string(dir.path().join("dist/old"))?, "old dist");
+        assert!(!receipt.exists());
+        assert_eq!(fs::read_dir(dir.path())?.count(), 4);
+        Ok(())
+    }
+
+    fn publication_fixture() -> Result<tempfile::TempDir> {
+        let dir = tempfile::tempdir()?;
+        for name in ["pkg", "dist", "stage-pkg", "stage-dist", "backups"] {
+            let path = dir.path().join(name);
+            fs::create_dir(&path)?;
+            if name != "backups" {
+                fs::write(path.join("contents"), name)?;
+                fs::write(path.join("blog-assets.json"), "{}")?;
+            }
+        }
+        Ok(dir)
+    }
+
+    #[test]
+    fn receipt_collision_rolls_back_both_outputs_and_preserves_existing_receipt() -> Result<()> {
+        let dir = publication_fixture()?;
+        let root = dir.path();
+        let receipt = root.join("receipt.json");
+        // This models another producer creating the receipt after the build's
+        // early check but before the final create-new publication.
+        fs::write(&receipt, "another producer's receipt")?;
+        let result = replace_pair(
+            &root.join("pkg"),
+            &root.join("stage-pkg"),
+            &root.join("dist"),
+            &root.join("stage-dist"),
+            &root.join("backups"),
+            Some((&receipt, b"new receipt")),
+        );
+        assert!(result.is_err());
+        for name in ["pkg", "dist", "stage-pkg", "stage-dist"] {
+            assert_eq!(fs::read_to_string(root.join(name).join("contents"))?, name);
+        }
+        assert_eq!(fs::read_to_string(&receipt)?, "another producer's receipt");
+        drop(result);
+        assert_eq!(fs::read_dir(root)?.count(), 6);
+        Ok(())
+    }
+
+    #[test]
+    fn successful_publication_includes_complete_private_receipt() -> Result<()> {
+        let dir = publication_fixture()?;
+        let root = dir.path();
+        let receipt = root.join("receipt.json");
+        replace_pair(
+            &root.join("pkg"),
+            &root.join("stage-pkg"),
+            &root.join("dist"),
+            &root.join("stage-dist"),
+            &root.join("backups"),
+            Some((&receipt, b"complete receipt\n")),
+        )?;
+        assert_eq!(fs::read_to_string(root.join("pkg/contents"))?, "stage-pkg");
+        assert_eq!(
+            fs::read_to_string(root.join("dist/contents"))?,
+            "stage-dist"
+        );
+        assert_eq!(fs::read(&receipt)?, b"complete receipt\n");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::{MetadataExt, PermissionsExt};
+            let metadata = fs::metadata(receipt)?;
+            assert_eq!(metadata.permissions().mode() & 0o777, 0o600);
+            assert_eq!(metadata.nlink(), 1);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn receipt_cannot_overlap_output_directories_through_path_aliases() -> Result<()> {
+        let dir = publication_fixture()?;
+        let root = dir.path();
+        for relative in [
+            "pkg/receipt.json",
+            "dist/receipt.json",
+            "pkg/../dist/receipt.json",
+            "dist/../pkg/receipt.json",
+            "pkg",
+            "dist",
+        ] {
+            let receipt = root.join(relative);
+            assert!(
+                receipt_destination(&receipt, &root.join("pkg"), &root.join("dist")).is_err(),
+                "{relative}"
+            );
+            assert_eq!(fs::read_to_string(root.join("pkg/contents"))?, "pkg");
+            assert_eq!(fs::read_to_string(root.join("dist/contents"))?, "dist");
+        }
         Ok(())
     }
 }

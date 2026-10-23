@@ -374,6 +374,68 @@ class GeneratedOutputs(unittest.TestCase):
 
 
 class TestClosures(unittest.TestCase):
+    def test_host_package_id_cannot_overwrite_a_different_target_identity(self):
+        package = dict(id='entry', name='entry', version='0.0.0',
+                       manifest_path='/workspace/closure-fixture/entry/Cargo.toml',
+                       targets=[dict(kind=['lib'])])
+        metadata = dict(workspace_root='/workspace/closure-fixture', workspace_members=['entry'],
+                        packages=[package], resolve=dict(nodes=[dict(id='entry', features=[], deps=[])]))
+        for field, value in [('manifest_path', '/workspace/closure-fixture/other/Cargo.toml'),
+                             ('name', 'other'), ('version', '1.0.0'), ('source', 'registry+external')]:
+            with self.subTest(field=field):
+                host = dict(metadata, packages=[dict(package, **{field: value})])
+                with self.assertRaisesRegex(ValueError, 'package identity differs'):
+                    manage.closure(metadata, ['entry/Cargo.toml'], 'runtime', host_metadata=host)
+
+    def test_wasm_build_and_proc_macro_dependencies_follow_the_linux_host(self):
+        with tempfile.TemporaryDirectory(prefix='blog-host-closure-test-') as directory:
+            root = Path(directory)
+            declarations = {
+                'entry': '''[dependencies]
+derive = { path = "../derive" }
+[build-dependencies]
+builder = { path = "../builder" }
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm_helper = { path = "../wasm-helper", package = "wasm-helper" }
+[target.'cfg(unix)'.dependencies]
+native_helper = { path = "../native-helper", package = "native-helper" }
+''',
+                'derive': '''[lib]
+proc-macro = true
+[target.'cfg(unix)'.dependencies]
+macro_helper = { path = "../macro-helper", package = "macro-helper" }
+''',
+                'builder': '''[target.'cfg(unix)'.dependencies]
+build_helper = { path = "../build-helper", package = "build-helper" }
+''',
+                'wasm-helper': '', 'native-helper': '', 'macro-helper': '', 'build-helper': '',
+            }
+            (root / 'Cargo.toml').write_text('[workspace]\nresolver = "3"\nmembers = '
+                                             + json.dumps(list(declarations)) + '\n')
+            for name, declaration in declarations.items():
+                source = root / name / 'src'
+                source.mkdir(parents=True)
+                (source.parent / 'Cargo.toml').write_text(
+                    f'[package]\nname = "{name}"\nversion = "0.0.0"\nedition = "2024"\n'
+                    + declaration)
+                (source / 'lib.rs').write_text('')
+            (root / 'entry/build.rs').write_text('fn main() {}\n')
+            subprocess.run(['cargo', 'generate-lockfile', '--offline'], cwd=root,
+                           check=True, capture_output=True,
+                           env={**os.environ, 'CARGO_NET_OFFLINE': 'true'})
+            policy = dict(profiles=[dict(id=target, target=target, role='runtime',
+                                        manifests=['entry/Cargo.toml'])
+                                    for target in sorted(manage.TARGETS)])
+            graphs = {item['target']: item['packages'] for item in manage.resolutions(root, policy)}
+            wasm = graphs['wasm32-unknown-unknown']
+            self.assertEqual(wasm['macro-helper']['roles'], ['compile'])
+            self.assertEqual(wasm['build-helper']['roles'], ['compile'])
+            self.assertEqual(wasm['wasm-helper']['roles'], ['runtime'])
+            self.assertNotIn('native-helper', wasm)
+            native = graphs['x86_64-unknown-linux-gnu']
+            self.assertEqual(native['native-helper']['roles'], ['runtime'])
+            self.assertNotIn('wasm-helper', native)
+
     def test_development_dependencies_belong_only_to_selected_roots(self):
         root = Path('/workspace/closure-fixture')
         manifests = {name: f'src/{name}/Cargo.toml'

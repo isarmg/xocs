@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Install a verified Blog package into a fresh root without overwriting state."""
 import argparse
+import errno
 import grp
 import json
 import os
@@ -45,6 +46,16 @@ def write(path, value, mode, uid=0, gid=0):
         os.close(descriptor)
 
 
+def clear_inherited_acls(descriptor):
+    """Make a newly created empty root independent of ancestor default ACLs."""
+    for attribute in ('system.posix_acl_default', 'system.posix_acl_access'):
+        try:
+            os.removexattr(descriptor, attribute)
+        except OSError as error:
+            if error.errno not in (errno.ENODATA, errno.ENOTSUP, errno.EOPNOTSUPP):
+                raise
+
+
 def validate_service_root(root, *, fixture=False):
     # These directories are hidden by the fixed systemd isolation policy.
     # Temporary test instances skip unit installation and can use /tmp.
@@ -87,9 +98,12 @@ def install(source, root, config, username, *, fixture=False):
     password = sys.stdin.buffer.read(4097)
     if len(password) > 4096:
         raise ValueError('password input exceeds its bound')
-    os.mkdir(root.name, mode=0o750, dir_fd=parent_descriptor)
+    # Keep inherited ACL entries masked while the empty root is secured. Its
+    # default ACL must be removed before config and private state are created.
+    os.mkdir(root.name, mode=0o700, dir_fd=parent_descriptor)
     root_descriptor = os.open(root.name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
                               dir_fd=parent_descriptor)
+    clear_inherited_acls(root_descriptor)
     os.fchmod(root_descriptor, 0o750)
     os.fchown(root_descriptor, 0, identity.pw_gid)
     created_root = os.fstat(root_descriptor)

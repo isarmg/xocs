@@ -17,7 +17,7 @@ sudo systemctl enable --now blog.service
 curl --fail http://127.0.0.1:8081/readyz
 ```
 
-安装前先创建 ROOT 的父目录；其全部祖先须由 root 管理，不能允许其他账号改名或替换。安装工具先验证完整包，再创建固定非 root 账号 `isarmg-blog`。程序文件由 root 管理；配置为 `root:isarmg-blog` 的 `0640`，配置目录 `0750`；可写的 `state/`、`media/`、`logs/`、`run/` 为服务账号的 `0700`。初始化通过服务账号执行本地 `blog-setup`，使用当前 schema、私有文件验证及服务器相同实例锁，拒绝已有数据库。密码仅从有界的 stdin 输入，不写命令行、配置或日志。安装成功不自动启动或启用服务；失败保留已创建的部分安装供检查，不能直接覆盖重试。
+安装前先创建 ROOT 的父目录；其全部祖先须由 root 管理，不能允许其他账号改名或替换。安装工具先验证完整包，再创建固定非 root 账号 `isarmg-blog`。新 ROOT 从 `0700` 权限开始创建，并在写入内容前移除继承的访问和默认 ACL；原父目录属性保持不变。程序文件由 root 管理；配置为 `root:isarmg-blog` 的 `0640`，配置目录 `0750`；可写的 `state/`、`media/`、`logs/`、`run/` 为服务账号的 `0700`。初始化通过服务账号执行本地 `blog-setup`，使用当前 schema、私有文件验证及服务器相同实例锁，拒绝已有数据库。密码仅从有界的 stdin 输入，不写命令行、配置或日志。安装成功不自动启动或启用服务；失败保留已创建的部分安装供检查，不能直接覆盖重试。
 
 生产 ROOT 必须位于 systemd 隔离后仍可见的位置；安装拒绝 `/tmp`、`/var/tmp`、`/home`、`/root`、`/run/user` 及其后代，因为服务启用 `PrivateTmp=true` 和 `ProtectHome=true`。默认 `/opt/isarmg/blog` 不受影响。临时验收实例不安装 unit，可使用 `/tmp`。
 

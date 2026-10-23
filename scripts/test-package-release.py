@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """The formal and candidate path share exact binary staging, not two packagers."""
 import hashlib
+import errno
 import importlib.util
 import json
 import os
 from pathlib import Path
 import re
 import shutil
+import struct
 import tarfile
 import tempfile
 import unittest
@@ -251,6 +253,65 @@ class PackageIntegrity(unittest.TestCase):
         source.update(retained)
         self.assertEqual(self.package.offline_environment(source), retained)
         self.assertEqual(source['BLOG_DATA_DIR'], 'pollution')
+
+    def test_installation_root_removes_inherited_acls_without_changing_parent(self):
+        spec = importlib.util.spec_from_file_location('blog_installer', ROOT / 'tools/packaging/install.py')
+        installer = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(installer)
+        with tempfile.TemporaryDirectory() as temporary:
+            parent = Path(temporary)
+            # Linux POSIX ACL xattr v2: owner, named user, group, mask, other.
+            # A named entry may redundantly name the owner. Use the mapped UID
+            # so this real ACL test also works in a one-user namespace.
+            named_uid = os.geteuid()
+            acl = struct.pack('<I', 2) + b''.join(struct.pack('<HHI', *entry) for entry in
+                                                ((1, 7, 0xffffffff), (2, 5, named_uid),
+                                                 (4, 5, 0xffffffff), (16, 5, 0xffffffff),
+                                                 (32, 0, 0xffffffff)))
+            basic_acl = struct.pack('<I', 2) + b''.join(struct.pack('<HHI', *entry) for entry in
+                                                      ((1, 7, 0xffffffff), (4, 5, 0xffffffff),
+                                                       (32, 0, 0xffffffff)))
+            try:
+                os.setxattr(parent, 'system.posix_acl_default', basic_acl)
+            except OSError as error:
+                if error.errno in (errno.ENOTSUP, errno.EOPNOTSUPP):
+                    self.skipTest('test filesystem does not support POSIX ACLs')
+                raise
+            os.setxattr(parent, 'system.posix_acl_default', acl)
+            root = parent / 'instance'
+            root.mkdir(mode=0o700)
+            self.assertIn('system.posix_acl_default', os.listxattr(root))
+            self.assertEqual(root.stat().st_mode & 0o777, 0o700)
+            descriptor = os.open(root, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                installer.clear_inherited_acls(descriptor)
+            finally:
+                os.close(descriptor)
+            self.assertEqual(os.getxattr(parent, 'system.posix_acl_default'), acl)
+            self.assertNotIn('system.posix_acl_access', os.listxattr(root))
+            self.assertNotIn('system.posix_acl_default', os.listxattr(root))
+            config = root / 'config'
+            config.mkdir(mode=0o750)
+            configuration = config / 'config.json'
+            configuration.write_text('{}')
+            for path in (config, configuration):
+                self.assertNotIn('system.posix_acl_access', os.listxattr(path))
+                self.assertNotIn('system.posix_acl_default', os.listxattr(path))
+
+    def test_acl_removal_only_ignores_absent_or_unsupported_attributes(self):
+        spec = importlib.util.spec_from_file_location('blog_installer', ROOT / 'tools/packaging/install.py')
+        installer = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(installer)
+        for code in (errno.ENODATA, errno.ENOTSUP, errno.EOPNOTSUPP):
+            with patch.object(installer.os, 'removexattr', side_effect=OSError(code, 'fixture')) as remove:
+                installer.clear_inherited_acls(123)
+                self.assertEqual(remove.call_args_list,
+                                 [unittest.mock.call(123, 'system.posix_acl_default'),
+                                  unittest.mock.call(123, 'system.posix_acl_access')])
+        for code in (errno.EPERM, errno.EACCES, errno.EIO):
+            with patch.object(installer.os, 'removexattr', side_effect=OSError(code, 'fixture')):
+                with self.assertRaises(OSError):
+                    installer.clear_inherited_acls(123)
 
     def test_installer_rejects_writable_or_unowned_parent_chain(self):
         import os

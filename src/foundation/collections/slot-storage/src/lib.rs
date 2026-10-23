@@ -165,9 +165,28 @@ where
     }
 
     fn clone_from(&mut self, source: &Self) {
-        self.entries.clone_from(&source.entries);
-        self.len = source.len;
-        self.next = source.next;
+        struct RestoreOnPanic<'a, T>(&'a mut Slab<T>);
+
+        impl<T> Drop for RestoreOnPanic<'_, T> {
+            fn drop(&mut self) {
+                // Vec::clone_from may already have changed occupied/vacant entries
+                // when cloning or dropping an element panics. Reconstruct metadata
+                // from the actual surviving entries before exposing the slab again.
+                self.0.len = self
+                    .0
+                    .entries
+                    .iter()
+                    .filter(|entry| matches!(entry, Entry::Occupied(_)))
+                    .count();
+                self.0.recreate_vacant_list();
+            }
+        }
+
+        let restore = RestoreOnPanic(self);
+        restore.0.entries.clone_from(&source.entries);
+        restore.0.len = source.len;
+        restore.0.next = source.next;
+        mem::forget(restore);
     }
 }
 
@@ -598,6 +617,9 @@ impl<T> Slab<T> {
 
     /// Clear the slab of all values.
     ///
+    /// The slab is already empty if dropping a value panics, and can be reused
+    /// after the panic is caught.
+    ///
     /// # Examples
     ///
     /// ```
@@ -612,9 +634,11 @@ impl<T> Slab<T> {
     /// assert!(slab.is_empty());
     /// ```
     pub fn clear(&mut self) {
-        self.entries.clear();
+        // Vec clears its length before running element destructors. Match that
+        // transition so a caught Drop panic leaves an empty, reusable slab.
         self.len = 0;
         self.next = 0;
+        self.entries.clear();
     }
 
     /// Return the number of stored values.
@@ -789,6 +813,9 @@ impl<T> Slab<T> {
     /// ```
     pub fn get2_mut(&mut self, key1: usize, key2: usize) -> Option<(&mut T, &mut T)> {
         assert!(key1 != key2);
+        if key1.max(key2) >= self.entries.len() {
+            return None;
+        }
 
         let (entry1, entry2);
 

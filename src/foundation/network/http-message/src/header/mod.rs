@@ -36,10 +36,12 @@
 //!
 //! [*See also the `HeaderMap` type.*](HeaderMap)
 
+mod encoding;
 mod map;
 mod name;
 mod value;
 
+pub use self::encoding::{accepted_encodings, AcceptedEncodings};
 pub use self::map::{
     AsHeaderName, Drain, Entry, GetAll, HeaderMap, IntoHeaderName, IntoIter, Iter, IterMut, Keys,
     MaxSizeReached, OccupiedEntry, VacantEntry, ValueDrain, ValueIter, ValueIterMut, Values,

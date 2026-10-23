@@ -19,7 +19,7 @@
 | 职责层 | 包数 | 构建入口 | 依赖的其他层 |
 | --- | --- | --- | --- |
 | application | 1 | native, workspace-tests | crypto, diagnostics, encoding, filesystem, format, network, platform, runtime, storage, syntax |
-| assets | 5 | domain-tests, host-tools, web-release, workspace-tests | collections, diagnostics, encoding, format, javascript, lookup, math, memory, network, platform, sync, syntax, text |
+| assets | 5 | domain-tests, host-tools, native, web-release, workspace-tests | collections, diagnostics, encoding, format, javascript, lookup, math, memory, network, platform, sync, syntax, text |
 | build | 1 | host-tools, workspace-tests | assets, crypto, diagnostics, encoding, filesystem, format, network, runtime, text, wasm |
 | checksum | 1 | host-tools, workspace-tests | native |
 | cli | 4 | host-tools, native, workspace-tests | assets, collections, encoding, format, syntax, text |
@@ -59,7 +59,7 @@
 | 当前包与路径 | 具体职责 | 构建入口 | 直接消费者 | 原始来源 |
 | --- | --- | --- | --- | --- |
 | blog-assets-compiler (`src/foundation/assets/compiler`) | 宿主 JavaScript AST、语义分析、代码生成与压缩 | host-tools, workspace-tests | tools/assets | bytecount@0.6.9, cow-utils@0.1.3, json-escape-simd@3.1.2, nonmax@0.5.5, oxc-browserslist@5.0.1, oxc@0.153.0, oxc_allocator@0.153.0, oxc_ast@0.153.0, oxc_ast_visit@0.153.0, oxc_codegen@0.153.0, oxc_compat@0.153.0, oxc_data_structures@0.153.0, oxc_diagnostics@0.153.0, oxc_ecmascript@0.153.0, oxc_estree@0.153.0, oxc_index@5.0.0, oxc_mangler@0.153.0, oxc_minifier@0.153.0, oxc_parser@0.153.0, oxc_regular_expression@0.153.0, oxc_semantic@0.153.0, oxc_sourcemap@9.0.0, oxc_span@0.153.0, oxc_str@0.153.0, oxc_syntax@0.153.0, oxc_traverse@0.153.0, unicode-id-start@1.5.0 |
-| blog-assets-markdown-parser (`src/foundation/assets/markdown-parser`) | markdown parser | web-release, domain-tests, workspace-tests | src/browser, src/foundation/cli/argument-derive, test/browser-domain | linkify@0.11.0, pulldown-cmark-escape@0.11.0, pulldown-cmark@0.13.4 |
+| blog-assets-markdown-parser (`src/foundation/assets/markdown-parser`) | markdown parser | native, web-release, domain-tests, workspace-tests | src/browser, src/foundation/cli/argument-derive, src/server, test/browser-domain | linkify@0.11.0, pulldown-cmark-escape@0.11.0, pulldown-cmark@0.13.4 |
 | blog-assets-style-compiler (`src/foundation/assets/style-compiler`) | 宿主 CSS 解析、选择器、浏览器兼容转换与压缩 | host-tools, workspace-tests | tools/assets | cssparser-color@0.1.0, cssparser@0.33.0, dtoa-short@0.3.5, dtoa@1.0.11, lightningcss@1.0.0-alpha.71, parcel_selectors@0.28.2, pathdiff@0.2.3, precomputed-hash@0.1.1 |
 | blog-assets-style-token-macros (`src/foundation/assets/style-token-macros`) | style token macros | host-tools, workspace-tests | src/foundation/assets/style-compiler | cssparser-macros@0.6.1 |
 | blog-assets-style-value-derive (`src/foundation/assets/style-value-derive`) | style value derive | host-tools, workspace-tests | src/foundation/assets/style-compiler | lightningcss-derive@1.0.0-alpha.43 |

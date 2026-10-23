@@ -6,6 +6,7 @@ use axum::{
     routing::post,
 };
 use blog_application::server_cli::ContractPath;
+use pulldown_cmark::{Event, Options, Parser, Tag};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use sqlx::{Row, SqliteConnection, SqlitePool};
@@ -217,15 +218,34 @@ fn decoded_reference(value: &str) -> String {
     decoded
 }
 
-fn contains_reference(value: &str, path: &str) -> bool {
+fn text_contains_reference(value: &str, path: &str) -> bool {
     if value.contains(path) || decoded_reference(value).contains(path) {
         return true;
     }
+    // The browser uses this same tokenizer: backslash escapes depend on the
+    // Markdown context and must never be stripped from arbitrary stored text.
+    // Its destinations have already decoded CommonMark escapes and entities;
+    // only URL percent decoding remains, not another HTML-entity pass.
+    value.contains('\\')
+        && Parser::new_ext(
+            value,
+            Options::ENABLE_TABLES | Options::ENABLE_STRIKETHROUGH,
+        )
+        .any(|event| match event {
+            Event::Start(Tag::Image { dest_url, .. } | Tag::Link { dest_url, .. }) => {
+                dest_url.contains(path)
+                    || url_encoding::percent::percent_decode_str(&dest_url)
+                        .decode_utf8_lossy()
+                        .contains(path)
+            }
+            _ => false,
+        })
+}
+
+fn contains_reference(value: &str, path: &str) -> bool {
     fn json_contains(value: &serde_json::Value, path: &str) -> bool {
         match value {
-            serde_json::Value::String(value) => {
-                value.contains(path) || decoded_reference(value).contains(path)
-            }
+            serde_json::Value::String(value) => text_contains_reference(value, path),
             serde_json::Value::Array(values) => {
                 values.iter().any(|value| json_contains(value, path))
             }
@@ -236,8 +256,11 @@ fn contains_reference(value: &str, path: &str) -> bool {
         }
     }
     value.split('\0').any(|field| {
-        serde_json::from_str::<serde_json::Value>(field)
-            .is_ok_and(|value| json_contains(&value, path))
+        // Each SQL column is a separate document. Parsing their NUL-separated
+        // concatenation changes CommonMark reference-definition boundaries.
+        text_contains_reference(field, path)
+            || serde_json::from_str::<serde_json::Value>(field)
+                .is_ok_and(|value| json_contains(&value, path))
     })
 }
 
@@ -448,4 +471,58 @@ async fn delete_resource(
         .map_err(|_| AppError(StatusCode::SERVICE_UNAVAILABLE, "服务正在停止"))?
         .await
         .map_err(|_| AppError(StatusCode::INTERNAL_SERVER_ERROR, "图片删除失败"))?
+}
+
+#[cfg(test)]
+mod reference_tests {
+    use super::*;
+
+    #[test]
+    fn commonmark_reference_detection_preserves_escape_context() {
+        let hash = "a".repeat(64);
+        let path = format!("/media/{hash}.png");
+        let escaped = path.replace('/', "\\/").replace('.', "\\.");
+        let double_escaped = format!("/media/{hash}\\\\.png");
+        let illegal_escape = format!("/media/\\a{}.png", "a".repeat(63));
+        for (source, expected_destination, referenced) in [
+            (format!("![saved]({escaped})"), path.clone(), true),
+            (
+                format!("![saved][upload]\n\n[upload]: {escaped}"),
+                path.clone(),
+                true,
+            ),
+            (
+                format!("![other]({double_escaped})"),
+                format!("/media/{hash}\\.png"),
+                false,
+            ),
+            (format!("![other]({illegal_escape})"), illegal_escape, false),
+        ] {
+            let destinations: Vec<_> = Parser::new_ext(
+                &source,
+                Options::ENABLE_TABLES | Options::ENABLE_STRIKETHROUGH,
+            )
+            .filter_map(|event| match event {
+                Event::Start(Tag::Image { dest_url, .. }) => Some(dest_url.into_string()),
+                _ => None,
+            })
+            .collect();
+            assert_eq!(destinations, [expected_destination], "{source}");
+            assert_eq!(contains_reference(&source, &path), referenced, "{source}");
+            assert_eq!(
+                contains_reference(&format!("\0\0{source}\0"), &path),
+                referenced,
+                "SQL-separated fields: {source}"
+            );
+            assert_eq!(
+                contains_reference(&serde_json::to_string(&vec![&source]).unwrap(), &path),
+                referenced,
+                "JSON-encoded Markdown: {source}"
+            );
+        }
+        assert!(!contains_reference(
+            &format!("`![example]({escaped})`"),
+            &path
+        ));
+    }
 }

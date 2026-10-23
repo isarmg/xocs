@@ -6,7 +6,7 @@ use axum::{
     Router,
     body::Body,
     extract::{Request, State},
-    http::{HeaderMap, Method, StatusCode, header},
+    http::{Method, StatusCode, header},
     response::Response,
 };
 use serde_json::{Value, json};
@@ -27,33 +27,6 @@ struct App {
     proxies: Vec<(String, String)>,
     client: proxy::Client,
     status: Arc<RwLock<Value>>,
-}
-
-fn gzip(headers: &HeaderMap) -> bool {
-    let mut explicit = None;
-    let mut wildcard = false;
-    for item in headers
-        .get_all(header::ACCEPT_ENCODING)
-        .iter()
-        .filter_map(|v| v.to_str().ok())
-        .flat_map(|v| v.split(','))
-    {
-        let mut parts = item.trim().split(';');
-        let encoding = parts.next().unwrap_or_default().trim();
-        let quality = parts
-            .find_map(|part| {
-                part.trim()
-                    .strip_prefix("q=")
-                    .and_then(|v| v.parse::<f32>().ok())
-            })
-            .unwrap_or(1.0);
-        if encoding.eq_ignore_ascii_case("gzip") {
-            explicit = Some(quality > 0.0);
-        } else if encoding == "*" {
-            wildcard = quality > 0.0;
-        }
-    }
-    explicit.unwrap_or(wildcard)
 }
 
 fn content_type(path: &Path) -> &'static str {
@@ -171,10 +144,17 @@ async fn respond(app: App, request: Request) -> Result<Response> {
     }
     let html = source.extension().is_some_and(|v| v == "html");
     let compressed_path = PathBuf::from(format!("{}.gz", source.display()));
-    let compressed = !html
-        && source.extension().is_some_and(|v| v == "wasm")
-        && compressed_path.is_file()
-        && gzip(request.headers());
+    let wasm = source.extension().is_some_and(|v| v == "wasm");
+    let accepted = header::accepted_encodings(request.headers());
+    let compressed = wasm && compressed_path.is_file() && accepted.gzip;
+    if wasm && !compressed && !accepted.identity {
+        return Ok(Response::builder()
+            .status(StatusCode::NOT_ACCEPTABLE)
+            .header(header::CACHE_CONTROL, "no-store")
+            .header(header::CONTENT_LENGTH, "0")
+            .header(header::VARY, "Accept-Encoding")
+            .body(Body::empty())?);
+    }
     let body = inventory::read(if compressed {
         &compressed_path
     } else {
@@ -377,14 +357,6 @@ mod tests {
         }
     }
 
-    #[test]
-    fn explicit_gzip_zero_overrides_wildcard() {
-        let mut headers = HeaderMap::new();
-        headers.insert(header::ACCEPT_ENCODING, "*;q=1, gzip;q=0".parse().unwrap());
-        assert!(!gzip(&headers));
-        headers.insert(header::ACCEPT_ENCODING, "br, gzip;q=0.5".parse().unwrap());
-        assert!(gzip(&headers));
-    }
     #[tokio::test]
     async fn static_head_etag_and_traversal() -> Result<()> {
         use tower::ServiceExt;
@@ -451,6 +423,80 @@ mod tests {
             )
             .await?;
         assert_ne!(escaped.status(), StatusCode::OK);
+        Ok(())
+    }
+    #[tokio::test]
+    async fn wasm_encoding_refusal_never_falls_back_to_forbidden_identity() -> Result<()> {
+        use tower::ServiceExt;
+        let dir = tempfile::tempdir()?;
+        std::fs::write(dir.path().join("app.wasm"), b"raw")?;
+        std::fs::write(dir.path().join("app.wasm.gz"), b"compressed")?;
+        let app = App {
+            dist: dir.path().into(),
+            base: "/".into(),
+            proxies: Vec::new(),
+            client: proxy::Client::new(Duration::from_secs(300)),
+            status: Arc::new(RwLock::new(json!({}))),
+        };
+        let router = Router::new().fallback(handler).with_state(app);
+        for method in [Method::GET, Method::HEAD] {
+            for (encoding, status, compressed) in [
+                ("gzip;q=0, identity;q=0", StatusCode::NOT_ACCEPTABLE, false),
+                ("*;q=0, identity;q=1", StatusCode::OK, false),
+                ("gzip;q=0, gzip;q=1", StatusCode::OK, false),
+                ("gzip, identity;q=0", StatusCode::OK, true),
+            ] {
+                let response = router
+                    .clone()
+                    .oneshot(
+                        Request::builder()
+                            .method(method.clone())
+                            .uri("/app.wasm")
+                            .header(header::ACCEPT_ENCODING, encoding)
+                            .body(Body::empty())?,
+                    )
+                    .await?;
+                assert_eq!(response.status(), status, "{encoding}");
+                assert_eq!(response.headers()[header::VARY], "Accept-Encoding");
+                assert_eq!(
+                    response.headers().contains_key(header::CONTENT_ENCODING),
+                    compressed
+                );
+                let body = axum::body::to_bytes(response.into_body(), 1024).await?;
+                if method == Method::HEAD || status == StatusCode::NOT_ACCEPTABLE {
+                    assert!(body.is_empty());
+                } else {
+                    assert_eq!(
+                        body.as_ref(),
+                        if compressed {
+                            b"compressed".as_slice()
+                        } else {
+                            b"raw".as_slice()
+                        }
+                    );
+                }
+            }
+        }
+        std::fs::remove_file(dir.path().join("app.wasm.gz"))?;
+        let response = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/app.wasm")
+                    .header(header::ACCEPT_ENCODING, "gzip, identity;q=0")
+                    .body(Body::empty())?,
+            )
+            .await?;
+        assert_eq!(response.status(), StatusCode::NOT_ACCEPTABLE);
+        let missing = router
+            .oneshot(
+                Request::builder()
+                    .uri("/missing.wasm")
+                    .header(header::ACCEPT_ENCODING, "*;q=0")
+                    .body(Body::empty())?,
+            )
+            .await?;
+        assert_eq!(missing.status(), StatusCode::NOT_FOUND);
         Ok(())
     }
 }

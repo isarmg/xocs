@@ -613,9 +613,20 @@ def cargo_metadata(root, target, cargo_home):
     return metadata
 
 
-def closure(metadata, manifests, role, *, include_dev=False):
-    packages = {item['id']: item for item in metadata['packages']}
+def closure(metadata, manifests, role, *, include_dev=False, host_metadata=None):
+    host_metadata = metadata if host_metadata is None else host_metadata
+    if host_metadata['workspace_root'] != metadata['workspace_root']:
+        raise ValueError('host and target metadata resolve different workspace roots')
+    packages = {}
+    for graph in (metadata, host_metadata):
+        for item in graph['packages']:
+            previous = packages.get(item['id'])
+            if previous is not None and any(previous.get(field) != item.get(field)
+                                            for field in ('manifest_path', 'name', 'version', 'source')):
+                raise ValueError(f'host and target metadata package identity differs: {item["id"]}')
+            packages[item['id']] = item
     nodes = {item['id']: item for item in metadata['resolve']['nodes']}
+    host_nodes = {item['id']: item for item in host_metadata['resolve']['nodes']}
     workspace = set(metadata['workspace_members'])
     root = Path(metadata['workspace_root'])
     selected = {item['id'] for item in packages.values() if item['id'] in workspace
@@ -630,7 +641,11 @@ def closure(metadata, manifests, role, *, include_dev=False):
         if current_role in used.setdefault(identity, set()):
             continue
         used[identity].add(current_role)
-        for edge in nodes[identity]['deps']:
+        # Build scripts and procedural macros execute on the Linux host even
+        # while the consuming library targets WASM. Their target-conditional
+        # dependencies must therefore come from the host-filtered graph.
+        current_nodes = host_nodes if current_role == 'compile' else nodes
+        for edge in current_nodes[identity]['deps']:
             for kind in edge['dep_kinds']:
                 # Cargo builds development dependencies for the selected test
                 # roots, not for every library reached through those roots.
@@ -640,20 +655,26 @@ def closure(metadata, manifests, role, *, include_dev=False):
     result = {}
     for identity, roles in used.items():
         path = Path(packages[identity]['manifest_path']).parent.relative_to(root).as_posix()
+        features = {feature for role in roles
+                    for feature in (host_nodes if role == 'compile' else nodes)[identity]['features']}
         result[path] = dict(name=packages[identity]['name'], version=packages[identity]['version'],
-                            roles=sorted(roles), features=sorted(nodes[identity]['features']))
+                            roles=sorted(roles), features=sorted(features))
     return dict(sorted(result.items()))
 
 
 def resolutions(root, policy):
     cache, result = {}, []
     with tempfile.TemporaryDirectory(prefix='blog-empty-cargo-') as temporary:
+        # Every supported target can reach a host build/proc-macro dependency.
+        host_target = 'x86_64-unknown-linux-gnu'
+        cache[host_target] = cargo_metadata(root, host_target, Path(temporary))
         for profile in policy['profiles']:
             target = profile['target']
             if target not in cache:
                 cache[target] = cargo_metadata(root, target, Path(temporary))
             packages = closure(cache[target], profile['manifests'], profile['role'],
-                               include_dev=profile.get('include_dev', False))
+                               include_dev=profile.get('include_dev', False),
+                               host_metadata=cache[host_target])
             result.append(dict(profile=profile['id'], target=target, packages=packages))
     return result
 

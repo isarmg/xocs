@@ -5,6 +5,8 @@ project_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$project_root"
 
 cargo test --locked --offline -p blog-network-byte-ranges --lib
+cargo test --locked --offline -p blog-network-http-message --test accepted-encodings
+cargo test --locked --offline -p blog-collections-slot-storage --test consumer-contracts
 cargo test --locked --offline -p blog-encoding-application-base-encoding --test consumer-contracts
 cargo test --locked --offline -p blog-assets --test configuration_contracts
 cargo test --locked --offline -p blog-platform-system-entropy --lib

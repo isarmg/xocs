@@ -22,6 +22,7 @@ tokio = {  features = ["macros", "rt-multi-thread", "net", "signal", "fs", "sync
 tower-http = {  features = ["fs", "trace"], path = "../foundation/network/http-middleware",package = "blog-network-http-middleware"}
 tempfile = { path = "../foundation/filesystem/temporary-storage",package = "blog-filesystem-temporary-storage"}
 blog-application = {  features = ["tracing"], path = "../application"}
+pulldown-cmark = { default-features = false, path = "../foundation/assets/markdown-parser", package = "blog-assets-markdown-parser" }
 
 [build-dependencies]
 schemars = { path = "../foundation/format/json-schema",package = "blog-format-json-schema"}

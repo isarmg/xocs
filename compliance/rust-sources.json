@@ -4397,13 +4397,37 @@
       {
         "directory": "src/application",
         "reason": "Register exclusively owned TCP listeners through the explicit unsafe AsyncFd boundary with documented descriptor lifetime and identity invariants; keep descriptor replacement inaccessible through the public listener API."
+      },
+      {
+        "directory": "src/interface/dom",
+        "reason": "Preserve the captured optional error-hook scope across futures and view rebuilds, clear registrations through their owning hook, and invoke hook callbacks/destructors outside thread-local RefCell borrows; cover cross-boundary disposal and reentrant hooks."
+      },
+      {
+        "directory": "src/foundation/collections/slot-storage",
+        "reason": "Return None for absent get2_mut keys; preserve usable length and vacant-list metadata after element Drop or Clone panics in clear/clone_from, rebuilding metadata only on unwind and retaining allocation reuse on success."
+      },
+      {
+        "directory": "src/foundation/network/http-message",
+        "reason": "Provide one allocation-free Accept-Encoding parser for the supported gzip and identity representations, handling explicit exclusions, wildcard precedence, duplicate codings and strict integer quality values with shared consumer contract tests."
+      },
+      {
+        "directory": "src/application",
+        "reason": "Use the shared HTTP coding parser for WASM representation selection and reject an existing resource with an empty 406 when neither available encoding is acceptable, including when gzip is missing; retain representation ETag and HEAD semantics."
+      },
+      {
+        "directory": "src/server",
+        "reason": "Reuse the browser CommonMark tokenizer to recognize escaped and reference-style media links before deletion; parse independently stored SQL fields separately and avoid decoding already normalized Markdown destinations twice."
+      },
+      {
+        "directory": "tools/assets",
+        "reason": "Publish frontend receipts with pkg/dist rollback when no-clobber receipt publication fails; reject receipt/output path overlap and share WASM coding acceptability and 406 semantics with the application responder."
       }
     ],
     "schema": 1
   },
-  "local_modifications_sha256": "4f38ed13556f34c2c6fca4d1e3a68682586cbc340c227a8886542ab1660c2a2c",
+  "local_modifications_sha256": "848771733ecdd5484cdcc1d1bf59ab1fce46c43cb693468f344846d698314543",
   "lockfiles_sha256": {
-    "Cargo.lock": "bba04722f8f947de9d64ee1939bf7d8c9f73a6cf2ee215e6ef3003d027a84e07"
+    "Cargo.lock": "e313360b28edf3210fda71da03c01ee4af2594aec4445714627c382d4c114b2a"
   },
   "manifests_sha256": {
     "Cargo.toml": "27a620c02b801f79b9fa8e9b76351717f19f840bda83b54c965806611f5bc79f",
@@ -4431,7 +4455,7 @@
     "src/foundation/collections/keyed-hash/Cargo.toml": "3a1821d99827bbd38410b16839d0e9b0b0505cce80b41038a88a44ca135064c4",
     "src/foundation/collections/ordered-cache/Cargo.toml": "d4e2af88dbe5dfe6284f83f5c12419cb69d562a83843d0dadd80ee428e63a169",
     "src/foundation/collections/ordered-map/Cargo.toml": "59fed94341af8ed96570965f1535509b441f39a9db852e7c9c5ba0d474621cfe",
-    "src/foundation/collections/slot-storage/Cargo.toml": "3e68c791407f45fa2cce6dd9bf55ab81169df364e4441b866c4018be96321965",
+    "src/foundation/collections/slot-storage/Cargo.toml": "b47c044774a44d6e44681817a61a03e03efdd5cc290ae3ca040b80d8e3c08a86",
     "src/foundation/collections/sorted-map/Cargo.toml": "81fb0cd44021e00d65820e2bf5def6d92e04750ccc607818831fb4cde128d1bb",
     "src/foundation/crypto/algorithm-identifiers/Cargo.toml": "aaa4b035bfe344e584c30c8b0275a51128b30a6e4f5357a0efd9216880f11574",
     "src/foundation/crypto/conditional-move/Cargo.toml": "051566f1d5e17edb112dc5fa150a950192e328aeb329979afe798946a1b5582b",
@@ -4527,7 +4551,7 @@
     "src/foundation/network/byte-ranges/Cargo.toml": "29f14910efdf9ded6b79135fe1969eb4f5e27646baba7fd35fe09fdaea7789e2",
     "src/foundation/network/form-data/Cargo.toml": "40fbcea6c8acf3042a54d43313f174b290c7825d8736cede7ae3857d929f7985",
     "src/foundation/network/http-date/Cargo.toml": "86ff30376ea4966402bc8037788e46ff010d30dec615915458e5e67bf2f07f83",
-    "src/foundation/network/http-message/Cargo.toml": "f81c98152c92c3f3d3ed3f9352b2185066f859216e267f175ce887c3a88bd4df",
+    "src/foundation/network/http-message/Cargo.toml": "5f4db092effb73536aae9dd3ca4e48681e0142f520e656ee2f541ecc62ed5977",
     "src/foundation/network/http-middleware/Cargo.toml": "6881e308982c675bc6fefb2eddeacaab7d1a718dc318273f4d0a81a6a7cd1088",
     "src/foundation/network/http-parser/Cargo.toml": "eabfdeaddd525912f4772850fafff2a8beea8f9322e9707297adc262ac78f92f",
     "src/foundation/network/http-transport/Cargo.toml": "6891c4db0f91ee33d528826151dbcbb4e86e4916c8943f097e9c620a7130c861",
@@ -4632,7 +4656,7 @@
     "src/interface/Cargo.toml": "e5cc7390cae6da1f45695067742413f850e57fd0542d800494246811a8ce11c4",
     "src/interface/dom/Cargo.toml": "320ffaba7e5e1911eb9e3dff661a5a4fc707ef20df8c2b9dfe4b6af9abf4062f",
     "src/interface/macros/Cargo.toml": "3db013a938bdffba9a7976e1e9bf4795a91bbeb49624fdeb447b3f66063f8b61",
-    "src/server/Cargo.toml": "11441de4536b18124f0d3d122ba97f2856d73903e5d7b3a1a807a31c73e0fecb",
+    "src/server/Cargo.toml": "ba4ab9404b914846b3d2c8ac34a735a962e7cd942317419693467e6b213adedc",
     "test/browser-domain/Cargo.toml": "42552e4737cabc19b224e88e6e5fb9b9949f84d193e7b79feabd71b27e663564",
     "tools/assets/Cargo.toml": "48e630b9079056ca4db8974fd810b3ebc421663be0edfa464f026973182de9d7",
     "tools/setup/Cargo.toml": "44d28abedb1e65c5f0ddfbebfe490769d238db82730a044719008f8b58e140e5"
@@ -32155,7 +32179,7 @@
         "src/web_assets/build.rs": "02e32672401701ffd3baa110d43ac02314e0255be2de8010abffb2f13d59d9e5",
         "src/web_assets/mod.rs": "534d476f4f4069f9c6d420ce1f60bd5a1d9861139a69ab47c6ce30140ca213a5",
         "src/web_assets/tests.rs": "40bcb7005cddb80fca88a4bcff27fbe4badc03476d3137bd765db27844bfa82d",
-        "src/web_assets/wasm.rs": "c968be3b8f79ad68ea1e5d3aaa76ba98d8505416870402dadd14e19274067a8c",
+        "src/web_assets/wasm.rs": "9ec29858efe6505e9b9eb1993a515f1b9874a52c6c2ea9b7d7085944e2dcd3be",
         "tests/body_collection.rs": "1738799c46a91aac69383293e0738269deaa3c68c33a39f82579f5cf47ac2dbe",
         "tests/crypto_vectors.rs": "a4e5cfb44b6461a8d3a4eb3abd2f255458b41fcba2086c06bc13eb56eeb9505f",
         "tests/session_cleanup.rs": "490dc492cdb06ba513d2b493a1ac3d6ed810a8bf7d539e7474c58d40de80c7bb",
@@ -34027,10 +34051,11 @@
       "directory": "src/foundation/collections/slot-storage",
       "files_sha256": {
         ".cargo_vcs_info.json": "6d1adf719e44ee93067b0d3a0e24c78ec7bfb26987a7a1fc308da0b4e0feee69",
-        "Cargo.toml": "3e68c791407f45fa2cce6dd9bf55ab81169df364e4441b866c4018be96321965",
+        "Cargo.toml": "b47c044774a44d6e44681817a61a03e03efdd5cc290ae3ca040b80d8e3c08a86",
         "src/builder.rs": "87e629b1f9853d910389635b27a42391f1681cd5638d81e386215211e8b67847",
-        "src/lib.rs": "b17602b85edd5f0617e910cc94b8a1cb2f8c6e2f9c9b64712b52ec5715f0060d",
+        "src/lib.rs": "fcc3c2854956d4971293baa0b4fe071777acecc850697b46f661abfe924ff774",
         "src/serde.rs": "e58650a04644cb732119f50eefe6a3066104b5b41be7074e12525e05e2ad21b7",
+        "tests/consumer_contracts.rs": "1f034b5ebaa959dafae8d06c4d8c421969e29e17951936cecdc24131c6342faa",
         "tests/serde.rs": "bb28112509dbb6949528802d05a1b1e34d2e5ff9d3ba5f62aa801cfb3de7a78e",
         "tests/slab.rs": "98688c5a5d67eaed7378b6ffa76bdf6b4f0c8d507def550574fef6630375f087"
       },
@@ -39886,13 +39911,14 @@
       "directory": "src/foundation/network/http-message",
       "files_sha256": {
         ".cargo_vcs_info.json": "3c059d947727f372a8acde6605c6a3e07ebb38b5c868eca16d1202f4b018d78d",
-        "Cargo.toml": "f81c98152c92c3f3d3ed3f9352b2185066f859216e267f175ce887c3a88bd4df",
+        "Cargo.toml": "5f4db092effb73536aae9dd3ca4e48681e0142f520e656ee2f541ecc62ed5977",
         "src/byte_str.rs": "267b2525d4ce4c6c2f0779cb924c781bdb4b7febc4c7fe2657c0b1afaa143d7e",
         "src/convert.rs": "648ef74bc21184c960ee21e43033584390d1900d107cdae8c1d9a4a35f9a3fc7",
         "src/error.rs": "0c440312522af28ce9d09cc74693c9cf43cc94ee48bb342f161dc002c2e39dae",
         "src/extensions.rs": "091c287545a3bcb2e874310ea0023a1d962795aae4d4970c77703f1fdc8f3c97",
+        "src/header/encoding.rs": "476fa002ced4f8caa8ad31cbf7a1773766b1c529e820d5057bc54508475bb197",
         "src/header/map.rs": "fff2c8490382c7e739e0b2d0ac344c2acc33e8d47f80643c85742b57950da648",
-        "src/header/mod.rs": "26109659d73db5fd66bda033daf2b9eebc1eac7af22c48323f808af09da599b5",
+        "src/header/mod.rs": "ca42196c4439808150696574acdbda658c985edc981d53bebf3cab5e0e6f9d14",
         "src/header/name.rs": "3aa66c4f7d5579b9dcfa2745325cea381e13cf27ee7e41ac773cfad8df66c685",
         "src/header/value.rs": "83466b516356257b48c55a7a34061d40f589f9e560ed9081fcbff0e188a19fd6",
         "src/lib.rs": "2c085126666e668fce40f30e5bd6f890bf3f94c0911ac59d531b4f1fbfc780d8",
@@ -39908,6 +39934,7 @@
         "src/uri/scheme.rs": "092ea3e74b5847be0f9cfb738e63f733643330421a1d657fbd7a35de5e0caebd",
         "src/uri/tests.rs": "61f88b73490c2442ec12cb0829aa1ddd28f1bce874b4fc6dd7a544c80280aeb1",
         "src/version.rs": "623ef60a450203b051f3457e2f095508b66aaaa799b1447fb1b34d92cb2e7d62",
+        "tests/accepted-encodings.rs": "6256c6ae3d46f3b694db0f8c8f802ee054e3306c6956651b5abf62aca9f9914e",
         "tests/header_map.rs": "5db45b086b15b51bb601c7d2aeb6d47a6bb53644a631fa4e9c55896972f1233e",
         "tests/header_map_fuzz.rs": "a1d3b3c6998f69113fe9288a71e1179077aca91e56bf3b215891695942936676",
         "tests/status_code.rs": "165cfa22544de42c9ce708be0921a445cd2b75f042192b7d677501fff79cb641"
@@ -45875,7 +45902,7 @@
         "src/kernel/events/mod.rs": "2b3d58951425991a7c2b1dba98f51f1a5294c159124aeceb7e7a628e02a04e94",
         "src/kernel/iterators/adaptors/coalesce.rs": "d7fd5ac00c7b6787ac75c772b84f6e23582268b1b907338a5a9a01aa94536e7f",
         "src/kernel/iterators/adaptors/map.rs": "a46333da8acd00feeffae619dc0666995f7421043111abaa95f940f0f6939d78",
-        "src/kernel/iterators/adaptors/mod.rs": "fd41187c7bc54b48433998523ffab57eeee6e447424b373de9639d30378563d7",
+        "src/kernel/iterators/adaptors/mod.rs": "059179f76909097206ba2b2a384f162bb24ed7775ae42aad0f2b8786215d98e0",
         "src/kernel/iterators/adaptors/multi_product.rs": "7d5a61d9be85b2d9dcdd92f02fbe4658257b9baf6fd08d706ce1d6719fce268a",
         "src/kernel/iterators/combinations.rs": "9a58683fd799e95dc7352bb165c99c31cf6431052042197a7db4cca97ee140b3",
         "src/kernel/iterators/combinations_with_replacement.rs": "fdce3d56fb3bfbb6ffd88ec18ac2a44d42c08f4fb60a52e328a14fff894d840b",
@@ -45987,7 +46014,7 @@
         "src/kernel/tuples/mod.rs": "ab537f54cb052e4ee1468f534b43d6844683ed5dfcf81fd2ddfb7c834ddc9e2f",
         "src/kernel/vector_drain/copypasted_impl.rs": "2ede31ebab68f867d1fb0aababdaeb4feb18ea30ccf7f28e5321728ff6fb1f79",
         "src/kernel/vector_drain/mod.rs": "b855ae82bf14ae506bd6f7f54fe3d5508571f468da5824c5755c00a39737a057",
-        "src/kernel/view_errors/mod.rs": "519210145aea25175f6586d12d28ab0ce2feed91aac5fa259275e4558c919b1d",
+        "src/kernel/view_errors/mod.rs": "45a278da1b83095667c423cb4265f058625afc968d69e5725ba68a8e360a3d5e",
         "src/kernel/view_tree/dom.rs": "581b3fc173e231c53b7d34ac47598aae0b821d05c339438b3479f5e76ff65c7b",
         "src/kernel/view_tree/erased.rs": "032a0d011fbf41a26310f0f87266f50d8c2a786689c7894c879cf722e4351864",
         "src/kernel/view_tree/html/attribute/any_attribute.rs": "cbccfda876ebd40c0066fc01650eb93bb4724809a3be4e94d7a5928ea2fc612c",
@@ -46016,7 +46043,7 @@
         "src/kernel/view_tree/reactive_graph/bind.rs": "0daff09f40dafd0125402e9b59359aa1c71bba7d083eb72931dee61fea13ba69",
         "src/kernel/view_tree/reactive_graph/class.rs": "262d7118e51b1533206ef579162261b4b4925ba287738f94c60b26a4108d1ecf",
         "src/kernel/view_tree/reactive_graph/inner_html.rs": "513870d8ec28ebdea542328ac9a9e98663ae7c296f5d3d3e93d286a450310ab1",
-        "src/kernel/view_tree/reactive_graph/mod.rs": "204a3b688f1149dbac3caa23ce06469fd1674f3e3ab1b30108e03cb78789b7ce",
+        "src/kernel/view_tree/reactive_graph/mod.rs": "2b602f8ccfa7c93bb672afdd1cc15b00355d12f61769a60464ba153b08d0b074",
         "src/kernel/view_tree/reactive_graph/node_ref.rs": "d1c53620c1d687930e5a3b41c0fd4cfae56b4302235ea481d09343bda79d6bd8",
         "src/kernel/view_tree/reactive_graph/owned.rs": "77dcf3c9a92e897fc413c3f83b7392f043ccdc1a0cc4a17eaa77a6300af586ca",
         "src/kernel/view_tree/reactive_graph/property.rs": "70a78caabf0574b829001752312df17a19050a5dd1cc3fe673f261a9bc508d9a",
@@ -46027,7 +46054,7 @@
         "src/kernel/view_tree/view/add_attr.rs": "31897cd02fa5fe2d437072ddb12b178a8f2496ae2287db5481debe7066bda309",
         "src/kernel/view_tree/view/any_view.rs": "9a95535a0c7959a3fa70d427dcf92c6d4ac6aa582ec3420c296b4ff1ca79cfc5",
         "src/kernel/view_tree/view/either.rs": "bcb45187542ef7fdf48e8b47bc40583d4446d1b32c4508cfe439755c18387522",
-        "src/kernel/view_tree/view/error_boundary.rs": "b4cf3d5e52a5fca2f0f7b79fc4c3b68f660ba0daaadc37b688dc6bc0210a7785",
+        "src/kernel/view_tree/view/error_boundary.rs": "cd2888bc75ced74c91aa5358067eda38d45fe968bc93ada10d3e1754f3f80058",
         "src/kernel/view_tree/view/fragment.rs": "5dba354ed056f562e8cfaaec7926d524099d9be135794ff2be4c70e74ef32db2",
         "src/kernel/view_tree/view/iterators.rs": "1ba3b227caa5a11e8e46dbf511d1878ef20c4b33a17a7209cc51aed6b3e98da5",
         "src/kernel/view_tree/view/keyed.rs": "2be2c1e7e0389ec3d59b33e488f101008325bc8a187ec5e34b536f023a3bc0ef",
@@ -46115,6 +46142,7 @@
     "src/server": {
       "dependencies": [
         "src/application",
+        "src/foundation/assets/markdown-parser",
         "src/foundation/cli/arguments",
         "src/foundation/crypto/secure-hash",
         "src/foundation/diagnostics/error-context",
@@ -46136,7 +46164,7 @@
       ],
       "directory": "src/server",
       "files_sha256": {
-        "Cargo.toml": "11441de4536b18124f0d3d122ba97f2856d73903e5d7b3a1a807a31c73e0fecb",
+        "Cargo.toml": "ba4ab9404b914846b3d2c8ac34a735a962e7cd942317419693467e6b213adedc",
         "build.rs": "44ee568120c22c5ff9960d8dea896bdd84e6d390133b9fc77e563ec0fc917967",
         "examples/smoke-fixture.rs": "d65c67701c2530c787ab3a2cf984b49d9eaec5093305b6aef391c096e75bec80",
         "schema/initialize-site-author.sql": "fa82753ff3758d95a71df0fd0c0318cfe134b4738137cd7d3f30c93cb2f500af",
@@ -46162,7 +46190,7 @@
         "src/lifecycle.rs": "6b10dcfc09d1177db7333579fb9da9486cd66c4844eb00e7f64c94db380f746f",
         "src/main.rs": "cd6a1d68f22c2f4d9dd41bb158a7b729bbfb9a4ca807a2b34abcfe129452be14",
         "src/maintenance.rs": "1040ac26cc51cff0955c39414bd0dbfceace0b58c26afcd2854c2f9c5ea48907",
-        "src/media.rs": "69f8d27571484023326cf6231862d5215473553583afe9f8edfad5c304c18a27",
+        "src/media.rs": "5fdceed4807486e33980b0b623e2b1a7c52faac5a743b0e74fb45337e4ca9850",
         "src/runtime.rs": "fd4ef1aeff38bc279a751809285bdc4b3d03ac266329cd7d63fcef6f7829e326",
         "src/schema.rs": "b388d1877bd6da6160a59ee5bc5579b75182032624be60c7e48c773a0eb7a28d",
         "src/schema_definition.rs": "683c929cd5e96e87f53ba40d4b540b7a88e9c751e56fcf112bd43a8fc1a7f077",
@@ -46170,7 +46198,7 @@
         "src/tests.rs": "46446fac401a229700036f6f876f97f5d0115349afa49d6ac85a90ac97fb7c23",
         "src/tests/family.rs": "c87838f01578dfe5dec106d9d560172fe17ac9785d914bcc412da22ac990bd05",
         "src/tests/management.rs": "2c35a6c531c05c634cfe6d704c0f1ca0eb76922e2f2c42b0646e7ba19edefff5",
-        "src/tests/media_management.rs": "33acb5c09e21d3b6c4e6dfaa2acfe598a15fe30a99b21b4ab7b7c1af82c3baeb",
+        "src/tests/media_management.rs": "c99c8fff18c0ddfdbb08fb2004a8cfda2d60c8ccef6fe97b258d652479e41a7d",
         "src/tests/media_names.rs": "1fc754ee0f0323929914f9558a30adfc7890752a7844e81e6709df5956e83ca6",
         "src/tests/public_browse.rs": "41343378bcc145776f59d11362bf7ada46cdc01724a741b8d25fdde3fc80abe6",
         "src/tests/schema_v3.rs": "241ced0e1e423d4a6b0d48d83085b313e91a87247e4a700d1d73016e36d86f96",
@@ -46242,16 +46270,16 @@
         "Cargo.toml": "48e630b9079056ca4db8974fd810b3ebc421663be0edfa464f026973182de9d7",
         "LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
         "ORIGIN.json": "93ce2b98016b4bfed5ba1ace17bc948b38f9fa9cfb124a00ea4a19cd0667fb49",
-        "README.md": "1237f3858d0ced871361d430e4ee22b9296f236f12cadb95ddf8763e470df28f",
+        "README.md": "55a5e492acee7380ded18dde89efcf060a5f9a136a4c217fd4e080870d9358b5",
         "build.rs": "98e99686d9f1d9000e4693c8ce048b5bc647039fb0e0aa8c79e38bbf763616b8",
         "src/assets.rs": "037007f3f1afb5501a7f75780fd671da2c83f04de0453f96c06deb5e7369e193",
         "src/browser_module.rs": "90b75d4debf5b649d45a48a169661c172fef9a0fdd58787b9db017ffff89a0ef",
-        "src/dev.rs": "cb3df61e34e2aa0d35a224ac9fb67b42434fad285cab474743e47ef42a0238d6",
+        "src/dev.rs": "b5299f2457a1d4c813bba8a49973695155d7027487043b8c44503e04176fe6f0",
         "src/dev/proxy.rs": "18ed20fb208e46a1eb4fed119f6de22aca70c1a125ffd3870fc806ec3f959dcb",
         "src/graph.rs": "e5e85572fccbd6ab8d9d0768e79a7262e7c9476589fee6d7d99aaf1b3d21f8c9",
         "src/inventory.rs": "bfc523c447c0f0c611624f1bd360625ec9ea116fa08655ad3e15011c5a35e637",
         "src/javascript.rs": "44cc623c3910b5251a580ff781d18f6fc05c714e9fa0a4d93eaf8b5a3b4eb730",
-        "src/lib.rs": "f5cf95cf6ebd0e631a3c3ced79cbff1dadc7debb06949eb098f670379c3b897b",
+        "src/lib.rs": "a3e13843a4a4dc0a66806a4ed547e96204b2f5f6aee4f3c0e871e97f3e87b63f",
         "src/main.rs": "82d9c552760db5a2e671b954b2d7377e03d68b24f8c224d5ee88955dec19f8ce",
         "src/platform_contract.rs": "15520a479cc436a16cd635841b53e91515e50b5fd1039209c6dedf2cd5a797af",
         "src/server_build.rs": "f28b356720b3c8339a8ef6db62714118dc77e0b7cb2897be222762fb1141bcb0",
@@ -46303,6 +46331,16 @@
           "name": "blog-application",
           "roles": [
             "compile",
+            "runtime"
+          ],
+          "version": "0.0.0"
+        },
+        "src/foundation/assets/markdown-parser": {
+          "features": [
+            "html"
+          ],
+          "name": "blog-assets-markdown-parser",
+          "roles": [
             "runtime"
           ],
           "version": "0.0.0"

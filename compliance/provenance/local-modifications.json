@@ -3337,6 +3337,30 @@
     {
       "directory": "src/application",
       "reason": "Register exclusively owned TCP listeners through the explicit unsafe AsyncFd boundary with documented descriptor lifetime and identity invariants; keep descriptor replacement inaccessible through the public listener API."
+    },
+    {
+      "directory": "src/interface/dom",
+      "reason": "Preserve the captured optional error-hook scope across futures and view rebuilds, clear registrations through their owning hook, and invoke hook callbacks/destructors outside thread-local RefCell borrows; cover cross-boundary disposal and reentrant hooks."
+    },
+    {
+      "directory": "src/foundation/collections/slot-storage",
+      "reason": "Return None for absent get2_mut keys; preserve usable length and vacant-list metadata after element Drop or Clone panics in clear/clone_from, rebuilding metadata only on unwind and retaining allocation reuse on success."
+    },
+    {
+      "directory": "src/foundation/network/http-message",
+      "reason": "Provide one allocation-free Accept-Encoding parser for the supported gzip and identity representations, handling explicit exclusions, wildcard precedence, duplicate codings and strict integer quality values with shared consumer contract tests."
+    },
+    {
+      "directory": "src/application",
+      "reason": "Use the shared HTTP coding parser for WASM representation selection and reject an existing resource with an empty 406 when neither available encoding is acceptable, including when gzip is missing; retain representation ETag and HEAD semantics."
+    },
+    {
+      "directory": "src/server",
+      "reason": "Reuse the browser CommonMark tokenizer to recognize escaped and reference-style media links before deletion; parse independently stored SQL fields separately and avoid decoding already normalized Markdown destinations twice."
+    },
+    {
+      "directory": "tools/assets",
+      "reason": "Publish frontend receipts with pkg/dist rollback when no-clobber receipt publication fails; reject receipt/output path overlap and share WASM coding acceptability and 406 semantics with the application responder."
     }
   ]
 }

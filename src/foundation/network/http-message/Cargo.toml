@@ -31,6 +31,10 @@ std = []
 name = "blog_network_http_message"
 path = "src/lib.rs"
 
+[[test]]
+name = "accepted-encodings"
+path = "tests/accepted-encodings.rs"
+
 [dependencies.bytes]
 path = "../../encoding/byte-buffer"
 package = "blog-encoding-byte-buffer"

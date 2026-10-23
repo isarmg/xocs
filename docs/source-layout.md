@@ -35,6 +35,8 @@ python3 tools/check-independence.py
 
 工具生成的入口闭包按 normal、build、proc-macro 和测试用途标注。声明图包含条件和 optional 分支，是受管输入的保守集合。`include_dev: true` 纳入指定测试根的开发依赖，再跟踪其 normal/build 依赖；不递归纳入依赖库自身的测试。具体可执行验证见[开发说明](development.md)和[浏览器验证](browser-testing.md)。
 
+运行依赖使用对应目标的 metadata 图；build 依赖、过程宏及其后续依赖统一切换到 Linux AMD64 宿主图，浏览器 WASM 构建也遵守这一规则。同一包可同时具有运行和编译职责，特性取相关 workspace 图的并集；这仍是保守闭包，不代表最终链接的精确特性集合。
+
 ## 接纳文件变动
 
 修改受管源码后，审查实际差异，再更新收据并校验：

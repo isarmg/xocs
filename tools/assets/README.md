@@ -31,6 +31,8 @@ JS 编译由 `blog-assets-compiler` 提供，CSS 编译由 `blog-assets-style-co
 
 绑定默认生成到 `web/pkg`。资源包含 WASM、JS、CSS、字体、许可文本及预压缩文件。`web/pkg/blog-assets.json` 与 `web/dist/assets/blog-assets.json` 记录实际构建输入、依赖图和输出摘要。
 
+`BLOG_FRONTEND_METADATA_FILE` 必须指定一个尚不存在的绝对文件路径，并位于 `web/pkg`、资源输出目录之外；父目录必须已存在且不经过符号链接。构建器先完整写入并同步临时收据，再发布输出与新收据。收据名称冲突或输出发布失败时保留原有输出与已有收据。
+
 ## 构建模式与校验
 
 `server --mode development` 使用未绑定提交的开发身份；`candidate` 绑定真实 HEAD 并允许工作树修改；`release` 要求干净工作树。候选和正式构建均使用 release 优化。正式打包还要求与版本、提交匹配的 annotated tag，见[开发说明](../../docs/development.md)。

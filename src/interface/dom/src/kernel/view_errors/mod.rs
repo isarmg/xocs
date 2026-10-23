@@ -58,6 +58,7 @@ where
 /// longer valid. This is useful for something like a user interface, in which an error can be
 /// "thrown" on some invalid user input, and later "cleared" if the user corrects the input.
 /// Keeping a unique identifier for each error allows the UI to be updated accordingly.
+/// Callbacks may enter nested error-hook scopes without borrowing the thread-local slot.
 pub trait ErrorHook: Send + Sync {
     /// Handles the given error, returning a unique identifier.
     fn throw(&self, error: Error) -> ErrorId;
@@ -92,7 +93,9 @@ pub struct ResetErrorHookOnDrop(Option<Arc<dyn ErrorHook>>);
 
 impl Drop for ResetErrorHookOnDrop {
     fn drop(&mut self) {
-        ERROR_HOOK.with_borrow_mut(|this| *this = self.0.take())
+        let removed = ERROR_HOOK.with_borrow_mut(|this| std::mem::replace(this, self.0.take()));
+        // A hook's destructor may itself read or change the current hook.
+        drop(removed);
     }
 }
 
@@ -103,21 +106,25 @@ pub fn get_error_hook() -> Option<Arc<dyn ErrorHook>> {
 
 /// Sets the current thread-local error hook, which will be invoked when [`throw`] is called.
 pub fn set_error_hook(hook: Arc<dyn ErrorHook>) -> ResetErrorHookOnDrop {
-    ResetErrorHookOnDrop(ERROR_HOOK.with_borrow_mut(|this| Option::replace(this, hook)))
+    set_optional_error_hook(Some(hook))
+}
+
+pub(crate) fn set_optional_error_hook(hook: Option<Arc<dyn ErrorHook>>) -> ResetErrorHookOnDrop {
+    ResetErrorHookOnDrop(ERROR_HOOK.with_borrow_mut(|this| std::mem::replace(this, hook)))
 }
 
 /// Invokes the error hook set by [`set_error_hook`] with the given error.
 pub fn throw(error: impl Into<Error>) -> ErrorId {
-    ERROR_HOOK
-        .with_borrow(|hook| hook.as_ref().map(|hook| hook.throw(error.into())))
+    get_error_hook()
+        .map(|hook| hook.throw(error.into()))
         .unwrap_or_default()
 }
 
 /// Clears the given error from the current error hook.
 pub fn clear(id: &ErrorId) {
-    ERROR_HOOK
-        .with_borrow(|hook| hook.as_ref().map(|hook| hook.clear(id)))
-        .unwrap_or_default()
+    if let Some(hook) = get_error_hook() {
+        hook.clear(id);
+    }
 }
 
 pin_project_lite::pin_project! {
@@ -132,7 +139,7 @@ pin_project_lite::pin_project! {
 
 impl<Fut> ErrorHookFuture<Fut> {
     /// Reads the current hook and wraps the given [`Future`], returning a new `Future` that will
-    /// set the error hook whenever it is polled.
+    /// restore that hook, including its absence, whenever it is polled.
     pub fn new(inner: Fut) -> Self {
         Self {
             hook: ERROR_HOOK.with_borrow(Clone::clone),
@@ -149,10 +156,84 @@ where
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.project();
-        let _hook = this
-            .hook
-            .as_ref()
-            .map(|hook| set_error_hook(Arc::clone(hook)));
+        let _hook = set_optional_error_hook(this.hook.clone());
         this.inner.poll(cx)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    struct NoopHook;
+
+    impl ErrorHook for NoopHook {
+        fn throw(&self, _: Error) -> ErrorId {
+            ErrorId::from(0)
+        }
+
+        fn clear(&self, _: &ErrorId) {}
+    }
+
+    struct ReentrantHook;
+
+    impl ErrorHook for ReentrantHook {
+        fn throw(&self, _: Error) -> ErrorId {
+            let _nested = set_error_hook(Arc::new(NoopHook));
+            ErrorId::from(1)
+        }
+
+        fn clear(&self, _: &ErrorId) {
+            let _nested = set_error_hook(Arc::new(NoopHook));
+        }
+    }
+
+    #[test]
+    fn error_callbacks_can_enter_a_nested_hook_scope() {
+        let hook: Arc<dyn ErrorHook> = Arc::new(ReentrantHook);
+        let _scope = set_error_hook(hook.clone());
+        let id = throw(std::io::Error::other("nested hook"));
+        assert_eq!(id, ErrorId::from(1));
+        clear(&id);
+        assert!(Arc::ptr_eq(&get_error_hook().unwrap(), &hook));
+    }
+
+    struct DropHook(Arc<AtomicBool>);
+
+    impl ErrorHook for DropHook {
+        fn throw(&self, _: Error) -> ErrorId {
+            ErrorId::from(0)
+        }
+
+        fn clear(&self, _: &ErrorId) {}
+    }
+
+    impl Drop for DropHook {
+        fn drop(&mut self) {
+            assert!(get_error_hook().is_none());
+            self.0.store(true, Ordering::Relaxed);
+        }
+    }
+
+    #[test]
+    fn restoring_a_scope_drops_its_hook_outside_the_thread_local_borrow() {
+        let dropped = Arc::new(AtomicBool::new(false));
+        let scope = set_error_hook(Arc::new(DropHook(dropped.clone())));
+        drop(scope);
+        assert!(dropped.load(Ordering::Relaxed));
+        assert!(get_error_hook().is_none());
+    }
+
+    #[test]
+    fn a_future_preserves_an_absent_captured_hook_when_polled_in_another_scope() {
+        let future = ErrorHookFuture::new(async {
+            assert!(get_error_hook().is_none());
+            42
+        });
+        let outer: Arc<dyn ErrorHook> = Arc::new(NoopHook);
+        let _scope = set_error_hook(outer.clone());
+        assert_eq!(futures::executor::block_on(future), 42);
+        assert!(Arc::ptr_eq(&get_error_hook().unwrap(), &outer));
     }
 }
