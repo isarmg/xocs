@@ -31,6 +31,20 @@ fn allowed_destination(value: &str, image: bool) -> bool {
     })
 }
 
+fn has_authority_scheme(value: &str) -> bool {
+    // LinkFinder's explicit URL scanner recognizes `scheme://authority`.
+    // A colon in a bare host's port, path or query is not a scheme delimiter.
+    value.split_once("://").is_some_and(|(scheme, _)| {
+        scheme
+            .as_bytes()
+            .first()
+            .is_some_and(u8::is_ascii_alphabetic)
+            && scheme
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b"+.-".contains(&b))
+    })
+}
+
 pub fn html(content: &str) -> String {
     let parser = Parser::new_ext(
         content,
@@ -108,7 +122,7 @@ pub fn html(content: &str) -> String {
                 for link in finder.links(&text) {
                     let destination = match link.kind() {
                         LinkKind::Email => format!("mailto:{}", link.as_str()),
-                        LinkKind::Url if !link.as_str().contains(":") => {
+                        LinkKind::Url if !has_authority_scheme(link.as_str()) => {
                             format!("http://{}", link.as_str())
                         }
                         _ => link.as_str().to_owned(),
@@ -226,5 +240,23 @@ mod tests {
             );
         }
         assert_eq!(rendered.matches("<a ").count(), 4);
+    }
+
+    #[test]
+    fn bare_links_with_ports_and_path_colons_receive_an_http_scheme() {
+        let rendered = html(
+            "Visit example.org:8080/docs, www.example.com/docs/part:one, example.org/search?url=https://example.net or https://example.net:8443/a:b.",
+        );
+        for destination in [
+            "http://example.org:8080/docs",
+            "http://www.example.com/docs/part:one",
+            "http://example.org/search?url=https://example.net",
+            "https://example.net:8443/a:b",
+        ] {
+            assert!(
+                rendered.contains(&format!("href=\"{destination}\"")),
+                "{rendered}"
+            );
+        }
     }
 }

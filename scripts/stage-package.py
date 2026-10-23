@@ -156,7 +156,7 @@ def build(binary, metadata, output, *, kind='candidate'):
                      'exec python3 -I -B "$root/libexec/' + program + '" "$@"\n')
             write(stage / name, value.encode(), 0o755)
         write(stage / 'share/config/config.json.example', package.read_regular(SOURCE / 'deploy/linux-x86_64/config.json.example'))
-        write(stage / 'share/README.md', package.read_regular(SOURCE / 'deploy/linux-x86_64/README.md'))
+        release.stage_documentation(stage / 'share', identity['source_revision'], source=SOURCE)
         for directory in ('compliance',):
             for path in sorted((SOURCE / directory).rglob('*')):
                 if path.is_file():
@@ -169,6 +169,10 @@ def build(binary, metadata, output, *, kind='candidate'):
         for path in sorted((SOURCE / 'web/licenses').glob('*')):
             if path.is_file():
                 write(stage / 'share/licenses/web/licenses' / path.name, package.read_regular(path))
+        # Setup is not the final source consumer: installers, manuals and legal
+        # material above also belong to the exact source tree in this identity.
+        if before != current_source_stamp():
+            raise ValueError('source changed while staging Blog package material')
         package.write_manifest(stage, native, kind, identity['source_tree_sha256'], identity['source_dirty'])
         archive = output / f'blog-{version}-linux-x86_64.tar.gz'
         epoch = int(command(['git', 'show', '-s', '--format=%ct', identity['source_revision']]).strip())

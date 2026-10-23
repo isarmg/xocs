@@ -1,0 +1,62 @@
+blog-browser-bridge/1
+struct Program<'a> { exports:Vec<Export<'a>>,enums:Vec<Enum<'a>>,imports:Vec<Import<'a>>,structs:Vec<Struct<'a>>,typescript_custom_sections:Vec<LitOrExpr<'a>>,local_modules:Vec<LocalModule<'a>>,inline_js:Vec<&'astr>,unique_crate_identifier:&'astr,package_json:Option<&'astr>,linked_modules:Vec<LinkedModule<'a>>, }
+struct Import<'a> { module:Option<ImportModule<'a>>,js_namespace:Option<Vec<String>>,reexport:Option<String>,generate_typescript:bool,kind:ImportKind<'a>, }
+struct LinkedModule<'a> { module:ImportModule<'a>,link_function_name:&'astr, }
+enum ImportModule<'a> { Named(&'astr),RawNamed(&'astr),Inline(u32), }
+enum ImportKind<'a> { Function(ImportFunction<'a>),Static(ImportStatic<'a>),String(ImportString<'a>),Type(ImportType<'a>),Enum(StringEnum<'a>),DynamicUnion(DynamicUnion<'a>), }
+struct ImportFunction<'a> { shim:&'astr,catch:bool,variadic:bool,assert_no_shim:bool,suspending:bool,method:Option<MethodData<'a>>,structural:bool,function:Function<'a>,generic_per_mono:bool, }
+struct MethodData<'a> { class:&'astr,kind:MethodKind<'a>, }
+enum MethodKind<'a> { Constructor,Operation(Operation<'a>), }
+struct Operation<'a> { is_static:bool,kind:OperationKind<'a>, }
+enum OperationKind<'a> { Regular,RegularThis,Getter(&'astr),Setter(&'astr),IndexingGetter,IndexingSetter,IndexingDeleter, }
+struct ImportStatic<'a> { name:&'astr,shim:&'astr, }
+struct ImportString<'a> { shim:&'astr,string:&'astr, }
+struct ImportType<'a> { name:&'astr,instanceof_shim:&'astr,vendor_prefixes:Vec<&'astr>, }
+struct StringEnum<'a> { name:&'astr,variant_values:Vec<&'astr>,comments:Vec<&'astr>,generate_typescript:bool,private:bool,js_namespace:Option<Vec<&'astr>>, }
+enum StartKind { None,Public,Private, }
+struct DynamicUnion<'a> { name:&'astr,variant_strings:Vec<&'astr>,variant_type_cnt:u32,comments:Vec<&'astr>,generate_typescript:bool,private:bool,fallback:bool, }
+struct Export<'a> { class:Option<&'astr>,comments:Vec<&'astr>,consumed:bool,function:Function<'a>,js_namespace:Option<Vec<&'astr>>,method_kind:MethodKind<'a>,start:StartKind, }
+struct Enum<'a> { name:&'astr,signed:bool,variants:Vec<EnumVariant<'a>>,comments:Vec<&'astr>,generate_typescript:bool,js_namespace:Option<Vec<&'astr>>,private:bool, }
+struct EnumVariant<'a> { name:&'astr,value:u32,comments:Vec<&'astr>, }
+struct Function<'a> { args:Vec<FunctionArgumentData<'a>>,asyncness:bool,jspi:bool,name:&'astr,generate_typescript:bool,generate_jsdoc:bool,variadic:bool,ret_ty_override:Option<&'astr>,ret_desc:Option<&'astr>, }
+struct FunctionArgumentData<'a> { name:String,ty_override:Option<&'astr>,optional:bool,desc:Option<&'astr>, }
+struct Struct<'a> { name:&'astr,fields:Vec<StructField<'a>>,comments:Vec<&'astr>,is_inspectable:bool,generate_typescript:bool,js_namespace:Option<Vec<&'astr>>,private:bool,extends:Option<&'astr>,extends_js_class:Option<&'astr>,extends_js_namespace:Option<Vec<&'astr>>, }
+struct StructField<'a> { name:&'astr,readonly:bool,comments:Vec<&'astr>,generate_typescript:bool,generate_jsdoc:bool, }
+struct LocalModule<'a> { identifier:&'astr,contents:&'astr,linked_module:bool, }
+I8=0
+U8=1
+I16=2
+U16=3
+I32=4
+U32=5
+I64=6
+U64=7
+I64_AS_F64=8
+U64_AS_F64=9
+I128=10
+U128=11
+F32=12
+F64=13
+BOOLEAN=14
+FUNCTION=15
+CLOSURE=16
+CACHED_STRING=17
+STRING=18
+REF=19
+REFMUT=20
+LONGREF=21
+SLICE=22
+VECTOR=23
+EXTERNREF=24
+NAMED_EXTERNREF=25
+ENUM=26
+STRING_ENUM=27
+DYNAMIC_UNION=28
+RUST_STRUCT=29
+CHAR=30
+OPTIONAL=31
+RESULT=32
+UNIT=33
+CLAMPED=34
+NONNULL=35
+RAW_POINTER=36

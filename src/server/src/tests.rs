@@ -1015,6 +1015,7 @@ mod public_browse;
 mod management;
 
 mod media_management;
+mod slow_body;
 
 #[tokio::test]
 async fn article_password_checks_ignore_forwarding_headers_and_failure_history() {

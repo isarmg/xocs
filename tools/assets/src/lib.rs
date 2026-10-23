@@ -29,57 +29,14 @@ pub fn compiled_inputs() -> Vec<(&'static str, String)> {
             "Cargo.lock",
             include_bytes!("../../../Cargo.lock").as_slice(),
         ),
-        (
-            "tools/assets/Cargo.toml",
-            include_bytes!("../Cargo.toml").as_slice(),
-        ),
-        (
-            "tools/assets/build.rs",
-            include_bytes!("../build.rs").as_slice(),
-        ),
-        (
-            "tools/assets/src/platform_contract.rs",
-            include_bytes!("platform_contract.rs").as_slice(),
-        ),
-        (
-            "tools/assets/src/lib.rs",
-            include_bytes!("lib.rs").as_slice(),
-        ),
-        (
-            "tools/assets/src/browser_module.rs",
-            include_bytes!("browser_module.rs").as_slice(),
-        ),
-        (
-            "tools/assets/src/main.rs",
-            include_bytes!("main.rs").as_slice(),
-        ),
-        (
-            "tools/assets/src/assets.rs",
-            include_bytes!("assets.rs").as_slice(),
-        ),
-        (
-            "tools/assets/src/inventory.rs",
-            include_bytes!("inventory.rs").as_slice(),
-        ),
-        (
-            "tools/assets/src/javascript.rs",
-            include_bytes!("javascript.rs").as_slice(),
-        ),
-        (
-            "tools/assets/src/dev.rs",
-            include_bytes!("dev.rs").as_slice(),
-        ),
-        (
-            "tools/assets/src/server_build.rs",
-            include_bytes!("server_build.rs").as_slice(),
-        ),
-        (
-            "tools/assets/src/graph.rs",
-            include_bytes!("graph.rs").as_slice(),
-        ),
     ]
     .into_iter()
     .map(|(name, bytes)| (name, inventory::sha(bytes)))
+    .chain(
+        include!(concat!(env!("OUT_DIR"), "/builder-inputs.rs"))
+            .into_iter()
+            .map(|(name, digest)| (name, digest.to_owned())),
+    )
     .chain([(
         "src/foundation",
         include!(concat!(env!("OUT_DIR"), "/foundation-inputs.rs")).to_owned(),
@@ -391,6 +348,26 @@ pub fn build(options: &Options) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn compiled_builder_binds_every_source_file() -> Result<()> {
+        let package = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let repository = package.parent().and_then(Path::parent).unwrap();
+        let compiled = compiled_inputs()
+            .into_iter()
+            .map(|(name, digest)| (name.to_owned(), digest))
+            .collect::<inventory::Files>();
+        for path in inventory::walk(&package.join("src"))? {
+            let name = inventory::relative(path.strip_prefix(repository)?)?;
+            assert_eq!(
+                compiled.get(&name),
+                Some(&inventory::sha(&inventory::read(&path)?)),
+                "Builder implementation is missing from compiled provenance: {name}",
+            );
+        }
+        Ok(())
+    }
+
     #[test]
     fn failed_publish_preserves_previous_pair() -> Result<()> {
         let dir = tempfile::tempdir()?;

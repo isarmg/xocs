@@ -195,9 +195,9 @@ impl ConnectionWorker {
                                 // we're already in a transaction (we need to
                                 // issue a `SAVEPOINT` instead)
                                 Some(_) if depth > 0 => {
-                                    if tx.blocking_send(Err(Error::InvalidSavePointStatement)).is_err() {
-                                        break;
-                                    }
+                                    // Rejection does not change SQLite state. A cancelled
+                                    // receiver must not shut down its parent connection.
+                                    let _ = tx.blocking_send(Err(Error::InvalidSavePointStatement));
                                     continue;
                                 },
                                 Some(statement) => statement,

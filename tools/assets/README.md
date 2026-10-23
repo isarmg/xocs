@@ -35,7 +35,7 @@ JS 编译由 `blog-assets-compiler` 提供，CSS 编译由 `blog-assets-style-co
 
 `server --mode development` 使用未绑定提交的开发身份；`candidate` 绑定真实 HEAD 并允许工作树修改；`release` 要求干净工作树。候选和正式构建均使用 release 优化。正式打包还要求与版本、提交匹配的 annotated tag，见[开发说明](../../docs/development.md)。
 
-构建器检查当前源码、依赖文档和来源材料的内容摘要，拒绝过期构建器或构建期间的输入变化。`source-stamp` 包含受 Git 管理及未被忽略的新源码文件，按路径记录 SHA-256 和执行权限；构建输出与运行数据不参与。来源校验见[源码布局与校验](../../docs/source-layout.md)。
+构建器编译时自动绑定自身全部源码，并检查当前源码、依赖文档和来源材料的内容摘要，拒绝过期构建器或构建期间的输入变化。`source-stamp` 包含受 Git 管理及未被忽略的新源码文件，按路径记录 SHA-256 和执行权限；构建输出与运行数据不参与。来源校验见[源码布局与校验](../../docs/source-layout.md)。
 
 服务端收据 `<binary>.blog-assets.json` 绑定程序字节、嵌入资源和构建身份，可独立验证：
 
@@ -44,6 +44,6 @@ cargo +1.99.0 run --locked --offline -p blog-assets -- verify \
   --binary /absolute/blog --receipt /absolute/blog.blog-assets.json --dist /absolute/web-dist
 ```
 
-资源处理保留 JS 语义作用域、CSS 导入层叠顺序与重复导入规则。默认预算为普通文件 512 KiB、WASM 及其 gzip 各 4 MiB、字体各 16 MiB、bundle 共 16 MiB；public 媒体按清单校验，单文件 4 MiB、总量 8 MiB。工具拒绝越界路径、符号链接、硬链接和特殊文件，失败时恢复原输出。
+资源处理保留 JS 语义作用域、CSS 导入层叠顺序与重复导入规则。默认预算为普通文件 512 KiB、WASM 及其 gzip 各 4 MiB、字体各 16 MiB、bundle 共 16 MiB；public 媒体按清单校验，单文件 4 MiB、总量 8 MiB。仓库相对路径使用正斜杠分隔，文件名不允许含反斜杠，防止不同 Linux 文件被写入同一收据键。工具拒绝越界路径、符号链接、硬链接和特殊文件，失败时恢复原输出。
 
-`serve` 提供回环开发服务及 API 代理；`preview` 提供已有输出。静态响应支持 MIME、nosniff、ETag、HEAD、304 与 WASM gzip 协商。开发服务和完整验证步骤见[开发说明](../../docs/development.md)与[浏览器测试](../../docs/browser-testing.md)。
+`serve` 提供回环开发服务及 API 代理，目标可使用 `localhost`、IPv4 或 IPv6 回环地址；`preview` 提供已有输出。静态响应支持 MIME、nosniff、ETag、HEAD、304 与 WASM gzip 协商。开发服务和完整验证步骤见[开发说明](../../docs/development.md)与[浏览器测试](../../docs/browser-testing.md)。

@@ -174,7 +174,6 @@ jobs:
         run: |
           rustup toolchain install 1.99.0 --profile minimal --component rustfmt,clippy --target wasm32-unknown-unknown
           CARGO_NET_OFFLINE=false cargo install cargo-audit --version 0.22.2 --locked
-          CARGO_NET_OFFLINE=false cargo install cargo-cyclonedx --version 0.5.9 --locked
       - name: Verify local packaging boundaries
         run: |
           python3 tools/rust-sources/manage.py verify --metadata

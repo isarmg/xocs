@@ -25,6 +25,7 @@ const markdown = [
   '![A " photo](/media/domain-test.png)',
   '| First | Second |\n| --- | --- |\n| one | ~~old~~ |',
   'Visit https://example.org/path, www.example.com or test@example.org.',
+  'Bare links: example.org:8080/docs, www.example.com/docs/part:one and example.org/search?url=https://example.net.',
   '[Local link](/sort?q=rust#top)',
   '<script>window.__domainXss=1</script>',
   '<img src=x onerror="window.__domainXss=2">',
@@ -101,6 +102,11 @@ try {
 
       for(const [name,href]of[['https://example.org/path','https://example.org/path'],['www.example.com','http://www.example.com'],['test@example.org','mailto:test@example.org'],['Local link','/sort?q=rust#top']]){
         await expect(body.getByRole('link',{name,exact:true})).toHaveAttribute('href',href);
+      }
+      for(const destination of ['example.org:8080/docs','www.example.com/docs/part:one','example.org/search?url=https://example.net']){
+        const link=body.getByRole('link',{name:destination,exact:true});
+        await expect(link).toHaveAttribute('href',`http://${destination}`);
+        assert.equal(await link.evaluate(node=>new URL(node.href).origin),new URL(`http://${destination}`).origin);
       }
       await expect(body.locator('pre code')).toHaveText(`${code}\n`);
       await body.getByRole('button',{name:'Copy code',exact:true}).click();

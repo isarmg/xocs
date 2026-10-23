@@ -6,12 +6,11 @@ use alloc::string::{String, ToString};
 
 pub mod identifier;
 #[cfg(test)]
-mod schema_hash_approval;
+mod schema_approval;
 pub mod tys;
 
-// This gets changed whenever our schema changes.
-// At this time versions of wasm-bindgen and wasm-bindgen-cli are required to have the exact same
-// SCHEMA_VERSION in order to work together.
+// The metadata encoder and binding generator must agree on this wire identity.
+// Changes to encoded fields, enum order, or descriptor values require a new identity.
 pub const SCHEMA_VERSION: &str = "blog-browser-bridge/1";
 
 #[macro_export]

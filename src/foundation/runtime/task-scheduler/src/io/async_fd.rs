@@ -3,8 +3,6 @@ use crate::runtime::io::{ReadyEvent, Registration};
 use crate::runtime::scheduler;
 
 use mio::unix::SourceFd;
-use std::error::Error;
-use std::fmt;
 use std::io;
 use std::os::unix::io::{AsRawFd, RawFd};
 use std::task::{ready, Context, Poll};
@@ -29,12 +27,11 @@ use std::task::{ready, Context, Poll};
 /// used as the inner object, as it is the simplest type that closes the fd on
 /// drop.
 ///
-/// The inner object is required to implement [`AsRawFd`]. This file descriptor
-/// must not change while [`AsyncFd`] owns the inner object, i.e. the
-/// [`AsRawFd::as_raw_fd`] method on the inner type must always return the same
-/// file descriptor when called multiple times. Failure to uphold this results
-/// in unspecified behavior in the IO driver, which may include breaking
-/// notifications for other sockets/etc.
+/// Registration is unsafe: the descriptor returned by [`AsRawFd::as_raw_fd`]
+/// must stay valid, open, and unchanged while registered. The caller must
+/// preserve this requirement through every alias and mutable access to the
+/// inner object. Closing or replacing it before deregistration can violate
+/// I/O safety and leave dangling pointers in the epoll driver.
 ///
 /// Polling for readiness is done by calling the async functions [`readable`]
 /// and [`writable`]. These functions complete when the associated readiness
@@ -88,7 +85,7 @@ use std::task::{ready, Context, Poll};
 ///     pub fn new(tcp: TcpStream) -> io::Result<Self> {
 ///         tcp.set_nonblocking(true)?;
 ///         Ok(Self {
-///             inner: AsyncFd::new(tcp)?,
+///             inner: unsafe { AsyncFd::register(tcp)? },
 ///         })
 ///     }
 ///
@@ -208,114 +205,74 @@ pub struct AsyncFdReadyMutGuard<'a, T: AsRawFd> {
 }
 
 impl<T: AsRawFd> AsyncFd<T> {
-    /// Creates an [`AsyncFd`] backed by (and taking ownership of) an object
-    /// implementing [`AsRawFd`]. The backing file descriptor is cached at the
-    /// time of creation.
+    /// Registers an owned I/O object with the current runtime for read and write readiness.
     ///
-    /// Only configures the [`Interest::READABLE`] and [`Interest::WRITABLE`] interests. For more
-    /// control, use [`AsyncFd::with_interest`].
+    /// # Safety
     ///
-    /// This method must be called in the context of a tokio runtime.
+    /// The descriptor returned by `inner.as_raw_fd()` must remain valid, open,
+    /// and unchanged until this `AsyncFd` is dropped or consumed by
+    /// [`into_inner`](Self::into_inner). This includes changes made through
+    /// shared references, [`get_mut`](Self::get_mut), or readiness guards.
+    /// The underlying object must use nonblocking I/O and support epoll.
     ///
-    /// # Panics
+    /// Owning a `TcpListener`, without replacing it while registered, satisfies
+    /// the descriptor lifetime requirement. An arbitrary `AsRawFd` implementation
+    /// does not prove this requirement.
     ///
-    /// This function panics if there is no current reactor set, or if the `rt`
-    /// feature flag is not enabled.
-    #[inline]
-    #[track_caller]
-    pub fn new(inner: T) -> io::Result<Self>
-    where
-        T: AsRawFd,
-    {
-        Self::with_interest(inner, Interest::READABLE | Interest::WRITABLE)
-    }
-
-    /// Creates an [`AsyncFd`] backed by (and taking ownership of) an object
-    /// implementing [`AsRawFd`], with a specific [`Interest`]. The backing
-    /// file descriptor is cached at the time of creation.
+    /// ```compile_fail,E0133
+    /// use blog_runtime_task_scheduler::io::unix::AsyncFd;
+    /// let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    /// let _ = AsyncFd::register(listener); // Registration requires a safety proof.
+    /// ```
     ///
-    /// # Panics
+    /// An arbitrary raw descriptor cannot be exposed as a safe borrowed descriptor:
     ///
-    /// This function panics if there is no current reactor set, or if the `rt`
-    /// feature flag is not enabled.
-    #[inline]
-    #[track_caller]
-    pub fn with_interest(inner: T, interest: Interest) -> io::Result<Self>
-    where
-        T: AsRawFd,
-    {
-        Self::new_with_handle_and_interest(inner, scheduler::Handle::current(), interest)
-    }
-
-    #[track_caller]
-    pub(crate) fn new_with_handle_and_interest(
-        inner: T,
-        handle: scheduler::Handle,
-        interest: Interest,
-    ) -> io::Result<Self> {
-        Self::try_new_with_handle_and_interest(inner, handle, interest).map_err(Into::into)
-    }
-
-    /// Creates an [`AsyncFd`] backed by (and taking ownership of) an object
-    /// implementing [`AsRawFd`]. The backing file descriptor is cached at the
-    /// time of creation.
-    ///
-    /// Only configures the [`Interest::READABLE`] and [`Interest::WRITABLE`] interests. For more
-    /// control, use [`AsyncFd::try_with_interest`].
-    ///
-    /// This method must be called in the context of a tokio runtime.
-    ///
-    /// In the case of failure, it returns [`AsyncFdTryNewError`] that contains the original object
-    /// passed to this function.
+    /// ```compile_fail,E0277
+    /// use blog_runtime_task_scheduler::io::unix::AsyncFd;
+    /// use std::os::fd::{AsFd, RawFd};
+    /// fn borrow_raw_wrapper(fd: &AsyncFd<RawFd>) { let _ = AsFd::as_fd(fd); }
+    /// ```
     ///
     /// # Panics
     ///
-    /// This function panics if there is no current reactor set, or if the `rt`
-    /// feature flag is not enabled.
+    /// Panics outside a runtime with the I/O driver enabled.
     #[inline]
     #[track_caller]
-    pub fn try_new(inner: T) -> Result<Self, AsyncFdTryNewError<T>>
-    where
-        T: AsRawFd,
-    {
-        Self::try_with_interest(inner, Interest::READABLE | Interest::WRITABLE)
+    pub unsafe fn register(inner: T) -> io::Result<Self> {
+        // SAFETY: the caller guarantees that the registered descriptor stays valid and unchanged.
+        unsafe { Self::register_with_interest(inner, Interest::READABLE | Interest::WRITABLE) }
     }
 
-    /// Creates an [`AsyncFd`] backed by (and taking ownership of) an object
-    /// implementing [`AsRawFd`], with a specific [`Interest`]. The backing
-    /// file descriptor is cached at the time of creation.
+    /// Registers an owned I/O object with a specific readiness interest.
     ///
-    /// In the case of failure, it returns [`AsyncFdTryNewError`] that contains the original object
-    /// passed to this function.
+    /// # Safety
+    ///
+    /// The descriptor must stay valid, open, and unchanged until deregistration,
+    /// as required by [`register`](Self::register). All aliases and mutable
+    /// access to the inner object must preserve that requirement.
+    ///
+    /// ```compile_fail,E0133
+    /// use blog_runtime_task_scheduler::io::{unix::AsyncFd, Interest};
+    /// let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    /// let _ = AsyncFd::register_with_interest(listener, Interest::READABLE);
+    /// ```
     ///
     /// # Panics
     ///
-    /// This function panics if there is no current reactor set, or if the `rt`
-    /// feature flag is not enabled.
+    /// Panics outside a runtime with the I/O driver enabled.
     #[inline]
     #[track_caller]
-    pub fn try_with_interest(inner: T, interest: Interest) -> Result<Self, AsyncFdTryNewError<T>>
-    where
-        T: AsRawFd,
-    {
-        Self::try_new_with_handle_and_interest(inner, scheduler::Handle::current(), interest)
-    }
-
-    #[track_caller]
-    pub(crate) fn try_new_with_handle_and_interest(
-        inner: T,
-        handle: scheduler::Handle,
-        interest: Interest,
-    ) -> Result<Self, AsyncFdTryNewError<T>> {
+    pub unsafe fn register_with_interest(inner: T, interest: Interest) -> io::Result<Self> {
         let fd = inner.as_raw_fd();
-
-        match Registration::new_with_interest_and_handle(&mut SourceFd(&fd), interest, handle) {
-            Ok(registration) => Ok(AsyncFd {
-                registration,
-                inner: Some(inner),
-            }),
-            Err(cause) => Err(AsyncFdTryNewError { inner, cause }),
-        }
+        let registration = Registration::new_with_interest_and_handle(
+            &mut SourceFd(&fd),
+            interest,
+            scheduler::Handle::current(),
+        )?;
+        Ok(AsyncFd {
+            registration,
+            inner: Some(inner),
+        })
     }
 
     /// Returns a shared reference to the backing object of this [`AsyncFd`].
@@ -325,6 +282,9 @@ impl<T: AsRawFd> AsyncFd<T> {
     }
 
     /// Returns a mutable reference to the backing object of this [`AsyncFd`].
+    ///
+    /// The registration safety requirement still applies: do not close or replace
+    /// the registered descriptor through this reference.
     #[inline]
     pub fn get_mut(&mut self) -> &mut T {
         self.inner.as_mut().unwrap()
@@ -527,8 +487,7 @@ impl<T: AsRawFd> AsyncFd<T> {
     /// splitting.
     ///
     /// ```no_run
-    /// use std::error::Error;
-    /// use std::io;
+    ///     /// use std::io;
     /// use std::io::{Read, Write};
     /// use std::net::TcpStream;
     /// use tokio::io::unix::AsyncFd;
@@ -538,7 +497,7 @@ impl<T: AsRawFd> AsyncFd<T> {
     /// async fn main() -> Result<(), Box<dyn Error>> {
     ///     let stream = TcpStream::connect("127.0.0.1:8080")?;
     ///     stream.set_nonblocking(true)?;
-    ///     let stream = AsyncFd::new(stream)?;
+    ///     let stream = unsafe { AsyncFd::register(stream)? };
     ///
     ///     loop {
     ///         let mut guard = stream
@@ -623,8 +582,7 @@ impl<T: AsRawFd> AsyncFd<T> {
     /// splitting.
     ///
     /// ```no_run
-    /// use std::error::Error;
-    /// use std::io;
+    ///     /// use std::io;
     /// use std::io::{Read, Write};
     /// use std::net::TcpStream;
     /// use tokio::io::unix::AsyncFd;
@@ -634,7 +592,7 @@ impl<T: AsRawFd> AsyncFd<T> {
     /// async fn main() -> Result<(), Box<dyn Error>> {
     ///     let stream = TcpStream::connect("127.0.0.1:8080")?;
     ///     stream.set_nonblocking(true)?;
-    ///     let mut stream = AsyncFd::new(stream)?;
+    ///     let mut stream = unsafe { AsyncFd::register(stream)? };
     ///
     ///     loop {
     ///         let mut guard = stream
@@ -833,7 +791,7 @@ impl<T: AsRawFd> AsyncFd<T> {
     /// async fn main() -> io::Result<()> {
     ///     let socket = UdpSocket::bind("0.0.0.0:8080")?;
     ///     socket.set_nonblocking(true)?;
-    ///     let async_fd = AsyncFd::new(socket)?;
+    ///     let async_fd = unsafe { AsyncFd::register(socket)? };
     ///
     ///     let written = async_fd
     ///         .async_io(Interest::WRITABLE, |inner| inner.send(&[1, 2]))
@@ -930,9 +888,10 @@ impl<T: AsRawFd> AsRawFd for AsyncFd<T> {
     }
 }
 
-impl<T: AsRawFd> std::os::unix::io::AsFd for AsyncFd<T> {
+/// Borrowing a descriptor requires the inner type's I/O safety guarantee.
+impl<T: AsRawFd + std::os::unix::io::AsFd> std::os::unix::io::AsFd for AsyncFd<T> {
     fn as_fd(&self) -> std::os::unix::io::BorrowedFd<'_> {
-        unsafe { std::os::unix::io::BorrowedFd::borrow_raw(self.as_raw_fd()) }
+        self.get_ref().as_fd()
     }
 }
 
@@ -996,8 +955,7 @@ impl<'a, Inner: AsRawFd> AsyncFdReadyGuard<'a, Inner> {
     /// splitting.
     ///
     /// ```no_run
-    /// use std::error::Error;
-    /// use std::io;
+    ///     /// use std::io;
     /// use std::io::{Read, Write};
     /// use std::net::TcpStream;
     /// use tokio::io::unix::AsyncFd;
@@ -1007,7 +965,7 @@ impl<'a, Inner: AsRawFd> AsyncFdReadyGuard<'a, Inner> {
     /// async fn main() -> Result<(), Box<dyn Error>> {
     ///     let stream = TcpStream::connect("127.0.0.1:8080")?;
     ///     stream.set_nonblocking(true)?;
-    ///     let stream = AsyncFd::new(stream)?;
+    ///     let stream = unsafe { AsyncFd::register(stream)? };
     ///
     ///     loop {
     ///         let mut guard = stream
@@ -1124,7 +1082,7 @@ impl<'a, Inner: AsRawFd> AsyncFdReadyGuard<'a, Inner> {
     /// async fn main() -> io::Result<()> {
     ///     let socket = UdpSocket::bind("0.0.0.0:8080")?;
     ///     socket.set_nonblocking(true)?;
-    ///     let async_fd = AsyncFd::new(socket)?;
+    ///     let async_fd = unsafe { AsyncFd::register(socket)? };
     ///
     ///     let written = loop {
     ///         let mut guard = async_fd.writable().await?;
@@ -1220,8 +1178,7 @@ impl<'a, Inner: AsRawFd> AsyncFdReadyMutGuard<'a, Inner> {
     /// splitting.
     ///
     /// ```no_run
-    /// use std::error::Error;
-    /// use std::io;
+    ///     /// use std::io;
     /// use std::io::{Read, Write};
     /// use std::net::TcpStream;
     /// use tokio::io::unix::AsyncFd;
@@ -1231,7 +1188,7 @@ impl<'a, Inner: AsRawFd> AsyncFdReadyMutGuard<'a, Inner> {
     /// async fn main() -> Result<(), Box<dyn Error>> {
     ///     let stream = TcpStream::connect("127.0.0.1:8080")?;
     ///     stream.set_nonblocking(true)?;
-    ///     let mut stream = AsyncFd::new(stream)?;
+    ///     let mut stream = unsafe { AsyncFd::register(stream)? };
     ///
     ///     loop {
     ///         let mut guard = stream
@@ -1393,47 +1350,3 @@ impl<'a, T: std::fmt::Debug + AsRawFd> std::fmt::Debug for AsyncFdReadyMutGuard<
 /// [`try_io`]: method@AsyncFdReadyGuard::try_io
 #[derive(Debug)]
 pub struct TryIoError(());
-
-/// Error returned by [`try_new`] or [`try_with_interest`].
-///
-/// [`try_new`]: AsyncFd::try_new
-/// [`try_with_interest`]: AsyncFd::try_with_interest
-pub struct AsyncFdTryNewError<T> {
-    inner: T,
-    cause: io::Error,
-}
-
-impl<T> AsyncFdTryNewError<T> {
-    /// Returns the original object passed to [`try_new`] or [`try_with_interest`]
-    /// alongside the error that caused these functions to fail.
-    ///
-    /// [`try_new`]: AsyncFd::try_new
-    /// [`try_with_interest`]: AsyncFd::try_with_interest
-    pub fn into_parts(self) -> (T, io::Error) {
-        (self.inner, self.cause)
-    }
-}
-
-impl<T> fmt::Display for AsyncFdTryNewError<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(&self.cause, f)
-    }
-}
-
-impl<T> fmt::Debug for AsyncFdTryNewError<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Debug::fmt(&self.cause, f)
-    }
-}
-
-impl<T> Error for AsyncFdTryNewError<T> {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        Some(&self.cause)
-    }
-}
-
-impl<T> From<AsyncFdTryNewError<T>> for io::Error {
-    fn from(value: AsyncFdTryNewError<T>) -> Self {
-        value.cause
-    }
-}

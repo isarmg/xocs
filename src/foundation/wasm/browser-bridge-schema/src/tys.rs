@@ -1,5 +1,9 @@
 macro_rules! tys {
-    ($($a:ident)*) => (tys! { @ ($($a)*) 0 });
+    ($($a:ident)*) => {
+        tys! { @ ($($a)*) 0 }
+        #[cfg(test)]
+        pub(crate) const DESCRIPTORS: &[(&str, u32)] = &[$((stringify!($a), $a)),*];
+    };
     (@ () $v:expr) => {};
     (@ ($a:ident $($b:ident)*) $v:expr) => {
         pub const $a: u32 = $v;

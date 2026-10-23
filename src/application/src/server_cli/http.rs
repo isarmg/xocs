@@ -10,6 +10,10 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use serde::de::DeserializeOwned;
+use std::time::Duration;
+
+/// Total time allowed to receive one product JSON body, independent of progress.
+pub const JSON_BODY_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// Apply the same bounded correlation and error policy as xcss's native
 /// transport. Install this outside product input/authentication middleware.
@@ -61,7 +65,12 @@ pub struct ContractQuery<T>(pub T);
 pub struct ContractPath<T>(pub T);
 
 fn rejected(status: StatusCode, reason: &'static str, extensions: &Extensions) -> Response {
-    let (code, message) = if status == StatusCode::PAYLOAD_TOO_LARGE {
+    let (code, message) = if status == StatusCode::REQUEST_TIMEOUT {
+        (
+            "request_timeout",
+            "The request body was not received in time.",
+        )
+    } else if status == StatusCode::PAYLOAD_TOO_LARGE {
         (
             "payload_too_large",
             "The request body exceeds its size limit.",
@@ -78,13 +87,21 @@ fn rejected(status: StatusCode, reason: &'static str, extensions: &Extensions) -
         )
     };
     let mut envelope = super::failure(code, message);
+    envelope.retryable = status == StatusCode::REQUEST_TIMEOUT;
     envelope.details.insert("reason".into(), reason.into());
     envelope.request_id = extensions.get::<RequestId>().cloned().or_else(|| {
         extensions
             .get::<String>()
             .and_then(|id| RequestId::new(id).ok())
     });
-    error_response(status, envelope)
+    let mut response = error_response(status, envelope);
+    if status == StatusCode::REQUEST_TIMEOUT {
+        // The unfinished HTTP/1 request body must not keep the connection open.
+        response
+            .headers_mut()
+            .insert(header::CONNECTION, "close".parse().expect("static header"));
+    }
+    response
 }
 
 fn error_response(status: StatusCode, error: ErrorEnvelope) -> Response {
@@ -105,8 +122,11 @@ where
 
     async fn from_request(request: Request, state: &S) -> Result<Self, Self::Rejection> {
         let extensions = request.extensions().clone();
-        Json::<T>::from_request(request, state)
+        // Bound only extraction. Once a handler starts, its transaction is not
+        // interrupted by this deadline, avoiding uncertain write outcomes.
+        tokio::time::timeout(JSON_BODY_TIMEOUT, Json::<T>::from_request(request, state))
             .await
+            .map_err(|_| rejected(StatusCode::REQUEST_TIMEOUT, "BODY_TIMEOUT", &extensions))?
             .map(|Json(value)| Self(value))
             .map_err(|error| {
                 let (status, reason) = match &error {
@@ -327,5 +347,29 @@ mod tests {
         let error: ErrorEnvelope = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(error.request_id.unwrap().as_str(), "trace-123");
         assert_eq!(error.details["reason"], "MISSING_FIELD");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn body_deadline_does_not_cancel_a_handler_after_input_was_received() {
+        let router = Router::new().route(
+            "/json",
+            post(|ContractJson(input): ContractJson<Input>| async move {
+                tokio::time::sleep(JSON_BODY_TIMEOUT * 2).await;
+                input.number.to_string()
+            }),
+        );
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/json")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(r#"{"number":7}"#))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(to_bytes(response.into_body(), 64).await.unwrap(), "7");
     }
 }

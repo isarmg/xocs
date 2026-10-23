@@ -95,3 +95,8 @@ default-features = false
 path = "../../diagnostics/structured-events"
 package = "blog-diagnostics-structured-events"
 
+
+[[test]]
+name = "async-fd-contracts"
+path = "tests/async_fd_contracts.rs"
+required-features = ["net", "rt", "time"]

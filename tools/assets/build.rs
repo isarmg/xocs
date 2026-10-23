@@ -71,14 +71,13 @@ fn collect(repository: &Path, directory: &Path, files: &mut BTreeMap<String, Str
                 bytes.len() <= 32 * 1024 * 1024,
                 "Build input grew beyond bound"
             );
-            let name = path
-                .strip_prefix(repository)
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .replace('\\', "/");
+            let name = path.strip_prefix(repository).unwrap().to_str().unwrap();
+            assert!(
+                !name.contains('\\'),
+                "Backslash in build input path: {name}"
+            );
             files.insert(
-                name,
+                name.to_owned(),
                 Sha256::digest(bytes)
                     .iter()
                     .map(|byte| format!("{byte:02x}"))
@@ -93,6 +92,33 @@ fn main() {
     platform_contract::check();
     let package = PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").unwrap());
     let repository = package.parent().unwrap().parent().unwrap();
+    let mut builder = BTreeMap::new();
+    let sources = package.join("src");
+    println!("cargo:rerun-if-changed={}", sources.display());
+    collect(repository, &sources, &mut builder);
+    for name in ["Cargo.toml", "build.rs"] {
+        let path = package.join(name);
+        println!("cargo:rerun-if-changed={}", path.display());
+        let bytes = fs::read(&path).unwrap();
+        builder.insert(
+            path.strip_prefix(repository)
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_owned(),
+            Sha256::digest(bytes)
+                .iter()
+                .map(|byte| format!("{byte:02x}"))
+                .collect(),
+        );
+    }
+    let output = PathBuf::from(std::env::var_os("OUT_DIR").unwrap());
+    let entries = builder
+        .iter()
+        .map(|(name, hash)| format!("({name:?}, {hash:?})"))
+        .collect::<Vec<_>>()
+        .join(",\n");
+    fs::write(output.join("builder-inputs.rs"), format!("[{entries}]\n")).unwrap();
     let mut files = BTreeMap::new();
     // Also bind relocated include_str! documentation and preserved notices.
     for name in [
@@ -112,9 +138,8 @@ fn main() {
         digest.update(hash.as_bytes());
         digest.update(b"\n");
     }
-    let output = PathBuf::from(std::env::var_os("OUT_DIR").unwrap()).join("foundation-inputs.rs");
     fs::write(
-        output,
+        output.join("foundation-inputs.rs"),
         format!(
             "\"{}\"\n",
             digest

@@ -17,6 +17,7 @@ dependencies = [
  "blog-format-date-time",
  "blog-format-json",
  "blog-format-json-schema",
+ "blog-network-body-stream",
  "blog-network-http-middleware",
  "blog-network-request-pipeline",
  "blog-network-request-router",

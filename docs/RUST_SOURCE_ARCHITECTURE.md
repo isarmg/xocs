@@ -256,7 +256,7 @@
 
 | 当前包与路径 | 具体职责 | 构建入口 | 直接消费者 | 原始来源 |
 | --- | --- | --- | --- | --- |
-| blog-network-body-stream (`src/foundation/network/body-stream`) | body stream | native, host-tools, workspace-tests | src/application, src/foundation/network/http-middleware, src/foundation/network/http-transport, src/foundation/network/request-router | http-body-util@0.1.5, http-body@1.1.0 |
+| blog-network-body-stream (`src/foundation/network/body-stream`) | body stream | native, host-tools, workspace-tests | src/application, src/foundation/network/http-middleware, src/foundation/network/http-transport, src/foundation/network/request-router, src/server | http-body-util@0.1.5, http-body@1.1.0 |
 | blog-network-byte-ranges (`src/foundation/network/byte-ranges`) | byte ranges | native, workspace-tests | src/foundation/network/http-middleware | http-range-header@0.4.2 |
 | blog-network-form-data (`src/foundation/network/form-data`) | form data | native, host-tools, workspace-tests | src/foundation/network/request-router | serde_urlencoded@0.7.1 |
 | blog-network-http-date (`src/foundation/network/http-date`) | http date | native, host-tools, workspace-tests | src/foundation/network/http-middleware, src/foundation/network/http-transport | httpdate@1.0.3 |

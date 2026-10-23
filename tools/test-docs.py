@@ -48,6 +48,26 @@ A setext title
 '''
         self.assertEqual(check.anchors(source), {'hello-rust', 'hello-rust-1', '中文-api--路径', 'a-setext-title', 'explicit'})
 
+    def test_heading_suffixes_do_not_collide_with_other_headings(self):
+        source = '# Entry\n# Entry-1\n# Entry\n# Entry\n# Entry-1\n'
+        self.assertEqual(check.anchors(source),
+                         {'entry', 'entry-1', 'entry-2', 'entry-3', 'entry-1-1'})
+
+    def test_example_anchors_and_invalid_fence_closers_are_hidden(self):
+        source = '''# Visible
+<!-- <a name="comment"></a> -->
+`<a name="inline"></a>`
+````markdown
+<a name="example"></a>
+# Example `code`
+````python
+[example](missing.md)
+````
+[visible](real.md)
+'''
+        self.assertEqual(check.anchors(source), {'visible'})
+        self.assertEqual(check.links(source), [(10, 'real.md')])
+
     def test_missing_files_and_fragments_fail(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -66,6 +86,24 @@ A setext title
             (root / 'docs/space file.md').write_text('# 中文\n[home](../README.md)\n')
             errors, count = check.check_links(root)
             self.assertEqual(count, 3)
+            self.assertEqual(len(errors), 1)
+            self.assertIn('escapes repository', errors[0])
+
+    def test_directory_fragments_require_a_local_readme(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / 'repo'
+            root.mkdir()
+            (root / 'docs').mkdir()
+            (root / 'README.md').write_text('[guide](docs#title)\n')
+            errors, count = check.check_links(root)
+            self.assertEqual(count, 1)
+            self.assertEqual(len(errors), 1)
+            self.assertIn('directory has no README.md', errors[0])
+
+            outside = root.parent / 'outside.md'
+            outside.write_text('# Title\n')
+            (root / 'docs/README.md').symlink_to(outside)
+            errors, _ = check.check_links(root)
             self.assertEqual(len(errors), 1)
             self.assertIn('escapes repository', errors[0])
 

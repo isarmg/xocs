@@ -22,30 +22,38 @@ ROOT = Path(__file__).resolve().parents[1]
 DOC_SUFFIXES = {'.md', '.markdown', '.rst', '.adoc'}
 
 
-def prose(text: str) -> str:
-    """Mask comments, fenced blocks and inline code, preserving line numbers."""
+def blocks(text: str) -> str:
+    """Mask comments and fenced code, preserving offsets and line numbers."""
     text = re.sub(r'<!--[\s\S]*?-->', lambda m: re.sub(r'[^\n]', ' ', m[0]), text)
     lines = []
     fence = None
     for line in text.splitlines(keepends=True):
         match = re.match(r' {0,3}(`{3,}|~{3,})', line)
         if fence:
-            if match and match[1][0] == fence[0] and len(match[1]) >= len(fence):
+            closing = re.fullmatch(r' {0,3}(`{3,}|~{3,})[ \t]*(?:\r?\n)?', line)
+            if closing and closing[1][0] == fence[0] and len(closing[1]) >= len(fence):
                 fence = None
             lines.append(re.sub(r'[^\n]', ' ', line))
-        elif match:
+        elif match and (match[1][0] != '`' or '`' not in line[match.end():]):
             fence = match[1]
             lines.append(re.sub(r'[^\n]', ' ', line))
         else:
             lines.append(line)
-    return re.sub(r'(`+)([^`]|(?!\1)`)*?\1', lambda m: re.sub(r'[^\n]', ' ', m[0]), ''.join(lines))
+    return ''.join(lines)
+
+
+def prose(text: str) -> str:
+    """Mask comments, fenced blocks and inline code, preserving line numbers."""
+    return re.sub(r'(`+)([^`]|(?!\1)`)*?\1', lambda m: re.sub(r'[^\n]', ' ', m[0]), blocks(text))
 
 
 def anchors(text: str) -> set[str]:
     # Keep inline code in headings: its content contributes to GitHub's slug.
-    lines = prose(re.sub(r'(`+)(.*?)\1', r'\2', text)).splitlines()
-    result = set(re.findall(r'<a\s[^>]*(?:id|name)=[\'\"]([^\'\"]+)[\'\"]', text, re.I))
+    visible = blocks(text)
+    lines = re.sub(r'(`+)(.*?)\1', r'\2', visible).splitlines()
+    result = set(re.findall(r'<a\s[^>]*(?:id|name)=[\'\"]([^\'\"]+)[\'\"]', prose(visible), re.I))
     counts: dict[str, int] = {}
+    headings = set()
     for index, line in enumerate(lines):
         heading = re.match(r' {0,3}#{1,6}\s+(.+?)(?:\s+#+)?\s*$', line)
         if heading:
@@ -59,8 +67,13 @@ def anchors(text: str) -> set[str]:
         slug = ''.join(c for c in title if c in ' _-' or unicodedata.category(c)[0] in 'LMN')
         slug = slug.replace(' ', '-')
         count = counts.get(slug, 0)
-        counts[slug] = count + 1
-        result.add(f'{slug}-{count}' if count else slug)
+        candidate = f'{slug}-{count}' if count else slug
+        while candidate in headings:
+            count += 1
+            candidate = f'{slug}-{count}'
+        counts[slug] = count
+        headings.add(candidate)
+        result.add(candidate)
     return result
 
 
@@ -146,7 +159,13 @@ def check_links(root: Path) -> tuple[list[str], int]:
                 errors.append(f'{label}: target does not exist')
             elif url.fragment:
                 if target.is_dir():
-                    target = target / 'README.md'
+                    target = (target / 'README.md').resolve()
+                    if not target.is_relative_to(root.resolve()):
+                        errors.append(f'{label}: directory readme escapes repository')
+                        continue
+                    if not target.is_file():
+                        errors.append(f'{label}: directory has no README.md for heading')
+                        continue
                 if target.suffix.lower() not in {'.md', '.markdown'}:
                     continue
                 if target not in anchor_cache:

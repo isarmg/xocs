@@ -462,7 +462,10 @@ pub(crate) fn create_listener(addr: SocketAddr) -> io::Result<AsyncFd<StdTcpList
     socket.listen(1024 /* Default backlog */)?;
     let std_listener = StdTcpListener::from(socket);
     std_listener.set_nonblocking(true)?;
-    let listener = AsyncFd::new(std_listener)?;
+    // SAFETY: AsyncFd exclusively owns this standard listener until deregistration.
+    // No aliases or mutable access can close or replace its descriptor.
+    #[allow(unsafe_code)]
+    let listener = unsafe { AsyncFd::register(std_listener)? };
     Ok(listener)
 }
 

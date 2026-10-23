@@ -27,10 +27,12 @@ pub fn relative(path: &Path) -> Result<String> {
         "Uncontrolled relative path: {}",
         path.display()
     );
-    Ok(path
-        .to_str()
-        .context("Path must be UTF-8")?
-        .replace('\\', "/"))
+    let name = path.to_str().context("Path must be UTF-8")?;
+    ensure!(
+        !name.contains('\\'),
+        "Backslashes are forbidden in source/output paths: {name}"
+    );
+    Ok(name.to_owned())
 }
 
 pub fn physical(path: &Path) -> Result<()> {
@@ -693,9 +695,19 @@ mod tests {
     }
     #[test]
     fn paths_cannot_escape() {
-        for name in ["", "/etc/passwd", "../file", "a/../file"] {
+        for name in ["", "/etc/passwd", "../file", "a/../file", "a\\b"] {
             assert!(relative(Path::new(name)).is_err());
         }
+    }
+
+    #[test]
+    fn source_names_cannot_alias_directory_separators_in_receipts() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        fs::create_dir(directory.path().join("a"))?;
+        fs::write(directory.path().join("a/b"), "nested input")?;
+        fs::write(directory.path().join("a\\b"), "different input")?;
+        assert!(files(directory.path()).is_err());
+        Ok(())
     }
     #[cfg(unix)]
     #[test]

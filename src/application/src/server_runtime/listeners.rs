@@ -45,8 +45,13 @@ impl BoundListeners {
 
     pub fn from_listener(listener: tokio::net::TcpListener) -> io::Result<Self> {
         let address = listener.local_addr()?;
+        let listener = listener.into_std()?;
+        // SAFETY: registration owns the standard listener and the listener collection
+        // only exposes shared access until it is dropped and deregistered.
+        #[allow(unsafe_code)]
+        let listener = unsafe { AsyncFd::register(listener)? };
         Ok(Self {
-            listeners: vec![AsyncFd::new(listener.into_std()?)?],
+            listeners: vec![listener],
             addresses: vec![address],
         })
     }

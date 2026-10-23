@@ -31,6 +31,7 @@ serde_json = { path = "../foundation/format/json",package = "blog-format-json"}
 blog-application = {  path = "../application"}
 
 [dev-dependencies]
+http-body = { path = "../foundation/network/body-stream", package = "blog-network-body-stream" }
 
 [lints.rust]
 unsafe_code = "deny"

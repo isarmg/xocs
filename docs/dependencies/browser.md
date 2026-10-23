@@ -14,7 +14,7 @@
 
 ## WASM 边界
 
-`browser-api` 和 `javascript-api` 提供类型化浏览器与 JavaScript 接口。`browser-bridge`、入口宏、元数据及 schema 配合 `browser-module` 生成绑定；模块的编码、解码、变换和调试信息由 `wasm` 层其余包提供。绑定生成直接由 `blog-assets` 调用。
+`browser-api` 和 `javascript-api` 提供类型化浏览器与 JavaScript 接口。`browser-bridge`、入口宏、元数据及 schema 配合 `browser-module` 生成绑定；模块的编码、解码、变换和调试信息由 `wasm` 层其余包提供。绑定生成直接由 `blog-assets` 调用。元数据字段、枚举顺序和描述符操作码通过 `browser-bridge-schema` 的协议快照测试核验；协议变化需更新 `SCHEMA_VERSION`，注释、文档和辅助函数变化不改变协议身份。
 
 应用使用 `wasm32-unknown-unknown`，WASM 必须与同次构建生成的 JS 绑定一起使用。手写 JS 负责加载和启动失败反馈，页面、请求、表单及 Markdown 规则在 Rust 中实现。构建、资源校验与本地预览见[开发说明](../development.md)，真实浏览器验证见[浏览器测试](../browser-testing.md)。
 

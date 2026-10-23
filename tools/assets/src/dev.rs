@@ -247,6 +247,28 @@ async fn rebuild(options: Options, status: Arc<RwLock<Value>>) {
     }
 }
 
+fn validate_proxy_target(target: &str) -> Result<()> {
+    use url_encoding::address::{Host, Url};
+
+    let url = Url::parse(target)?;
+    let loopback = match url.host() {
+        Some(Host::Domain(host)) => host == "localhost",
+        Some(Host::Ipv4(address)) => address.is_loopback(),
+        Some(Host::Ipv6(address)) => address.is_loopback(),
+        None => false,
+    };
+    ensure!(
+        url.scheme() == "http"
+            && loopback
+            && url.username().is_empty()
+            && url.password().is_none()
+            && url.query().is_none()
+            && url.fragment().is_none(),
+        "Development proxy target must be an unauthenticated loopback HTTP origin"
+    );
+    Ok(())
+}
+
 pub async fn serve(
     options: Options,
     bind: SocketAddr,
@@ -271,19 +293,7 @@ pub async fn serve(
             prefix.starts_with('/') && !prefix.contains(['?', '#']),
             "Proxy prefix must be an absolute path"
         );
-        let url = url_encoding::address::Url::parse(target)?;
-        ensure!(
-            url.scheme() == "http"
-                && url.host_str().is_some_and(|host| host == "localhost"
-                    || host
-                        .parse::<std::net::IpAddr>()
-                        .is_ok_and(|ip| ip.is_loopback()))
-                && url.username().is_empty()
-                && url.password().is_none()
-                && url.query().is_none()
-                && url.fragment().is_none(),
-            "Development proxy target must be an unauthenticated loopback HTTP origin"
-        );
+        validate_proxy_target(target)?;
     }
     let mut proxies = proxies.into_iter().collect::<Vec<_>>();
     proxies.sort_by_key(|(prefix, _)| std::cmp::Reverse(prefix.len()));
@@ -342,6 +352,31 @@ pub async fn serve(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn proxy_accepts_both_loopback_address_families() {
+        for target in [
+            "http://localhost:8081",
+            "http://127.0.0.1:8081",
+            "http://[::1]:8081",
+        ] {
+            assert!(validate_proxy_target(target).is_ok(), "{target}");
+        }
+        for target in [
+            "http://192.0.2.1:8081",
+            "http://[2001:db8::1]:8081",
+            "http://[::]:8081",
+            "http://0.0.0.0:8081",
+            "http://example.com",
+            "https://localhost:8081",
+            "http://user:secret@[::1]:8081",
+            "http://[::1]:8081/?query=1",
+            "http://[::1]:8081/#fragment",
+        ] {
+            assert!(validate_proxy_target(target).is_err(), "{target}");
+        }
+    }
+
     #[test]
     fn explicit_gzip_zero_overrides_wildcard() {
         let mut headers = HeaderMap::new();

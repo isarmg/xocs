@@ -15,7 +15,7 @@ SOURCE = Path(__file__).resolve().parents[1]
 # canonical identity and executable binding as source staging.
 import sys
 sys.path.insert(0, str(SOURCE / "tools/packaging"))
-from package import canonical_build_identity, require_compiled_identity
+from package import canonical_build_identity, read_regular, require_compiled_identity
 
 
 def stage_verified_server(binary:Path,destination:Path,revision:str)->None:
@@ -46,6 +46,32 @@ def stage_verified_server(binary:Path,destination:Path,revision:str)->None:
 def stage_original_notices(destination:Path,*,source:Path=SOURCE)->None:
     shutil.copyfile(source/"LICENSE",destination/"LICENSE")
     (destination/"LICENSE").chmod(0o644)
+
+
+def stage_documentation(destination:Path,revision:str,*,source:Path=SOURCE)->None:
+    """Keep installation and operations manuals usable outside the source tree."""
+    if not re.fullmatch(r"[0-9a-f]{40}", revision):
+        raise ValueError("documentation must identify its reviewed source revision")
+    manuals = {
+        "deploy/linux-x86_64/README.md": "README.md",
+        **{f"docs/{name}.md": f"docs/{name}.md" for name in
+           ("getting-started", "configuration", "usage", "operations", "contracts")},
+    }
+    for origin, relative in manuals.items():
+        value = read_regular(source / origin).decode("utf-8")
+        if relative == "README.md":
+            value = value.replace("](../../docs/", "](docs/")
+        else:
+            value = value.replace("](../deploy/linux-x86_64/README.md)", "](../README.md)")
+            # Building the project requires the full checkout, rather than the
+            # runtime package. Keep that reference bound to the packaged source.
+            value = value.replace("](development.md)",
+                                  f"](https://github.com/isarmg/xocs/blob/{revision}/docs/development.md)")
+        target = destination / relative
+        target.parent.mkdir(mode=0o755, parents=True, exist_ok=True)
+        with target.open("xb") as stream:
+            stream.write(value.encode("utf-8"))
+        target.chmod(0o644)
 
 
 if __name__ == "__main__":

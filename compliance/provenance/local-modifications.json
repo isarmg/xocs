@@ -3297,6 +3297,46 @@
     {
       "directory": "src/foundation/crypto/constant-time-utilities",
       "reason": "Replace all implementation files with checksum-verified ctutils 0.4.4 for RUSTSEC-2026-0385, including to_u8 optimization barriers in all mask sizes and non-short-circuiting u128 comparisons on 32-bit WASM; preserve the maintained Cargo identity and local dependency edges."
+    },
+    {
+      "directory": "src/foundation/wasm/browser-bridge-schema",
+      "reason": "Validate the encoded shared API declaration order and actual descriptor opcode values with a reviewed protocol snapshot; remove raw source-file hashing and its build script so documentation and unrelated helpers cannot invalidate the wire contract."
+    },
+    {
+      "directory": "src/foundation/sync/atomic-lock",
+      "reason": "Remove the safe deprecated entry point that admitted unsound weak memory orderings, retain explicitly validated and unsafe lock APIs, and verify every ordering pair plus cross-thread serialization."
+    },
+    {
+      "directory": "src/foundation/storage/sqlite-access",
+      "reason": "Mark transactions open only after the SQLite worker acknowledges BEGIN; let the worker own cancellation rollback so rejected or cancelled nested BEGIN cannot roll back its parent. Cover failed and deterministically cancelled savepoints."
+    },
+    {
+      "directory": "src/application",
+      "reason": "Apply an absolute ten-second deadline to JSON body extraction, return a correlated retryable 408 and close stalled HTTP connections without interrupting handlers or committed writes."
+    },
+    {
+      "directory": "src/server",
+      "reason": "Verify stalled public JSON bodies release the shared write capacity without entering business handlers, using the existing local HTTP body contract in server tests."
+    },
+    {
+      "directory": "src/browser",
+      "reason": "Recognize only leading authority-style URL schemes when rendering detected bare links, preserving ports and colons in paths or query strings while applying the existing destination policy."
+    },
+    {
+      "directory": "tools/assets",
+      "reason": "Automatically bind all builder source files at compile time, reject backslash source names that could collide in input receipts, and validate IPv6 loopback development proxy targets using parsed host types."
+    },
+    {
+      "directory": "src/foundation/crypto/password-format",
+      "reason": "Encode B64 parameter values into a bounded temporary Value buffer and use the shared checked insertion path, preserving parameter invariants after invalid names, duplicate names, overlong values, encoding errors and capacity failures."
+    },
+    {
+      "directory": "src/foundation/runtime/task-scheduler",
+      "reason": "Address RUSTSEC-2026-0386 by removing safe AsyncFd constructors for arbitrary AsRawFd implementations, requiring explicit unsafe registration with a valid stable descriptor lifetime, and delegating borrowed descriptor access only for AsFd backing objects. Retain independent deregistration failure protection and validate registration safety at compile time and through the real listener consumer."
+    },
+    {
+      "directory": "src/application",
+      "reason": "Register exclusively owned TCP listeners through the explicit unsafe AsyncFd boundary with documented descriptor lifetime and identity invariants; keep descriptor replacement inaccessible through the public listener API."
     }
   ]
 }

@@ -51,29 +51,13 @@ impl ParamsString {
 
     /// Add the given byte value to the [`ParamsString`], encoding it as "B64".
     pub fn add_b64_bytes<'a>(&mut self, name: impl TryInto<Ident<'a>>, bytes: &[u8]) -> Result<()> {
-        if !self.is_empty() {
-            self.0
-                .write_char(PARAMS_DELIMITER)
-                .map_err(|_| Error::ParamsMaxExceeded)?
-        }
-
         let name = name.try_into().map_err(|_| Error::ParamNameInvalid)?;
-
-        // Add param name
-        let offset = self.0.length;
-        if write!(self.0, "{}=", name).is_err() {
-            self.0.length = offset;
-            return Err(Error::ParamsMaxExceeded);
-        }
-
-        // Encode B64 value
-        let offset = self.0.length as usize;
-        let written = Encoding::B64
-            .encode(bytes, &mut self.0.bytes[offset..])?
-            .len();
-
-        self.0.length += written as u8;
-        Ok(())
+        // Validate the complete value before changing the parameter buffer.
+        // The shared insertion path also rejects duplicates and rolls back a
+        // partial name/value write when the complete parameter does not fit.
+        let mut encoded = [0u8; Value::MAX_LENGTH];
+        let value = Encoding::B64.encode(bytes, &mut encoded)?;
+        self.add(name, Value::new(value)?)
     }
 
     /// Add a key/value pair with a decimal value to the [`ParamsString`].
@@ -354,6 +338,61 @@ mod tests {
         params.add_b64_bytes("b", &[2, 3]).unwrap();
         params.add_b64_bytes("c", &[4, 5, 6]).unwrap();
         assert_eq!(params.to_string(), "a=AQ,b=AgM,c=BAUG");
+    }
+
+    #[test]
+    fn add_b64_errors_preserve_existing_parameters() {
+        let mut params = ParamsString::new();
+        params.add_decimal("m", 1).unwrap();
+        let before = params.clone();
+        assert_eq!(
+            params.add_b64_bytes("INVALID", &[1]),
+            Err(Error::ParamNameInvalid)
+        );
+        assert_eq!(params, before);
+        assert!(params.add_b64_bytes("data", &[0; 128]).is_err());
+        assert_eq!(params, before);
+        assert_eq!(params.iter().count(), 1);
+
+        params
+            .add_str(
+                "a",
+                "1111111111111111111111111111111111111111111111111111111111111111",
+            )
+            .unwrap();
+        params
+            .add_str("b", "222222222222222222222222222222222222222222222222222")
+            .unwrap();
+        let before = params.clone();
+        assert_eq!(
+            params.add_b64_bytes("c", &[1]),
+            Err(Error::ParamsMaxExceeded)
+        );
+        assert_eq!(params, before);
+        assert_eq!(params.iter().count(), 3);
+    }
+
+    #[test]
+    fn add_b64_rejects_duplicate_names_without_mutation() {
+        let mut params = ParamsString::new();
+        params.add_decimal("data", 1).unwrap();
+        let before = params.clone();
+        assert_eq!(
+            params.add_b64_bytes("data", &[1]),
+            Err(Error::ParamNameDuplicated)
+        );
+        assert_eq!(params, before);
+    }
+
+    #[test]
+    fn add_b64_values_obey_the_parameter_length_limit() {
+        let mut params = ParamsString::new();
+        params.add_b64_bytes("data", &[0; 48]).unwrap();
+        assert_eq!(params.get("data").unwrap().len(), Value::MAX_LENGTH);
+        let before = params.clone();
+        assert!(params.add_b64_bytes("extra", &[0; 49]).is_err());
+        assert_eq!(params, before);
+        assert_eq!(params.iter().count(), 1);
     }
 
     #[test]

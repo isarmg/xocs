@@ -84,13 +84,11 @@ async function checkAccessibility(page) {
 | 工具 | 固定版本 | 用途与入口 |
 | --- | --- | --- |
 | `cargo-audit` | 0.22.2 | [audit.py](../../tools/rust-sources/audit.py) 从当前来源映射恢复原始 registry 身份，调用审计并启用 `--deny yanked` |
-| `cargo-cyclonedx` | 0.5.9 | CI 准备的 CycloneDX SBOM 导出工具；当前打包脚本的制品仍以实际生成文件为准 |
 
 CI 中的工具安装命令为：
 
 ```sh
 CARGO_NET_OFFLINE=false cargo install cargo-audit --version 0.22.2 --locked
-CARGO_NET_OFFLINE=false cargo install cargo-cyclonedx --version 0.5.9 --locked
 python3 tools/rust-sources/audit.py
 ```
 

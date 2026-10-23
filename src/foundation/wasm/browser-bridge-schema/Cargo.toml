@@ -13,10 +13,8 @@
 edition = "2021"
 rust-version = "1.81"
 name = "blog-wasm-browser-bridge-schema"
-build = "build.rs"
-links = "wasm_bindgen"
+build = false
 include = [
-    "/build.rs",
     "/LICENSE-*",
     "/src",
 ]

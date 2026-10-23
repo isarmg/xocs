@@ -3,9 +3,15 @@
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
+import re
+import shutil
+import tarfile
 import tempfile
 import unittest
+from unittest.mock import patch
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('release', ROOT / 'scripts/package-release.py')
@@ -49,6 +55,23 @@ class Staging(unittest.TestCase):
             release.stage_original_notices(destination, source=ROOT)
             self.assertEqual((destination / 'LICENSE').read_bytes(), (ROOT / 'LICENSE').read_bytes())
             self.assertEqual(list(destination.iterdir()), [destination / 'LICENSE'])
+
+    def test_standalone_manual_links_resolve_inside_the_package(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            destination = Path(temporary)
+            release.stage_documentation(destination, 'a' * 40, source=ROOT)
+            self.assertEqual(len(list(destination.rglob('*.md'))), 6)
+            for manual in destination.rglob('*.md'):
+                for target in re.findall(r'\[[^\]\n]+\]\(([^\s)]+)\)', manual.read_text()):
+                    reference = urlsplit(target)
+                    if reference.scheme or reference.netloc or not reference.path:
+                        continue
+                    resolved = (manual.parent / reference.path).resolve()
+                    self.assertTrue(resolved.is_relative_to(destination), target)
+                    self.assertTrue(resolved.is_file(), f'{manual.name}: {target}')
+            first_run = (destination / 'docs/getting-started.md').read_text()
+            self.assertIn('https://github.com/isarmg/xocs/blob/' + 'a' * 40
+                          + '/docs/development.md', first_run)
 
 
 class CompiledBuildIdentity(unittest.TestCase):
@@ -261,6 +284,79 @@ class PackageIntegrity(unittest.TestCase):
         for name in ('../bin/blog', '/bin/blog', 'bin/../blog', 'bin//blog', 'state/site.sqlite'):
             with self.assertRaises(ValueError):
                 self.package.relative(name)
+
+    def test_staging_accepts_stable_source_and_rejects_material_copy_changes(self):
+        spec = importlib.util.spec_from_file_location('blog_stager', ROOT / 'scripts/stage-package.py')
+        stager = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(stager)
+        previous_umask = os.umask(0o022)  # The stager's command-line entry sets this.
+        self.addCleanup(os.umask, previous_umask)
+        with tempfile.TemporaryDirectory() as temporary:
+            work = Path(temporary)
+            payload = work / 'payload'
+            payload.mkdir()
+            self.fixture(payload)
+            metadata = work / 'metadata'
+            shutil.copytree(payload / 'share/build', metadata)
+            (metadata / 'server.blog-assets.json').unlink()
+            binary = work / 'server'
+            shutil.copyfile(payload / 'bin/blog', binary)
+            shutil.copyfile(payload / 'share/build/server.blog-assets.json',
+                            Path(str(binary) + '.blog-assets.json'))
+            source = work / 'source'
+            for name in ('package.py', 'install.py', 'maintenance.py'):
+                target = source / 'tools/packaging' / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(ROOT / 'tools/packaging' / name, target)
+            for origin in ('src/application/LICENSE', 'src/interface/LICENSE', 'web/styles/LICENSE',
+                           'tools/assets/LICENSE', 'src/interface/dom/LICENSE',
+                           'src/interface/macros/LICENSE', 'web/styles/web-fonts/CJK-LICENSE.txt',
+                           'web/styles/web-fonts/NORMAL-LICENSE.txt', 'LICENSE',
+                           'deploy/linux-x86_64/config.json.example', 'deploy/linux-x86_64/README.md',
+                           *(f'docs/{name}.md' for name in
+                             ('getting-started', 'configuration', 'usage', 'operations', 'contracts'))):
+                target = source / origin
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(ROOT / origin, target)
+            manifest = source / 'src/server/Cargo.toml'
+            manifest.parent.mkdir(parents=True, exist_ok=True)
+            manifest.write_text('[package]\nversion = "1.0.1"\n')
+            original_license = (source / 'LICENSE').read_bytes()
+            stamp = dict(source_revision='a' * 40, source_dirty=True, source_tree_sha256='c' * 64)
+
+            def source_stamp():
+                return {**stamp, 'source_tree_sha256':
+                        'c' * 64 if (source / 'LICENSE').read_bytes() == original_license else 'f' * 64}
+
+            def build_setup(_identity, output):
+                output.mkdir(exist_ok=True)
+                for name in ('blog-build-identity.json', 'blog-schema.json'):
+                    shutil.copyfile(metadata / name, output / name)
+                return binary
+
+            stage_notices = release.stage_original_notices
+
+            def change_material(destination, *, source):
+                stage_notices(destination, source=source)
+                (source / 'LICENSE').write_bytes(original_license + b'changed while staging')
+
+            with patch.object(stager, 'SOURCE', source), \
+                    patch.object(stager, 'current_source_stamp', side_effect=source_stamp), \
+                    patch.object(stager, 'build_setup', side_effect=build_setup), \
+                    patch.object(stager, 'command', return_value='1700000000\n'), \
+                    patch.object(stager, 'module', return_value=release):
+                archive = stager.build(binary, metadata, work / 'stable-output')
+                with tarfile.open(archive) as packed:
+                    prefix = 'blog-1.0.1-linux-x86_64/share/'
+                    for name in ('README.md', 'docs/configuration.md', 'docs/operations.md'):
+                        self.assertIn(prefix + name, packed.getnames())
+                # The real payload is copied; only Cargo and Git commands are
+                # substituted. The changed legal input must invalidate staging.
+                with patch.object(release, 'stage_original_notices', side_effect=change_material):
+                    with self.assertRaisesRegex(ValueError, 'source changed while staging'):
+                        stager.build(binary, metadata, work / 'output')
+            self.assertFalse(list((work / 'output').glob('*.tar.gz')))
+            self.assertFalse((work / 'output/SHA256SUMS').exists())
 
 
 if __name__ == '__main__':

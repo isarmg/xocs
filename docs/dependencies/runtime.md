@@ -12,6 +12,8 @@
 
 `task-scheduler` 提供运行时、任务、时间和异步 I/O；`io-poller` 使用 Linux epoll，`readiness-signal` 提供唤醒。等待就绪后仍须处理 `WouldBlock` 并按实际事件清除就绪状态，取消等待时释放注册。实现入口见 [I/O driver](../../src/foundation/runtime/task-scheduler/src/runtime/io)。
 
+`AsyncFd` 的 `register` 与 `register_with_interest` 是 unsafe 注册入口：调用者须保证底层文件描述符在整个注册期间保持有效、打开且不变，包括所有别名和可变访问。服务监听器独占持有标准库 `TcpListener`，只共享借用它，注销后才关闭；`AsFd` 借用直接来自实际支持 I/O safety 的内部对象。
+
 并行迭代与异步任务有不同调度接口。CPU 数据并行使用 `parallel-iterator` 与 `worker-pool`，其内部协议分别见[迭代器 plumbing](../../src/foundation/runtime/parallel-iterator/src/iter/plumbing/README.md)和[线程休眠](../../src/foundation/runtime/worker-pool/src/sleep/README.md)。阻塞任务需要明确并发上限，不能占用运行时的 I/O 工作线程执行无界计算。
 
 ## 共享状态与诊断

@@ -123,3 +123,13 @@ test('both matrix branches execute every original UI script exactly once', () =>
     rmSync(directory, {recursive: true, force: true});
   }
 });
+
+// A release publishes the build itself, so it must retain the same UI failure
+// gates as branch CI, including the startup failure/timeout tests.
+test('release executes every browser CI gate exactly once', () => {
+  const release = readFileSync(new URL('../.github/workflows/release.yml', import.meta.url), 'utf8');
+  const scripts = text => [...text.matchAll(/node tests\/([a-z-]+)\.mjs/g)]
+    .map(match => match[1]).sort();
+  assert.deepEqual(scripts(release), scripts(browser));
+  assert.equal(release.match(/npm run test:unit/g)?.length, 1);
+});

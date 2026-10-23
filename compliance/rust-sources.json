@@ -4357,13 +4357,53 @@
       {
         "directory": "src/foundation/crypto/constant-time-utilities",
         "reason": "Replace all implementation files with checksum-verified ctutils 0.4.4 for RUSTSEC-2026-0385, including to_u8 optimization barriers in all mask sizes and non-short-circuiting u128 comparisons on 32-bit WASM; preserve the maintained Cargo identity and local dependency edges."
+      },
+      {
+        "directory": "src/foundation/wasm/browser-bridge-schema",
+        "reason": "Validate the encoded shared API declaration order and actual descriptor opcode values with a reviewed protocol snapshot; remove raw source-file hashing and its build script so documentation and unrelated helpers cannot invalidate the wire contract."
+      },
+      {
+        "directory": "src/foundation/sync/atomic-lock",
+        "reason": "Remove the safe deprecated entry point that admitted unsound weak memory orderings, retain explicitly validated and unsafe lock APIs, and verify every ordering pair plus cross-thread serialization."
+      },
+      {
+        "directory": "src/foundation/storage/sqlite-access",
+        "reason": "Mark transactions open only after the SQLite worker acknowledges BEGIN; let the worker own cancellation rollback so rejected or cancelled nested BEGIN cannot roll back its parent. Cover failed and deterministically cancelled savepoints."
+      },
+      {
+        "directory": "src/application",
+        "reason": "Apply an absolute ten-second deadline to JSON body extraction, return a correlated retryable 408 and close stalled HTTP connections without interrupting handlers or committed writes."
+      },
+      {
+        "directory": "src/server",
+        "reason": "Verify stalled public JSON bodies release the shared write capacity without entering business handlers, using the existing local HTTP body contract in server tests."
+      },
+      {
+        "directory": "src/browser",
+        "reason": "Recognize only leading authority-style URL schemes when rendering detected bare links, preserving ports and colons in paths or query strings while applying the existing destination policy."
+      },
+      {
+        "directory": "tools/assets",
+        "reason": "Automatically bind all builder source files at compile time, reject backslash source names that could collide in input receipts, and validate IPv6 loopback development proxy targets using parsed host types."
+      },
+      {
+        "directory": "src/foundation/crypto/password-format",
+        "reason": "Encode B64 parameter values into a bounded temporary Value buffer and use the shared checked insertion path, preserving parameter invariants after invalid names, duplicate names, overlong values, encoding errors and capacity failures."
+      },
+      {
+        "directory": "src/foundation/runtime/task-scheduler",
+        "reason": "Address RUSTSEC-2026-0386 by removing safe AsyncFd constructors for arbitrary AsRawFd implementations, requiring explicit unsafe registration with a valid stable descriptor lifetime, and delegating borrowed descriptor access only for AsFd backing objects. Retain independent deregistration failure protection and validate registration safety at compile time and through the real listener consumer."
+      },
+      {
+        "directory": "src/application",
+        "reason": "Register exclusively owned TCP listeners through the explicit unsafe AsyncFd boundary with documented descriptor lifetime and identity invariants; keep descriptor replacement inaccessible through the public listener API."
       }
     ],
     "schema": 1
   },
-  "local_modifications_sha256": "76e38355e772684746944bb23d81f83c7ef20d91fc71d093a575aaa67ed79f7d",
+  "local_modifications_sha256": "4f38ed13556f34c2c6fca4d1e3a68682586cbc340c227a8886542ab1660c2a2c",
   "lockfiles_sha256": {
-    "Cargo.lock": "983058f5012a1b35e39b5ce989e5a0e894d2b22a711906cd1e77ed8fe5a25593"
+    "Cargo.lock": "bba04722f8f947de9d64ee1939bf7d8c9f73a6cf2ee215e6ef3003d027a84e07"
   },
   "manifests_sha256": {
     "Cargo.toml": "27a620c02b801f79b9fa8e9b76351717f19f840bda83b54c965806611f5bc79f",
@@ -4514,7 +4554,7 @@
     "src/foundation/runtime/scheduled-io/Cargo.toml": "0084bbf63451cfb90be7143b29e5bb62e24a4fda09de4b6aa5f94e705c1255e1",
     "src/foundation/runtime/signal-registry/Cargo.toml": "5d5782ffd201aef38fac01cccf9c8a00d1907ba01c7a719add796592c2bcbba0",
     "src/foundation/runtime/task-entry/Cargo.toml": "e75bd25c21a752102f92a79461d693b3c52551e08edb20b8f689e48610058b06",
-    "src/foundation/runtime/task-scheduler/Cargo.toml": "b0af15f2c6a278f10693f1996b37fef65c6639e4f7874c9dd607f5a29620337c",
+    "src/foundation/runtime/task-scheduler/Cargo.toml": "1b734be969a82dee6c669d4677e896ff04d7af5724b0de12e414a85dbddd8ed7",
     "src/foundation/runtime/task-waker/Cargo.toml": "d6129c89066da3601deb890d127d4192db32afdd577e823f9f99430350a4f12e",
     "src/foundation/runtime/worker-pool/Cargo.toml": "d5d25f6f6659337005c6ece3fb98c74b7935c445498680d751b0833683fe3d0b",
     "src/foundation/storage/fallible-rows/Cargo.toml": "a544c2ec52e274cca7594f55dc40819476353e3496d0434acd9f50dc95c8af8e",
@@ -4580,7 +4620,7 @@
     "src/foundation/unicode/locale-selection/Cargo.toml": "67f3c87df2bf4694f441df38fcc08b45a85319a804168450a1d1ebd890628673",
     "src/foundation/unicode/text-normalizer/Cargo.toml": "2555eaaf34a5bf7feadf5c85e3b8a50b1d44ce47058e81d8cf94aee1de7a6243",
     "src/foundation/wasm/browser-bridge-entry/Cargo.toml": "9c3b0f1f6eaa31965e73e6515d1d5e7177596e43a974f2cfc18fe4486b3d8cd1",
-    "src/foundation/wasm/browser-bridge-schema/Cargo.toml": "3e5cd59233567c57aeb8c1683893327a352a6ca2e9d08c85262fc0ef22b36707",
+    "src/foundation/wasm/browser-bridge-schema/Cargo.toml": "1f9c9b36e8f4f3dbf359da6b7072708d3c5850894e91405ff744d5d2230af763",
     "src/foundation/wasm/browser-bridge/Cargo.toml": "a871c24574018e4bfe49a621b05780d12fe2f4d1b173f41175dc917aae39e66b",
     "src/foundation/wasm/browser-futures/Cargo.toml": "4e04aadfb317a093a9fe547f4ec59dc518c85299691d9e289e09866bf97d361c",
     "src/foundation/wasm/browser-module/Cargo.toml": "b7d785818857e6f327fbcdf27e072e08e765eb5952ebe6c9e5ceb94687b7ffbc",
@@ -4592,7 +4632,7 @@
     "src/interface/Cargo.toml": "e5cc7390cae6da1f45695067742413f850e57fd0542d800494246811a8ce11c4",
     "src/interface/dom/Cargo.toml": "320ffaba7e5e1911eb9e3dff661a5a4fc707ef20df8c2b9dfe4b6af9abf4062f",
     "src/interface/macros/Cargo.toml": "3db013a938bdffba9a7976e1e9bf4795a91bbeb49624fdeb447b3f66063f8b61",
-    "src/server/Cargo.toml": "6d0b2e424089ebd5435a8e96d3970853a209f29bd83c42d6dce78b9fe6f85d11",
+    "src/server/Cargo.toml": "11441de4536b18124f0d3d122ba97f2856d73903e5d7b3a1a807a31c73e0fecb",
     "test/browser-domain/Cargo.toml": "42552e4737cabc19b224e88e6e5fb9b9949f84d193e7b79feabd71b27e663564",
     "tools/assets/Cargo.toml": "48e630b9079056ca4db8974fd810b3ebc421663be0edfa464f026973182de9d7",
     "tools/setup/Cargo.toml": "44d28abedb1e65c5f0ddfbebfe490769d238db82730a044719008f8b58e140e5"
@@ -32092,11 +32132,11 @@
         "src/schema_identity/mod.rs": "99a7beb0ee8bdb9e74d4b201d6d5d550aa0dbbab39da0d9e64926115c61f2216",
         "src/secret_envelope/fixtures/current-envelope-v1.json": "03a37059fa6ef97093d64a7ebd2874f772d1536519e12ae68d54c74d861a919a",
         "src/secret_envelope/mod.rs": "cf754fa0d1fbc7eee409eaa5dec3786ca228b017a74f28550c17880e08798ab1",
-        "src/server_cli/http.rs": "14487ca1b744a3a9c00cb8edfa6bf798418119d9ecbccdcc0b8e6191a521b720",
+        "src/server_cli/http.rs": "d4e0040ba94f7f571e6a18ff2f16701c800365f6043bf6eaa4043b1fde52a485",
         "src/server_cli/mod.rs": "3d8783648f8893ce656fa5bca5e430aca84df1af4f08a5a2523e9d8eae800f1f",
         "src/server_layout.rs": "994dd0d1b8cec6e4f0472cf42217bf566d17066c631f70c3b2880a796f02a509",
-        "src/server_runtime/http1.rs": "070b4095972266401a4d1733599b67f9a3743a2f088ac2f4730e93330aa356a5",
-        "src/server_runtime/listeners.rs": "f57da036d100fde7de91a762a105469ac8225ab69eccf6b6d325fa9f45fb98c6",
+        "src/server_runtime/http1.rs": "e209182d1617659f324ca77a541949a68c34d28a56e3ab83e5321ba16ef2d9e7",
+        "src/server_runtime/listeners.rs": "3a69aede7f9eb737f3bda8c0140528f643580a8f123cf8c7a304be120830a448",
         "src/server_runtime/mod.rs": "8c3cd0b690894865bcf9b38c09a91bd7ce035f676b2e20d9871190037edab340",
         "src/server_runtime/shutdown.rs": "a5007abd53d84375185c81c22e84129e346b9eb64a34586548cd31b48e0a9b72",
         "src/server_runtime/tasks.rs": "d5f151a088c0b9470f8652bab21257376278809957e54ef6c695661a993f268a",
@@ -32157,7 +32197,7 @@
         "src/dates.rs": "ab0cf56afb62232b07cbce453399184fa0c71764aa173e12162fae10a034b96c",
         "src/editor.rs": "2a82adaa2a9fa6cad49bf9ba0da61246eb448ece04985772f033185b8ed47a43",
         "src/lib.rs": "b1ebf629aef0667e8f79da2b6d4ec652e62e52b10c71140ee643258ebaedb04e",
-        "src/markdown.rs": "75e0d12af5f2f736bfae600a3a7ae1660963e298ae8d08cb76134dbee4f68dd9",
+        "src/markdown.rs": "6fce23e3ba363f8df55366547e4239e22b5df3bcbde95e520e45c1a31c2c7b37",
         "src/models.rs": "5568f204893d2ac7c63646482fc1d66d606d61215a30d3cd437d0b98392ba4f2",
         "src/public.rs": "5a69400fd55990600703793eae2226d9f586b3c18a50c536d7af618ca5d91cf7",
         "src/select.rs": "dbfb8968b97b1f2974dcb1c32eca6f4c2b128d66eb578ac6bd026b0874766c20"
@@ -34358,7 +34398,7 @@
         "src/ident.rs": "14fe7330bdad50d932efef361c5d0631ae94f173aa1c5741533f3107253e7365",
         "src/lib.rs": "18f8c29e10b49b9ad8a7f2c5ed63d7b74e7ea3b864d5cce77012a92f814ff2c2",
         "src/output.rs": "dedbd1eea5a8c6a1ffb6b6d68507ef89fa5f059b55c2b89da3385cbbf0f704d5",
-        "src/params.rs": "c76838597ded5162c1860fac341850ddfe6df5156d45a1514d8bebeee34d15be",
+        "src/params.rs": "2c5133e0b15cd5fda3d51a59e845b69c517ad8f937d5434a77ce7cf993a79c76",
         "src/salt.rs": "c475e04c49716ec7278abf7147980c73ed53081f32f4b118474d10c1e6a89cb8",
         "src/traits.rs": "7ee9e9d21e416590ea529121b0de6960e9f1f2dd1b0a309a566efebf631f035f",
         "src/value.rs": "6541cad2260442117297ab463b88773b4caee60ebd42ffb4ceff7f75d6606b62",
@@ -41580,7 +41620,7 @@
       "directory": "src/foundation/runtime/task-scheduler",
       "files_sha256": {
         ".cargo_vcs_info.json": "0417c2edd6230f28c2446d0de305c5f9ed201386153fb667d69628074d9b94c1",
-        "Cargo.toml": "b0af15f2c6a278f10693f1996b37fef65c6639e4f7874c9dd607f5a29620337c",
+        "Cargo.toml": "1b734be969a82dee6c669d4677e896ff04d7af5724b0de12e414a85dbddd8ed7",
         "src/blocking.rs": "8e62b2cdc512fedbca4b4c4f983629af035afea4ee7e918bb1a3e9851c8e034e",
         "src/doc/mod.rs": "fbb5c84915b85f0d6916040b85c4a5d04910c6da957431024b663c90def1d35b",
         "src/doc/os.rs": "6e11b38bbd5a1cb4a6a0858e6eb689ee5b7a175a255c774c10cf4aa58f734e51",
@@ -41619,14 +41659,14 @@
         "src/future/try_join.rs": "0ea5a069b17a34bbc091acbd74b9d51794a55a85dfa63fe2404d5ee91a4f0038",
         "src/fuzz.rs": "db998767c729f35320b1d489f43f4d7788e989c8d16c0793188a2868207d8e25",
         "src/io/async_buf_read.rs": "1c8a8b0f1184a37da6919f33e2406523b4ec392a94701eaff932f4b750d83519",
-        "src/io/async_fd.rs": "f9cc49dda8716e391555e1963671430b1a224bddc4675f9d3d71a565ac87f1e2",
+        "src/io/async_fd.rs": "9021416e571925a35745a902b3b6f5d39814d06233032ae43d1f1c622cd59518",
         "src/io/async_read.rs": "09e13e8d6163fb6ba8ed5fbe4acb51f9ddb6e25391bb7548e446a6ff88086a0f",
         "src/io/async_seek.rs": "f1d4945bd0bdf531aaab167740dd1f4465205987666e1ac1ff06ab8bad170ee0",
         "src/io/async_write.rs": "08e060b892eb57fdaa79f83c4f0c39877587866e67ef0565896d9c3abc05e720",
         "src/io/blocking.rs": "a9b344dc844329658068087183277ed73c4a9f762319d2eb64276361a35af5bf",
         "src/io/interest.rs": "64affb13dd60d55c5c3f0350210d9499908ccc4e8fe324f6e68e0adf02d52bb2",
         "src/io/join.rs": "f1c229259247b0065dda9d18f93684137b16a82669758eb5fc140070c64d2d4f",
-        "src/io/mod.rs": "fc6c436f0f30f886d04c90e8bdf26695a631368c836881b36cca9235fbc1f8a6",
+        "src/io/mod.rs": "d6cbf3b7cfa33fd1c4b432298758bec794b5d39efd99624a86673ecfe454393a",
         "src/io/poll_evented.rs": "42453b009eac237a0ad3a4764e152ce08eabbad367de72d01673cf55ff06a555",
         "src/io/read_buf.rs": "f2a75bdf27487fd4681d737f892eabf528ec7e79ec24e8c5af7fc278c8c239ea",
         "src/io/ready.rs": "af055eb3fc28a3847651da8283b6a1a01c3a81d2d81494bf807c104b55479366",
@@ -41924,6 +41964,7 @@
         "src/util/wake.rs": "cd20093a80571075c8087b8d9096c2506ff9fc5da0d135cd1988a7b171c38eae",
         "src/util/wake_list.rs": "bba6898b54d874170c0ccb2b3f918398f42de3bb117d8903742afeb9201ccb46",
         "tests/_require_full.rs": "1f58c8125018bd88b9f21647cee3d957b716bcce70f9144af1de58ee6712908f",
+        "tests/async_fd_contracts.rs": "82a79c7784fe56e88b1733c8067bb812e33d4d0c61ca359d743419c72730f771",
         "tests/async_send_sync.rs": "b7ba1ef28da9363b3950cb45b539d15b70727e7a939d043cd00078359f4959bc",
         "tests/buffered.rs": "67d457bebbe39a7b166a6d535a7337e05cf2e5a3fa67be820beb2b0413d88e32",
         "tests/coop_budget.rs": "941352b3456e7f76479af423739044995cbe8a5c253c114038959a7be45d962c",
@@ -41940,7 +41981,6 @@
         "tests/fs_rename.rs": "c5397d389b2aefef31e2f4bc5f7e4b4a2c9c1e3109945de9f93dffc98bf0ae00",
         "tests/fs_try_exists.rs": "e30f75e67905ee16abcf8f80dd9741c2cec93cffb173aff7197e964aab45c1fe",
         "tests/fs_write.rs": "f9b1779f22ad772cbbc213806f14bc1a8e936cbeceef6d55d4b5b9e1efb5e953",
-        "tests/io_async_fd.rs": "bf0b834217ea572ca05261d7878ac5e7875046dc1f908cbe5c115ebfed75de20",
         "tests/io_async_read.rs": "a590efe9bb01986f067118640a3b55f6760186e554f8e8f2404231d4e96f61b9",
         "tests/io_buf_reader.rs": "f5a322dea6fe9f40c18a085a865919c1bbfe8653203b37d1e18b77d259c6211d",
         "tests/io_buf_writer.rs": "3bdabe9ac26f3189929ab3e8957150f5262d5b426fd3cb6c4761a45014b1c1fa",
@@ -41953,7 +41993,7 @@
         "tests/io_join.rs": "2ad74bbac647582382e0b8dd01e711ccd3565992e29c1cd36f7625e7a5916670",
         "tests/io_lines.rs": "f5b1599ffff44819e269519ff0a08635ea1c5d7c541293e63ee33d98f25f0e3b",
         "tests/io_mem_stream.rs": "7b20d86c02c8a868cfa3aa4d228519090d156fdd9a8a19a3be263f264fc9d33c",
-        "tests/io_panic.rs": "80222a47b45c71a4d56305a40139e936e997e223241c94fcd45cf9d34ca96cf1",
+        "tests/io_panic.rs": "d9b8c3da984880b342dc495297902e3d5617e05ca412202e4ddc19f1f7535c6a",
         "tests/io_read.rs": "c0ed5738a4b2d9623b2e0a67cab0fb19bc50015f62ced524b5d9069c57e10f05",
         "tests/io_read_buf.rs": "6dc454751af0e9cccb44fdfb12b9f0311fa8afa482886aa56e3e15d49ae1e06c",
         "tests/io_read_exact.rs": "b6387dbeb0baceb7a1f74a9a3a8b4a654894465368be27c3bbf4352b79fc4314",
@@ -42267,7 +42307,7 @@
         "src/query_engine/sql_str.rs": "dbcd5592f6a28cbc05e2d4fa86312e748ead08f045c2a9306c08ad0cf7c78bad",
         "src/query_engine/statement.rs": "d13427357eced907feaca356e0745f6b9a77986d96bbc3a856b2f749ba936775",
         "src/query_engine/sync.rs": "35d017474ad69d5523e0c99cb27ff0409cc9694096543c20c662a625dd52aa80",
-        "src/query_engine/transaction.rs": "485126295d2d54fe7aab194b0407e2cd414d59a1d8ca7839e5faa4bd808141c9",
+        "src/query_engine/transaction.rs": "2cf6adc333e1c3d5fc419ff3c656ec2e51b8fe9389bf5a7b0232b363668fc0cf",
         "src/query_engine/type_info.rs": "d75095c7f1b1ea24b0ab32e03640f01671cef74b1a56b1f2e2f9ec0ad4534d3b",
         "src/query_engine/types/json.rs": "3c3eaf5cbfcc3bd303c2c96fd21c1262de04a2c0c7eb09dbfcb74ca203717ccc",
         "src/query_engine/types/mod.rs": "3b2a3bd5bd52876dd48be004b45c8d1926b994781b1531d87d370d02dff0ce47",
@@ -42283,7 +42323,7 @@
         "src/sqlite/connection/executor.rs": "9b4eca599b989872b2d7d8ceefdf4488dce61b2fb819fcdc8359a3ba96191898",
         "src/sqlite/connection/handle.rs": "ca747a229fdd8908fdffe0854efc7886f13a2774d5b77d6c0c67ce286f4855a0",
         "src/sqlite/connection/mod.rs": "9db87935941022d652edba3cd816868ce698c9e207e5872713bd415e51e35bbf",
-        "src/sqlite/connection/worker.rs": "a1f6b79d391fc4f2946bbbc6662cae291c40eaaa7da80b46f83f2b9d46f47adf",
+        "src/sqlite/connection/worker.rs": "0d094bedde8db08b70bdcece86ca0247d4c48911082d614296c54f574aedc200",
         "src/sqlite/database.rs": "2d2d754f517a75d746ed60b6dd65901388b863d4f372385a93f592752532d800",
         "src/sqlite/error.rs": "28cdf66137a0c272ec8e901490a00d3fee692ca1fdb7aba6271e11762323c8c2",
         "src/sqlite/lib.rs": "346c35616a75c6e1eca3f3ab318f890faccb69872756f9b3e59cfa62f0815086",
@@ -42369,7 +42409,7 @@
       "files_sha256": {
         ".cargo_vcs_info.json": "c5f5a5732d2955e7363c9d9151e9683a721a91b9dfb71ac66ada77192468e1f5",
         "Cargo.toml": "04b6141d677eff92f4d1e97e04198371085b1edd53232687b09d764ad1a6dbe7",
-        "src/lib.rs": "e8ec55a7e3873d1923d5d989cce758e7374b1c791a5cd6d51e47168769d3110e"
+        "src/lib.rs": "6946d740e8382021844a0f4a95e7c7541a7847efcfa3bf7438ea7b43d6da3e4d"
       },
       "layer": "sync",
       "name": "blog-sync-atomic-lock",
@@ -45341,12 +45381,12 @@
       "directory": "src/foundation/wasm/browser-bridge-schema",
       "files_sha256": {
         ".cargo_vcs_info.json": "3826fe890bb8821821d32d9d384ee9ce6a4d2683652b291122cd94db848cf21c",
-        "Cargo.toml": "3e5cd59233567c57aeb8c1683893327a352a6ca2e9d08c85262fc0ef22b36707",
-        "build.rs": "e4ead80a3cac208b043c70b1efa5c753635f60b0c291c01848787a2d22c88116",
+        "Cargo.toml": "1f9c9b36e8f4f3dbf359da6b7072708d3c5850894e91405ff744d5d2230af763",
         "src/identifier.rs": "7258d83ecab94be36f598c8e193fdadc3205a7cdf9b211593bb6eb9533cc16d7",
-        "src/lib.rs": "2a2f0a21ba8c9f4bf0264e184f4f60176888141c61077bb394fa653b43a35cfb",
-        "src/schema_hash_approval.rs": "447938968a7c26661310a05b3f33b00c6e2596a74aa79031f3ecf62f5abf6652",
-        "src/tys.rs": "35d93e50402556c531a6c205618f78da2eb15c4b7877a39f636de667c1fb58ea"
+        "src/lib.rs": "420873726d13a1cc3b0c48d2988bee1f83b171e2d789bd318aac4fadffd62c3a",
+        "src/schema.approved": "5db2e75cbda9b0ae277278eeb057fe5e82ecd9b8b3ac7cf13e4ff141c4697f45",
+        "src/schema_approval.rs": "7693f1b799e07a5e5ae317aa0f9cb95739ce1e62e1683e64d9aef5d9bb9638ac",
+        "src/tys.rs": "2ed146219039d7ed5262e8d758ccae040a95a6dc53a685a42076f47f6314b3d1"
       },
       "layer": "wasm",
       "name": "blog-wasm-browser-bridge-schema",
@@ -46085,6 +46125,7 @@
         "src/foundation/format/date-time",
         "src/foundation/format/json",
         "src/foundation/format/json-schema",
+        "src/foundation/network/body-stream",
         "src/foundation/network/http-middleware",
         "src/foundation/network/request-pipeline",
         "src/foundation/network/request-router",
@@ -46095,7 +46136,7 @@
       ],
       "directory": "src/server",
       "files_sha256": {
-        "Cargo.toml": "6d0b2e424089ebd5435a8e96d3970853a209f29bd83c42d6dce78b9fe6f85d11",
+        "Cargo.toml": "11441de4536b18124f0d3d122ba97f2856d73903e5d7b3a1a807a31c73e0fecb",
         "build.rs": "44ee568120c22c5ff9960d8dea896bdd84e6d390133b9fc77e563ec0fc917967",
         "examples/smoke-fixture.rs": "d65c67701c2530c787ab3a2cf984b49d9eaec5093305b6aef391c096e75bec80",
         "schema/initialize-site-author.sql": "fa82753ff3758d95a71df0fd0c0318cfe134b4738137cd7d3f30c93cb2f500af",
@@ -46126,13 +46167,14 @@
         "src/schema.rs": "b388d1877bd6da6160a59ee5bc5579b75182032624be60c7e48c773a0eb7a28d",
         "src/schema_definition.rs": "683c929cd5e96e87f53ba40d4b540b7a88e9c751e56fcf112bd43a8fc1a7f077",
         "src/static_assets.rs": "99a69b689d448ee1f0235aa113669ed3ad0f44eff7f9bcf8a91859990af1c932",
-        "src/tests.rs": "4c21f2477f3099e88941ab7bca2590a7cf6338770858e94c2e339d0ef259c0ce",
+        "src/tests.rs": "46446fac401a229700036f6f876f97f5d0115349afa49d6ac85a90ac97fb7c23",
         "src/tests/family.rs": "c87838f01578dfe5dec106d9d560172fe17ac9785d914bcc412da22ac990bd05",
         "src/tests/management.rs": "2c35a6c531c05c634cfe6d704c0f1ca0eb76922e2f2c42b0646e7ba19edefff5",
         "src/tests/media_management.rs": "33acb5c09e21d3b6c4e6dfaa2acfe598a15fe30a99b21b4ab7b7c1af82c3baeb",
         "src/tests/media_names.rs": "1fc754ee0f0323929914f9558a30adfc7890752a7844e81e6709df5956e83ca6",
         "src/tests/public_browse.rs": "41343378bcc145776f59d11362bf7ada46cdc01724a741b8d25fdde3fc80abe6",
         "src/tests/schema_v3.rs": "241ced0e1e423d4a6b0d48d83085b313e91a87247e4a700d1d73016e36d86f96",
+        "src/tests/slow_body.rs": "6a1ac8ef4915ca93098b7b2a4f3297c06e97ba81ad5eed35b12bdf92d9609951",
         "src/tests/taxonomy.rs": "cf648747c31d55c950f614c5bd102eee0579b863f2a2750c554ae149da11d2ad",
         "tests/date_time_contracts.rs": "57db470a0aaaee8159e74af37d6b7891af9d5464aaf8c7eeeb403b240a87ad53",
         "tests/deployment_contract.rs": "4f4ac04038f9a1971171de88cc5f8fbdd579d0de36b4c6fb8bfc406df72d5b54",
@@ -46200,16 +46242,16 @@
         "Cargo.toml": "48e630b9079056ca4db8974fd810b3ebc421663be0edfa464f026973182de9d7",
         "LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
         "ORIGIN.json": "93ce2b98016b4bfed5ba1ace17bc948b38f9fa9cfb124a00ea4a19cd0667fb49",
-        "README.md": "f77997cd52f24f1891f54195bd28f3c561ef221a0ce6a78d6dc76a3ffe180e13",
-        "build.rs": "e36acf964e05e09f18c61f2520bca306c8cefde60360a98883dd5d0a588876a0",
+        "README.md": "1237f3858d0ced871361d430e4ee22b9296f236f12cadb95ddf8763e470df28f",
+        "build.rs": "98e99686d9f1d9000e4693c8ce048b5bc647039fb0e0aa8c79e38bbf763616b8",
         "src/assets.rs": "037007f3f1afb5501a7f75780fd671da2c83f04de0453f96c06deb5e7369e193",
         "src/browser_module.rs": "90b75d4debf5b649d45a48a169661c172fef9a0fdd58787b9db017ffff89a0ef",
-        "src/dev.rs": "89c29e42dea707ff05610fa884773051b5c2b83836fb50e8c40843af692da657",
+        "src/dev.rs": "cb3df61e34e2aa0d35a224ac9fb67b42434fad285cab474743e47ef42a0238d6",
         "src/dev/proxy.rs": "18ed20fb208e46a1eb4fed119f6de22aca70c1a125ffd3870fc806ec3f959dcb",
         "src/graph.rs": "e5e85572fccbd6ab8d9d0768e79a7262e7c9476589fee6d7d99aaf1b3d21f8c9",
-        "src/inventory.rs": "6dbde123d7c13ee6b345936431d36c7481a8e902aac3add169ddacf8276d0820",
+        "src/inventory.rs": "bfc523c447c0f0c611624f1bd360625ec9ea116fa08655ad3e15011c5a35e637",
         "src/javascript.rs": "44cc623c3910b5251a580ff781d18f6fc05c714e9fa0a4d93eaf8b5a3b4eb730",
-        "src/lib.rs": "deb69a16bedcc4e8f1d6ec20707d535ae21eaaff612a33067cf7bbae37b5d6cc",
+        "src/lib.rs": "f5cf95cf6ebd0e631a3c3ced79cbff1dadc7debb06949eb098f670379c3b897b",
         "src/main.rs": "82d9c552760db5a2e671b954b2d7377e03d68b24f8c224d5ee88955dec19f8ce",
         "src/platform_contract.rs": "15520a479cc436a16cd635841b53e91515e50b5fd1039209c6dedf2cd5a797af",
         "src/server_build.rs": "f28b356720b3c8339a8ef6db62714118dc77e0b7cb2897be222762fb1141bcb0",

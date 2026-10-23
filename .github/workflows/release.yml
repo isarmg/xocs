@@ -37,7 +37,6 @@ jobs:
       - name: Install exact supply-chain tools
         run: |
           CARGO_NET_OFFLINE=false cargo install cargo-audit --version 0.22.2 --locked
-          CARGO_NET_OFFLINE=false cargo install cargo-cyclonedx --version 0.5.9 --locked
 
       - name: Verify repository-owned implementation
         run: |
@@ -94,6 +93,7 @@ jobs:
           node tests/blog-interface-runtime.mjs
           node tests/async-state.mjs
           node tests/transport-lifecycle.mjs
+          node tests/startup-failure.mjs
           node tests/rust-native-domain.mjs
           node tests/public-footer.mjs
           node tests/public-layout.mjs
