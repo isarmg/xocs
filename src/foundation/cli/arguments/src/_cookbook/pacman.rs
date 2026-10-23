@@ -7,4 +7,4 @@
 #![doc = include_str!("../../examples/pacman.rs")]
 //! ```
 //!
-#![doc = include_str!("../../../../../../docs/reference/zxs/command-line/docs/architecture/command-line-reference/runtime/examples/pacman.md")]
+#![doc = include_str!("../../../../../../docs/dependencies/guides/cli/runtime/examples/pacman.md")]

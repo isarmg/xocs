@@ -41,7 +41,7 @@ enum_property! {
 
 /// A [cursor image](https://www.w3.org/TR/2021/WD-css-ui-4-20210316/#cursor) value, used in the `cursor` property.
 ///
-/// See [Cursor](Cursor).
+/// See [Cursor].
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(any(), derive(static_self::IntoOwned))]
@@ -90,7 +90,7 @@ enum_property! {
   /// A pre-defined [cursor](https://www.w3.org/TR/2021/WD-css-ui-4-20210316/#cursor) value,
   /// used in the `cursor` property.
   ///
-  /// See [Cursor](Cursor).
+  /// See [`Cursor`].
   #[allow(missing_docs)]
   pub enum CursorKeyword {
     Auto,

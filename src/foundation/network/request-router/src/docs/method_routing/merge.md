@@ -4,7 +4,7 @@ This is useful for breaking routers into smaller pieces and combining them
 into one.
 
 ```rust
-use axum::{
+use http_routing::{
     routing::{get, post},
     Router,
 };

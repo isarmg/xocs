@@ -1,4 +1,5 @@
-use command_line::Args;
+extern crate blog_cli_arguments as clap;
+use blog_cli_arguments::Args;
 
 use crate::implicit::BumpLevel;
 
@@ -44,7 +45,7 @@ impl std::str::FromStr for TargetVersion {
 }
 
 /// Default to `TargetVersionParser` for `TargetVersion`, instead of `FromStr`
-impl command_line::builder::ValueParserFactory for TargetVersion {
+impl blog_cli_arguments::builder::ValueParserFactory for TargetVersion {
     type Parser = TargetVersionParser;
 
     fn value_parser() -> Self::Parser {
@@ -55,27 +56,27 @@ impl command_line::builder::ValueParserFactory for TargetVersion {
 #[derive(Copy, Clone)]
 pub(crate) struct TargetVersionParser;
 
-impl command_line::builder::TypedValueParser for TargetVersionParser {
+impl blog_cli_arguments::builder::TypedValueParser for TargetVersionParser {
     type Value = TargetVersion;
 
     fn parse_ref(
         &self,
-        cmd: &command_line::Command,
-        arg: Option<&command_line::Arg>,
+        cmd: &blog_cli_arguments::Command,
+        arg: Option<&blog_cli_arguments::Arg>,
         value: &std::ffi::OsStr,
-    ) -> Result<Self::Value, command_line::Error> {
+    ) -> Result<Self::Value, blog_cli_arguments::Error> {
         let inner_parser = <TargetVersion as std::str::FromStr>::from_str;
         inner_parser.parse_ref(cmd, arg, value)
     }
 
     fn possible_values(
         &self,
-    ) -> Option<Box<dyn Iterator<Item = command_line::builder::PossibleValue> + '_>> {
-        let inner_parser = command_line::builder::EnumValueParser::<BumpLevel>::new();
+    ) -> Option<Box<dyn Iterator<Item = blog_cli_arguments::builder::PossibleValue> + '_>> {
+        let inner_parser = blog_cli_arguments::builder::EnumValueParser::<BumpLevel>::new();
         #[allow(clippy::needless_collect)] // Erasing a lifetime
         inner_parser.possible_values().map(|ps| {
             let ps = ps.collect::<Vec<_>>();
-            let ps: Box<dyn Iterator<Item = command_line::builder::PossibleValue> + '_> =
+            let ps: Box<dyn Iterator<Item = blog_cli_arguments::builder::PossibleValue> + '_> =
                 Box::new(ps.into_iter());
             ps
         })

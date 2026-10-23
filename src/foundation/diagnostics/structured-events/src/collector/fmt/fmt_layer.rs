@@ -420,16 +420,11 @@ where
     ///
     /// See the [`time` module] for the provided timer implementations.
     ///
-    /// Note that using the `"time`"" feature flag enables the
-    /// additional time formatters [`UtcTime`] and [`LocalTime`], which use the
-    /// [`time` crate] to provide more sophisticated timestamp formatting
-    /// options.
+    /// The provided timers report wall-clock time or elapsed time. Implement
+    /// the timer trait to supply a different timestamp format.
     ///
     /// [`timer`]: super::time::FormatTime
     /// [`time` module]: mod@super::time
-    /// [`UtcTime`]: super::time::UtcTime
-    /// [`LocalTime`]: super::time::LocalTime
-    /// [`time` crate]: https://docs.rs/time/0.3
     pub fn with_timer<T2>(self, timer: T2) -> Layer<S, N, format::Format<L, T2>, W> {
         Layer {
             fmt_event: self.fmt_event.with_timer(timer),

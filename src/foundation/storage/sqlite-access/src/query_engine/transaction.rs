@@ -11,7 +11,7 @@ use crate::query_engine::sql_str::{AssertSqlSafe, SqlSafeStr, SqlStr};
 
 /// Generic management of database transactions.
 ///
-/// This trait should not be used, except when implementing [`Connection`].
+/// This trait should not be used, except when implementing [`Connection`](crate::Connection).
 pub trait TransactionManager {
     type Database: Database;
 
@@ -49,40 +49,30 @@ pub trait TransactionManager {
     fn get_transaction_depth(conn: &<Self::Database as Database>::Connection) -> usize;
 }
 
-/// An in-progress database transaction or savepoint.
+/// An in-progress SQLite transaction or savepoint.
 ///
-/// A transaction starts with a call to [`Pool::begin`] or [`Connection::begin`].
+/// Start a transaction with [`crate::Pool::begin`] or [`crate::Connection::begin`].
+/// Commit it with [`Transaction::commit`] or roll it back with
+/// [`Transaction::rollback`]. Dropping an open transaction queues a rollback on
+/// the connection worker; use the explicit async operation when its completion
+/// must be observed.
 ///
-/// A transaction should end with a call to [`commit`] or [`rollback`]. If neither are called
-/// before the transaction goes out-of-scope, [`rollback`] is called. In other
-/// words, [`rollback`] is called on `drop` if the transaction is still in-progress.
+/// A nested transaction uses a savepoint, allowing changes after that savepoint
+/// to be undone without rolling back its parent transaction. Pass `&mut *tx` to
+/// query methods to access the transaction's connection.
 ///
-/// A savepoint is a special mark inside a transaction that allows all commands that are
-/// executed after it was established to be rolled back, restoring the transaction state to
-/// what it was at the time of the savepoint.
-///
-/// A transaction can be used as an [`Executor`] when performing queries:
-/// ```rust,no_run
-/// # use crate::query_engine::acquire::Acquire;
-/// # async fn example() -> sqlx::Result<()> {
-/// # let id = 1;
-/// # let mut conn: sqlx::PgConnection = unimplemented!();
-/// let mut tx = conn.begin().await?;
-///
-/// let result = sqlx::query("DELETE FROM \"testcases\" WHERE id = $1")
-///     .bind(id)
-///     .execute(&mut *tx)
-///     .await?
-///     .rows_affected();
-///
-/// tx.commit().await
+/// ```
+/// # async fn example(pool: &blog_storage_sqlite_access::SqlitePool) -> blog_storage_sqlite_access::Result<()> {
+/// let mut tx = pool.begin().await?;
+/// let value: i64 = blog_storage_sqlite_access::query_scalar("SELECT ?1")
+///     .bind(1_i64)
+///     .fetch_one(&mut *tx)
+///     .await?;
+/// assert_eq!(value, 1);
+/// tx.commit().await?;
+/// # Ok(())
 /// # }
 /// ```
-/// [`Executor`]: crate::query_engine::executor::Executor
-/// [`Connection::begin`]: crate::query_engine::connection::Connection::begin()
-/// [`Pool::begin`]: crate::query_engine::pool::Pool::begin()
-/// [`commit`]: Self::commit()
-/// [`rollback`]: Self::rollback()
 pub struct Transaction<'c, DB>
 where
     DB: Database,

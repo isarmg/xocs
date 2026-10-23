@@ -44,7 +44,7 @@ pub enum SVGPaint<'i> {
 
 /// A fallback for an SVG paint in case a paint server `url()` cannot be resolved.
 ///
-/// See [SVGPaint](SVGPaint).
+/// See [SVGPaint].
 #[derive(Debug, Clone, PartialEq, Parse, ToCss)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(

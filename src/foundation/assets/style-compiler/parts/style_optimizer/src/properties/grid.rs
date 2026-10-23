@@ -44,7 +44,7 @@ pub enum TrackSizing<'i> {
 /// A [`<track-list>`](https://drafts.csswg.org/css-grid-2/#typedef-track-list) value,
 /// as used in the `grid-template-rows` and `grid-template-columns` properties.
 ///
-/// See [TrackSizing](TrackSizing).
+/// See [TrackSizing].
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(any(), derive(static_self::IntoOwned))]
@@ -64,7 +64,7 @@ pub struct TrackList<'i> {
 
 /// Either a track size or `repeat()` function.
 ///
-/// See [TrackList](TrackList).
+/// See [TrackList].
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(any(), derive(static_self::IntoOwned))]
@@ -85,7 +85,7 @@ pub enum TrackListItem<'i> {
 /// A [`<track-size>`](https://drafts.csswg.org/css-grid-2/#typedef-track-size) value,
 /// as used in the `grid-template-rows` and `grid-template-columns` properties.
 ///
-/// See [TrackListItem](TrackListItem).
+/// See [TrackListItem].
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(
@@ -128,7 +128,7 @@ pub struct TrackSizeList(pub SmallVec<[TrackSize; 1]>);
 
 /// A [`<track-breadth>`](https://drafts.csswg.org/css-grid-2/#typedef-track-breadth) value.
 ///
-/// See [TrackSize](TrackSize).
+/// See [TrackSize].
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(
@@ -154,7 +154,7 @@ pub enum TrackBreadth {
 /// A [`<track-repeat>`](https://drafts.csswg.org/css-grid-2/#typedef-track-repeat) value,
 /// representing the `repeat()` function in a track list.
 ///
-/// See [TrackListItem](TrackListItem).
+/// See [TrackListItem].
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(any(), derive(static_self::IntoOwned))]
@@ -177,7 +177,7 @@ pub struct TrackRepeat<'i> {
 /// A [`<repeat-count>`](https://drafts.csswg.org/css-grid-2/#typedef-track-repeat) value,
 /// used in the `repeat()` function.
 ///
-/// See [TrackRepeat](TrackRepeat).
+/// See [TrackRepeat].
 #[derive(Debug, Clone, PartialEq, Parse, ToCss)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(
@@ -533,7 +533,7 @@ impl ToCss for TrackSizeList {
 }
 
 /// A value for the [grid-template-areas](https://drafts.csswg.org/css-grid-2/#grid-template-areas-property) property.
-/// none | <string>+
+/// none | `<string>`+
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(
@@ -705,7 +705,7 @@ impl GridTemplateAreas {
 
 /// A value for the [grid-template](https://drafts.csswg.org/css-grid-2/#explicit-grid-shorthand) shorthand property.
 ///
-/// none | [ <'grid-template-rows'> / <'grid-template-columns'> ] | [ <line-names>? <string> <track-size>? <line-names>? ]+ [ / <explicit-track-list> ]?
+/// none | [ <'grid-template-rows'> / <'grid-template-columns'> ] | [ `<line-names>`? `<string>` `<track-size>`? `<line-names>`? ]+ [ / `<explicit-track-list>` ]?
 ///
 /// If `areas` is not `None`, then `rows` must also not be `None`.
 #[derive(Debug, Clone, PartialEq)]
@@ -1516,7 +1516,7 @@ macro_rules! impl_grid_placement {
 
 define_shorthand! {
   /// A value for the [grid-row](https://drafts.csswg.org/css-grid-2/#propdef-grid-row) shorthand property.
-  /// <grid-line> [ / <grid-line> ]?
+  /// `<grid-line> [ / <grid-line> ]?`
   pub struct GridRow<'i> {
     /// The starting line.
     #[cfg_attr(any(), serde(borrow))]
@@ -1528,7 +1528,7 @@ define_shorthand! {
 
 define_shorthand! {
   /// A value for the [grid-column](https://drafts.csswg.org/css-grid-2/#propdef-grid-column) shorthand property.
-  /// <grid-line> [ / <grid-line> ]?
+  /// `<grid-line> [ / <grid-line> ]?`
   pub struct GridColumn<'i> {
     /// The starting line.
     #[cfg_attr(any(), serde(borrow))]
@@ -1543,7 +1543,7 @@ impl_grid_placement!(GridColumn);
 
 define_shorthand! {
   /// A value for the [grid-area](https://drafts.csswg.org/css-grid-2/#propdef-grid-area) shorthand property.
-  /// <grid-line> [ / <grid-line> ]{0,3}
+  /// `<grid-line> [ / <grid-line> ]{0,3}`
   pub struct GridArea<'i> {
     /// The grid row start placement.
     #[cfg_attr(any(), serde(borrow))]

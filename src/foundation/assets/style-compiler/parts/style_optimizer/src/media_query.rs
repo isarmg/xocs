@@ -1574,7 +1574,7 @@ where
 
 /// [media feature value](https://drafts.csswg.org/mediaqueries/#typedef-mf-value) within a media query.
 ///
-/// See [MediaFeature](MediaFeature).
+/// See [MediaFeature].
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(all(), derive(Visit), visit(visit_media_feature_value, MEDIA_QUERIES))]
 #[cfg_attr(any(), derive(static_self::IntoOwned))]

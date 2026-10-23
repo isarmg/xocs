@@ -12,7 +12,7 @@ use crate::automata::{hybrid::id::LazyStateIDError, nfa, util::search::Anchored}
 ///
 /// * Obtain a human readable message via its `std::fmt::Display` impl.
 /// * Access an underlying
-/// [`nfa::thompson::BuildError`](blog_text_pattern_search::automata::nfa::thompson::BuildError)
+/// [`nfa::thompson::BuildError`](crate::automata::nfa::thompson::BuildError)
 /// type from its `source` method via the `std::error::Error` trait. This error
 /// only occurs when using convenience routines for building a lazy DFA
 /// directly from a pattern string.
@@ -100,12 +100,12 @@ impl core::fmt::Display for BuildError {
 /// based on incorrect configuration or even based on whether
 /// the look-behind byte triggers a quit state. Typically
 /// one does not need to handle this error if you're using
-/// [`DFA::start_state_forward`](blog_text_pattern_search::automata::hybrid::dfa::DFA::start_state_forward)
+/// [`DFA::start_state_forward`](crate::automata::hybrid::dfa::DFA::start_state_forward)
 /// (or its reverse counterpart), as that routine automatically converts
-/// `StartError` to a [`MatchError`](blog_text_pattern_search::automata::MatchError) for you.
+/// `StartError` to a [`MatchError`](crate::automata::MatchError) for you.
 ///
 /// This error may be returned by the
-/// [`DFA::start_state`](blog_text_pattern_search::automata::hybrid::dfa::DFA::start_state) routine.
+/// [`DFA::start_state`](crate::automata::hybrid::dfa::DFA::start_state) routine.
 ///
 /// This error implements the `std::error::Error` trait when the `std` feature
 /// is enabled.
@@ -212,9 +212,9 @@ impl core::fmt::Display for StartError {
 /// The default configuration of a lazy DFA in this crate is
 /// set such that a `CacheError` will never occur. Instead,
 /// callers must opt into this behavior with settings like
-/// [`dfa::Config::minimum_cache_clear_count`](blog_text_pattern_search::automata::hybrid::dfa::Config::minimum_cache_clear_count)
+/// [`dfa::Config::minimum_cache_clear_count`](crate::automata::hybrid::dfa::Config::minimum_cache_clear_count)
 /// and
-/// [`dfa::Config::minimum_bytes_per_state`](blog_text_pattern_search::automata::hybrid::dfa::Config::minimum_bytes_per_state).
+/// [`dfa::Config::minimum_bytes_per_state`](crate::automata::hybrid::dfa::Config::minimum_bytes_per_state).
 ///
 /// When the `std` feature is enabled, this implements the `std::error::Error`
 /// trait.

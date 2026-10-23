@@ -60,9 +60,9 @@ type CachePoolFn =
 ///
 /// * When calling [`Regex::captures`], instead of immediately
 /// running a slower but more capable regex engine like the
-/// [`PikeVM`](blog_text_pattern_search::automata::nfa::thompson::pikevm::PikeVM), the meta regex engine
+/// [`PikeVM`](crate::automata::nfa::thompson::pikevm::PikeVM), the meta regex engine
 /// will usually first look for the bounds of a match with a higher throughput
-/// regex engine like a [lazy DFA](blog_text_pattern_search::automata::hybrid). Only when a match is found
+/// regex engine like a [lazy DFA](crate::automata::hybrid). Only when a match is found
 /// is a slower engine like `PikeVM` used to find the matching span for each
 /// capture group.
 /// * While higher throughout engines like the lazy DFA cannot handle
@@ -98,11 +98,11 @@ type CachePoolFn =
 /// mutable scratch space. This scratch space is called a [`Cache`].
 ///
 /// Most regex engines _also_ usually have a read-only component, typically
-/// a [Thompson `NFA`](blog_text_pattern_search::automata::nfa::thompson::NFA).
+/// a [Thompson `NFA`](crate::automata::nfa::thompson::NFA).
 ///
 /// In order to make the `Regex` API convenient, most of the routines hide
 /// the fact that a `Cache` is needed at all. To achieve this, a [memory
-/// pool](blog_text_pattern_search::automata::util::pool::Pool) is used internally to retrieve `Cache`
+/// pool](crate::automata::util::pool::Pool) is used internally to retrieve `Cache`
 /// values in a thread safe way that also permits reuse. This in turn implies
 /// that every such search call requires some form of synchronization. Usually
 /// this synchronization is fast enough to not notice, but in some cases, it
@@ -110,7 +110,7 @@ type CachePoolFn =
 /// true:
 ///
 /// * The same `Regex` is shared across multiple threads simultaneously,
-/// usually via a [`util::lazy::Lazy`](blog_text_pattern_search::automata::util::lazy::Lazy) or something
+/// usually via a [`util::lazy::Lazy`](crate::automata::util::lazy::Lazy) or something
 /// similar from the `once_cell` or `lazy_static` crates.
 /// * The primary unit of work in each thread is a regex search.
 /// * Searches are run on very short haystacks.
@@ -623,7 +623,7 @@ impl Regex {
     /// This yields the same matches as [`Regex::find_iter`], but it includes
     /// the spans of all capturing groups that participate in each match.
     ///
-    /// **Tip:** See [`util::iter::Searcher`](blog_text_pattern_search::automata::util::iter::Searcher) for
+    /// **Tip:** See [`util::iter::Searcher`](crate::automata::util::iter::Searcher) for
     /// how to correctly iterate over all matches in a haystack while avoiding
     /// the creation of a new `Captures` value for every match. (Which you are
     /// forced to do with an `Iterator`.)
@@ -1090,7 +1090,7 @@ impl Regex {
     /// * A slice with [`pattern_len() * 2`](Regex::pattern_len) slots, if you
     /// only care about the overall match spans for each matching pattern.
     /// * A slice with
-    /// [`slot_len()`](blog_text_pattern_search::automata::util::captures::GroupInfo::slot_len) slots, which
+    /// [`slot_len()`](crate::automata::util::captures::GroupInfo::slot_len) slots, which
     /// permits recording match offsets for every capturing group in every
     /// pattern.
     ///
@@ -2320,7 +2320,7 @@ impl<'r, 'h> core::iter::FusedIterator for SplitN<'r, 'h> {}
 /// Most of the regex engines in this crate require some kind of
 /// mutable state in order to execute a search. This mutable state is
 /// explicitly separated from the core regex object (such as a
-/// [`thompson::NFA`](blog_text_pattern_search::automata::nfa::thompson::NFA)) so that the read-only regex
+/// [`thompson::NFA`](crate::automata::nfa::thompson::NFA)) so that the read-only regex
 /// object can be shared across multiple threads simultaneously without any
 /// synchronization. Conversely, a `Cache` must either be duplicated if using
 /// the same `Regex` from multiple threads, or else there must be some kind of
@@ -2442,7 +2442,7 @@ impl Cache {
 /// This configuration only includes options for the
 /// non-syntax behavior of a `Regex`, and can be applied via the
 /// [`Builder::configure`] method. For configuring the syntax options, see
-/// [`util::syntax::Config`](blog_text_pattern_search::automata::util::syntax::Config).
+/// [`util::syntax::Config`](crate::automata::util::syntax::Config).
 ///
 /// # Example: lower the NFA size limit
 ///
@@ -3021,7 +3021,7 @@ impl Config {
     ///
     /// **Warning**: This does not change the behavior of `.`. To do that,
     /// you'll need to configure the syntax option
-    /// [`syntax::Config::line_terminator`](blog_text_pattern_search::automata::util::syntax::Config::line_terminator)
+    /// [`syntax::Config::line_terminator`](crate::automata::util::syntax::Config::line_terminator)
     /// in addition to this. Otherwise, `.` will continue to match any
     /// character other than `\n`.
     ///
@@ -3089,7 +3089,7 @@ impl Config {
     /// definitely be used. It just means that it will be _available_ for
     /// use if the meta regex engine thinks it will be useful. (Indeed, a
     /// one-pass DFA can only be used when the regex is one-pass. See the
-    /// [`dfa::onepass`](blog_text_pattern_search::automata::dfa::onepass) module for more details.)
+    /// [`dfa::onepass`](crate::automata::dfa::onepass) module for more details.)
     ///
     /// When the `dfa-onepass` crate feature is enabled, then this is enabled
     /// by default. Otherwise, if the crate feature is disabled, then this is
@@ -3373,7 +3373,7 @@ impl Config {
 /// * [`Builder::configure`] will set high-level configuration options as
 /// described by a [`Config`].
 /// * [`Builder::syntax`] will set the syntax level configuration options
-/// as described by a [`util::syntax::Config`](blog_text_pattern_search::automata::util::syntax::Config).
+/// as described by a [`util::syntax::Config`](crate::automata::util::syntax::Config).
 /// This only applies when building a `Regex` from pattern strings.
 ///
 /// Once configured, the builder can then be used to construct a `Regex` from

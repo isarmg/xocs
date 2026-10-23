@@ -30,7 +30,6 @@ use crate::stream::UpdateSlice;
 ///
 /// See also [`StreamIsPartial`] to tell whether the input supports complete or partial parsing.
 ///
-/// See also [Special Topics: Parsing Partial Input][crate::_topic::partial].
 ///
 /// # Example
 ///

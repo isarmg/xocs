@@ -35,7 +35,7 @@ pub struct PageSelector<'i> {
 enum_property! {
   /// A page pseudo class within an `@page` selector.
   ///
-  /// See [PageSelector](PageSelector).
+  /// See [`PageSelector`].
   pub enum PagePseudoClass {
     /// The `:left` pseudo class.
     Left,

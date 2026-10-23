@@ -23,7 +23,8 @@ use crate::distributions::{Distribution, Uniform};
 /// This distribution samples with replacement; each sample is independent.
 /// Sampling without replacement requires state to be retained, and therefore
 /// cannot be handled by a distribution; you should instead consider methods
-/// on [`SliceRandom`], such as [`SliceRandom::choose_multiple`].
+/// on [`SliceRandom`]. With `alloc`, its `choose_multiple` method returns
+/// a sample without replacement.
 ///
 /// # Example
 ///
@@ -60,7 +61,6 @@ use crate::distributions::{Distribution, Uniform};
 ///
 /// [`SliceRandom`]: crate::seq::SliceRandom
 /// [`SliceRandom::choose`]: crate::seq::SliceRandom::choose
-/// [`SliceRandom::choose_multiple`]: crate::seq::SliceRandom::choose_multiple
 #[derive(Debug, Clone, Copy)]
 pub struct Slice<'a, T> {
     slice: &'a [T],

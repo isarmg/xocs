@@ -20,7 +20,7 @@ impl RawString {
 
     /// Access the underlying string
     ///
-    /// This generally requires a [`DocumentMut`][blog_format_configuration::editor::DocumentMut].
+    /// This generally requires a [`crate::editor::DocumentMut`].
     pub fn as_str(&self) -> Option<&str> {
         match &self.0 {
             RawStringInner::Empty => Some(""),
@@ -32,7 +32,7 @@ impl RawString {
 
     /// The location within the original document
     ///
-    /// This generally requires an [`ImDocument`][blog_format_configuration::editor::ImDocument].
+    /// This generally requires an [`crate::editor::ImDocument`].
     pub fn span(&self) -> Option<std::ops::Range<usize>> {
         match &self.0 {
             RawStringInner::Empty => None,

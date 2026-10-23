@@ -6,11 +6,11 @@ use core::fmt;
 
 pub(crate) use __private::Internal;
 
-/// The type of notification to use with an [`Event`].
+/// The type of notification to use with an [`Event`](crate::Event).
 ///
 /// This is hidden and sealed to prevent changes to this trait from being breaking.
 ///
-/// [`Event`]: crate::Event
+/// [`Event`](crate::Event): crate::Event
 #[doc(hidden)]
 pub trait NotificationPrivate {
     /// The tag data associated with a notification.
@@ -31,9 +31,9 @@ pub trait NotificationPrivate {
     fn next_tag(&mut self, internal: Internal) -> Self::Tag;
 }
 
-/// A notification that can be used to notify an [`Event`].
+/// A notification that can be used to notify an [`Event`](crate::Event).
 ///
-/// This type is used by the [`Event::notify()`] function to determine how many listeners to wake up, whether
+/// This type is used by the [`Event::notify()`](crate::Event::notify) function to determine how many listeners to wake up, whether
 /// or not to subtract additional listeners, and other properties. The actual internal data is hidden in a
 /// private trait and is intentionally not exposed. This means that users cannot manually implement the
 /// [`Notification`] trait. However, it also means that changing the underlying trait is not a semver breaking
@@ -55,7 +55,7 @@ pub trait NotificationPrivate {
 /// notify(&Event::new(), 1.additional());
 /// ```
 ///
-/// [`Event`]: crate::Event
+/// [`Event`](crate::Event): crate::Event
 pub trait Notification: NotificationPrivate {}
 impl<N: NotificationPrivate + ?Sized> Notification for N {}
 
@@ -359,7 +359,7 @@ impl<T, F: FnMut() -> T> TagProducer for F {
 pub trait IntoNotification: __private::Sealed {
     /// The tag data associated with a notification.
     ///
-    /// By default, most [`Event`]s will use the unit type, `()`. However, this can be used to pass data along to
+    /// By default, most [`Event`](crate::Event)s will use the unit type, `()`. However, this can be used to pass data along to
     /// the listener.
     type Tag;
 
@@ -389,12 +389,12 @@ pub trait IntoNotification: __private::Sealed {
     /// Convert this value into an additional notification.
     ///
     /// By default, notifications ignore listeners that are already notified. Generally, this happens when there
-    /// is an [`EventListener`] that has been woken up, but hasn't been polled to completion or waited on yet.
+    /// is an [`EventListener`](crate::EventListener) that has been woken up, but hasn't been polled to completion or waited on yet.
     /// For instance, if you have three notified listeners and you call `event.notify(5)`, only two listeners
     /// will be woken up.
     ///
     /// This default behavior is generally desired. For instance, if you are writing a `Mutex` implementation
-    /// powered by an [`Event`], you usually only want one consumer to be notified at a time. If you notified
+    /// powered by an [`Event`](crate::Event), you usually only want one consumer to be notified at a time. If you notified
     /// a listener when another listener is already notified, you would have unnecessary contention for your
     /// lock, as both listeners fight over the lock. Therefore, you would call `event.notify(1)` to make sure
     /// *at least* one listener is awake.
@@ -434,7 +434,7 @@ pub trait IntoNotification: __private::Sealed {
     /// that notification state isn't inconsistent before any wakers are woken up. However, it may be
     /// desirable to omit this fence in certain cases.
     ///
-    /// - You are running the [`Event`] on a single thread, where no synchronization needs to occur.
+    /// - You are running the [`Event`](crate::Event) on a single thread, where no synchronization needs to occur.
     /// - You are emitting the `SeqCst` fence yourself.
     ///
     /// In these cases, `relaxed()` can be used to avoid emitting the `SeqCst` fence.
@@ -470,12 +470,12 @@ pub trait IntoNotification: __private::Sealed {
 
     /// Use a tag with this notification.
     ///
-    /// In many cases, it is desired to send additional information to the listener of the [`Event`]. For instance,
+    /// In many cases, it is desired to send additional information to the listener of the [`Event`](crate::Event). For instance,
     /// it is possible to optimize a `Mutex` implementation by locking directly on the next listener, without
     /// needing to ever unlock the mutex at all.
     ///
     /// The tag provided is cloned to provide the tag for all listeners. In cases where this is not flexible
-    /// enough, use [`IntoNotification::with_tag()`] instead.
+    /// enough, use [`IntoNotification::tag_with()`] instead.
     ///
     /// Tagging functions cannot be implemented efficiently for `no_std`, so this is only available
     /// when the `std` feature is enabled.
@@ -509,7 +509,7 @@ pub trait IntoNotification: __private::Sealed {
 
     /// Use a function to generate a tag with this notification.
     ///
-    /// In many cases, it is desired to send additional information to the listener of the [`Event`]. For instance,
+    /// In many cases, it is desired to send additional information to the listener of the [`Event`](crate::Event). For instance,
     /// it is possible to optimize a `Mutex` implementation by locking directly on the next listener, without
     /// needing to ever unlock the mutex at all.
     ///

@@ -241,7 +241,7 @@ impl<'i, 't, 'a, P, I, E> RuleBodyParser<'i, 't, 'a, P, I, E> {
     }
 }
 
-/// https://drafts.csswg.org/css-syntax/#consume-a-blocks-contents
+/// <https://drafts.csswg.org/css-syntax/#consume-a-blocks-contents>
 impl<'i, 't, 'a, I, P, E: 'i> Iterator for RuleBodyParser<'i, 't, 'a, P, I, E>
 where
     P: RuleBodyItemParser<'i, I, E>,

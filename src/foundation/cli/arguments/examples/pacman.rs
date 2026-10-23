@@ -1,4 +1,4 @@
-use command_line::{Arg, ArgAction, Command};
+use blog_cli_arguments::{Arg, ArgAction, Command};
 
 fn cli() -> Command {
     Command::new("pacman")

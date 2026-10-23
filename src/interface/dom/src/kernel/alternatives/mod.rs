@@ -708,7 +708,7 @@ tuples!(EitherOf16 + EitherOf16Future + EitherOf16FutureProj {
 });
 // if you need more eithers feel free to open a PR ;-)
 
-/// Matches over the first expression and returns an either ([`Either`], [`EitherOf3`], ... [`EitherOf8`])
+/// Matches over the first expression and returns an either ([`enum@Either`], [`EitherOf3`], ... [`EitherOf8`])
 /// composed of the values returned by the match arms.
 ///
 /// The pattern syntax is exactly the same as found in a match arm.

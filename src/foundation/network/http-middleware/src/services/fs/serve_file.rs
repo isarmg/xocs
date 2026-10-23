@@ -531,7 +531,7 @@ mod tests {
         let res = svc.oneshot(req).await.unwrap();
         assert_eq!(res.status(), StatusCode::OK);
         let readme_bytes =
-            include_bytes!("../../../../../../../docs/upstream/tower-http-0.6.11/README.md");
+            include_bytes!("../../../../../../../docs/dependencies/origins/tower-http-0.6.11/README.md");
         let body = res.into_body().collect().await.unwrap().to_bytes();
         assert_eq!(body.as_ref(), readme_bytes);
 

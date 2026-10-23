@@ -1037,7 +1037,7 @@ pub enum ViewTransitionPartName<'i> {
   /// *
   #[cfg_attr(any(), serde(rename = "*"))]
   All,
-  /// <custom-ident>
+  /// `<custom-ident>`
   #[cfg_attr(any(), serde(borrow, untagged))]
   Name(CustomIdent<'i>),
 }

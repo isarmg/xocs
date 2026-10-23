@@ -1,6 +1,7 @@
+extern crate blog_cli_arguments as clap;
 use std::ops::RangeInclusive;
 
-use command_line::Parser;
+use blog_cli_arguments::Parser;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]

@@ -185,7 +185,7 @@ def static_structure(root, policy):
         here = parent.relative_to(root).as_posix()
         for name in children[:]:
             item = (parent / name).relative_to(root).as_posix()
-            if any(item == path or item.startswith(path + '/') for path in (*outputs, 'compliance', 'docs/upstream')):
+            if any(item == path or item.startswith(path + '/') for path in (*outputs, 'compliance', 'docs/dependencies/origins')):
                 children.remove(name)
                 continue
             if (parent / name).is_symlink():
@@ -663,14 +663,10 @@ def table_row(values):
 
 
 def migrated_document(catalog, policy):
-    lines = ['# Rust 第三方源码与离线构建', '',
-             '当前源码按产品用途组织；Cargo 内部包名与版本不是原始上游身份。原始发布版本只用于来源、法律材料和按原始身份执行的安全审计。',
-             'compliance/provenance/origins.json 与原始 .crate 档案保持原始身份及逐文件摘要，compliance/rust-sources.json 单独记录当前源码摘要。',
-             'compliance/provenance/source-migrations.json 从首次启用前的完整包身份基线出发，逐事件记录重命名、版本变化、合并、拆分、导入和退役。',
-             'verify 完整重放日志并核对实际 manifest 与当前映射；refresh 只允许追加迁移事件，不能重写历史或原始来源。',
-             '源码收据与空 Cargo home 的 Linux/WASM metadata 是构建输入证据，不替代编译、原生测试、浏览器、安装或正式发行验收。',
-             'Rust 工具链、系统原生构建材料、审计数据库和非 Rust 测试工具另行管理。', '',
-             '用途架构、入口和实际声明的包依赖关系见 [Rust 用途架构](RUST_SOURCE_ARCHITECTURE.md)。', '',
+    lines = ['# 第三方 Rust 源码清单', '',
+             '本表由当前源码映射生成，列出各包的原始名称、版本和许可证。内部 Cargo 包名和版本用于本项目，原始发布身份用于来源和安全审计。',
+             '完整原始归档、逐文件摘要和许可文本保存在 `compliance/`，当前源码摘要保存在 `compliance/rust-sources.json`。', '',
+             '阅读实现请从[依赖文档](dependencies/README.md)进入；构建入口和直接消费者见 [Cargo 依赖关系](RUST_SOURCE_ARCHITECTURE.md)，校验命令见[源码布局与校验](source-layout.md)。', '',
              '## 当前源码与原始来源', '',
              '| 当前用途路径 | 内部 Cargo 包 | 原始身份 | 原始许可 |', '| --- | --- | --- | --- |']
     for directory, item in sorted(catalog['packages'].items()):
@@ -683,12 +679,6 @@ def migrated_document(catalog, policy):
                 value += '；发布包无独立许可文本，待复核'
             licenses.append(value)
         lines.append(table_row([directory, item['name'], origin_ids, '; '.join(licenses) or '沿用组件独立法律材料']))
-    lines += ['', '## 已退役来源', '', '退役只移除当前实现；原始归档、许可材料及历史仍完整保留。', '',
-              '| 原始身份 | 迁移事件 | 退役原因 |', '| --- | --- | --- |']
-    for name, item in sorted(catalog['retired_origins'].items()):
-        lines.append(table_row([name, item['event'], item['reason']]))
-    if not catalog['retired_origins']:
-        lines.append('| 无 | — | — |')
     return '\n'.join(lines) + '\n'
 
 
@@ -706,10 +696,10 @@ def architecture_document(catalog, policy):
     layers = {}
     for directory, item in packages.items():
         layers.setdefault(item['layer'], []).append(directory)
-    lines = ['# Rust 用途架构', '',
-             '本表由 workspaces.json 的明确职责映射、当前 manifest 本地路径边和已验证的构建入口生成。',
+    lines = ['# Cargo 依赖关系', '',
+             '本表由 `workspaces.json` 的职责映射、当前 manifest 本地路径边和已验证的构建入口生成。设计说明见[架构](architecture.md)，各层用法和本地参考资料见[依赖文档](dependencies/README.md)。',
              '层名用于说明职责，不自动证明依赖方向或无环。依赖列包含目标条件、optional、dev 和 build 声明；入口列来自统一 workspace 特性图的保守闭包，不能当作精确链接结果。',
-             '每个当前包都必须有 layer、purpose 和可重放的身份；合并包保留多个原始来源，拆分包共享来源，完全不再活动的来源必须有明确退役事件。', '',
+             '一个当前包可以整合多个原始来源；一个原始来源也可以由多个用途包分别实现。', '',
              '## 构建入口', '', '| 入口 | 目标 | 职责 | 测试根 dev 依赖 | 根包 |', '| --- | --- | --- | --- | --- |']
     for item in policy['profiles']:
         lines.append(table_row([item['id'], item['target'], item.get('purpose', item['role']),

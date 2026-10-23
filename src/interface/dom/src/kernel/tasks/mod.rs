@@ -4,7 +4,7 @@
 //! Browser dispatch uses one global executor configured at runtime. Native adapters may install
 //! an override for their current thread; threads without an override use the global executor.
 //!
-//! This can be extended to support any executor or runtime that supports spawning [`Future`]s.
+//! This can be extended to support any executor or runtime that supports spawning [`Future`](std::future::Future)s.
 //!
 //! This is a least common denominator implementation in many ways. Limitations include:
 //! - installing each global or native thread-local executor is a one-time action
@@ -199,11 +199,10 @@ impl Executor {
 }
 
 impl Executor {
-    /// Globally sets the [`wasm-bindgen-futures`] runtime as the executor used to spawn tasks.
+    /// Globally sets the [`wasm_bindgen_futures`] runtime as the executor used to spawn tasks.
     ///
     /// Returns `Err(_)` if a global executor has already been set.
     ///
-    /// Requires the `wasm-bindgen` feature to be activated on this crate.
     #[cfg_attr(docsrs, doc(cfg(all())))]
     pub fn init_wasm_bindgen() -> Result<(), ExecutorError> {
         let executor_impl = ExecutorFns {

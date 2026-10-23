@@ -3,7 +3,7 @@ Utilities for dealing with the syntax of a regular expression.
 
 This module currently only exposes a [`Config`] type that
 itself represents a wrapper around the configuration for a
-[`regex-syntax::ParserBuilder`](blog_text_pattern_search::syntax::ParserBuilder). The purpose of
+[`regex-syntax::ParserBuilder`](crate::syntax::ParserBuilder). The purpose of
 this wrapper is to make configuring syntax options very similar to how other
 configuration is done throughout this crate. Namely, instead of duplicating
 syntax options across every builder (of which there are many), we instead

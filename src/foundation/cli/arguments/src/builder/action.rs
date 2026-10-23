@@ -9,50 +9,50 @@ use crate::builder::ValueRange;
 ///
 /// ```rust
 /// # #[cfg(feature = "help")] {
-/// # use command_line;
-/// # use command_line::Command;
-/// # use command_line::Arg;
+/// # use blog_cli_arguments;
+/// # use blog_cli_arguments::Command;
+/// # use blog_cli_arguments::Arg;
 /// let cmd = Command::new("mycmd")
 ///     .arg(
 ///         Arg::new("special-help")
 ///             .short('?')
-///             .action(command_line::ArgAction::Help)
+///             .action(blog_cli_arguments::ArgAction::Help)
 ///     );
 ///
 /// // Existing help still exists
 /// let err = cmd.clone().try_get_matches_from(["mycmd", "-h"]).unwrap_err();
-/// assert_eq!(err.kind(), command_line::error::ErrorKind::DisplayHelp);
+/// assert_eq!(err.kind(), blog_cli_arguments::error::ErrorKind::DisplayHelp);
 ///
 /// // New help available
 /// let err = cmd.try_get_matches_from(["mycmd", "-?"]).unwrap_err();
-/// assert_eq!(err.kind(), command_line::error::ErrorKind::DisplayHelp);
+/// assert_eq!(err.kind(), blog_cli_arguments::error::ErrorKind::DisplayHelp);
 /// # }
 /// ```
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 #[allow(missing_copy_implementations)] // In the future, we may accept `Box<dyn ...>`
 pub enum ArgAction {
-    /// When encountered, store the associated value(s) in [`ArgMatches`][command_line::ArgMatches]
+    /// When encountered, store the associated value(s) in [`ArgMatches`][crate::ArgMatches]
     ///
     /// <div class="warning">
     ///
     /// **NOTE:** If the argument has previously been seen, it will result in a
-    /// [`ArgumentConflict`][command_line::error::ErrorKind::ArgumentConflict] unless
-    /// [`Command::args_override_self(true)`][command_line::Command::args_override_self] is set.
+    /// [`ArgumentConflict`][crate::error::ErrorKind::ArgumentConflict] unless
+    /// [`Command::args_override_self(true)`][crate::Command::args_override_self] is set.
     ///
     /// </div>
     ///
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::Command;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Command;
+    /// # use blog_cli_arguments::Arg;
     /// let cmd = Command::new("mycmd")
     ///     .arg(
     ///         Arg::new("flag")
     ///             .long("flag")
-    ///             .action(command_line::ArgAction::Set)
+    ///             .action(blog_cli_arguments::ArgAction::Set)
     ///     );
     ///
     /// let matches = cmd.try_get_matches_from(["mycmd", "--flag", "value"]).unwrap();
@@ -63,19 +63,19 @@ pub enum ArgAction {
     /// );
     /// ```
     Set,
-    /// When encountered, store the associated value(s) in [`ArgMatches`][command_line::ArgMatches]
+    /// When encountered, store the associated value(s) in [`ArgMatches`][crate::ArgMatches]
     ///
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::Command;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Command;
+    /// # use blog_cli_arguments::Arg;
     /// let cmd = Command::new("mycmd")
     ///     .arg(
     ///         Arg::new("flag")
     ///             .long("flag")
-    ///             .action(command_line::ArgAction::Append)
+    ///             .action(blog_cli_arguments::ArgAction::Append)
     ///     );
     ///
     /// let matches = cmd.try_get_matches_from(["mycmd", "--flag", "value1", "--flag", "value2"]).unwrap();
@@ -96,22 +96,22 @@ pub enum ArgAction {
     /// <div class="warning">
     ///
     /// **NOTE:** If the argument has previously been seen, it will result in a
-    /// [`ArgumentConflict`][command_line::error::ErrorKind::ArgumentConflict] unless
-    /// [`Command::args_override_self(true)`][command_line::Command::args_override_self] is set.
+    /// [`ArgumentConflict`][crate::error::ErrorKind::ArgumentConflict] unless
+    /// [`Command::args_override_self(true)`][crate::Command::args_override_self] is set.
     ///
     /// </div>
     ///
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::Command;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Command;
+    /// # use blog_cli_arguments::Arg;
     /// let cmd = Command::new("mycmd")
     ///     .arg(
     ///         Arg::new("flag")
     ///             .long("flag")
-    ///             .action(command_line::ArgAction::SetTrue)
+    ///             .action(blog_cli_arguments::ArgAction::SetTrue)
     ///     );
     ///
     /// let matches = cmd.clone().try_get_matches_from(["mycmd", "--flag"]).unwrap();
@@ -129,19 +129,19 @@ pub enum ArgAction {
     /// );
     /// ```
     ///
-    /// You can use [`TypedValueParser::map`][command_line::builder::TypedValueParser::map] to have the
+    /// You can use [`TypedValueParser::map`][crate::builder::TypedValueParser::map] to have the
     /// flag control an application-specific type:
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::Command;
-    /// # use command_line::Arg;
-    /// # use command_line::builder::TypedValueParser as _;
-    /// # use command_line::builder::BoolishValueParser;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Command;
+    /// # use blog_cli_arguments::Arg;
+    /// # use blog_cli_arguments::builder::TypedValueParser as _;
+    /// # use blog_cli_arguments::builder::BoolishValueParser;
     /// let cmd = Command::new("mycmd")
     ///     .arg(
     ///         Arg::new("flag")
     ///             .long("flag")
-    ///             .action(command_line::ArgAction::SetTrue)
+    ///             .action(blog_cli_arguments::ArgAction::SetTrue)
     ///             .value_parser(
     ///                 BoolishValueParser::new()
     ///                 .map(|b| -> usize {
@@ -175,22 +175,22 @@ pub enum ArgAction {
     /// <div class="warning">
     ///
     /// **NOTE:** If the argument has previously been seen, it will result in a
-    /// [`ArgumentConflict`][command_line::error::ErrorKind::ArgumentConflict] unless
-    /// [`Command::args_override_self(true)`][command_line::Command::args_override_self] is set.
+    /// [`ArgumentConflict`][crate::error::ErrorKind::ArgumentConflict] unless
+    /// [`Command::args_override_self(true)`][crate::Command::args_override_self] is set.
     ///
     /// </div>
     ///
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::Command;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Command;
+    /// # use blog_cli_arguments::Arg;
     /// let cmd = Command::new("mycmd")
     ///     .arg(
     ///         Arg::new("flag")
     ///             .long("flag")
-    ///             .action(command_line::ArgAction::SetFalse)
+    ///             .action(blog_cli_arguments::ArgAction::SetFalse)
     ///     );
     ///
     /// let matches = cmd.clone().try_get_matches_from(["mycmd", "--flag"]).unwrap();
@@ -218,14 +218,14 @@ pub enum ArgAction {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::Command;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Command;
+    /// # use blog_cli_arguments::Arg;
     /// let cmd = Command::new("mycmd")
     ///     .arg(
     ///         Arg::new("flag")
     ///             .long("flag")
-    ///             .action(command_line::ArgAction::Count)
+    ///             .action(blog_cli_arguments::ArgAction::Count)
     ///     );
     ///
     /// let matches = cmd.clone().try_get_matches_from(["mycmd", "--flag", "--flag"]).unwrap();
@@ -251,23 +251,23 @@ pub enum ArgAction {
     ///
     /// ```rust
     /// # #[cfg(feature = "help")] {
-    /// # use command_line;
-    /// # use command_line::Command;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Command;
+    /// # use blog_cli_arguments::Arg;
     /// let cmd = Command::new("mycmd")
     ///     .arg(
     ///         Arg::new("special-help")
     ///             .short('?')
-    ///             .action(command_line::ArgAction::Help)
+    ///             .action(blog_cli_arguments::ArgAction::Help)
     ///     );
     ///
     /// // Existing help still exists
     /// let err = cmd.clone().try_get_matches_from(["mycmd", "-h"]).unwrap_err();
-    /// assert_eq!(err.kind(), command_line::error::ErrorKind::DisplayHelp);
+    /// assert_eq!(err.kind(), blog_cli_arguments::error::ErrorKind::DisplayHelp);
     ///
     /// // New help available
     /// let err = cmd.try_get_matches_from(["mycmd", "-?"]).unwrap_err();
-    /// assert_eq!(err.kind(), command_line::error::ErrorKind::DisplayHelp);
+    /// assert_eq!(err.kind(), blog_cli_arguments::error::ErrorKind::DisplayHelp);
     /// # }
     /// ```
     Help,
@@ -277,23 +277,23 @@ pub enum ArgAction {
     ///
     /// ```rust
     /// # #[cfg(feature = "help")] {
-    /// # use command_line;
-    /// # use command_line::Command;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Command;
+    /// # use blog_cli_arguments::Arg;
     /// let cmd = Command::new("mycmd")
     ///     .arg(
     ///         Arg::new("special-help")
     ///             .short('?')
-    ///             .action(command_line::ArgAction::HelpShort)
+    ///             .action(blog_cli_arguments::ArgAction::HelpShort)
     ///     );
     ///
     /// // Existing help still exists
     /// let err = cmd.clone().try_get_matches_from(["mycmd", "-h"]).unwrap_err();
-    /// assert_eq!(err.kind(), command_line::error::ErrorKind::DisplayHelp);
+    /// assert_eq!(err.kind(), blog_cli_arguments::error::ErrorKind::DisplayHelp);
     ///
     /// // New help available
     /// let err = cmd.try_get_matches_from(["mycmd", "-?"]).unwrap_err();
-    /// assert_eq!(err.kind(), command_line::error::ErrorKind::DisplayHelp);
+    /// assert_eq!(err.kind(), blog_cli_arguments::error::ErrorKind::DisplayHelp);
     /// # }
     /// ```
     HelpShort,
@@ -303,23 +303,23 @@ pub enum ArgAction {
     ///
     /// ```rust
     /// # #[cfg(feature = "help")] {
-    /// # use command_line;
-    /// # use command_line::Command;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Command;
+    /// # use blog_cli_arguments::Arg;
     /// let cmd = Command::new("mycmd")
     ///     .arg(
     ///         Arg::new("special-help")
     ///             .short('?')
-    ///             .action(command_line::ArgAction::HelpLong)
+    ///             .action(blog_cli_arguments::ArgAction::HelpLong)
     ///     );
     ///
     /// // Existing help still exists
     /// let err = cmd.clone().try_get_matches_from(["mycmd", "-h"]).unwrap_err();
-    /// assert_eq!(err.kind(), command_line::error::ErrorKind::DisplayHelp);
+    /// assert_eq!(err.kind(), blog_cli_arguments::error::ErrorKind::DisplayHelp);
     ///
     /// // New help available
     /// let err = cmd.try_get_matches_from(["mycmd", "-?"]).unwrap_err();
-    /// assert_eq!(err.kind(), command_line::error::ErrorKind::DisplayHelp);
+    /// assert_eq!(err.kind(), blog_cli_arguments::error::ErrorKind::DisplayHelp);
     /// # }
     /// ```
     HelpLong,
@@ -330,24 +330,24 @@ pub enum ArgAction {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::Command;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Command;
+    /// # use blog_cli_arguments::Arg;
     /// let cmd = Command::new("mycmd")
     ///     .version("1.0.0")
     ///     .arg(
     ///         Arg::new("special-version")
     ///             .long("special-version")
-    ///             .action(command_line::ArgAction::Version)
+    ///             .action(blog_cli_arguments::ArgAction::Version)
     ///     );
     ///
     /// // Existing version still exists
     /// let err = cmd.clone().try_get_matches_from(["mycmd", "--version"]).unwrap_err();
-    /// assert_eq!(err.kind(), command_line::error::ErrorKind::DisplayVersion);
+    /// assert_eq!(err.kind(), blog_cli_arguments::error::ErrorKind::DisplayVersion);
     ///
     /// // New version available
     /// let err = cmd.try_get_matches_from(["mycmd", "--special-version"]).unwrap_err();
-    /// assert_eq!(err.kind(), command_line::error::ErrorKind::DisplayVersion);
+    /// assert_eq!(err.kind(), blog_cli_arguments::error::ErrorKind::DisplayVersion);
     /// ```
     Version,
 }

@@ -438,8 +438,7 @@ pub use zerovec_derive::make_ule;
 /// The following traits are available to derive, but not automatic:
 ///
 /// - [`Debug`]
-/// - [`Serialize`](serde::Serialize)
-/// - [`Deserialize`](serde::Deserialize)
+/// - `serde::Serialize` and `serde::Deserialize`, when the `serde` feature is enabled
 ///
 /// To enable one of these additional derives, use `#[zerovec::derive(...)]` like so: `#[zerovec::derive(Debug)]`.
 ///

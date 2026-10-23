@@ -27,31 +27,9 @@ use std::{collections::HashMap, convert::Infallible, sync::Arc};
 ///
 /// `MatchedPath` can also be accessed from middleware via request extensions.
 ///
-/// This is useful for example with [`Trace`](tower_http::trace::Trace) to
-/// create a span that contains the matched path:
-///
-/// ```
-/// use http_routing::{
-///     Router,
-///     extract::{Request, MatchedPath},
-///     routing::get,
-/// };
-/// use tower_http::trace::TraceLayer;
-///
-/// let app = Router::new()
-///     .route("/users/{id}", get(|| async { /* ... */ }))
-///     .layer(
-///         TraceLayer::new_for_http().make_span_with(|req: &Request<_>| {
-///             let path = if let Some(path) = req.extensions().get::<MatchedPath>() {
-///                 path.as_str()
-///             } else {
-///                 req.uri().path()
-///             };
-///             tracing::info_span!("http-request", %path)
-///         }),
-///     );
-/// # let _: Router = app;
-/// ```
+/// Middleware can inspect `request.extensions().get::<MatchedPath>()`
+/// to record this routing metadata. The extension may be absent when a request
+/// did not pass through the router or another middleware removed it.
 #[cfg_attr(docsrs, doc(cfg(feature = "matched-path")))]
 #[derive(Clone, Debug)]
 pub struct MatchedPath(pub(crate) Arc<str>);

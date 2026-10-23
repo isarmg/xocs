@@ -194,7 +194,7 @@ impl<'i> Pattern<'i> {
 
 /// A segment in a CSS modules class name pattern.
 ///
-/// See [Pattern](Pattern).
+/// See [Pattern].
 #[derive(Clone, Debug)]
 pub enum Segment<'i> {
   /// A literal string segment.
@@ -211,7 +211,7 @@ pub enum Segment<'i> {
 
 /// A referenced name within a CSS module, e.g. via the `composes` property.
 ///
-/// See [CssModuleExport](CssModuleExport).
+/// See [CssModuleExport].
 #[derive(PartialEq, Debug, Clone)]
 #[cfg_attr(any(any(), any()), derive(Serialize))]
 #[cfg_attr(

@@ -9,13 +9,13 @@
 //!
 //! # Tower
 //!
-//! While [`hyper`] uses its own notion of a [`Service`][hyper-svc] internally, many other
+//! While [the HTTP transport](crate) uses its own notion of a [`Service`][hyper-svc] internally, many other
 //! libraries use a library such as [`tower`][tower] to provide the fundamental model of an
 //! asynchronous function.
 //!
 //! The [`TowerToHyperService`] type provided by this submodule can be used to bridge these
 //! ecosystems together. By wrapping a [`service_stack::Service`][tower-svc] in [`TowerToHyperService`],
-//! it can be passed into [`hyper`] interfaces that expect a [`crate::service::Service`].
+//! it can be passed into [the HTTP transport](crate) interfaces that expect a [`crate::service::Service`].
 //!
 //! [hyper-svc]: crate::service::Service
 //! [tower]: https://docs.rs/tower/latest/tower/

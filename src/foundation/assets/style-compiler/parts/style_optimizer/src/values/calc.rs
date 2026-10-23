@@ -235,8 +235,8 @@ impl<V: ToCss + std::ops::Mul<f32, Output = V> + TrySign + Clone + std::fmt::Deb
 
 /// A mathematical expression used within the [`calc()`](https://www.w3.org/TR/css-values-4/#calc-func) function.
 ///
-/// This type supports generic value types. Values such as [Length](super::length::Length), [Percentage](super::percentage::Percentage),
-/// [Time](super::time::Time), and [Angle](super::angle::Angle) support `calc()` expressions.
+/// This type supports generic value types. Values such as [Length], [Percentage],
+/// [Time], and [Angle] support `calc()` expressions.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(

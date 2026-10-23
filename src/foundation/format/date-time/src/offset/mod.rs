@@ -48,7 +48,8 @@ pub use self::utc::Utc;
 ///
 /// <div class="warning">
 ///
-/// In wasm, when using [`Local`], only the [`LocalResult::Single`] variant is returned.
+/// With `clock` and `wasmbind` enabled on browser WASM, `Local` returns only
+/// the [`LocalResult::Single`] variant.
 /// Specifically:
 ///
 /// * When the clock is turned backwards, where `Ambiguous(earliest, latest)` would be expected,

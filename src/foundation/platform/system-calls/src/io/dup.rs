@@ -56,9 +56,6 @@ pub fn dup<Fd: AsFd>(fd: Fd) -> io::Result<OwnedFd> {
 /// set `O_CLOEXEC`, use [`dup3`] with [`DupFlags::CLOEXEC`] on platforms which
 /// support it, or [`fcntl_dupfd_cloexec`].
 ///
-/// For `dup2` to stdin, stdout, and stderr, see [`stdio::dup2_stdin`],
-/// [`stdio::dup2_stdout`], and [`stdio::dup2_stderr`].
-///
 /// # References
 ///  - [POSIX]
 ///  - [Linux]
@@ -81,9 +78,6 @@ pub fn dup<Fd: AsFd>(fd: Fd) -> io::Result<OwnedFd> {
 /// [DragonFly BSD]: https://man.dragonflybsd.org/?command=dup2&section=2
 /// [illumos]: https://illumos.org/man/2/dup
 /// [glibc]: https://sourceware.org/glibc/manual/latest/html_node/Duplicating-Descriptors.html
-/// [`stdio::dup2_stdin`]: crate::stdio::dup2_stdin
-/// [`stdio::dup2_stdout`]: crate::stdio::dup2_stdout
-/// [`stdio::dup2_stderr`]: crate::stdio::dup2_stderr
 #[cfg(not(target_os = "wasi"))]
 #[inline]
 pub fn dup2<Fd: AsFd>(fd: Fd, new: &mut OwnedFd) -> io::Result<()> {

@@ -958,7 +958,7 @@ impl ToCss for ColorFunction {
     }
 }
 
-/// Describes one of the value <color> values according to the CSS
+/// Describes one of the value `<color>` values according to the CSS
 /// specification.
 ///
 /// Most components are `Option<_>`, so when the value is `None`, that component
@@ -1152,7 +1152,7 @@ impl<'i> ColorParser<'i> for DefaultColorParser {
 }
 
 impl Color {
-    /// Parse a <color> value, per CSS Color Module Level 3.
+    /// Parse a `<color>` value, per CSS Color Module Level 3.
     ///
     /// FIXME(#2) Deprecated CSS2 System Colors are not supported yet.
     pub fn parse<'i>(input: &mut Parser<'i, '_>) -> Result<Color, ParseError<'i, ()>> {

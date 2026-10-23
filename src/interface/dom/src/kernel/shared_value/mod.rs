@@ -1,7 +1,7 @@
-//! which is used to store immutable references to values.
-//! This is useful for storing, for example, strings.
+//! Borrowed, owned and reference-counted immutable values.
+//! [`Oco`](crate::shared_value::Oco) is useful for sharing values such as strings.
 //!
-//! Imagine this as an alternative to [`Cow`] with an additional, reference-counted
+//! Imagine this as an alternative to [`Cow`](std::borrow::Cow) with an additional, reference-counted
 //! branch.
 //!
 //! ```rust

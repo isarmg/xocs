@@ -1,4 +1,5 @@
-use command_line::{Args, Command, FromArgMatches as _, arg};
+extern crate blog_cli_arguments as clap;
+use blog_cli_arguments::{Args, Command, FromArgMatches as _, arg};
 
 #[derive(Args, Debug)]
 struct DerivedArgs {
@@ -7,7 +8,7 @@ struct DerivedArgs {
 }
 
 fn main() {
-    let cli = Command::new("CLI").arg(arg!(-b - -built).action(command_line::ArgAction::SetTrue));
+    let cli = Command::new("CLI").arg(arg!(-b - -built).action(blog_cli_arguments::ArgAction::SetTrue));
     // Augment built args with derived args
     let cli = DerivedArgs::augment_args(cli);
 

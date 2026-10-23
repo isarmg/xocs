@@ -3,7 +3,7 @@ Add a fallback service to the router.
 This service will be called if no routes matches the incoming request.
 
 ```rust
-use axum::{
+use http_routing::{
     Router,
     routing::get,
     handler::Handler,
@@ -27,7 +27,7 @@ Two routers that both have a fallback cannot be merged. Doing so results in a
 panic:
 
 ```rust,should_panic
-use axum::{
+use http_routing::{
     routing::{get, post},
     handler::Handler,
     response::IntoResponse,
@@ -42,7 +42,7 @@ let method_route = one.merge(two);
 
 async fn fallback_one() -> impl IntoResponse { /* ... */ }
 async fn fallback_two() -> impl IntoResponse { /* ... */ }
-# let app: axum::Router = axum::Router::new().route("/", method_route);
+# let app: http_routing::Router = http_routing::Router::new().route("/", method_route);
 ```
 
 ## Setting the `Allow` header

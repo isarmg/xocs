@@ -18,7 +18,7 @@ use crate::Pattern;
 /// than those provided in `Casing`, or if it is simply more convenient or explicit.
 ///
 /// ```
-/// use convert_case::{Boundary, Case, Casing, Converter, Pattern};
+/// use blog_text_style_identifier_case::{Boundary, Case, Casing, Converter, Pattern};
 ///
 /// let s = "DialogueBox-border-shadow";
 ///
@@ -46,7 +46,7 @@ use crate::Pattern;
 /// not provided as a variant of `Case`.
 ///
 /// ```
-/// use convert_case::{Boundary, Case, Casing, Converter, Pattern};
+/// use blog_text_style_identifier_case::{Boundary, Case, Casing, Converter, Pattern};
 ///
 /// let dot_camel = Converter::new()
 ///     .set_boundaries(&[Boundary::LowerUpper, Boundary::LowerDigit])
@@ -82,7 +82,7 @@ impl Converter {
     /// The `Converter` will use `Boundary::defaults()` for boundaries, no pattern, and an empty
     /// string as a delimeter.
     /// ```
-    /// use convert_case::Converter;
+    /// use blog_text_style_identifier_case::Converter;
     ///
     /// let conv = Converter::new();
     /// assert_eq!("DeathPerennialQUEST", conv.convert("Death-Perennial QUEST"))
@@ -93,7 +93,7 @@ impl Converter {
 
     /// Converts a string.
     /// ```
-    /// use convert_case::{Case, Converter};
+    /// use blog_text_style_identifier_case::{Case, Converter};
     ///
     /// let conv = Converter::new()
     ///     .to_case(Case::Camel);
@@ -114,7 +114,7 @@ impl Converter {
 
     /// Set the pattern and delimiter to those associated with the given case.
     /// ```
-    /// use convert_case::{Case, Converter};
+    /// use blog_text_style_identifier_case::{Case, Converter};
     ///
     /// let conv = Converter::new()
     ///     .to_case(Case::Pascal);
@@ -129,7 +129,7 @@ impl Converter {
     /// Sets the boundaries to those associated with the provided case.  This is used
     /// by the `from_case` function in the `Casing` trait.
     /// ```
-    /// use convert_case::{Case, Converter};
+    /// use blog_text_style_identifier_case::{Case, Converter};
     ///
     /// let conv = Converter::new()
     ///     .from_case(Case::Snake)
@@ -143,7 +143,7 @@ impl Converter {
 
     /// Sets the boundaries to those provided.
     /// ```
-    /// use convert_case::{Boundary, Case, Converter};
+    /// use blog_text_style_identifier_case::{Boundary, Case, Converter};
     ///
     /// let conv = Converter::new()
     ///     .set_boundaries(&[Boundary::Underscore, Boundary::LowerUpper])
@@ -157,7 +157,7 @@ impl Converter {
 
     /// Adds a boundary to the list of boundaries.
     /// ```
-    /// use convert_case::{Boundary, Case, Converter};
+    /// use blog_text_style_identifier_case::{Boundary, Case, Converter};
     ///
     /// let conv = Converter::new()
     ///     .from_case(Case::Title)
@@ -172,7 +172,7 @@ impl Converter {
 
     /// Adds a vector of boundaries to the list of boundaries.
     /// ```
-    /// use convert_case::{Boundary, Case, Converter};
+    /// use blog_text_style_identifier_case::{Boundary, Case, Converter};
     ///
     /// let conv = Converter::new()
     ///     .from_case(Case::Kebab)
@@ -187,7 +187,7 @@ impl Converter {
 
     /// Removes a boundary from the list of boundaries if it exists.
     /// ```
-    /// use convert_case::{Boundary, Case, Converter};
+    /// use blog_text_style_identifier_case::{Boundary, Case, Converter};
     ///
     /// let conv = Converter::new()
     ///     .remove_boundary(Boundary::Acronym)
@@ -201,7 +201,7 @@ impl Converter {
 
     /// Removes all the provided boundaries from the list of boundaries if it exists.
     /// ```
-    /// use convert_case::{Boundary, Case, Converter};
+    /// use blog_text_style_identifier_case::{Boundary, Case, Converter};
     ///
     /// let conv = Converter::new()
     ///     .remove_boundaries(&Boundary::digits())
@@ -217,7 +217,7 @@ impl Converter {
 
     /// Sets the delimeter.
     /// ```
-    /// use convert_case::{Case, Converter};
+    /// use blog_text_style_identifier_case::{Case, Converter};
     ///
     /// let conv = Converter::new()
     ///     .to_case(Case::Snake)
@@ -234,7 +234,7 @@ impl Converter {
 
     /// Sets the delimeter to an empty string.
     /// ```
-    /// use convert_case::{Case, Converter};
+    /// use blog_text_style_identifier_case::{Case, Converter};
     ///
     /// let conv = Converter::new()
     ///     .to_case(Case::Snake)
@@ -248,7 +248,7 @@ impl Converter {
 
     /// Sets the pattern.
     /// ```
-    /// use convert_case::{Case, Converter, Pattern};
+    /// use blog_text_style_identifier_case::{Case, Converter, Pattern};
     ///
     /// let conv = Converter::new()
     ///     .set_delim("_")
@@ -263,7 +263,7 @@ impl Converter {
     /// Sets the pattern field to `None`.  Where there is no pattern, a character's case is never
     /// mutated and will be maintained at the end of conversion.
     /// ```
-    /// use convert_case::{Case, Converter};
+    /// use blog_text_style_identifier_case::{Case, Converter};
     ///
     /// let conv = Converter::new()
     ///     .from_case(Case::Title)

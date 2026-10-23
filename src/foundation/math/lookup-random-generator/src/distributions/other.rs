@@ -40,8 +40,8 @@ use core::mem::{self, MaybeUninit};
 /// println!("Random chars: {}", chars);
 /// ```
 ///
-/// The [`DistString`] trait provides an easier method of generating
-/// a random `String`, and offers more efficient allocation:
+/// With the `alloc` feature, `DistString` provides an allocation-backed helper
+/// for generating a random `String`:
 /// ```
 /// use rand::distributions::{Alphanumeric, DistString};
 /// let string = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);

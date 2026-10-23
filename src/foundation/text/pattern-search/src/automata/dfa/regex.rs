@@ -12,7 +12,7 @@ Internally, a `Regex` is composed of two DFAs. One is a "forward" DFA that
 finds the end offset of a match, where as the other is a "reverse" DFA that
 find the start offset of a match.
 
-See the [parent module](blog_text_pattern_search::automata::dfa) for examples.
+See the [parent module](crate::automata::dfa) for examples.
 */
 
 #[cfg(feature = "alloc")]
@@ -414,7 +414,7 @@ impl<A: Automaton> Regex<A> {
     /// panics. See [`Regex::find`] for the panic conditions.
     ///
     /// Use [`Regex::try_search`] with
-    /// [`util::iter::Searcher`](blog_text_pattern_search::automata::util::iter::Searcher) if you want to
+    /// [`util::iter::Searcher`](crate::automata::util::iter::Searcher) if you want to
     /// handle these error conditions.
     ///
     /// # Example
@@ -624,10 +624,10 @@ impl<'r, 'h, A: Automaton> Iterator for FindMatches<'r, 'h, A> {
 /// configuration that might not make sense. For example, there are two
 /// different UTF-8 modes:
 ///
-/// * [`syntax::Config::utf8`](blog_text_pattern_search::automata::util::syntax::Config::utf8) controls
+/// * [`syntax::Config::utf8`](crate::automata::util::syntax::Config::utf8) controls
 /// whether the pattern itself can contain sub-expressions that match invalid
 /// UTF-8.
-/// * [`thompson::Config::utf8`](blog_text_pattern_search::automata::nfa::thompson::Config::utf8) controls
+/// * [`thompson::Config::utf8`](crate::automata::nfa::thompson::Config::utf8) controls
 /// how the regex iterators themselves advance the starting position of the
 /// next search when a match with zero length is found.
 ///
@@ -824,7 +824,7 @@ impl Builder {
     }
 
     /// Set the syntax configuration for this builder using
-    /// [`syntax::Config`](blog_text_pattern_search::automata::util::syntax::Config).
+    /// [`syntax::Config`](crate::automata::util::syntax::Config).
     ///
     /// This permits setting things like case insensitivity, Unicode and multi
     /// line mode.
@@ -838,7 +838,7 @@ impl Builder {
     }
 
     /// Set the Thompson NFA configuration for this builder using
-    /// [`nfa::thompson::Config`](blog_text_pattern_search::automata::nfa::thompson::Config).
+    /// [`nfa::thompson::Config`](crate::automata::nfa::thompson::Config).
     ///
     /// This permits setting things like whether additional time should be
     /// spent shrinking the size of the NFA.

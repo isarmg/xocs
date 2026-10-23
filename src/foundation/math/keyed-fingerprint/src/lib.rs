@@ -1,4 +1,4 @@
-#![doc = include_str!("../../../../../docs/upstream/siphasher-1.0.4/README.md")]
+#![doc = include_str!("../../../../../docs/dependencies/origins/siphasher-1.0.4/README.md")]
 #![cfg_attr(not(test), no_std)]
 #![allow(clippy::unreadable_literal)]
 #![allow(clippy::cast_lossless)]

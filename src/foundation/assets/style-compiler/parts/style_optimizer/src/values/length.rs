@@ -89,7 +89,7 @@ macro_rules! define_length_units {
     )+
   ) => {
     /// A CSS [`<length>`](https://www.w3.org/TR/css-values-4/#lengths) value,
-    /// without support for `calc()`. See also: [Length](Length).
+    /// without support for `calc()`. See also: [`Length`].
     #[derive(Debug, Clone, PartialEq)]
     #[cfg_attr(all(), derive(Visit))]
     #[cfg_attr(all(), visit(visit_length, LENGTHS))]

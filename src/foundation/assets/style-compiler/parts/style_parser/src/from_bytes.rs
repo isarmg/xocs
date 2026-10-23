@@ -7,7 +7,7 @@ pub trait EncodingSupport {
     /// One character encoding
     type Encoding;
 
-    /// https://encoding.spec.whatwg.org/#concept-encoding-get
+    /// <https://encoding.spec.whatwg.org/#concept-encoding-get>
     fn from_label(ascii_label: &[u8]) -> Option<Self::Encoding>;
 
     /// Return the UTF-8 encoding
@@ -25,8 +25,8 @@ pub trait EncodingSupport {
 /// * `css_bytes`: A byte string.
 /// * `protocol_encoding`: The encoding label, if any, defined by HTTP or equivalent protocol.
 ///     (e.g. via the `charset` parameter of the `Content-Type` header.)
-/// * `environment_encoding`: An optional `Encoding` object for the [environment encoding]
-///     (https://drafts.csswg.org/css-syntax/#environment-encoding), if any.
+/// * `environment_encoding`: An optional `Encoding` object for the
+///   [environment encoding](https://drafts.csswg.org/css-syntax/#environment-encoding), if any.
 ///
 /// Returns the encoding to use.
 pub fn stylesheet_encoding<E>(

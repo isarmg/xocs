@@ -283,7 +283,7 @@ impl BlockType {
 ///
 /// The union of two sets can be obtained with the `|` operator. Example:
 ///
-/// ```{rust,ignore}
+/// ```ignore
 /// input.parse_until_before(Delimiter::CurlyBracketBlock | Delimiter::Semicolon)
 /// ```
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -814,7 +814,7 @@ impl<'i: 't, 't> Parser<'i, 't> {
         parse_until_after(self, delimiters, ParseUntilErrorBehavior::Consume, parse)
     }
 
-    /// Parse a <whitespace-token> and return its value.
+    /// Parse a `<whitespace-token>` and return its value.
     #[inline]
     pub fn expect_whitespace(&mut self) -> Result<&'i str, BasicParseError<'i>> {
         let start_location = self.current_source_location();
@@ -824,7 +824,7 @@ impl<'i: 't, 't> Parser<'i, 't> {
         }
     }
 
-    /// Parse a <ident-token> and return the unescaped value.
+    /// Parse a `<ident-token>` and return the unescaped value.
     #[inline]
     pub fn expect_ident(&mut self) -> Result<&CowRcStr<'i>, BasicParseError<'i>> {
         expect! {self,
@@ -838,7 +838,7 @@ impl<'i: 't, 't> Parser<'i, 't> {
         self.expect_ident().map(|s| s.clone())
     }
 
-    /// Parse a <ident-token> whose unescaped value is an ASCII-insensitive match for the given value.
+    /// Parse a `<ident-token>` whose unescaped value is an ASCII-insensitive match for the given value.
     #[inline]
     pub fn expect_ident_matching(
         &mut self,
@@ -849,7 +849,7 @@ impl<'i: 't, 't> Parser<'i, 't> {
         }
     }
 
-    /// Parse a <string-token> and return the unescaped value.
+    /// Parse a `<string-token>` and return the unescaped value.
     #[inline]
     pub fn expect_string(&mut self) -> Result<&CowRcStr<'i>, BasicParseError<'i>> {
         expect! {self,
@@ -863,7 +863,7 @@ impl<'i: 't, 't> Parser<'i, 't> {
         self.expect_string().map(|s| s.clone())
     }
 
-    /// Parse either a <ident-token> or a <string-token>, and return the unescaped value.
+    /// Parse either a `<ident-token>` or a `<string-token>`, and return the unescaped value.
     #[inline]
     pub fn expect_ident_or_string(&mut self) -> Result<&CowRcStr<'i>, BasicParseError<'i>> {
         expect! {self,
@@ -872,7 +872,7 @@ impl<'i: 't, 't> Parser<'i, 't> {
         }
     }
 
-    /// Parse a <url-token> and return the unescaped value.
+    /// Parse a `<url-token>` and return the unescaped value.
     #[inline]
     pub fn expect_url(&mut self) -> Result<CowRcStr<'i>, BasicParseError<'i>> {
         expect! {self,
@@ -886,7 +886,7 @@ impl<'i: 't, 't> Parser<'i, 't> {
         }
     }
 
-    /// Parse either a <url-token> or a <string-token>, and return the unescaped value.
+    /// Parse either a `<url-token>` or a `<string-token>`, and return the unescaped value.
     #[inline]
     pub fn expect_url_or_string(&mut self) -> Result<CowRcStr<'i>, BasicParseError<'i>> {
         expect! {self,
@@ -901,7 +901,7 @@ impl<'i: 't, 't> Parser<'i, 't> {
         }
     }
 
-    /// Parse a <number-token> and return the integer value.
+    /// Parse a `<number-token>` and return the integer value.
     #[inline]
     pub fn expect_number(&mut self) -> Result<f32, BasicParseError<'i>> {
         expect! {self,
@@ -909,7 +909,7 @@ impl<'i: 't, 't> Parser<'i, 't> {
         }
     }
 
-    /// Parse a <number-token> that does not have a fractional part, and return the integer value.
+    /// Parse a `<number-token>` that does not have a fractional part, and return the integer value.
     #[inline]
     pub fn expect_integer(&mut self) -> Result<i32, BasicParseError<'i>> {
         expect! {self,
@@ -917,7 +917,7 @@ impl<'i: 't, 't> Parser<'i, 't> {
         }
     }
 
-    /// Parse a <percentage-token> and return the value.
+    /// Parse a `<percentage-token>` and return the value.
     /// `0%` and `100%` map to `0.0` and `1.0` (not `100.0`), respectively.
     #[inline]
     pub fn expect_percentage(&mut self) -> Result<f32, BasicParseError<'i>> {
@@ -926,7 +926,7 @@ impl<'i: 't, 't> Parser<'i, 't> {
         }
     }
 
-    /// Parse a `:` <colon-token>.
+    /// Parse a `:` `<colon-token>`.
     #[inline]
     pub fn expect_colon(&mut self) -> Result<(), BasicParseError<'i>> {
         expect! {self,
@@ -934,7 +934,7 @@ impl<'i: 't, 't> Parser<'i, 't> {
         }
     }
 
-    /// Parse a `;` <semicolon-token>.
+    /// Parse a `;` `<semicolon-token>`.
     #[inline]
     pub fn expect_semicolon(&mut self) -> Result<(), BasicParseError<'i>> {
         expect! {self,
@@ -942,7 +942,7 @@ impl<'i: 't, 't> Parser<'i, 't> {
         }
     }
 
-    /// Parse a `,` <comma-token>.
+    /// Parse a `,` `<comma-token>`.
     #[inline]
     pub fn expect_comma(&mut self) -> Result<(), BasicParseError<'i>> {
         expect! {self,
@@ -950,7 +950,7 @@ impl<'i: 't, 't> Parser<'i, 't> {
         }
     }
 
-    /// Parse a <delim-token> with the given value.
+    /// Parse a `<delim-token>` with the given value.
     #[inline]
     pub fn expect_delim(&mut self, expected_value: char) -> Result<(), BasicParseError<'i>> {
         expect! {self,
@@ -988,7 +988,7 @@ impl<'i: 't, 't> Parser<'i, 't> {
         }
     }
 
-    /// Parse a <function> token and return its name.
+    /// Parse a `<function>` token and return its name.
     ///
     /// If the result is `Ok`, you can then call the `Parser::parse_nested_block` method.
     #[inline]
@@ -998,7 +998,7 @@ impl<'i: 't, 't> Parser<'i, 't> {
         }
     }
 
-    /// Parse a <function> token whose name is an ASCII-insensitive match for the given value.
+    /// Parse a `<function>` token whose name is an ASCII-insensitive match for the given value.
     ///
     /// If the result is `Ok`, you can then call the `Parser::parse_nested_block` method.
     #[inline]

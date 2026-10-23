@@ -1,4 +1,5 @@
-use command_line::Parser;
+extern crate blog_cli_arguments as clap;
+use blog_cli_arguments::Parser;
 
 mod builtin;
 mod custom;
@@ -7,7 +8,7 @@ mod foreign_crate;
 mod implicit;
 
 #[derive(Parser, Debug)] // requires `derive` feature
-#[command(term_width = 0)] // Just to make testing across command_line features easier
+#[command(term_width = 0)] // Just to make testing across blog_cli_arguments features easier
 #[command(bin_name = "typed-derive")] // Make testing easier by avoiding `.exe` in Usage on Windows
 enum Cli {
     Implicit(implicit::ImplicitParsers),

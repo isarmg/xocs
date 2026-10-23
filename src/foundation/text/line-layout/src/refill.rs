@@ -47,7 +47,7 @@ use alloc::string::String;
 /// # Examples
 ///
 /// ```
-/// use textwrap::{LineEnding, unfill};
+/// use blog_text_line_layout::{LineEnding, unfill};
 ///
 /// let (text, options) = unfill("\
 /// * This is an
@@ -127,7 +127,7 @@ pub fn unfill(text: &str) -> (String, Options<'_>) {
 /// # Examples
 ///
 /// ```
-/// use textwrap::refill;
+/// use blog_text_line_layout::refill;
 ///
 /// // Some loosely wrapped text. The "> " prefix is recognized automatically.
 /// let text = "\
@@ -155,7 +155,7 @@ pub fn unfill(text: &str) -> (String, Options<'_>) {
 /// You can also reshape bullet points:
 ///
 /// ```
-/// use textwrap::refill;
+/// use blog_text_line_layout::refill;
 ///
 /// let text = "\
 /// - This is my

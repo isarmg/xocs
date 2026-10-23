@@ -1,4 +1,4 @@
-use command_line::{Command, arg};
+use blog_cli_arguments::{Command, arg};
 
 fn main() {
     let matches = Command::new("MyApp")

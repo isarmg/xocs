@@ -833,7 +833,7 @@ enum_property! {
 enum_property! {
   /// A keyword for the [text-emphasis-style](https://www.w3.org/TR/2020/WD-css-text-decor-4-20200506/#text-emphasis-style-property) property.
   ///
-  /// See [TextEmphasisStyle](TextEmphasisStyle).
+  /// See [`TextEmphasisStyle`].
   pub enum TextEmphasisFillMode {
     /// The shape is filled with solid color.
     Filled,
@@ -845,7 +845,7 @@ enum_property! {
 enum_property! {
   /// A text emphasis shape for the [text-emphasis-style](https://www.w3.org/TR/2020/WD-css-text-decor-4-20200506/#text-emphasis-style-property) property.
   ///
-  /// See [TextEmphasisStyle](TextEmphasisStyle).
+  /// See [`TextEmphasisStyle`].
   pub enum TextEmphasisShape {
     /// Display small circles as marks.
     Dot,
@@ -1017,7 +1017,7 @@ impl<'i> FallbackValues for TextEmphasis<'i> {
 enum_property! {
   /// A vertical position keyword for the [text-emphasis-position](https://www.w3.org/TR/2020/WD-css-text-decor-4-20200506/#text-emphasis-position-property) property.
   ///
-  /// See [TextEmphasisPosition](TextEmphasisPosition).
+  /// See [`TextEmphasisPosition`].
   pub enum TextEmphasisPositionVertical {
     /// Draw marks over the text in horizontal typographic modes.
     Over,
@@ -1029,7 +1029,7 @@ enum_property! {
 enum_property! {
   /// A horizontal position keyword for the [text-emphasis-position](https://www.w3.org/TR/2020/WD-css-text-decor-4-20200506/#text-emphasis-position-property) property.
   ///
-  /// See [TextEmphasisPosition](TextEmphasisPosition).
+  /// See [`TextEmphasisPosition`].
   pub enum TextEmphasisPositionHorizontal {
     /// Draw marks to the right of the text in vertical typographic modes.
     Left,

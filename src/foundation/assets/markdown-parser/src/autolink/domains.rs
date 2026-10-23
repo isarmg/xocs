@@ -1,7 +1,7 @@
 //! Domain name related scanning, used by both email and URL scanners.
 //!
 //! This is called domains for familiarity but it's about the authority part of URLs as defined in
-//! https://datatracker.ietf.org/doc/html/rfc3986#section-3.2
+//! <https://datatracker.ietf.org/doc/html/rfc3986#section-3.2>
 //!
 //! ```text
 //! authority   = [ userinfo "@" ] host [ ":" port ]

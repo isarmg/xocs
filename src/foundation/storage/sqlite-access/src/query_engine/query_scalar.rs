@@ -168,133 +168,33 @@ where
     }
 }
 
-/// Execute a single SQL query as a prepared statement (transparently cached) and extract the first
-/// column of each row.
+/// Execute a cached SQLite query and decode the first column of each row.
 ///
-/// Extracts the first column of each row. Additional columns are ignored.
-/// Any type that implements `Type<DB> + Decode<DB>` may be used.
+/// Additional columns are ignored. The output must have a compatible SQLite type
+/// and implement the corresponding decoding traits. Use `i64` for `COUNT`, `bool`
+/// for `EXISTS`, and `Option<T>` for a selected value that may be SQL `NULL`.
 ///
-/// For details about prepared statements and allowed SQL syntax, see [`query()`][crate::query_engine::query::query].
-///
-/// ### Example: Simple Lookup
-/// If you just want to look up a single value with little fanfare, this API is perfect for you:
-///
-/// ```rust,no_run
-/// # async fn example_lookup() -> Result<(), Box<dyn std::error::Error>> {
-/// # let mut conn: sqlx::PgConnection = unimplemented!();
-/// use uuid::Uuid;
-///
-/// // MySQL and MariaDB: use `?`
-/// let user_id: Option<Uuid> = sqlx::query_scalar("SELECT user_id FROM users WHERE username = $1")
-///     .bind("alice")
-///     // Use `&mut` where `conn` is a connection or a transaction, or use `&` for a `Pool`.
-///     .fetch_optional(&mut conn)
+/// ```
+/// # async fn example(pool: &blog_storage_sqlite_access::SqlitePool) -> blog_storage_sqlite_access::Result<()> {
+/// let value: i64 = blog_storage_sqlite_access::query_scalar("SELECT ?1")
+///     .bind(42_i64)
+///     .fetch_one(pool)
 ///     .await?;
+/// assert_eq!(value, 42);
 ///
-/// let user_id = user_id.ok_or("unknown user")?;
-///
+/// let nullable: Option<i64> = blog_storage_sqlite_access::query_scalar("SELECT NULL")
+///     .fetch_one(pool)
+///     .await?;
+/// assert_eq!(nullable, None);
 /// # Ok(())
 /// # }
 /// ```
 ///
-/// Note how we're using `.fetch_optional()` because the lookup may return no results,
-/// in which case we need to be able to handle an empty result set.
-/// Any rows after the first are ignored.
-///
-/// ### Example: `COUNT`
-/// This API is the easiest way to invoke an aggregate query like `SELECT COUNT(*)`, because you
-/// can conveniently extract the result:
-///
-/// ```rust,no_run
-/// # async fn example_count() -> sqlx::Result<()> {
-/// # let mut conn: sqlx::PgConnection = unimplemented!();
-/// // Note that `usize` is not used here because unsigned integers are generally not supported,
-/// // and `usize` doesn't even make sense as a mapping because the database server may have
-/// // a completely different architecture.
-/// //
-/// // `i64` is generally a safe choice for `COUNT`.
-/// let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users WHERE accepted_tos IS TRUE")
-///     // Use `&mut` where `conn` is a connection or a transaction, or use `&` for a `Pool`.
-///     .fetch_one(&mut conn)
-///     .await?;
-///
-/// // The above is functionally equivalent to the following:
-/// // Note the trailing comma, required for the compiler to recognize a 1-element tuple.
-/// let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users WHERE accepted_tos IS TRUE")
-///     .fetch_one(&mut conn)
-///     .await?;
-/// # Ok(())
-/// # }
-/// ```
-///
-/// ### Example: `EXISTS`
-/// To test if a row exists or not, use `SELECT EXISTS(<query>)`:
-///
-/// ```rust,no_run
-/// # async fn example_exists() -> sqlx::Result<()> {
-/// # let mut conn: sqlx::PgConnection = unimplemented!();
-/// // MySQL and MariaDB: use `?`
-/// let username_taken: bool = sqlx::query_scalar(
-///     "SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)"
-/// )
-///     .bind("alice")
-///     // Use `&mut` where `conn` is a connection or a transaction, or use `&` for a `Pool`.
-///     .fetch_one(&mut conn)
-///     .await?;
-/// # Ok(())
-/// # }
-/// ```
-///
-/// ### Example: Other Aggregates
-/// Be aware that most other aggregate functions return `NULL` if the query yields an empty set:
-///
-/// ```rust,no_run
-/// # async fn example_aggregate() -> sqlx::Result<()> {
-/// # let mut conn: sqlx::PgConnection = unimplemented!();
-/// let max_upvotes: Option<i64> = sqlx::query_scalar("SELECT MAX(upvotes) FROM posts")
-///     // Use `&mut` where `conn` is a connection or a transaction, or use `&` for a `Pool`.
-///     .fetch_one(&mut conn)
-///     .await?;
-/// # Ok(())
-/// # }
-/// ```
-///
-/// Note how we're using `Option<i64>` with `.fetch_one()`, because we're always expecting one row
-/// but the column value may be `NULL`. If no rows are returned, this will error.
-///
-/// This is in contrast to using `.fetch_optional()` with `Option<i64>`, which implies that
-/// we're expecting _either_ a row with a `i64` (`BIGINT`), _or_ no rows at all.
-///
-/// Either way, any rows after the first are ignored.
-///
-/// ### Example: `Vec` of Scalars
-/// If you want to collect a single column from a query into a vector,
-/// try `.fetch_all()`:
-///
-/// ```rust,no_run
-/// # async fn example_vec() -> sqlx::Result<()> {
-/// # let mut conn: sqlx::PgConnection = unimplemented!();
-/// let top_users: Vec<String> = sqlx::query_scalar(
-///     // Note the `LIMIT` to ensure that this doesn't return *all* users:
-///     "SELECT username
-///      FROM (
-///          SELECT SUM(upvotes) total, user_id
-///          FROM posts
-///          GROUP BY user_id
-///      ) top_users
-///      INNER JOIN users USING (user_id)
-///      ORDER BY total DESC
-///      LIMIT 10"
-/// )
-///     // Use `&mut` where `conn` is a connection or a transaction, or use `&` for a `Pool`.
-///     .fetch_all(&mut conn)
-///     .await?;
-///
-/// // `top_users` could be empty, too.
-/// assert!(top_users.len() <= 10);
-/// # Ok(())
-/// # }
-/// ```
+/// `fetch_optional` distinguishes an absent row from a returned row: combined with
+/// an `Option<T>` output, it yields `Option<Option<T>>`. `fetch_one` returns
+/// [`Error::RowNotFound`] for no row; later rows are ignored. `fetch_all` collects
+/// the first column of every row, so bound the query result when memory is limited.
+/// See [`crate::query()`] for parameter binding.
 #[inline]
 pub fn query_scalar<'q, DB, O>(
     sql: impl SqlSafeStr,

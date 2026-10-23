@@ -533,7 +533,9 @@ class Migrations(unittest.TestCase):
         manage.refresh(self.root)
         manage.verify(self.root, metadata=True)
         self.assertTrue((self.root / 'compliance/provenance/archives/third-1.0.0.crate').is_file())
-        self.assertIn('受支持入口不再需要该能力', (self.root / manage.DOC).read_text())
+        catalog = manage.read_json(self.root / manage.CATALOG)
+        self.assertEqual(catalog['retired_origins']['third@1.0.0']['reason'], '受支持入口不再需要该能力')
+        self.assertNotIn('third@1.0.0', (self.root / manage.DOC).read_text())
 
     def prepare_retired_original_restore(self):
         ledger, policy = self.enable_migrations()

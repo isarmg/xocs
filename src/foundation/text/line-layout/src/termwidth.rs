@@ -14,7 +14,7 @@ use crate::Options;
 /// with a two-column margin to the left and the right:
 ///
 /// ```no_run
-/// use textwrap::{termwidth, Options};
+/// use blog_text_line_layout::{termwidth, Options};
 ///
 /// let width = termwidth() - 4; // Two columns on each side.
 /// let options = Options::new(width)
@@ -39,7 +39,7 @@ impl<'a> Options<'a> {
     /// Equivalent to:
     ///
     /// ```no_run
-    /// use textwrap::{termwidth, Options};
+    /// use blog_text_line_layout::{termwidth, Options};
     ///
     /// let options = Options::new(termwidth());
     /// ```

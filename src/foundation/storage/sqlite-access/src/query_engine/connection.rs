@@ -86,12 +86,12 @@ pub trait Connection: Send {
     /// # Example
     ///
     /// ```rust
-    /// use sqlx::postgres::{PgConnection, PgRow};
-    /// use sqlx::Connection;
+    /// use blog_storage_sqlite_access::{SqliteConnection, sqlite::SqliteRow};
+    /// use blog_storage_sqlite_access::Connection;
     ///
-    /// # pub async fn _f(conn: &mut PgConnection) -> sqlx::Result<Vec<PgRow>> {
+    /// # pub async fn _f(conn: &mut SqliteConnection) -> blog_storage_sqlite_access::Result<Vec<SqliteRow>> {
     /// conn.transaction(|txn| Box::pin(async move {
-    ///     sqlx::query("select * from ..").fetch_all(&mut **txn).await
+    ///     blog_storage_sqlite_access::query("select * from ..").fetch_all(&mut **txn).await
     /// })).await
     /// # }
     /// ```

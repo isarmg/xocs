@@ -60,7 +60,7 @@ extern crate std;
 #[cfg_attr(feature = "rustc-dep-of-std", allow(unused_extern_crates))]
 extern crate alloc;
 
-#[doc = include_str!("../../../../../docs/upstream/hashbrown-0.16.1/README.md")]
+#[doc = include_str!("../../../../../docs/dependencies/origins/hashbrown-0.16.1/README.md")]
 #[cfg(doctest)]
 pub struct ReadmeDoctests;
 

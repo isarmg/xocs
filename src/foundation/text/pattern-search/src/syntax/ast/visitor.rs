@@ -15,8 +15,8 @@ use crate::syntax::ast::{self, Ast};
 ///
 /// Note that the abstract syntax tree for a regular expression is quite
 /// complex. Unless you specifically need it, you might be able to use the much
-/// simpler [high-level intermediate representation](blog_text_pattern_search::syntax::hir::Hir) and its
-/// [corresponding `Visitor` trait](blog_text_pattern_search::syntax::hir::Visitor) instead.
+/// simpler [high-level intermediate representation](crate::syntax::hir::Hir) and its
+/// [corresponding `Visitor` trait](crate::syntax::hir::Visitor) instead.
 pub trait Visitor {
     /// The result of visiting an AST.
     type Output;

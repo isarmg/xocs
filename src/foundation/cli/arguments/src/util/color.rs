@@ -8,7 +8,7 @@ pub enum ColorChoice {
     ///
     /// <div class="warning">
     ///
-    /// **NOTE:** This is the default behavior of `command_line`.
+    /// **NOTE:** This is the default behavior of `blog_cli_arguments`.
     ///
     /// </div>
     ///
@@ -16,8 +16,8 @@ pub enum ColorChoice {
     ///
     /// ```rust
     /// # #[cfg(feature = "color")] {
-    /// # use command_line;
-    /// # use command_line::{Command, ColorChoice};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, ColorChoice};
     /// Command::new("myprog")
     ///     .color(ColorChoice::Auto)
     ///     .get_matches();
@@ -32,8 +32,8 @@ pub enum ColorChoice {
     ///
     /// ```rust
     /// # #[cfg(feature = "color")] {
-    /// # use command_line;
-    /// # use command_line::{Command, ColorChoice};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, ColorChoice};
     /// Command::new("myprog")
     ///     .color(ColorChoice::Always)
     ///     .get_matches();
@@ -47,8 +47,8 @@ pub enum ColorChoice {
     ///
     /// ```rust
     /// # #[cfg(feature = "color")] {
-    /// # use command_line;
-    /// # use command_line::{Command, ColorChoice};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, ColorChoice};
     /// Command::new("myprog")
     ///     .color(ColorChoice::Never)
     ///     .get_matches();

@@ -22,7 +22,7 @@ use crate::output::wrap;
 use crate::util::Escape;
 use crate::util::FlatSet;
 
-/// `command_line` auto-generated help writer
+/// `blog_cli_arguments` auto-generated help writer
 pub(crate) struct AutoHelp<'cmd, 'writer> {
     template: HelpTemplate<'cmd, 'writer>,
 }
@@ -79,7 +79,7 @@ const SHORT_SIZE: usize = 4; // See `fn short` for the 4
 
 /// Help template writer
 ///
-/// Wraps a writer stream providing different methods to generate help for `command_line` objects.
+/// Wraps a writer stream providing different methods to generate help for `blog_cli_arguments` objects.
 pub(crate) struct HelpTemplate<'cmd, 'writer> {
     writer: &'writer mut StyledStr,
     cmd: &'cmd Command,

@@ -58,7 +58,6 @@ pub trait Parser<I, O, E> {
     /// To ignore trailing `input`, combine your parser with a [`rest`][crate::token::rest]
     /// (e.g. `(parser, rest).parse(input)`).
     ///
-    /// See also the [tutorial][crate::_tutorial::chapter_6].
     #[inline]
     fn parse(&mut self, mut input: I) -> Result<O, ParseError<I, <E as ParserError<I>>::Inner>>
     where
@@ -760,7 +759,7 @@ pub trait Parser<I, O, E> {
     /// This is used mainly to add user friendly information
     /// to errors when backtracking through a parse tree.
     ///
-    /// See also [tutorial][crate::_tutorial::chapter_7].
+    /// [`ContextError`](crate::error::ContextError) stores the default error context.
     ///
     /// # Example
     ///
@@ -806,7 +805,7 @@ pub trait Parser<I, O, E> {
     /// This is used mainly to add user friendly information
     /// to errors when backtracking through a parse tree.
     ///
-    /// See also [tutorial][crate::_tutorial::chapter_7].
+    /// [`ContextError`](crate::error::ContextError) stores the default error context.
     ///
     /// # Example
     ///

@@ -14,7 +14,7 @@ use alloc::vec::Vec;
 /// `width_or_options`:
 ///
 /// ```
-/// use textwrap::fill;
+/// use blog_text_line_layout::fill;
 ///
 /// assert_eq!(
 ///     fill("Memory safety without garbage collection.", 15),
@@ -26,7 +26,7 @@ use alloc::vec::Vec;
 /// instead of an `usize`:
 ///
 /// ```
-/// use textwrap::{fill, Options};
+/// use blog_text_line_layout::{fill, Options};
 ///
 /// let options = Options::new(15)
 ///     .initial_indent("- ")
@@ -84,7 +84,7 @@ pub(crate) fn fill_slow_path(text: &str, options: Options<'_>) -> String {
 /// these options:
 ///
 /// ```
-/// # use textwrap::{core, LineEnding, Options, WordSplitter, WordSeparator, WrapAlgorithm};
+/// # use blog_text_line_layout::{core, LineEnding, Options, WordSplitter, WordSeparator, WrapAlgorithm};
 /// # let width = 80;
 /// Options::new(width)
 ///     .break_words(false)

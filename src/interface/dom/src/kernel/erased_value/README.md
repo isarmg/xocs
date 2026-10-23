@@ -1,24 +1,15 @@
-<div align="center">
-  <h1><code>Erased</code></h1>
-  <p><strong>Erase the type of a reference or box, retaining the lifetime</strong></p>
-</div>
+# Lifetime-preserving type erasure
 
-## About
-
-This crate provides a way to erase the type of a reference or box, retaining the lifetime. These erased references can then be **unsafely** converted back to their original type.
+This module erases the type of a reference or box while retaining its lifetime. These erased references can then be **unsafely** converted back to their original type.
 This can be used to store heterogeneous references in a Vec or another datastructure. This is often useful with references into an arena.
 
 The following types are provided:
 
 | type                 | description                                        |
 |----------------------|----------------------------------------------------|
-| [`Erased<'a>`][1]    | An erased reference to a value `&'a T`             |
-| [`ErasedMut<'a>`][2] | An erased mutable reference to a value `&'a mut T` |
-| [`ErasedBox`][3]     | An erased box `Box<T>`                              |
-
-[1]: https://docs.rs/erased/latest/erased/struct.Erased.html
-[2]: https://docs.rs/erased/latest/erased/struct.ErasedMut.html
-[3]: https://docs.rs/erased/latest/erased/struct.ErasedBox.html
+| [`Erased<'a>`](crate::erased_value::Erased)    | An erased reference to a value `&'a T`             |
+| [`ErasedMut<'a>`](crate::erased_value::ErasedMut) | An erased mutable reference to a value `&'a mut T` |
+| [`ErasedBox`](crate::erased_value::ErasedBox)     | An erased box `Box<T>`                              |
 
 ## Example
 
@@ -37,9 +28,9 @@ assert_eq!(unsafe { *vec[1].get::<&'static str>() }, "Hello World");
 
 ## Comparison with `dyn Any`
 
-This crate provides similar functionality to [downcast_ref](https://doc.rust-lang.org/stable/std/any/trait.Any.html#method.downcast_ref-1) and [downcast_mut](https://doc.rust-lang.org/stable/std/any/trait.Any.html#method.downcast_mut-1) on a `dyn Any`.
+This module provides similar functionality to the `downcast_ref` and `downcast_mut` methods on [`dyn Any`](std::any::Any).
 The differences are:
-- Downcast is *checked*, it stores the type id of the type that was stored and checks whether the generic type provided matches upon retrieval. 
-  The types defined in this crate are *unchecked*, and have an unsafe precondition that the type matches.
+- Downcast is *checked*, it stores the type id of the type that was stored and checks whether the generic type provided matches upon retrieval.
+  The types defined in this module are *unchecked*, and have an unsafe precondition that the type matches.
 - Since no type information is stored, a `Erased<'a>` is only one pointer wide, half the size of `&'a dyn Any`
-- `dyn Any` can currently only be used on types with a static lifetime. Erased can be used on any type. 
+- `dyn Any` can currently only be used on types with a static lifetime. Erased can be used on any type.

@@ -28,17 +28,15 @@
 //! * `std`: Enables features which require the Rust standard library. For more
 //!   information see the section on [`no_std`].
 //! * `rayon`: Enables parallel iteration and other parallel methods.
-//! * `serde`: Adds implementations for [`Serialize`] and [`Deserialize`]
-//!   to [`IndexMap`] and [`IndexSet`]. Alternative implementations for
-//!   (de)serializing [`IndexMap`] as an ordered sequence are available in the
-//!   [`map::serde_seq`] module.
+//! * `serde`: Adds `serde::Serialize` and `serde::Deserialize` implementations
+//!   to [`IndexMap`] and [`IndexSet`]. Enabling this feature also provides the
+//!   `map::serde_seq` module for (de)serializing [`IndexMap`] as an ordered
+//!   sequence.
 //!
 //! _Note: only the `std` feature is enabled by default._
 //!
 //! [feature flags]: https://doc.rust-lang.org/cargo/reference/manifest.html#the-features-section
 //! [`no_std`]: #no-standard-library-targets
-//! [`Serialize`]: `::serde::Serialize`
-//! [`Deserialize`]: `::serde::Deserialize`
 //!
 //! ### Alternate Hashers
 //!

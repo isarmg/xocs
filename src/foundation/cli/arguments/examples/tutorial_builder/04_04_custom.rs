@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
-use command_line::error::ErrorKind;
-use command_line::{ArgAction, arg, command, value_parser};
+use blog_cli_arguments::error::ErrorKind;
+use blog_cli_arguments::{ArgAction, arg, command, value_parser};
 
 fn main() {
     // Create application like normal

@@ -24,7 +24,7 @@ use crate::literal::{
 ///
 /// Currently, prefilters cannot be constructed by
 /// callers. A `Prefilter` can only be accessed via the
-/// [`Automaton::prefilter`](blog_text_pattern_search::literal::automaton::Automaton::prefilter)
+/// [`Automaton::prefilter`](crate::literal::automaton::Automaton::prefilter)
 /// method and used to execute a search. In other words, a prefilter can be
 /// used to optimize your own search implementation if necessary, but cannot do
 /// much else. If you have a use case for more APIs, please submit an issue.

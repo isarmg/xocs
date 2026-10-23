@@ -288,7 +288,7 @@ where
 ///
 /// Typical usage:
 ///
-/// ```{rust,ignore}
+/// ```ignore
 /// fn write_foo<W>(foo: &Foo, dest: &mut W) -> fmt::Result where W: fmt::Write {
 ///     dest.write_str("\"")?;
 ///     {
@@ -399,9 +399,9 @@ impl TokenSerializationType {
     /// an empty comment `/**/` needs to be inserted between them
     /// so that they are not re-parsed as a single token.
     ///
-    /// See https://drafts.csswg.org/css-syntax/#serialization
+    /// See <https://drafts.csswg.org/css-syntax/#serialization>
     ///
-    /// See https://github.com/w3c/csswg-drafts/issues/4088 for the
+    /// See <https://github.com/w3c/csswg-drafts/issues/4088> for the
     /// `DelimPercent` bits.
     pub fn needs_separator_when_before(self, other: TokenSerializationType) -> bool {
         use self::TokenSerializationTypeVariants::*;

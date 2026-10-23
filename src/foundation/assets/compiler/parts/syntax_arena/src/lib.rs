@@ -1,40 +1,15 @@
-//! # ⚓ Oxc Memory Allocator
+//! Memory arena and arena-backed containers for the JavaScript compiler.
 //!
-//! Oxc uses a bump-based memory arena for faster AST allocations.
+//! [`Allocator`] owns the storage used by the syntax tree and related analysis.
+//! The container types use that storage for their allocations:
 //!
-//! This crate contains an [`Allocator`] for creating such arenas, as well as ports of data types
-//! from `std` adapted to use this arena:
+//! * [`Box`], [`Vec`] and [`String`]
+//! * [`HashMap`] and [`HashSet`]
+//! * [`BitSet`] for indexed membership
 //!
-//! * [`Box`]
-//! * [`Vec`]
-//! * [`String`]
-//! * [`HashMap`]
-//! * [`HashSet`]
-//!
-//! See [`Allocator`] docs for information on efficient use of [`Allocator`].
-//!
-//! ## Features
-//!
-//! * `serialize` - Enables serialization support for [`Box`] and [`Vec`] with `serde` and `oxc_estree`.
-//!
-//! * `pool` - Enables `AllocatorPool`.
-//!
-//! * `bitset` - Enables `BitSet`.
-//!
-//! * `from_raw_parts` - Adds `Allocator::from_raw_parts` method.
-//!   Usage of this feature is not advisable, and it will be removed as soon as we're able to.
-//!
-//! * `fixed_size` - Makes `AllocatorPool` create large fixed-size allocators, instead of
-//!   flexibly-sized ones.
-//!   Only supported on 64-bit little-endian platforms at present.
-//!   Usage of this feature is not advisable, and it will be removed as soon as we're able to.
-//!
-//! * `track_allocations` - Count allocations and reallocations.
-//!   For internal use only. The APIs provided by this feature are sketchy at best, and possibly
-//!   undefined behavior. Do not enable this feature under any circumstances in production code.
-//!
-//! * `disable_track_allocations` - Disables `track_allocations` feature.
-//!   Purpose is to prevent `--all-features` enabling allocation tracking.
+//! [`CloneIn`] copies values into an explicitly selected allocator, while
+//! [`GetAllocator`] and [`GetAddress`] expose the allocator and address protocols.
+//! See [`Allocator`] for allocation lifetime and destruction requirements.
 
 mod accessor;
 mod address;

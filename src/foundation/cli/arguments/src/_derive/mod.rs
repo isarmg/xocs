@@ -15,7 +15,7 @@
 //!
 //! ## Overview
 //!
-//! To derive `command_line` types, you need to enable the [`derive` feature flag][crate::_features].
+//! To derive `blog_cli_arguments` types, you need to enable the [`derive` feature flag][crate::_features].
 //!
 //! Example:
 //! ```rust
@@ -24,7 +24,8 @@
 //!
 //! Let's start by breaking down the anatomy of the derive attributes:
 //! ```rust
-//! use command_line::{Parser, Args, Subcommand, ValueEnum};
+//! # extern crate blog_cli_arguments as clap;
+//! use blog_cli_arguments::{Parser, Args, Subcommand, ValueEnum};
 //!
 //! /// Doc comment
 //! #[derive(Parser)]
@@ -98,7 +99,7 @@
 //!
 //! ### Terminology
 //!
-//! **Raw attributes** are forwarded directly to the underlying [`command_line` builder][crate::builder].  Any
+//! **Raw attributes** are forwarded directly to the underlying [`blog_cli_arguments` builder][crate::builder].  Any
 //! [`Command`][crate::Command], [`Arg`][crate::Arg], or [`PossibleValue`][crate::builder::PossibleValue] method can be used as an attribute.
 //!
 //! Raw attributes come in two different syntaxes:
@@ -197,7 +198,7 @@
 //! And for [`Args`][crate::Args] fields:
 //! - `flatten`: Delegates to the field for more arguments (must implement [`Args`][crate::Args])
 //!   - Only [`next_help_heading`][crate::Command::next_help_heading] can be used with `flatten`.  See
-//!     [clap-rs/command_line#3269](https://github.com/clap-rs/clap/issues/3269) for why
+//!     [clap-rs/blog_cli_arguments#3269](https://github.com/clap-rs/clap/issues/3269) for why
 //!     arg attributes are not generally supported.
 //!   - **Tip:** Though we do apply a flattened [`Args`][crate::Args]'s Parent Command Attributes, this
 //!     makes reuse harder. Generally prefer putting the cmd attributes on the
@@ -308,7 +309,7 @@
 //!
 //! ## Field Types
 //!
-//! `command_line` assumes some intent based on the type used.
+//! `blog_cli_arguments` assumes some intent based on the type used.
 //!
 //! ### Subcommand Types
 //!
@@ -345,7 +346,7 @@
 //!
 //! ## Doc Comments
 //!
-//! In command_line, help messages for the whole binary can be specified
+//! In blog_cli_arguments, help messages for the whole binary can be specified
 //! via [`Command::about`][crate::Command::about] and [`Command::long_about`][crate::Command::long_about] while help messages
 //! for individual arguments can be specified via [`Arg::help`][crate::Arg::help] and [`Arg::long_help`][crate::Arg::long_help].
 //!
@@ -353,7 +354,8 @@
 //! `--help` and "short" variants are used with `-h` flag.
 //!
 //! ```rust
-//! # use command_line::Parser;
+//! # extern crate blog_cli_arguments as clap;
+//! # use blog_cli_arguments::Parser;
 //!
 //! #[derive(Parser)]
 //! #[command(about = "I am a program and I work, just pass `-h`", long_about = None)]
@@ -367,7 +369,8 @@
 //! (this example works exactly like the one above):
 //!
 //! ```rust
-//! # use command_line::Parser;
+//! # extern crate blog_cli_arguments as clap;
+//! # use blog_cli_arguments::Parser;
 //!
 //! #[derive(Parser)]
 //! /// I am a program and I work, just pass `-h`
@@ -392,7 +395,8 @@
 //! ### Pre-processing
 //!
 //! ```rust
-//! # use command_line::Parser;
+//! # extern crate blog_cli_arguments as clap;
+//! # use blog_cli_arguments::Parser;
 //! #[derive(Parser)]
 //! /// Hi there, I'm Robo!
 //! ///
@@ -421,7 +425,7 @@
 //! `Arg::help` or `Command::about` / `Arg::help` and `Command::long_about` /
 //! `Arg::long_help`
 //!
-//! In addition, when `verbatim_doc_comment` is not present, `command_line` applies some preprocessing, including:
+//! In addition, when `verbatim_doc_comment` is not present, `blog_cli_arguments` applies some preprocessing, including:
 //!
 //! - Strip leading and trailing whitespace from every line, if present.
 //!

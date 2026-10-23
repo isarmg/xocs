@@ -13,7 +13,7 @@ const PATTERN_LIMIT: usize = 128;
 /// A knob for controlling the match semantics of a packed multiple string
 /// searcher.
 ///
-/// This differs from the [`MatchKind`](blog_text_pattern_search::literal::MatchKind) type in the top-level
+/// This differs from the [`MatchKind`](crate::literal::MatchKind) type in the top-level
 /// crate module in that it doesn't support "standard" match semantics,
 /// and instead only supports leftmost-first or leftmost-longest. Namely,
 /// "standard" semantics cannot be easily supported by packed searchers.

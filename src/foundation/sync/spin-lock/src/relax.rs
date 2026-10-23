@@ -13,7 +13,7 @@ pub trait RelaxStrategy {
 /// thereby misallocating even more CPU time to the spinning process. This is known as
 /// ['priority inversion'](https://matklad.github.io/2020/01/02/spinlocks-considered-harmful.html).
 ///
-/// If you see signs that priority inversion is occurring, consider switching to [`Yield`] or, even better, not using a
+/// If you see signs that priority inversion is occurring, consider the `Yield` strategy with the `std` feature or, preferably, not using a
 /// spinlock at all and opting for a proper scheduler-aware lock. Remember also that different targets, operating
 /// systems, schedulers, and even the same scheduler with different workloads will exhibit different behaviour. Just
 /// because priority inversion isn't occurring in your tests does not mean that it will not occur. Use a scheduler-

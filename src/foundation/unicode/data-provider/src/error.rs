@@ -36,7 +36,7 @@ pub enum DataErrorKind {
     #[displaydoc("Downcast: expected {0}, found")]
     Downcast(&'static str),
 
-    /// An error occured during [`serde`] deserialization.
+    /// An error occurred while deserializing data.
     ///
     /// Check debug logs for potentially more information.
     #[displaydoc("Deserialize")]

@@ -15,13 +15,13 @@
 //! [`Uniform`].
 //!
 //! This distribution is provided with support for several primitive types
-//! (all integer and floating-point types) as well as [`std::time::Duration`],
+//! (all integer and floating-point types) as well as [`core::time::Duration`],
 //! and supports extension to user-defined types via a type-specific *back-end*
 //! implementation.
 //!
 //! The types [`UniformInt`], [`UniformFloat`] and [`UniformDuration`] are the
 //! back-ends supporting sampling from primitive integer and floating-point
-//! ranges as well as from [`std::time::Duration`]; these types do not normally
+//! ranges as well as from [`core::time::Duration`]; these types do not normally
 //! need to be used directly (unless implementing a derived back-end).
 //!
 //! # Example usage
@@ -318,11 +318,11 @@ impl<X: SampleUniform> From<RangeInclusive<X>> for Uniform<X> {
 /// only for SampleUniform and references to SampleUniform in
 /// order to resolve ambiguity issues.
 ///
-/// [`Borrow`]: std::borrow::Borrow
+/// [`Borrow`]: core::borrow::Borrow
 pub trait SampleBorrow<Borrowed> {
     /// Immutably borrows from an owned value. See [`Borrow::borrow`]
     ///
-    /// [`Borrow::borrow`]: std::borrow::Borrow::borrow
+    /// [`Borrow::borrow`]: core::borrow::Borrow::borrow
     fn borrow(&self) -> &Borrowed;
 }
 impl<Borrowed> SampleBorrow<Borrowed> for Borrowed

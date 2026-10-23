@@ -407,8 +407,7 @@ fn foundation_paths(root: &Path) -> Result<Vec<PathBuf>> {
     let mut paths = Vec::new();
     for name in [
         "src/foundation",
-        "docs/upstream",
-        "docs/reference",
+        "docs/dependencies",
         "test/foundation",
         "compliance/licenses/upstream",
     ] {
@@ -807,7 +806,7 @@ mod tests {
         fs::create_dir_all(dependency.join("native"))?;
         fs::create_dir_all(dependency.join("src/target"))?;
         fs::write(dependency.join("src/target/data.rs"), "const DATA:u8=1;")?;
-        fs::create_dir_all(root.join("docs/upstream/local-1.0.0"))?;
+        fs::create_dir_all(root.join("docs/dependencies/origins/local-1.0.0"))?;
         fs::write(
             root.join("Cargo.toml"),
             "[workspace]\nmembers=['src/browser']\nresolver='3'\n[workspace.dependencies]\nlocal={path='src/foundation/local-1.0.0'}\n",
@@ -828,7 +827,7 @@ mod tests {
         fs::write(dependency.join("src/lib.rs"), "")?;
         fs::write(dependency.join("native/helper.c"), "int answer=1;")?;
         fs::write(
-            root.join("docs/upstream/local-1.0.0/README.md"),
+            root.join("docs/dependencies/origins/local-1.0.0/README.md"),
             "original documentation",
         )?;
         let before = snapshot(root)?;
@@ -836,7 +835,10 @@ mod tests {
         assert!(
             before["patched_inputs"]["src/foundation/local-1.0.0"]["native/helper.c"].is_string()
         );
-        assert!(before["foundation_inputs"]["docs/upstream/local-1.0.0/README.md"].is_string());
+        assert!(
+            before["foundation_inputs"]["docs/dependencies/origins/local-1.0.0/README.md"]
+                .is_string()
+        );
         let probe = signature(root)?;
         let helper = dependency.join("native/helper.c");
         let modified = fs::metadata(&helper)?.modified()?;
@@ -865,18 +867,18 @@ mod tests {
         assert_ne!(snapshot(root)?, before);
         let first = foundation_digest(&foundation_inputs(root)?);
         fs::write(
-            root.join("docs/upstream/local-1.0.0/README.md"),
+            root.join("docs/dependencies/origins/local-1.0.0/README.md"),
             "edited documentation",
         )?;
         assert_ne!(foundation_digest(&foundation_inputs(root)?), first);
-        fs::create_dir_all(root.join("docs/reference/compiler"))?;
+        fs::create_dir_all(root.join("docs/dependencies/guides/compiler"))?;
         fs::write(
-            root.join("docs/reference/compiler/ast.md"),
+            root.join("docs/dependencies/guides/compiler/ast.md"),
             "included compiler docs",
         )?;
         let first = foundation_digest(&foundation_inputs(root)?);
         fs::write(
-            root.join("docs/reference/compiler/ast.md"),
+            root.join("docs/dependencies/guides/compiler/ast.md"),
             "changed compiler docs",
         )?;
         assert_ne!(foundation_digest(&foundation_inputs(root)?), first);

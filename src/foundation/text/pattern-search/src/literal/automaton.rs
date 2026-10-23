@@ -39,17 +39,17 @@ impl<'a, T: private::Sealed + ?Sized> private::Sealed for &'a T {}
 /// This trait primarily exists for niche use cases such as:
 ///
 /// * Using an NFA or DFA directly, bypassing the top-level
-/// [`AhoCorasick`](blog_text_pattern_search::literal::AhoCorasick) searcher. Currently, these include
-/// [`noncontiguous::NFA`](blog_text_pattern_search::literal::nfa::noncontiguous::NFA),
-/// [`contiguous::NFA`](blog_text_pattern_search::literal::nfa::contiguous::NFA) and
-/// [`dfa::DFA`](blog_text_pattern_search::literal::dfa::DFA).
+/// [`AhoCorasick`](crate::literal::AhoCorasick) searcher. Currently, these include
+/// [`noncontiguous::NFA`](crate::literal::nfa::noncontiguous::NFA),
+/// [`contiguous::NFA`](crate::literal::nfa::contiguous::NFA) and
+/// [`dfa::DFA`](crate::literal::dfa::DFA).
 /// * Implementing your own custom search routine by walking the automaton
 /// yourself. This might be useful for implementing search on non-contiguous
 /// strings or streams.
 ///
 /// For most use cases, it is not expected that users will need
 /// to use or even know about this trait. Indeed, the top level
-/// [`AhoCorasick`](blog_text_pattern_search::literal::AhoCorasick) searcher does not expose any details
+/// [`AhoCorasick`](crate::literal::AhoCorasick) searcher does not expose any details
 /// about this trait, nor does it implement it itself.
 ///
 /// Note that this trait defines a number of default methods, such as
@@ -349,7 +349,7 @@ pub unsafe trait Automaton: private::Sealed {
     /// configuration.
     ///
     /// See
-    /// [`AhoCorasick::try_find`](blog_text_pattern_search::literal::AhoCorasick::try_find)
+    /// [`AhoCorasick::try_find`](crate::literal::AhoCorasick::try_find)
     /// for more documentation and examples.
     fn try_find(
         &self,
@@ -362,7 +362,7 @@ pub unsafe trait Automaton: private::Sealed {
     /// configuration.
     ///
     /// See
-    /// [`AhoCorasick::try_find_overlapping`](blog_text_pattern_search::literal::AhoCorasick::try_find_overlapping)
+    /// [`AhoCorasick::try_find_overlapping`](crate::literal::AhoCorasick::try_find_overlapping)
     /// for more documentation and examples.
     fn try_find_overlapping(
         &self,
@@ -376,7 +376,7 @@ pub unsafe trait Automaton: private::Sealed {
     /// using the given configuration.
     ///
     /// See
-    /// [`AhoCorasick::try_find_iter`](blog_text_pattern_search::literal::AhoCorasick::try_find_iter)
+    /// [`AhoCorasick::try_find_iter`](crate::literal::AhoCorasick::try_find_iter)
     /// for more documentation and examples.
     fn try_find_iter<'a, 'h>(
         &'a self,
@@ -392,7 +392,7 @@ pub unsafe trait Automaton: private::Sealed {
     /// using the given configuration.
     ///
     /// See
-    /// [`AhoCorasick::try_find_overlapping_iter`](blog_text_pattern_search::literal::AhoCorasick::try_find_overlapping_iter)
+    /// [`AhoCorasick::try_find_overlapping_iter`](crate::literal::AhoCorasick::try_find_overlapping_iter)
     /// for more documentation and examples.
     fn try_find_overlapping_iter<'a, 'h>(
         &'a self,
@@ -428,7 +428,7 @@ pub unsafe trait Automaton: private::Sealed {
     /// `Automaton::patterns_len`.
     ///
     /// See
-    /// [`AhoCorasick::try_replace_all`](blog_text_pattern_search::literal::AhoCorasick::try_replace_all)
+    /// [`AhoCorasick::try_replace_all`](crate::literal::AhoCorasick::try_replace_all)
     /// for more documentation and examples.
     fn try_replace_all<B>(
         &self,
@@ -459,7 +459,7 @@ pub unsafe trait Automaton: private::Sealed {
     /// `Automaton::patterns_len`.
     ///
     /// See
-    /// [`AhoCorasick::try_replace_all_bytes`](blog_text_pattern_search::literal::AhoCorasick::try_replace_all_bytes)
+    /// [`AhoCorasick::try_replace_all_bytes`](crate::literal::AhoCorasick::try_replace_all_bytes)
     /// for more documentation and examples.
     fn try_replace_all_bytes<B>(
         &self,
@@ -488,7 +488,7 @@ pub unsafe trait Automaton: private::Sealed {
     /// `replace_with` closure given.
     ///
     /// See
-    /// [`AhoCorasick::try_replace_all_with`](blog_text_pattern_search::literal::AhoCorasick::try_replace_all_with)
+    /// [`AhoCorasick::try_replace_all_with`](crate::literal::AhoCorasick::try_replace_all_with)
     /// for more documentation and examples.
     fn try_replace_all_with<F>(
         &self,
@@ -525,7 +525,7 @@ pub unsafe trait Automaton: private::Sealed {
     /// `replace_with` closure given.
     ///
     /// See
-    /// [`AhoCorasick::try_replace_all_with_bytes`](blog_text_pattern_search::literal::AhoCorasick::try_replace_all_with_bytes)
+    /// [`AhoCorasick::try_replace_all_with_bytes`](crate::literal::AhoCorasick::try_replace_all_with_bytes)
     /// for more documentation and examples.
     fn try_replace_all_with_bytes<F>(
         &self,
@@ -553,7 +553,7 @@ pub unsafe trait Automaton: private::Sealed {
     /// from the stream given.
     ///
     /// See
-    /// [`AhoCorasick::try_stream_find_iter`](blog_text_pattern_search::literal::AhoCorasick::try_stream_find_iter)
+    /// [`AhoCorasick::try_stream_find_iter`](crate::literal::AhoCorasick::try_stream_find_iter)
     /// for more documentation and examples.
     #[cfg(feature = "std")]
     fn try_stream_find_iter<'a, R: std::io::Read>(
@@ -572,7 +572,7 @@ pub unsafe trait Automaton: private::Sealed {
     /// `Automaton::patterns_len`.
     ///
     /// See
-    /// [`AhoCorasick::try_stream_replace_all`](blog_text_pattern_search::literal::AhoCorasick::try_stream_replace_all)
+    /// [`AhoCorasick::try_stream_replace_all`](crate::literal::AhoCorasick::try_stream_replace_all)
     /// for more documentation and examples.
     #[cfg(feature = "std")]
     fn try_stream_replace_all<R, W, B>(
@@ -602,7 +602,7 @@ pub unsafe trait Automaton: private::Sealed {
     /// `replace_with` closure given and writing the result to `wtr`.
     ///
     /// See
-    /// [`AhoCorasick::try_stream_replace_all_with`](blog_text_pattern_search::literal::AhoCorasick::try_stream_replace_all_with)
+    /// [`AhoCorasick::try_stream_replace_all_with`](crate::literal::AhoCorasick::try_stream_replace_all_with)
     /// for more documentation and examples.
     #[cfg(feature = "std")]
     fn try_stream_replace_all_with<R, W, F>(
@@ -744,7 +744,7 @@ unsafe impl<'a, A: Automaton + ?Sized> Automaton for &'a A {
 ///
 /// This example shows how to manually iterate over all overlapping matches. If
 /// you need this, you might consider using
-/// [`AhoCorasick::find_overlapping_iter`](blog_text_pattern_search::literal::AhoCorasick::find_overlapping_iter)
+/// [`AhoCorasick::find_overlapping_iter`](crate::literal::AhoCorasick::find_overlapping_iter)
 /// instead, but this shows how to correctly use an `OverlappingState`.
 ///
 /// ```

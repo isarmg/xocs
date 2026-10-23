@@ -1,12 +1,12 @@
 fn main() {
-    let cmd = command_line::Command::new("cargo")
+    let cmd = blog_cli_arguments::Command::new("cargo")
         .bin_name("cargo")
         .styles(COMMAND_LINE_STYLING)
         .subcommand_required(true)
         .subcommand(
-            command_line::command!("example").arg(
-                command_line::arg!(--"manifest-path" <PATH>)
-                    .value_parser(command_line::value_parser!(std::path::PathBuf)),
+            blog_cli_arguments::command!("example").arg(
+                blog_cli_arguments::arg!(--"manifest-path" <PATH>)
+                    .value_parser(blog_cli_arguments::value_parser!(std::path::PathBuf)),
             ),
         );
     let matches = cmd.get_matches();
@@ -19,7 +19,7 @@ fn main() {
 }
 
 // See also `command_line_cargo::style::COMMAND_LINE_STYLING`
-pub const COMMAND_LINE_STYLING: command_line::builder::styling::Styles = command_line::builder::styling::Styles::styled()
+pub const COMMAND_LINE_STYLING: blog_cli_arguments::builder::styling::Styles = blog_cli_arguments::builder::styling::Styles::styled()
     .header(command_line_cargo::style::HEADER)
     .usage(command_line_cargo::style::USAGE)
     .literal(command_line_cargo::style::LITERAL)

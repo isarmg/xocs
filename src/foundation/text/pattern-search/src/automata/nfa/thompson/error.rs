@@ -9,13 +9,13 @@ use crate::automata::util::{
 /// generally only two things you can do with it:
 ///
 /// * Obtain a human readable message via its `std::fmt::Display` impl.
-/// * Access an underlying [`blog_text_pattern_search::syntax::Error`] type from its `source`
+/// * Access an underlying [`crate::syntax::Error`] type from its `source`
 /// method via the `std::error::Error` trait. This error only occurs when using
 /// convenience routines for building an NFA directly from a pattern string.
 ///
 /// Otherwise, errors typically occur when a limit has been breached. For
 /// example, if the total heap usage of the compiled NFA exceeds the limit
-/// set by [`Config::nfa_size_limit`](blog_text_pattern_search::automata::nfa::thompson::Config), then
+/// set by [`Config::nfa_size_limit`](crate::automata::nfa::thompson::Config), then
 /// building the NFA will fail.
 #[derive(Clone, Debug)]
 pub struct BuildError {

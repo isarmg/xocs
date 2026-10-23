@@ -1,4 +1,5 @@
-use command_line::{Command, FromArgMatches as _, Parser, Subcommand as _};
+extern crate blog_cli_arguments as clap;
+use blog_cli_arguments::{Command, FromArgMatches as _, Parser, Subcommand as _};
 
 #[derive(Parser, Debug)]
 enum Subcommands {

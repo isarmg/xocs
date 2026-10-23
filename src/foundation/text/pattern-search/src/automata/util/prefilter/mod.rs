@@ -67,7 +67,7 @@ pub(crate) use crate::automata::util::prefilter::{
 /// then the vanilla [`Prefilter::new`] constructor is for you. But
 /// if you have an [`Hir`] value from the `regex-syntax` crate, then
 /// [`Prefilter::from_hir_prefix`] might be more convenient. Namely, it uses
-/// the [`regex-syntax::hir::literal`](blog_text_pattern_search::syntax::hir::literal) module to
+/// the [`regex-syntax::hir::literal`](crate::syntax::hir::literal) module to
 /// extract literal prefixes for you, optimize them and then select and build a
 /// prefilter matcher.
 ///
@@ -91,7 +91,7 @@ pub(crate) use crate::automata::util::prefilter::{
 /// # Example
 ///
 /// This example shows how to attach a `Prefilter` to the
-/// [`PikeVM`](blog_text_pattern_search::automata::nfa::thompson::pikevm::PikeVM) in order to accelerate
+/// [`PikeVM`](crate::automata::nfa::thompson::pikevm::PikeVM) in order to accelerate
 /// searches.
 ///
 /// ```

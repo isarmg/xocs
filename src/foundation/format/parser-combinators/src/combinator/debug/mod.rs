@@ -9,7 +9,6 @@ use crate::Parser;
 ///
 /// Note that [`Parser::context`] also provides high level trace information.
 ///
-/// See [tutorial][crate::_tutorial::chapter_8] for more details.
 ///
 /// # Example
 ///

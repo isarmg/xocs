@@ -4,7 +4,7 @@
     html_logo_url = "https://raw.githubusercontent.com/RustCrypto/media/6ee8e381/logo.svg",
     html_favicon_url = "https://raw.githubusercontent.com/RustCrypto/media/6ee8e381/logo.svg"
 )]
-#![doc = include_str!("../../../../../docs/upstream/base64ct-1.8.3/README.md")]
+#![doc = include_str!("../../../../../docs/dependencies/origins/base64ct-1.8.3/README.md")]
 #![warn(
     clippy::arithmetic_side_effects,
     clippy::mod_module_files,

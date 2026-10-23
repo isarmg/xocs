@@ -211,7 +211,7 @@ pub trait DatabaseError: 'static + Send + Sync + StdError {
     /// If the error was caused by a conflict of a unique index, this will be the index name.
     ///
     /// ### Note
-    /// Currently only populated by the Postgres driver.
+    /// SQLite does not populate this field and returns `None`.
     fn constraint(&self) -> Option<&str> {
         None
     }
@@ -219,7 +219,7 @@ pub trait DatabaseError: 'static + Send + Sync + StdError {
     /// Returns the name of the table that was affected by the error, if applicable.
     ///
     /// ### Note
-    /// Currently only populated by the Postgres driver.
+    /// SQLite does not populate this field and returns `None`.
     fn table(&self) -> Option<&str> {
         None
     }

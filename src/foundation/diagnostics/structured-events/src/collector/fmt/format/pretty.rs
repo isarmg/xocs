@@ -18,7 +18,7 @@ use nu_ansi_term::{Color, Style};
 
 /// An excessively pretty, human-readable event formatter.
 ///
-/// Unlike the [`Full`], [`Compact`], and [`Json`] formatters, this is a
+/// Unlike the [`Full`] and [`Compact`] formatters, this is a
 /// multi-line output format. Each individual event may output multiple lines of
 /// text.
 ///

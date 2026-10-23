@@ -1,97 +1,36 @@
-//! Adapters for connecting unstructured log records from the `log` crate into
-//! the `tracing` ecosystem.
+//! Convert between unstructured log records and tracing metadata.
 //!
-//! # Overview
+//! [`AsTrace`](crate::log_bridge::AsTrace) and [`AsLog`](crate::log_bridge::AsLog)
+//! translate levels and metadata. [record dispatch](crate::log_bridge::format_trace)
+//! dispatches a log record as an event in the current tracing span. Message
+//! formatting arguments remain message text; they are not parsed into fields.
 //!
-//! [`tracing`] is a framework for instrumenting Rust programs with context-aware,
-//! structured, event-based diagnostic information. This crate provides
-//! compatibility layers for using `tracing` alongside the logging facade provided
-//! by the [`log`] crate.
-//!
-//! This crate provides:
-//!
-//! - [`AsTrace`] and [`AsLog`] traits for converting between `tracing` and `log` types.
-//! - [`LogTracer`], a [`log::Log`] implementation that consumes [`log::Record`]s
-//!   and outputs them as [`tracing::Event`].
-//!
-//! *Compiler support: [requires `rustc` 1.56+][msrv]*
-//!
-//! [msrv]: #supported-rust-versions
-//!
-//! # Usage
-//!
-//! ## Convert log records to tracing `Event`s
-//!
-//! To convert [`log::Record`]s as [`tracing::Event`]s, set `LogTracer` as the default
-//! logger by calling its [`init`] or [`init_with_filter`] methods.
+//! The `log-bridge` feature enables this module. With `log-tracer`, the
+//! `LogTracer` logger can be installed once to forward records automatically:
 //!
 //! ```rust
-//! # use std::error::Error;
+//! # #[cfg(feature = "log-tracer")]
+//! # fn main() -> Result<(), log::SetLoggerError> {
 //! use tracing::log_bridge::LogTracer;
-//! use log;
 //!
-//! # fn main() -> Result<(), Box<Error>> {
-//! LogTracer::init()?;
-//!
-//! // will be available for Subscribers as a tracing Event
-//! log::trace!("an example trace log");
+//! LogTracer::builder()
+//!     .with_max_level(log::LevelFilter::INFO)
+//!     .init()?;
 //! # Ok(())
 //! # }
+//! # #[cfg(not(feature = "log-tracer"))]
+//! # fn main() {}
 //! ```
 //!
-//! This conversion does not convert unstructured data in log records (such as
-//! values passed as format arguments to the `log!` macro) to structured
-//! `tracing` fields. However, it *does* attach these new events to to the
-//! span that was currently executing when the record was logged. This is the
-//! primary use-case for this library: making it possible to locate the log
-//! records emitted by dependencies which use `log` within the context of a
-//! trace.
+//! The logger builder can filter by maximum level and ignore target prefixes.
+//! Install a tracing subscriber separately to collect the forwarded events.
 //!
-//! ## Convert tracing `Event`s to logs
+//! ## Conversion direction
 //!
-//! Enabling the ["log" and "log-always" feature flags][flags] on the `tracing`
-//! crate will cause all `tracing` spans and events to emit `log::Record`s as
-//! they occur.
-//!
-//! ## Caution: Mixing both conversions
-//!
-//! Note that `log::Logger` implementations that convert log records to trace events
-//! should not be used with `Subscriber`s that convert trace events _back_ into
-//! `log` records, as doing so will result in the event recursing between the subscriber
-//! and the logger forever (or, in real life, probably overflowing the call stack).
-//!
-//! If the logging of trace events generated from log records produced by the
-//! `log` crate is desired, either the `log` crate should not be used to
-//! implement this logging, or an additional layer of filtering will be
-//! required to avoid infinitely converting between `Event` and `log::Record`.
-//!
-//! ## Feature Flags
-//!
-//! * `std`: enables features that require the Rust standard library (on by default)
-//! * `log-tracer`: enables the `LogTracer` type (on by default)
-//!
-//! ## Supported Rust Versions
-//!
-//! Tracing is built against the latest stable release. The minimum supported
-//! version is 1.56. The current Tracing version is not guaranteed to build on
-//! Rust versions earlier than the minimum supported version.
-//!
-//! Tracing follows the same compiler support policies as the rest of the Tokio
-//! project. The current stable Rust compiler and the three most recent minor
-//! versions before it will always be supported. For example, if the current
-//! stable compiler version is 1.69, the minimum supported version will not be
-//! increased past 1.66, three minor versions prior. Increasing the minimum
-//! supported compiler version is not considered a semver breaking change as
-//! long as doing so complies with this policy.
-//!
-//! [`init`]: LogTracer::init
-//! [`init_with_filter`]: LogTracer::init_with_filter
-//! [`tracing`]: https://crates.io/crates/tracing
-//! [`tracing::Subscriber`]: https://docs.rs/tracing/latest/tracing/trait.Subscriber.html
-//! [`Subscriber`]: https://docs.rs/tracing/latest/tracing/trait.Subscriber.html
-//! [`tracing::Event`]: https://docs.rs/tracing/latest/tracing/struct.Event.html
-//! [flags]: https://docs.rs/tracing/latest/tracing/#crate-feature-flags
-//! [`Builder::with_interest_cache`]: log_tracer::Builder::with_interest_cache
+//! The crate's `log` and `log-always` features can also send tracing events to
+//! the log facade. Avoid a subscriber that sends forwarded log events back to
+//! that same facade: without a filtering boundary, the two directions recurse.
+
 #![cfg_attr(docsrs, feature(doc_cfg), deny(rustdoc::broken_intra_doc_links))]
 #![warn(
     missing_debug_implementations,

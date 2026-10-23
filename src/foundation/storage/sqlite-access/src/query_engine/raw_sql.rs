@@ -19,103 +19,29 @@ use crate::query_engine::Error;
 /// See [`raw_sql()`] for details.
 pub struct RawSql(SqlStr);
 
-/// Execute one or more statements as raw SQL, separated by semicolons (`;`).
+/// Execute SQLite statements separated by semicolons.
 ///
-/// This interface can be used to execute both DML
-/// (Data Manipulation Language: `SELECT`, `INSERT`, `UPDATE`, `DELETE` and variants)
-/// as well as DDL (Data Definition Language: `CREATE TABLE`, `ALTER TABLE`, etc).
+/// This interface is suitable for trusted schema or administration statements.
+/// It does not retain statements in the connection cache and exposes no bound
+/// argument input. Use [`crate::query()`] with `.bind()` for dynamic values; this
+/// API does not escape SQL fragments or identifiers.
 ///
-/// This will not create or cache any prepared statements.
+/// Statements execute in order. Separate statements do not become atomic merely
+/// because they share one SQL string. Run them through a [`crate::Transaction`]
+/// when they must commit or roll back together.
 ///
-/// ### Note: singular DML queries, prefer `query()`
-/// This API does not use prepared statements, so usage of it is missing out on their benefits.
-///
-/// Prefer [`query()`][crate::query_engine::query::query] instead if executing a single query.
-///
-/// It's also possible to combine multiple DML queries into one for use with `query()`:
-///
-/// ##### Common Table Expressions (CTEs: i.e The `WITH` Clause)
-/// Common Table Expressions effectively allow you to define aliases for queries
-/// that can be referenced like temporary tables:
-///
-/// ```sql
-/// WITH inserted_foos AS (
-///     -- Note that only Postgres allows data-modifying statements in CTEs
-///     INSERT INTO foo (bar_id) VALUES ($1)
-///     RETURNING foo_id, bar_id
-/// )
-/// SELECT foo_id, bar_id, bar
-/// FROM inserted_foos
-/// INNER JOIN bar USING (bar_id)
 /// ```
-///
-/// It's important to note that data modifying statements (`INSERT`, `UPDATE`, `DELETE`) may
-/// behave differently than expected. In Postgres, all data-modifying subqueries in a `WITH`
-/// clause execute with the same view of the data; they *cannot* see each other's modifications.
-///
-/// MySQL, MariaDB and SQLite appear to *only* allow `SELECT` statements in CTEs.
-///
-/// See the appropriate entry in your database's manual for details:
-/// * [MySQL](https://dev.mysql.com/doc/refman/8.0/en/with.html)
-///     * [MariaDB](https://mariadb.com/kb/en/with/)
-/// * [Postgres](https://www.postgresql.org/docs/current/queries-with.html)
-/// * [SQLite](https://www.sqlite.org/lang_with.html)
-///
-/// ##### `UNION`/`INTERSECT`/`EXCEPT`
-/// You can also use various set-theory operations on queries,
-/// including `UNION ALL` which simply concatenates their results.
-///
-/// See the appropriate entry in your database's manual for details:
-/// * [MySQL](https://dev.mysql.com/doc/refman/8.0/en/set-operations.html)
-///    * [MariaDB](https://mariadb.com/kb/en/joins-subqueries/)
-/// * [Postgres](https://www.postgresql.org/docs/current/queries-union.html)
-/// * [SQLite](https://www.sqlite.org/lang_select.html#compound_select_statements)
-///
-/// ### Note: query parameters are not supported.
-/// Query parameters require the use of prepared statements which this API does support.
-///
-/// If you require dynamic input data in your SQL, you can use `format!()` but **be very careful
-/// doing this with user input**. SQLx does **not** provide escaping or sanitization for inserting
-/// dynamic input into queries this way.
-///
-/// See [`query()`][crate::query_engine::query::query] for details.
-///
-/// ### Note: multiple statements and autocommit.
-/// By default, when you use this API to execute a SQL string containing multiple statements
-/// separated by semicolons (`;`), the database server will treat those statements as all executing
-/// within the same transaction block, i.e. wrapped in `BEGIN` and `COMMIT`:
-///
-/// ```rust,no_run
-/// # async fn example() -> sqlx::Result<()> {
-/// let mut conn: sqlx::PgConnection = todo!("e.g. PgConnection::connect(<DATABASE URL>)");
-///
-/// sqlx::raw_sql(
-///     // Imagine we're moving data from one table to another:
-///     // Implicit `BEGIN;`
-///     "UPDATE foo SET bar = foobar.bar FROM foobar WHERE foobar.foo_id = foo.id;\
-///      DELETE FROM foobar;"
-///     // Implicit `COMMIT;`
+/// # async fn example(pool: &blog_storage_sqlite_access::SqlitePool) -> blog_storage_sqlite_access::Result<()> {
+/// let mut tx = pool.begin().await?;
+/// blog_storage_sqlite_access::raw_sql(
+///     "CREATE TABLE entries(id INTEGER PRIMARY KEY, title TEXT NOT NULL);      INSERT INTO entries(title) VALUES ('Blog');"
 /// )
-///    .execute(&mut conn)
-///    .await?;
-///
+/// .execute(&mut *tx)
+/// .await?;
+/// tx.commit().await?;
 /// # Ok(())
 /// # }
 /// ```
-///
-/// If one statement triggers an error, the whole script aborts and rolls back.
-/// You can include explicit `BEGIN` and `COMMIT` statements in the SQL string
-/// to designate units that can be committed or rolled back piecemeal.
-///
-/// This also allows for a rudimentary form of pipelining as the whole SQL string is sent in one go.
-///
-/// ##### MySQL and MariaDB: DDL implicitly commits!
-/// MySQL and MariaDB do not support DDL in transactions. Instead, any active transaction is
-/// immediately and implicitly committed by the database server when executing a DDL statement.
-/// Beware of this behavior.
-///
-/// See [MySQL manual, section 13.3.3: Statements That Cause an Implicit Commit](https://dev.mysql.com/doc/refman/8.0/en/implicit-commit.html) for details.
-/// See also: [MariaDB manual: SQL statements That Cause an Implicit Commit](https://mariadb.com/kb/en/sql-statements-that-cause-an-implicit-commit/).
 pub fn raw_sql(sql: impl SqlSafeStr) -> RawSql {
     RawSql(sql.into_sql_str())
 }

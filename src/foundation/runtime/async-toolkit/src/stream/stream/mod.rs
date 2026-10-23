@@ -1651,8 +1651,8 @@ pub trait StreamExt: Stream {
     /// Using the future with a [`FusedFuture`][]-aware primitive like the
     /// [`select!`] macro will prevent this.
     ///
-    /// [`FusedFuture`]: futures::future::FusedFuture
-    /// [`FusedFuture::is_terminated`]: futures::future::FusedFuture::is_terminated
+    /// [`FusedFuture`]: crate::future::FusedFuture
+    /// [`FusedFuture::is_terminated`]: crate::future::FusedFuture::is_terminated
     ///
     /// # Examples
     ///

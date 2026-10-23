@@ -34,7 +34,7 @@
 //! supported platforms or a compatibility policy.
 //!
 //! Original libc source, documentation, and licensing are retained separately under
-//! `docs/upstream` and `compliance`.
+//! `docs/dependencies/origins` and `compliance`.
 
 // Make it a bit easier to build without Cargo
 #![crate_name = "blog_platform_system_abi"]

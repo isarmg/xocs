@@ -37,8 +37,7 @@
 //! [`Standard`] for more details.
 //!
 //! Implementing `Distribution<T>` for [`Standard`] for user types `T` makes it
-//! possible to generate type `T` with [`Rng::gen`], and by extension also
-//! with the [`random`] function.
+//! possible to generate type `T` with [`Rng::gen`] from an explicitly supplied RNG.
 //!
 //! ## Random characters
 //!
@@ -78,8 +77,8 @@
 //! Sampling a simple true/false outcome with a given probability has a name:
 //! the [`Bernoulli`] distribution (this is used by [`Rng::gen_bool`]).
 //!
-//! For weighted sampling from a sequence of discrete values, use the
-//! [`WeightedIndex`] distribution.
+//! With the `alloc` feature, `WeightedIndex` supports weighted sampling from
+//! a sequence of discrete values.
 //!
 //! This crate no longer includes other non-uniform distributions; instead
 //! it is recommended that you use either [`rand_distr`] or [`statrs`].
@@ -89,7 +88,6 @@
 //! [`rand_distr`]: https://crates.io/crates/rand_distr
 //! [`statrs`]: https://crates.io/crates/statrs
 
-//! [`random`]: crate::random
 //! [`rand_distr`]: https://crates.io/crates/rand_distr
 //! [`statrs`]: https://crates.io/crates/statrs
 

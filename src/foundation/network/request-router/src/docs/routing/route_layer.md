@@ -1,4 +1,4 @@
-Apply a [`tower::Layer`] to the router that will only run if the request matches
+Apply a [`service_stack::Layer`] to the router that will only run if the request matches
 a route.
 
 Note that the middleware is only applied to existing routes. So you have to
@@ -18,18 +18,12 @@ In generic code, you can test if that is the case first, by calling [`Router::ha
 # Example
 
 ```rust
-use axum::{
-    routing::get,
-    Router,
-};
-use tower_http::validate_request::ValidateRequestHeaderLayer;
+use http_routing::{extract::Extension, routing::get, Router};
 
-let app = Router::new()
-    .route("/foo", get(|| async {}))
-    .route_layer(ValidateRequestHeaderLayer::bearer("password"));
-
-// `GET /foo` with a valid token will receive `200 OK`
-// `GET /foo` with a invalid token will receive `401 Unauthorized`
-// `GET /not-found` with a invalid token will receive `404 Not Found`
-# let _: Router = app;
+let app: Router = Router::new()
+    .route("/foo", get(|| async { "Blog" }))
+    .route_layer(Extension("label"));
 ```
+
+Middleware that rejects a request early should return its own response.
+Implement it with [`crate::middleware::from_fn`] or a local service layer.

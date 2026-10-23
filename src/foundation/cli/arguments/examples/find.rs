@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use command_line::{Arg, ArgAction, ArgGroup, ArgMatches, Command, command, value_parser};
+use blog_cli_arguments::{Arg, ArgAction, ArgGroup, ArgMatches, Command, command, value_parser};
 
 fn main() {
     let matches = cli().get_matches();
@@ -58,17 +58,17 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn from_matches(matches: &ArgMatches) -> Vec<(command_line::Id, Self)> {
+    pub fn from_matches(matches: &ArgMatches) -> Vec<(blog_cli_arguments::Id, Self)> {
         let mut values = BTreeMap::new();
         for id in matches.ids() {
-            if matches.try_get_many::<command_line::Id>(id.as_str()).is_ok() {
+            if matches.try_get_many::<blog_cli_arguments::Id>(id.as_str()).is_ok() {
                 // ignore groups
                 continue;
             }
             let value_source = matches
                 .value_source(id.as_str())
                 .expect("id came from matches");
-            if value_source != command_line::parser::ValueSource::CommandLine {
+            if value_source != blog_cli_arguments::parser::ValueSource::CommandLine {
                 // Any other source just gets tacked on at the end (like default values)
                 continue;
             }
@@ -85,8 +85,8 @@ impl Value {
 
     fn extract<T: Clone + Into<Self> + Send + Sync + 'static>(
         matches: &ArgMatches,
-        id: &command_line::Id,
-        output: &mut BTreeMap<usize, (command_line::Id, Self)>,
+        id: &blog_cli_arguments::Id,
+        output: &mut BTreeMap<usize, (blog_cli_arguments::Id, Self)>,
     ) -> bool {
         match matches.try_get_many::<T>(id.as_str()) {
             Ok(Some(values)) => {
@@ -102,10 +102,10 @@ impl Value {
             Ok(None) => {
                 unreachable!("`ids` only reports what is present")
             }
-            Err(command_line::parser::MatchesError::UnknownArgument { .. }) => {
+            Err(blog_cli_arguments::parser::MatchesError::UnknownArgument { .. }) => {
                 unreachable!("id came from matches")
             }
-            Err(command_line::parser::MatchesError::Downcast { .. }) => false,
+            Err(blog_cli_arguments::parser::MatchesError::Downcast { .. }) => false,
             Err(_) => {
                 unreachable!("id came from matches")
             }

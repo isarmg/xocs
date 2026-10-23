@@ -2,7 +2,7 @@ use crate::{convert::TryFromJsValue, JsValue};
 
 /// A trait for dynamic checked and unchecked casting between JS types.
 ///
-/// Unlike [`crate::Upcast`], which provides type-safe zero-cost type
+/// Unlike [`crate::convert::Upcast`], which provides type-safe zero-cost type
 /// conversions for generic type wrappers, this trait can be used to
 /// perform arbitrary casts with JS instance checking.
 ///

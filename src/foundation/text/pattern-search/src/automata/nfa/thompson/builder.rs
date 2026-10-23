@@ -21,7 +21,7 @@ use crate::automata::{
 /// needs.
 ///
 /// Once construction is finished, the builder will convert these states to a
-/// [`nfa::thompson::State`](blog_text_pattern_search::automata::nfa::thompson::State). This conversion not
+/// [`nfa::thompson::State`](crate::automata::nfa::thompson::State). This conversion not
 /// only results in a simpler representation, but in some cases, entire classes
 /// of states are completely removed (such as [`State::Empty`]).
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -170,7 +170,7 @@ impl State {
 
 /// An abstraction for building Thompson NFAs by hand.
 ///
-/// A builder is what a [`thompson::Compiler`](blog_text_pattern_search::automata::nfa::thompson::Compiler)
+/// A builder is what a [`thompson::Compiler`](crate::automata::nfa::thompson::Compiler)
 /// uses internally to translate a regex's high-level intermediate
 /// representation into an [`NFA`].
 ///
@@ -397,7 +397,7 @@ impl Builder {
     /// This returns an error if there was a problem producing the final NFA.
     /// In particular, this might include an error if the capturing groups
     /// added to this builder violate any of the invariants documented on
-    /// [`GroupInfo`](blog_text_pattern_search::automata::util::captures::GroupInfo).
+    /// [`GroupInfo`](crate::automata::util::captures::GroupInfo).
     ///
     /// # Panics
     ///
@@ -850,7 +850,7 @@ impl Builder {
     /// NFA. For example, if one adds two distinct capturing groups with the
     /// same name, then that will result in `build()` failing with an error.
     ///
-    /// See the [`GroupInfo`](blog_text_pattern_search::automata::util::captures::GroupInfo) type for
+    /// See the [`GroupInfo`](crate::automata::util::captures::GroupInfo) type for
     /// more information on what qualifies as valid capturing groups.
     ///
     /// # Example
@@ -1053,7 +1053,7 @@ impl Builder {
     /// NFA. For example, if one adds two distinct capturing groups with the
     /// same name, then that will result in `build()` failing with an error.
     ///
-    /// See the [`GroupInfo`](blog_text_pattern_search::automata::util::captures::GroupInfo) type for
+    /// See the [`GroupInfo`](crate::automata::util::captures::GroupInfo) type for
     /// more information on what qualifies as valid capturing groups.
     pub fn add_capture_end(
         &mut self,
@@ -1201,8 +1201,8 @@ impl Builder {
     /// filtering out empty matches that don't fall on UTF-8 boundaries.
     ///
     /// If you're building an NFA from an HIR (and not using a
-    /// [`thompson::Compiler`](blog_text_pattern_search::automata::nfa::thompson::Compiler)), then you can
-    /// use the [`syntax::Config::utf8`](blog_text_pattern_search::automata::util::syntax::Config::utf8)
+    /// [`thompson::Compiler`](crate::automata::nfa::thompson::Compiler)), then you can
+    /// use the [`syntax::Config::utf8`](crate::automata::util::syntax::Config::utf8)
     /// option to guarantee that if the HIR detects a non-empty match, then it
     /// is guaranteed to be valid UTF-8.
     ///

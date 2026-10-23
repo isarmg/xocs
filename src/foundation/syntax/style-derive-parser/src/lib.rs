@@ -12,11 +12,10 @@
 //! Currently this library is geared toward use in Rust procedural macros, but
 //! contains some APIs that may be useful more generally.
 //!
-//! - **Data structures** — Syn provides a complete syntax tree that can
-//!   represent any valid Rust source code. The syntax tree is rooted at
-//!   [`syn::File`] which represents a full source file, but there are other
-//!   entry points that may be useful to procedural macros including
-//!   [`syn::Item`], [`syn::Expr`] and [`syn::Type`].
+//! - **Data structures** — The parser exposes the syntax nodes needed by
+//!   procedural macros, including [`syn::Expr`], [`syn::Type`] and
+//!   [`syn::DeriveInput`]. The `full` feature additionally exposes `File`
+//!   and `Item` for parsing complete source files.
 //!
 //! - **Derives** — Of particular interest to derive macros is
 //!   [`syn::DeriveInput`] which is any of the three legal input items to a
@@ -39,8 +38,6 @@
 //!   procedural macros enable only what they need, and do not pay in compile
 //!   time for all the rest.
 //!
-//! [`syn::File`]: File
-//! [`syn::Item`]: Item
 //! [`syn::Expr`]: Expr
 //! [`syn::Type`]: Type
 //! [`syn::DeriveInput`]: DeriveInput

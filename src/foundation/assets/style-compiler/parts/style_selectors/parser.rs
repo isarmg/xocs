@@ -60,7 +60,7 @@ pub trait NonTSPseudoClass<'i>: Sized + ToCss {
 
   /// Whether this pseudo-class belongs to:
   ///
-  /// https://drafts.csswg.org/selectors-4/#useraction-pseudos
+  /// <https://drafts.csswg.org/selectors-4/#useraction-pseudos>
   fn is_user_action_state(&self) -> bool;
 
   fn is_valid_before_webkit_scrollbar(&self) -> bool {
@@ -233,7 +233,7 @@ macro_rules! with_all_bounds {
             type BorrowedLocalName: ?Sized + Eq;
 
             /// non tree-structural pseudo-classes
-            /// (see: https://drafts.csswg.org/selectors/#structural-pseudos)
+            /// (see: <https://drafts.csswg.org/selectors/#structural-pseudos>)
             type NonTSPseudoClass: $($CommonBounds)* + NonTSPseudoClass<'i, Impl = Self>;
             type VendorPrefix: Sized + Eq + $($CommonBounds)* + ToCss;
 
@@ -1169,11 +1169,11 @@ pub enum Combinator {
   Part,
 
   /// Non-standard Vue >>> combinator.
-  /// https://vue-loader.vuejs.org/guide/scoped-css.html#deep-selectors
+  /// <https://vue-loader.vuejs.org/guide/scoped-css.html#deep-selectors>
   DeepDescendant,
   /// Non-standard /deep/ combinator.
   /// Appeared in early versions of the css-scoping-1 specification:
-  /// https://www.w3.org/TR/2014/WD-css-scoping-1-20140403/#deep-combinator
+  /// <https://www.w3.org/TR/2014/WD-css-scoping-1-20140403/#deep-combinator>
   /// And still supported as an alias for >>> by Vue.
   Deep,
 }
@@ -1243,7 +1243,7 @@ impl NthType {
 
 /// The properties that comprise an :nth- pseudoclass as of Selectors 3 (e.g.,
 /// nth-child(An+B)).
-/// https://www.w3.org/TR/selectors-3/#nth-child-pseudo
+/// <https://www.w3.org/TR/selectors-3/#nth-child-pseudo>
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 #[cfg_attr(any(), derive(static_self::IntoOwned))]
 pub struct NthSelectorData {
@@ -1342,7 +1342,7 @@ impl NthSelectorData {
 
 /// The properties that comprise an :nth- pseudoclass as of Selectors 4 (e.g.,
 /// nth-child(An+B [of S]?)).
-/// https://www.w3.org/TR/selectors-4/#nth-child-pseudo
+/// <https://www.w3.org/TR/selectors-4/#nth-child-pseudo>
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct NthOfSelectorData<'i, Impl: SelectorImpl<'i>>(NthSelectorData, Box<[Selector<'i, Impl>]>);
 
@@ -1387,7 +1387,7 @@ impl<'i, Impl: SelectorImpl<'i>> NthOfSelectorData<'i, Impl> {
 /// A CSS simple selector or combinator. We store both in the same enum for
 /// optimal packing and cache performance, see [1].
 ///
-/// [1] https://bugzilla.mozilla.org/show_bug.cgi?id=1357973
+/// [1]: <https://bugzilla.mozilla.org/show_bug.cgi?id=1357973>
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub enum Component<'i, Impl: SelectorImpl<'i>> {
   Combinator(Combinator),
@@ -1428,7 +1428,7 @@ pub enum Component<'i, Impl: SelectorImpl<'i>> {
   NonTSPseudoClass(Impl::NonTSPseudoClass),
   /// The ::slotted() pseudo-element:
   ///
-  /// https://drafts.csswg.org/css-scoping/#slotted-pseudo
+  /// <https://drafts.csswg.org/css-scoping/#slotted-pseudo>
   ///
   /// The selector here is a compound selector, that is, no combinators.
   ///
@@ -1436,44 +1436,44 @@ pub enum Component<'i, Impl: SelectorImpl<'i>> {
   /// writing no other browser does, and that allows them to put ::slotted()
   /// in the rule hash, so we do that too.
   ///
-  /// See https://github.com/w3c/csswg-drafts/issues/2158
+  /// See <https://github.com/w3c/csswg-drafts/issues/2158>
   Slotted(Selector<'i, Impl>),
   /// The `::part` pseudo-element.
-  ///   https://drafts.csswg.org/css-shadow-parts/#part
+  ///   <https://drafts.csswg.org/css-shadow-parts/#part>
   Part(Box<[Impl::Identifier]>),
   /// The `:host` pseudo-class:
   ///
-  /// https://drafts.csswg.org/css-scoping/#host-selector
+  /// <https://drafts.csswg.org/css-scoping/#host-selector>
   ///
   /// NOTE(emilio): This should support a list of selectors, but as of this
   /// writing no other browser does, and that allows them to put :host()
   /// in the rule hash, so we do that too.
   ///
-  /// See https://github.com/w3c/csswg-drafts/issues/2158
+  /// See <https://github.com/w3c/csswg-drafts/issues/2158>
   Host(Option<Selector<'i, Impl>>),
   /// The `:where` pseudo-class.
   ///
-  /// https://drafts.csswg.org/selectors/#zero-matches
+  /// <https://drafts.csswg.org/selectors/#zero-matches>
   ///
   /// The inner argument is conceptually a SelectorList, but we move the
   /// selectors to the heap to keep Component small.
   Where(Box<[Selector<'i, Impl>]>),
   /// The `:is` pseudo-class.
   ///
-  /// https://drafts.csswg.org/selectors/#matches-pseudo
+  /// <https://drafts.csswg.org/selectors/#matches-pseudo>
   ///
   /// Same comment as above re. the argument.
   Is(Box<[Selector<'i, Impl>]>),
   Any(Impl::VendorPrefix, Box<[Selector<'i, Impl>]>),
   /// The `:has` pseudo-class.
   ///
-  /// https://www.w3.org/TR/selectors/#relational
+  /// <https://www.w3.org/TR/selectors/#relational>
   Has(Box<[Selector<'i, Impl>]>),
   /// An implementation-dependent pseudo-element selector.
   PseudoElement(Impl::PseudoElement),
   /// A nesting selector:
   ///
-  /// https://drafts.csswg.org/css-nesting-1/#nest-selector
+  /// <https://drafts.csswg.org/css-nesting-1/#nest-selector>
   ///
   /// NOTE: This is a lightningcss addition.
   Nesting,

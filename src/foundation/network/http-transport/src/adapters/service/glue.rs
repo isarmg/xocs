@@ -10,7 +10,7 @@ use super::Oneshot;
 ///
 /// This wraps an inner tower service `S` in a [`crate::service::Service`] implementation. See
 /// the module-level documentation of [`service`][crate::adapters::service] for more information about using
-/// [`tower`][tower] services and middleware with [`hyper`].
+/// [`tower`][tower] services and middleware with [the HTTP transport](crate).
 ///
 /// [hyper-svc]: crate::service::Service
 /// [tower]: https://docs.rs/tower/latest/tower/

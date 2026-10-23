@@ -159,17 +159,9 @@
 //!
 //! # Standard input and output
 //!
-//! Tokio provides asynchronous APIs to standard [input], [output], and [error].
-//! These APIs are very similar to the ones provided by `std`, but they also
-//! implement [`AsyncRead`] and [`AsyncWrite`].
-//!
-//! Note that the standard input / output APIs  **must** be used from the
-//! context of the Tokio runtime, as they require Tokio-specific features to
-//! function. Calling these functions outside of a Tokio runtime will panic.
-//!
-//! [input]: fn@stdin
-//! [output]: fn@stdout
-//! [error]: fn@stderr
+//! Enabling `io-std` provides `stdin`, `stdout`, `stderr` and their stream types.
+//! These implement the asynchronous I/O traits and must be used within a runtime.
+//! They are absent when `io-std` is disabled.
 //!
 //! # `std` re-exports
 //!

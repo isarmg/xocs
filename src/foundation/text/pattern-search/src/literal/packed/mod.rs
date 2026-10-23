@@ -5,7 +5,7 @@ patterns.
 This sub-module provides vectorized routines for quickly finding
 matches of a small number of patterns. In general, users of this crate
 shouldn't need to interface with this module directly, as the primary
-[`AhoCorasick`](blog_text_pattern_search::literal::AhoCorasick) searcher will use these routines
+[`AhoCorasick`](crate::literal::AhoCorasick) searcher will use these routines
 automatically as a prefilter when applicable. However, in some cases, callers
 may want to bypass the Aho-Corasick machinery entirely and use this vectorized
 searcher directly.

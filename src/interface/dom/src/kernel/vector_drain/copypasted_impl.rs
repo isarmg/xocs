@@ -28,7 +28,7 @@ impl<T> crate::vector_drain::VecExt<T> for Vec<T> {
 
 /// An iterator which uses a closure to determine if an element should be removed.
 ///
-/// This struct is created by [`Vec::drain_filter`].
+/// This struct is created by [`VecExt::drain_filter`](crate::vector_drain::VecExt::drain_filter).
 /// See its documentation for more.
 ///
 /// # Example

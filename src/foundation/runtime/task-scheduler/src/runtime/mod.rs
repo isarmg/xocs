@@ -358,8 +358,8 @@
 //! [`global_queue_interval`] times in a row. If the value of
 //! [`global_queue_interval`] is not explicitly set using the runtime builder,
 //! then the runtime will dynamically compute it using a heuristic that targets
-//! 10ms intervals between each check of the global queue (based on the
-//! [`worker_mean_poll_time`] metric).
+//! 10ms intervals between each check of the global queue (based on
+//! the worker's measured mean poll time).
 //!
 //! If both the local queue and global queue is empty, then the worker thread
 //! will attempt to steal tasks from the local queue of another worker thread.
@@ -370,7 +370,7 @@
 //! tasks ready to be scheduled, or when it has scheduled 61 tasks in a row. The
 //! number 61 may be changed using the [`event_interval`] setting.
 //!
-//! The multi thread runtime uses [the lifo slot optimization]: Whenever a task
+//! The multi thread runtime uses a LIFO slot optimization: Whenever a task
 //! wakes up another task, the other task is added to the worker thread's lifo
 //! slot instead of being added to a queue. If there was already a task in the
 //! lifo slot when this happened, then the lifo slot is replaced, and the task
@@ -379,10 +379,9 @@
 //! the lifo slot immediately, if any. When the lifo slot is used, the [coop
 //! budget] is not reset. Furthermore, if a worker thread uses the lifo slot
 //! three times in a row, it is temporarily disabled until the worker thread has
-//! scheduled a task that didn't come from the lifo slot. The lifo slot can be
-//! disabled using the [`disable_lifo_slot`] setting. The lifo slot is separate
-//! from the local queue, so other worker threads cannot steal the task in the
-//! lifo slot.
+//! scheduled a task that didn't come from the lifo slot. The lifo slot is
+//! separate from the local queue, so other worker threads cannot steal the task
+//! in the lifo slot.
 //!
 //! When a task is woken from a thread that is not a worker thread, then the
 //! task is placed in the global queue.
@@ -402,10 +401,7 @@
 //! [multi thread runtime]: crate::runtime::Builder::new_multi_thread
 //! [`global_queue_interval`]: crate::runtime::Builder::global_queue_interval
 //! [`event_interval`]: crate::runtime::Builder::event_interval
-//! [`disable_lifo_slot`]: crate::runtime::Builder::disable_lifo_slot
-//! [the lifo slot optimization]: crate::runtime::Builder::disable_lifo_slot
 //! [coop budget]: crate::task::coop#cooperative-scheduling
-//! [`worker_mean_poll_time`]: crate::runtime::RuntimeMetrics::worker_mean_poll_time
 //! [`prewarm-fd-table`]: https://github.com/tokio-rs/tokio/blob/master/examples/prewarm-fd-table.rs
 
 // At the top due to macros

@@ -35,7 +35,7 @@ pub struct FontPaletteValuesRule<'i> {
 
 /// A property within an `@font-palette-values` rule.
 ///
-///  See [FontPaletteValuesRule](FontPaletteValuesRule).
+///  See [FontPaletteValuesRule].
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(any(), derive(static_self::IntoOwned))]

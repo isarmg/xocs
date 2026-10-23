@@ -16,7 +16,7 @@
 //! ```
 //!
 //! # Abstract Syntax Tree (AST)
-//! Oxc's AST is located in a separate [`oxc_ast`] crate. You can find type definitions for AST
+//! Oxc's AST is located in a separate [`crate::syntax_tree`] crate. You can find type definitions for AST
 //! nodes [here][`crate::syntax_tree::ast`].
 //!
 //! # Performance

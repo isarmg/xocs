@@ -339,44 +339,31 @@ impl<DB: Database> PoolOptions<DB> {
         self
     }
 
-    /// Perform an asynchronous action after connecting to the database.
+    /// Run an async callback after a SQLite connection is opened.
     ///
-    /// If the operation returns with an error then the error is logged, the connection is closed
-    /// and a new one is opened in its place and the callback is invoked again.
+    /// If the callback fails, its error is logged and the connection is closed.
+    /// Opening and callback execution are retried with backoff. This also applies to
+    /// connections opened internally to maintain [`PoolOptions::min_connections`].
+    /// Use `SqliteConnectOptions` for supported connection settings; reserve this
+    /// callback for additional application initialization.
     ///
-    /// This occurs in a backoff loop to avoid high CPU usage and spamming logs during a transient
-    /// error condition.
+    /// ```
+    /// # async fn example() -> blog_storage_sqlite_access::Result<()> {
+    /// use blog_storage_sqlite_access::sqlite::SqlitePoolOptions;
     ///
-    /// Note that this may be called for internally opened connections, such as when maintaining
-    /// [`min_connections`][Self::min_connections], that are then immediately returned to the pool
-    /// without invoking [`after_release`][Self::after_release].
-    ///
-    /// # Example: Additional Parameters
-    /// This callback may be used to set additional configuration parameters
-    /// that are not exposed by the database's `ConnectOptions`.
-    ///
-    /// This example is written for PostgreSQL but can likely be adapted to other databases.
-    ///
-    /// ```no_run
-    /// # async fn f() -> Result<(), Box<dyn std::error::Error>> {
-    /// use sqlx::Executor;
-    /// use sqlx::postgres::PgPoolOptions;
-    ///
-    /// let pool = PgPoolOptions::new()
-    ///     .after_connect(|conn, _meta| Box::pin(async move {
-    ///         // When directly invoking `Executor` methods,
-    ///         // it is possible to execute multiple statements with one call.
-    ///         conn.execute("SET application_name = 'your_app'; SET search_path = 'my_schema';")
+    /// let pool = SqlitePoolOptions::new()
+    ///     .after_connect(|connection, _metadata| Box::pin(async move {
+    ///         blog_storage_sqlite_access::query("PRAGMA optimize")
+    ///             .execute(connection)
     ///             .await?;
-    ///
     ///         Ok(())
     ///     }))
-    ///     .connect("postgres:// …").await?;
+    ///     .connect("sqlite::memory:")
+    ///     .await?;
+    /// pool.close().await;
     /// # Ok(())
     /// # }
     /// ```
-    ///
-    /// For a discussion on why `Box::pin()` is required, see [the type-level docs][Self].
     pub fn after_connect<F>(mut self, callback: F) -> Self
     where
         // We're passing the `PoolConnectionMetadata` here mostly for future-proofing.
@@ -390,48 +377,17 @@ impl<DB: Database> PoolOptions<DB> {
         self
     }
 
-    /// Perform an asynchronous action on a previously idle connection before giving it out.
+    /// Inspect a previously idle connection before lending it to the caller.
     ///
-    /// Alongside the connection, the closure gets [`PoolConnectionMetadata`] which contains
-    /// potentially useful information such as the connection's age and the duration it was
-    /// idle.
+    /// The callback receives its age and idle duration in [`PoolConnectionMetadata`].
+    /// Return `Ok(true)` to lend it, or `Ok(false)` to close it and try another.
+    /// Errors are logged and also close the connection. New connections use
+    /// [`PoolOptions::after_connect`] instead.
     ///
-    /// If the operation returns `Ok(true)`, the connection is returned to the task that called
-    /// [`Pool::acquire`].
-    ///
-    /// If the operation returns `Ok(false)` or an error, the error is logged (if applicable)
-    /// and then the connection is closed and [`Pool::acquire`] tries again with another idle
-    /// connection. If it runs out of idle connections, it opens a new connection instead.
-    ///
-    /// This is *not* invoked for new connections. Use [`after_connect`][Self::after_connect]
-    /// for those.
-    ///
-    /// # Example: Custom `test_before_acquire` Logic
-    /// If you only want to ping connections if they've been idle a certain amount of time,
-    /// you can implement your own logic here:
-    ///
-    /// This example is written for Postgres but should be trivially adaptable to other databases.
-    /// ```no_run
-    /// # async fn f() -> Result<(), Box<dyn std::error::Error>> {
-    /// use sqlx::{Connection, Executor};
-    /// use sqlx::postgres::PgPoolOptions;
-    ///
-    /// let pool = PgPoolOptions::new()
-    ///     .test_before_acquire(false)
-    ///     .before_acquire(|conn, meta| Box::pin(async move {
-    ///         // One minute
-    ///         if meta.idle_for.as_secs() > 60 {
-    ///             conn.ping().await?;
-    ///         }
-    ///
-    ///         Ok(true)
-    ///     }))
-    ///     .connect("postgres:// …").await?;
-    /// # Ok(())
-    /// # }
-    ///```
-    ///
-    /// For a discussion on why `Box::pin()` is required, see [the type-level docs][Self].
+    /// For a custom idle check, disable [`PoolOptions::test_before_acquire`] and call
+    /// [`crate::Connection::ping`] from this callback when the idle duration exceeds
+    /// the application's threshold. The callback returns a boxed future borrowing
+    /// the connection.
     pub fn before_acquire<F>(mut self, callback: F) -> Self
     where
         for<'c> F: Fn(&'c mut DB::Connection, PoolConnectionMetadata) -> BoxFuture<'c, Result<bool, Error>>
@@ -443,52 +399,14 @@ impl<DB: Database> PoolOptions<DB> {
         self
     }
 
-    /// Perform an asynchronous action on a connection before it is returned to the pool.
+    /// Inspect a connection before returning it to the idle pool.
     ///
-    /// Alongside the connection, the closure gets [`PoolConnectionMetadata`] which contains
-    /// potentially useful information such as the connection's age.
+    /// The callback receives [`PoolConnectionMetadata`]. Return `Ok(true)` to retain
+    /// the connection, or `Ok(false)` to close it; an error is logged and also closes
+    /// it. A later acquisition can open a replacement subject to pool limits.
     ///
-    /// If the operation returns `Ok(true)`, the connection is returned to the pool's idle queue.
-    /// If the operation returns `Ok(false)` or an error, the error is logged (if applicable)
-    /// and the connection is closed, allowing a task waiting on [`Pool::acquire`] to
-    /// open a new one in its place.
-    ///
-    /// # Example (Postgres): Close Memory-Hungry Connections
-    /// Instead of relying on [`max_lifetime`][Self::max_lifetime] to close connections,
-    /// we can monitor their memory usage directly and close any that have allocated too much.
-    ///
-    /// Note that this is purely an example showcasing a possible use for this callback
-    /// and may be flawed as it has not been tested.
-    ///
-    /// This example queries [`pg_backend_memory_contexts`](https://www.postgresql.org/docs/current/view-pg-backend-memory-contexts.html)
-    /// which is only allowed for superusers.
-    ///
-    /// ```no_run
-    /// # async fn f() -> Result<(), Box<dyn std::error::Error>> {
-    /// use sqlx::{Connection, Executor};
-    /// use sqlx::postgres::PgPoolOptions;
-    ///
-    /// let pool = PgPoolOptions::new()
-    ///     // Let connections live as long as they want.
-    ///     .max_lifetime(None)
-    ///     .after_release(|conn, meta| Box::pin(async move {
-    ///         // Only check connections older than 6 hours.
-    ///         if meta.age.as_secs() < 6 * 60 * 60 {
-    ///             return Ok(true);
-    ///         }
-    ///
-    ///         let total_memory_usage: i64 = sqlx::query_scalar(
-    ///             "select sum(used_bytes) from pg_backend_memory_contexts"
-    ///         )
-    ///         .fetch_one(conn)
-    ///         .await?;
-    ///
-    ///         // Close the connection if the backend memory usage exceeds 256 MiB.
-    ///         Ok(total_memory_usage <= (1 << 28))
-    ///     }))
-    ///     .connect("postgres:// …").await?;
-    /// # Ok(())
-    /// # }
+    /// Use this for application-specific connection reuse policy. Prefer
+    /// [`PoolOptions::max_lifetime`] when an age limit alone is sufficient.
     pub fn after_release<F>(mut self, callback: F) -> Self
     where
         for<'c> F: Fn(&'c mut DB::Connection, PoolConnectionMetadata) -> BoxFuture<'c, Result<bool, Error>>
@@ -521,10 +439,7 @@ impl<DB: Database> PoolOptions<DB> {
     ///
     /// Refer to the relevant `ConnectOptions` impl for your database for the expected URL format:
     ///
-    /// * Postgres: [`PgConnectOptions`][crate::query_engine::postgres::PgConnectOptions]
-    /// * MySQL: [`MySqlConnectOptions`][crate::query_engine::mysql::MySqlConnectOptions]
-    /// * SQLite: [`SqliteConnectOptions`][crate::query_engine::sqlite::SqliteConnectOptions]
-    /// * MSSQL: [`MssqlConnectOptions`][crate::query_engine::mssql::MssqlConnectOptions]
+    /// * SQLite: [`SqliteConnectOptions`][crate::sqlite::SqliteConnectOptions]
     pub async fn connect(self, url: &str) -> Result<Pool<DB>, Error> {
         self.connect_with(url.parse()?).await
     }
@@ -564,10 +479,7 @@ impl<DB: Database> PoolOptions<DB> {
     ///
     /// Refer to the relevant `ConnectOptions` impl for your database for the expected URL format:
     ///
-    /// * Postgres: [`PgConnectOptions`][crate::query_engine::postgres::PgConnectOptions]
-    /// * MySQL: [`MySqlConnectOptions`][crate::query_engine::mysql::MySqlConnectOptions]
-    /// * SQLite: [`SqliteConnectOptions`][crate::query_engine::sqlite::SqliteConnectOptions]
-    /// * MSSQL: [`MssqlConnectOptions`][crate::query_engine::mssql::MssqlConnectOptions]
+    /// * SQLite: [`SqliteConnectOptions`][crate::sqlite::SqliteConnectOptions]
     pub fn connect_lazy(self, url: &str) -> Result<Pool<DB>, Error> {
         Ok(self.connect_lazy_with(url.parse()?))
     }

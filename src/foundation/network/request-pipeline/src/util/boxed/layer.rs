@@ -13,44 +13,19 @@ use crate::Service;
 ///
 /// # Example
 ///
-/// `BoxLayer` can, for example, be useful to create layers dynamically that otherwise wouldn't have
-/// the same types. In this example, we include a [`Timeout`] layer
-/// only if an environment variable is set. We can use `BoxLayer`
-/// to return a consistent type regardless of runtime configuration:
+/// Box a layer when callers need a consistent service type:
 ///
 /// ```
-/// use std::time::Duration;
-/// use service_stack::{Service, ServiceBuilder, BoxError, util::BoxLayer};
+/// use service_stack::{Identity, Service, util::BoxLayer};
 ///
-/// fn common_layer<S, T>() -> BoxLayer<S, T, S::Response, BoxError>
+/// fn boxed<S, R>() -> BoxLayer<S, R, S::Response, S::Error>
 /// where
-///     S: Service<T> + Send + 'static,
+///     S: Service<R> + Send + 'static,
 ///     S::Future: Send + 'static,
-///     S::Error: Into<BoxError> + 'static,
 /// {
-///     let builder = ServiceBuilder::new()
-///         .concurrency_limit(100);
-///
-///     if std::env::var("SET_TIMEOUT").is_ok() {
-///         let layer = builder
-///             .timeout(Duration::from_secs(30))
-///             .into_inner();
-///
-///         BoxLayer::new(layer)
-///     } else {
-///         let layer = builder
-///             .map_err(Into::into)
-///             .into_inner();
-///
-///         BoxLayer::new(layer)
-///     }
+///     BoxLayer::new(Identity::new())
 /// }
 /// ```
-///
-/// [`Layer`]: crate::Layer
-/// [`Service`]: crate::Service
-/// [`BoxService`]: super::BoxService
-/// [`Timeout`]: crate::timeout
 pub struct BoxLayer<In, T, U, E> {
     boxed: Arc<dyn Layer<In, Service = BoxService<T, U, E>> + Send + Sync + 'static>,
 }

@@ -13,10 +13,10 @@
     clippy::unnecessary_map_or // Too high MSRV.
 )]
 
-//! # slotmap
+//! Versioned containers with persistent keys
 //!
-//! This library provides a container with persistent unique keys to access
-//! stored values, [`SlotMap`]. Upon insertion a key is returned that can be
+//! This module provides a container with persistent unique keys to access
+//! stored values, [`SlotMap`](crate::slots::SlotMap). Upon insertion a key is returned that can be
 //! used to later access or remove the values. Insertion, removal and access all
 //! take O(1) time with low overhead. Great for storing collections of objects
 //! that need stable, safe references but have no clear ownership otherwise,
@@ -29,11 +29,9 @@
 //! manner.
 //!
 //! You can also create (multiple) secondary maps that can map the keys returned
-//! by [`SlotMap`] to other values, to associate arbitrary data with objects
+//! by [`SlotMap`](crate::slots::SlotMap) to other values, to associate arbitrary data with objects
 //! stored in slot maps, without hashing required - it's direct indexing under
 //! the hood.
-//!
-//! The minimum required stable Rust version for this crate is 1.58.
 //!
 //! # Examples
 //!
@@ -58,31 +56,8 @@
 //! }
 //! ```
 //!
-//! # Serialization through [`serde`], [`no_std`] support and unstable features
-//!
-//! Both keys and the slot maps have full (de)seralization support through
-//! the [`serde`] library. A key remains valid for a slot map even after one or
-//! both have been serialized and deserialized! This makes storing or
-//! transferring complicated referential structures and graphs a breeze. Care has
-//! been taken such that deserializing keys and slot maps from untrusted sources
-//! is safe. If you wish to use these features you must enable the `serde`
-//! feature flag for `slotmap` in your `Cargo.toml`.
-//!
-//! ```text
-//! slotmap = { version = "1.0", features = ["serde"] }
-//! ```
-//!
-//! This crate also supports [`no_std`] environments, but does require the
-//! [`alloc`] crate to be available. To enable this you have to disable the
-//! `std` feature that is enabled by default:
-//!
-//! ```text
-//! slotmap = { version = "1.0", default-features = false }
-//! ```
-//!
-//! Unfortunately [`SparseSecondaryMap`] is not available in [`no_std`], because
-//! it relies on [`HashMap`]. Finally the `unstable` feature can be defined to
-//! enable the parts of `slotmap` that only work on nightly Rust.
+//! Keys and maps support serialization through `serde`. Preserve the pairing
+//! between a primary map and its keys when saving or restoring related values.
 //!
 //! # Why not index a [`Vec`], or use [`slab`], [`stable-vec`], etc?
 //!
@@ -91,7 +66,7 @@
 //! This means that once a key is removed, it stays removed, even if the
 //! physical storage inside the slotmap is reused for new elements. The key is a
 //! permanently unique<sup>*</sup> reference to the inserted value. Despite
-//! supporting versioning, a [`SlotMap`] is often not (much) slower than the
+//! supporting versioning, a [`SlotMap`](crate::slots::SlotMap) is often not (much) slower than the
 //! alternative, by internally using carefully checked unsafe code. Finally,
 //! `slotmap` simply has a lot of features that make your life easy.
 //!
@@ -110,37 +85,37 @@
 //! circumstances is the behavior safe. A slot map can hold up to
 //! 2<sup>32</sup> - 2 elements at a time.
 //!
-//! The memory usage for each slot in [`SlotMap`] is `4 + max(sizeof(T), 4)`
-//! rounded up to the alignment of `T`. [`DenseSlotMap`] has an overhead of 8 bytes per element
+//! The memory usage for each slot in [`SlotMap`](crate::slots::SlotMap) is `4 + max(sizeof(T), 4)`
+//! rounded up to the alignment of `T`. [`DenseSlotMap`](crate::slots::DenseSlotMap) has an overhead of 8 bytes per element
 //! and 8 bytes per slot.
 //!
-//! # Choosing [`SlotMap`] or [`DenseSlotMap`]
+//! # Choosing [`SlotMap`](crate::slots::SlotMap) or [`DenseSlotMap`](crate::slots::DenseSlotMap)
 //!
-//! A [`SlotMap`] is the fastest for most operations, except iteration. It can
+//! A [`SlotMap`](crate::slots::SlotMap) is the fastest for most operations, except iteration. It can
 //! never shrink the size of its underlying storage, because it must remember
 //! for each storage slot what the latest stored version was, even if the slot
 //! is empty now. This means that iteration can be slow as it must iterate over
 //! potentially a lot of empty slots.
 //!
-//! [`DenseSlotMap`] stores all elements on a contiguous
+//! [`DenseSlotMap`](crate::slots::DenseSlotMap) stores all elements on a contiguous
 //! block of memory. It uses two indirections per random access; the slots
 //! contain indices used to access the contiguous memory. This means random
-//! access is slower than [`SlotMap`], but iteration is
+//! access is slower than [`SlotMap`](crate::slots::SlotMap), but iteration is
 //! significantly faster, as fast as a normal [`Vec`].
 //!
-//! # Choosing [`SecondaryMap`] or [`SparseSecondaryMap`]
+//! # Choosing [`SecondaryMap`](crate::slots::SecondaryMap) or [`SparseSecondaryMap`](crate::slots::SparseSecondaryMap)
 //!
 //! You want to associate extra data with objects stored in a slot map, so you
 //! use (multiple) secondary maps to map keys to that data.
 //!
-//! A [`SecondaryMap`] is simply a [`Vec`] of slots like slot map is, and
-//! essentially provides all the same guarantees as [`SlotMap`] does for its
+//! A [`SecondaryMap`](crate::slots::SecondaryMap) is simply a [`Vec`] of slots like slot map is, and
+//! essentially provides all the same guarantees as [`SlotMap`](crate::slots::SlotMap) does for its
 //! operations (with the exception that you provide the keys as produced by the
 //! primary slot map). This does mean that even if you associate data to only
 //! a single element from the primary slot map, you could need and have to
 //! initialize as much memory as the original.
 //!
-//! A [`SparseSecondaryMap`] is like a [`HashMap`] from keys to objects, however
+//! A [`SparseSecondaryMap`](crate::slots::SparseSecondaryMap) is like a [`HashMap`] from keys to objects, however
 //! it automatically removes outdated keys for slots that had their space
 //! reused. You should use this variant if you expect to store some associated
 //! data for only a small portion of the primary slot map.
@@ -153,7 +128,7 @@
 //!
 //! To prevent this, slot maps allow you to specify what the type is of the key
 //! they return. You can construct new key types using the [`new_key_type!`]
-//! macro. The resulting type behaves exactly like [`DefaultKey`], but is a
+//! macro. The resulting type behaves exactly like [`DefaultKey`](crate::slots::DefaultKey), but is a
 //! distinct type. So instead of simply using `SlotMap<DefaultKey, Player>` you
 //! would use:
 //!
@@ -165,15 +140,13 @@
 //! let sm: SlotMap<PlayerKey, Player> = SlotMap::with_key();
 //! ```
 //!
-//! You can write code generic over any key type using the [`Key`] trait.
+//! You can write code generic over any key type using the [`Key`](crate::slots::Key) trait.
 //!
 //! [`Vec`]: std::vec::Vec
 //! [`BTreeMap`]: std::collections::BTreeMap
 //! [`HashMap`]: std::collections::HashMap
-//! [`serde`]: https://github.com/serde-rs/serde
 //! [`slab`]: https://crates.io/crates/slab
 //! [`stable-vec`]: https://crates.io/crates/stable-vec
-//! [`no_std`]: https://doc.rust-lang.org/1.7.0/book/no-stdlib.html
 
 // So our macros can refer to these.
 #[doc(hidden)]

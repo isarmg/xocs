@@ -28,7 +28,7 @@ pub struct ViewTransitionRule<'i> {
 
 /// A property within a `@view-transition` rule.
 ///
-///  See [ViewTransitionRule](ViewTransitionRule).
+///  See [ViewTransitionRule].
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(any(), derive(static_self::IntoOwned))]

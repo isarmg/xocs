@@ -1012,7 +1012,7 @@ impl<T: ?Sized> Box<T> {
     /// ```
     ///
     /// [memory layout]: self#memory-layout
-    /// [`Layout`]: crate::Layout
+    /// [`Layout`]: core::alloc::Layout
     #[must_use = "call `drop(from_raw(ptr))` if you intend to drop the `Box`"]
     #[inline(always)]
     pub unsafe fn from_raw(raw: *mut T) -> Self {
@@ -1065,7 +1065,7 @@ impl<T: ?Sized, A: Allocator> Box<T, A> {
     /// ```
     ///
     /// [memory layout]: self#memory-layout
-    /// [`Layout`]: crate::Layout
+    /// [`Layout`]: core::alloc::Layout
     #[inline(always)]
     pub const unsafe fn from_raw_in(raw: *mut T, alloc: A) -> Self {
         Box(unsafe { Unique::new_unchecked(raw) }, alloc)

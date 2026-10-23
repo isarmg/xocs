@@ -28,8 +28,7 @@ pub trait Statement: Send + Sync + Clone {
 
     /// Get the expected parameters for this statement.
     ///
-    /// The information returned depends on what is available from the driver. SQLite can
-    /// only tell us the number of parameters. PostgreSQL can give us full type information.
+    /// SQLite reports the number of parameters, rather than a type for each parameter.
     fn parameters(&self) -> Option<Either<&[<Self::Database as Database>::TypeInfo], usize>>;
 
     /// Get the columns expected to be returned by executing this statement.

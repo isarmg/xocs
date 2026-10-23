@@ -1,5 +1,6 @@
-use command_line::error::Error;
-use command_line::{Arg, ArgAction, ArgMatches, Args, Command, FromArgMatches, Parser};
+extern crate blog_cli_arguments as clap;
+use blog_cli_arguments::error::Error;
+use blog_cli_arguments::{Arg, ArgAction, ArgMatches, Args, Command, FromArgMatches, Parser};
 
 #[derive(Debug)]
 struct CliArgs {

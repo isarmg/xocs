@@ -129,7 +129,7 @@ macro_rules! ascii_case_insensitive_phf_map {
     }
 }
 
-/// Create a new array of MaybeUninit<T> items, in an uninitialized state.
+/// Create a new array of `MaybeUninit<u8>` items, in an uninitialized state.
 #[inline(always)]
 pub fn _cssparser_internal_create_uninit_array<const N: usize>() -> [MaybeUninit<u8>; N] {
     unsafe {

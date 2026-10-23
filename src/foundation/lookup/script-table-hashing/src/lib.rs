@@ -2,7 +2,6 @@
 //!
 //! [phf]: https://docs.rs/phf
 
-#![doc(html_root_url = "https://docs.rs/phf_shared/0.14.0")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(feature = "std")]

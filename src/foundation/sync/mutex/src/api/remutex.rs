@@ -208,7 +208,7 @@ impl<R: RawMutexTimed, G: GetThreadId> RawReentrantMutex<R, G> {
 /// - `ReentrantMutexGuard` does not give mutable references to the locked data.
 ///   Use a `RefCell` if you need this.
 ///
-/// See [`Mutex`](synchronization::api::Mutex) for more details about the underlying mutex
+/// See [`Mutex`](crate::api::Mutex) for more details about the underlying mutex
 /// primitive.
 pub struct ReentrantMutex<R, G, T: ?Sized> {
     raw: RawReentrantMutex<R, G>,

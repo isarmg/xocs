@@ -1441,9 +1441,9 @@ impl<'a> DoubleEndedIterator for PatternSetIter<'a> {
 /// # Example
 ///
 /// This example shows how to use the various `Anchored` modes to run a
-/// search. We use the [`PikeVM`](blog_text_pattern_search::automata::nfa::thompson::pikevm::PikeVM)
+/// search. We use the [`PikeVM`](crate::automata::nfa::thompson::pikevm::PikeVM)
 /// because it supports all modes unconditionally. Some regex engines, like
-/// the [`onepass::DFA`](blog_text_pattern_search::automata::dfa::onepass::DFA) cannot support unanchored
+/// the [`onepass::DFA`](crate::automata::dfa::onepass::DFA) cannot support unanchored
 /// searches.
 ///
 /// ```
@@ -1767,13 +1767,13 @@ impl MatchKind {
 /// fashion. For example, by default, a DFA will fail to build if the regex
 /// pattern contains a Unicode word boundary. One needs to opt into the "quit"
 /// behavior via options, like
-/// [`hybrid::dfa::Config::unicode_word_boundary`](blog_text_pattern_search::automata::hybrid::dfa::Config::unicode_word_boundary).)
+/// [`hybrid::dfa::Config::unicode_word_boundary`](crate::automata::hybrid::dfa::Config::unicode_word_boundary).)
 ///
 /// There are a couple other ways a search
 /// can fail. For example, when using the
-/// [`BoundedBacktracker`](blog_text_pattern_search::automata::nfa::thompson::backtrack::BoundedBacktracker)
+/// [`BoundedBacktracker`](crate::automata::nfa::thompson::backtrack::BoundedBacktracker)
 /// with a haystack that is too long, or trying to run an unanchored search
-/// with a [one-pass DFA](blog_text_pattern_search::automata::dfa::onepass).
+/// with a [one-pass DFA](crate::automata::dfa::onepass).
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MatchError(
     #[cfg(feature = "alloc")] alloc::boxed::Box<MatchErrorKind>,
@@ -1883,9 +1883,9 @@ pub enum MatchErrorKind {
     /// cause is that the underlying regex engine was built without support
     /// for anchored starting states for each pattern. For DFA engines, this
     /// typically means enabling the
-    /// [`hybrid::dfa::Config::starts_for_each_pattern`](blog_text_pattern_search::automata::hybrid::dfa::Config::starts_for_each_pattern)
+    /// [`hybrid::dfa::Config::starts_for_each_pattern`](crate::automata::hybrid::dfa::Config::starts_for_each_pattern)
     /// or
-    /// [`dfa::dense::Config::starts_for_each_pattern`](blog_text_pattern_search::automata::dfa::dense::Config::starts_for_each_pattern)
+    /// [`dfa::dense::Config::starts_for_each_pattern`](crate::automata::dfa::dense::Config::starts_for_each_pattern)
     /// configuration option, depending on which regex engine is being built.
     ///
     /// Note that this error should not be returned by a regex engine simply

@@ -5,7 +5,7 @@ This allows usage of paths starting with a colon `:` or an asterisk `*` which ar
 # Example
 
 ```rust
-use axum::{
+use http_routing::{
     routing::get,
     Router,
 };
@@ -24,7 +24,7 @@ let app = Router::<()>::new()
 Adding such routes without calling this method first will panic.
 
 ```rust,should_panic
-use axum::{
+use http_routing::{
     routing::get,
     Router,
 };

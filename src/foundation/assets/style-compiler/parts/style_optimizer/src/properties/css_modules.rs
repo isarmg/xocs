@@ -29,7 +29,7 @@ pub struct Composes<'i> {
 
 /// Defines where the class names referenced in the `composes` property are located.
 ///
-/// See [Composes](Composes).
+/// See [Composes].
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(any(), derive(static_self::IntoOwned))]

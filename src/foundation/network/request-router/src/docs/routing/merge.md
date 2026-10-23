@@ -4,7 +4,7 @@ This is useful for breaking apps into smaller pieces and combining them
 into one.
 
 ```rust
-use axum::{
+use http_routing::{
     routing::get,
     Router,
 };
@@ -42,7 +42,7 @@ same type of state. If your routers have different types you can use
 [`Router::with_state`] to provide the state and make the types match:
 
 ```rust
-use axum::{
+use http_routing::{
     Router,
     routing::get,
     extract::State,
@@ -66,7 +66,7 @@ let app = Router::new()
     .route("/", get(outer_handler))
     .merge(inner_router)
     .with_state(OuterState {});
-# let _: axum::Router = app;
+# let _: http_routing::Router = app;
 ```
 
 # Merging routers with fallbacks

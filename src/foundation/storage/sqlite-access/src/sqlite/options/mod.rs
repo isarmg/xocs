@@ -39,9 +39,9 @@ use crate::sqlite::connection::collation::Collation;
 /// # Example
 ///
 /// ```rust,no_run
-/// # async fn example() -> sqlx::Result<()> {
-/// use sqlx::ConnectOptions;
-/// use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePool};
+/// # async fn example() -> blog_storage_sqlite_access::Result<()> {
+/// use blog_storage_sqlite_access::ConnectOptions;
+/// use blog_storage_sqlite_access::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePool};
 /// use std::str::FromStr;
 ///
 /// let opts = SqliteConnectOptions::from_str("sqlite://data.db")?

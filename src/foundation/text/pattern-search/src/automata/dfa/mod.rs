@@ -7,13 +7,13 @@ time trade off for your use case and provides support for cheap deserialization
 of automata for use in `no_std` environments.
 
 If you're looking for lazy DFAs that build themselves incrementally during
-search, then please see the top-level [`hybrid` module](blog_text_pattern_search::automata::hybrid).
+search, then please see the top-level [`hybrid` module](crate::automata::hybrid).
 
 # Overview
 
 This section gives a brief overview of the primary types in this module:
 
-* A [`blog_text_pattern_search::Regex`] provides a way to search for matches of a regular
+* A [`crate::Regex`] provides a way to search for matches of a regular
 expression using DFAs. This includes iterating over matches with both the start
 and end positions of each match.
 * A [`dense::DFA`] provides low level access to a DFA that uses a dense
@@ -191,7 +191,7 @@ assert_eq!(matches, vec![
 
 Note that unlike dense DFAs, sparse DFAs have no alignment requirements.
 Conversely, dense DFAs must be aligned to the same alignment as a
-[`StateID`](blog_text_pattern_search::automata::util::primitives::StateID).
+[`StateID`](crate::automata::util::primitives::StateID).
 
 # Support for `no_std` and `alloc`-only
 
@@ -227,7 +227,7 @@ same parser. You can find an exhaustive list of supported syntax in the
 
 There are two things that are not supported by the DFAs in this module:
 
-* Capturing groups. The DFAs (and [`Regex`](blog_text_pattern_search::Regex)es built on top
+* Capturing groups. The DFAs (and [`Regex`](crate::Regex)es built on top
 of them) can only find the offsets of an entire match, but cannot resolve
 the offsets of each capturing group. This is because DFAs do not have the
 expressive power necessary.
@@ -274,19 +274,19 @@ them! (They are enabled by default though.)
 * This module does not support Unicode word boundaries. ASCII word boundaries
 may be used though by disabling Unicode or selectively doing so in the syntax,
 e.g., `(?-u:\b)`. There is also an option to
-[heuristically enable Unicode word boundaries](blog_text_pattern_search::automata::dfa::dense::Config::unicode_word_boundary),
+[heuristically enable Unicode word boundaries](crate::automata::dfa::dense::Config::unicode_word_boundary),
 where the corresponding DFA will give up if any non-ASCII byte is seen.
 * As a lower level API, this module does not do literal optimizations
 automatically. Although it does provide hooks in its API to make use of the
-[`Prefilter`](blog_text_pattern_search::automata::util::prefilter::Prefilter) trait. Missing literal
+[`Prefilter`](crate::automata::util::prefilter::Prefilter) trait. Missing literal
 optimizations means that searches may run much slower than what you're
 accustomed to, although, it does provide more predictable and consistent
 performance.
 * There is no `&str` API like in the regex crate. In this module, all APIs
 operate on `&[u8]`. By default, match indices are
 guaranteed to fall on UTF-8 boundaries, unless either of
-[`syntax::Config::utf8`](blog_text_pattern_search::automata::util::syntax::Config::utf8) or
-[`thompson::Config::utf8`](blog_text_pattern_search::automata::nfa::thompson::Config::utf8) are disabled.
+[`syntax::Config::utf8`](crate::automata::util::syntax::Config::utf8) or
+[`thompson::Config::utf8`](crate::automata::nfa::thompson::Config::utf8) are disabled.
 
 With some of the downsides out of the way, here are some positive differences:
 

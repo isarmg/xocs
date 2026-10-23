@@ -43,7 +43,7 @@ use crate::{Options, wrap};
 /// # Examples
 ///
 /// ```
-/// use textwrap::wrap_columns;
+/// use blog_text_line_layout::wrap_columns;
 ///
 /// let text = "\
 /// This is an example text, which is wrapped into three columns. \

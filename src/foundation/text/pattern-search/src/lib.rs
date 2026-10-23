@@ -97,59 +97,18 @@ enabled or disabled for this crate.
 
 # Usage
 
-The `regex` crate is [on crates.io](https://crates.io/crates/regex) and can be
-used by adding `regex` to your dependencies in your project's `Cargo.toml`.
-Or more simply, just run `cargo add regex`.
-
-Here is a complete example that creates a new Rust project, adds a dependency
-on `regex`, creates the source code for a regex search and then runs the
-program.
-
-First, create the project in a new directory:
-
-```text
-$ mkdir regex-example
-$ cd regex-example
-$ cargo init
-```
-
-Second, add a dependency on `regex`:
-
-```text
-$ cargo add regex
-```
-
-Third, edit `src/main.rs`. Delete what's there and replace it with this:
+This repository provides the package `blog-text-pattern-search` through local
+Cargo paths. Consumers use the root workspace dependency or a path to this
+package; the Rust crate name is `blog_text_pattern_search`. Build commands run
+from the repository's root workspace with `--locked --offline`.
 
 ```
 use blog_text_pattern_search::Regex;
-
-fn main() {
-    let re = Regex::new(r"Hello (?<name>\w+)!").unwrap();
-    let Some(caps) = re.captures("Hello Murphy!") else {
-        println!("no match!");
-        return;
-    };
-    println!("The name is: {}", &caps["name"]);
-}
+let pattern = Regex::new(r"Hello (?<name>\w+)!")?;
+let captures = pattern.captures("Hello Murphy!").unwrap();
+assert_eq!(&captures["name"], "Murphy");
+# Ok::<(), Box<dyn std::error::Error>>(())
 ```
-
-Fourth, run it with `cargo run`:
-
-```text
-$ cargo run
-   Compiling memchr v2.5.0
-   Compiling regex-syntax v0.7.1
-   Compiling aho-corasick v1.0.1
-   Compiling regex v1.8.1
-   Compiling regex-example v0.1.0 (/tmp/regex-example)
-    Finished dev [unoptimized + debuginfo] target(s) in 4.22s
-     Running `target/debug/regex-example`
-The name is: Murphy
-```
-
-The first time you run the program will show more output like above. But
-subsequent runs shouldn't have to re-compile the dependencies.
 
 # Examples
 

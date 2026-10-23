@@ -58,7 +58,7 @@ Note that `/{*key}` doesn't match empty segments. Thus:
 Wildcard captures can also be extracted using [`Path`](crate::extract::Path):
 
 ```rust
-use axum::{
+use http_routing::{
     Router,
     routing::get,
     extract::Path,
@@ -80,7 +80,7 @@ To accept multiple methods for the same route you can add all handlers at the
 same time:
 
 ```rust
-use axum::{Router, routing::{get, delete}, extract::Path};
+use http_routing::{Router, routing::{get, delete}, extract::Path};
 
 let app = Router::new().route(
     "/",
@@ -98,8 +98,8 @@ async fn delete_root() {}
 Or you can add them one by one:
 
 ```rust
-# use axum::Router;
-# use axum::routing::{get, post, delete};
+# use http_routing::Router;
+# use http_routing::routing::{get, post, delete};
 #
 let app = Router::new()
     .route("/", get(get_root))
@@ -115,7 +115,7 @@ let app = Router::new()
 # More examples
 
 ```rust
-use axum::{Router, routing::{get, delete}, extract::Path};
+use http_routing::{Router, routing::{get, delete}, extract::Path};
 
 let app = Router::new()
     .route("/", get(root))
@@ -143,7 +143,7 @@ async fn serve_asset(Path(path): Path<String>) {}
 Panics if the route overlaps with another route:
 
 ```rust,should_panic
-use axum::{routing::get, Router};
+use http_routing::{routing::get, Router};
 
 let app = Router::new()
     .route("/", get(|| async {}))

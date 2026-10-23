@@ -56,7 +56,7 @@ impl IsCompatible for FontWeight {
 /// An [absolute font weight](https://www.w3.org/TR/css-fonts-4/#font-weight-absolute-values),
 /// as used in the `font-weight` property.
 ///
-/// See [FontWeight](FontWeight).
+/// See [FontWeight].
 #[derive(Debug, Clone, PartialEq, Parse)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(
@@ -110,7 +110,7 @@ enum_property! {
   /// An [absolute font size](https://www.w3.org/TR/css-fonts-3/#absolute-size-value),
   /// as used in the `font-size` property.
   ///
-  /// See [FontSize](FontSize).
+  /// See [`FontSize`].
   #[allow(missing_docs)]
   pub enum AbsoluteFontSize {
     "xx-small": XXSmall,
@@ -138,7 +138,7 @@ enum_property! {
   /// A [relative font size](https://www.w3.org/TR/css-fonts-3/#relative-size-value),
   /// as used in the `font-size` property.
   ///
-  /// See [FontSize](FontSize).
+  /// See [`FontSize`].
   #[allow(missing_docs)]
   pub enum RelativeFontSize {
     Smaller,
@@ -182,7 +182,7 @@ enum_property! {
   /// A [font stretch keyword](https://www.w3.org/TR/css-fonts-4/#font-stretch-prop),
   /// as used in the `font-stretch` property.
   ///
-  /// See [FontStretch](FontStretch).
+  /// See [`FontStretch`].
   pub enum FontStretchKeyword {
     /// 100%
     "normal": Normal,
@@ -291,7 +291,7 @@ enum_property! {
   /// A [generic font family](https://www.w3.org/TR/css-fonts-4/#generic-font-families) name,
   /// as used in the `font-family` property.
   ///
-  /// See [FontFamily](FontFamily).
+  /// See [`FontFamily`].
   #[allow(missing_docs)]
   #[derive(Eq, Hash)]
   pub enum GenericFontFamily {

@@ -1,6 +1,6 @@
 #![cfg_attr(not(any(test, feature = "use-std")), no_std)]
 #![warn(missing_docs)]
-#![cfg_attr(not(doctest), doc = include_str!("../../../../../docs/upstream/postcard-1.1.3/README.md"))]
+#![cfg_attr(not(doctest), doc = include_str!("../../../../../docs/dependencies/origins/postcard-1.1.3/README.md"))]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 pub mod accumulator;

@@ -25,10 +25,9 @@
 //!
 //! # Usage
 //!
-//! The easiest way to use this crate with the standard library [`HashMap`] or
-//! [`HashSet`] is to import them from `foldhash` instead, along with the
-//! extension traits to make [`HashMap::new`] and [`HashMap::with_capacity`]
-//! work out-of-the-box:
+//! With the `std` feature enabled, this crate exports convenience `HashMap` and
+//! `HashSet` aliases. Their extension traits provide `HashMap::new` and
+//! `HashMap::with_capacity` using the hashing state from this crate:
 //!
 //! ```rust
 //! use foldhash::{HashMap, HashMapExt};
@@ -73,7 +72,7 @@
 //!
 //! Finally, you can also directly use the [`RandomState`](quality::RandomState)
 //! or [`FixedState`](quality::FixedState) to manually hash items using the
-//! [`BuildHasher`](std::hash::BuildHasher) trait:
+//! [`BuildHasher`](core::hash::BuildHasher) trait:
 //! ```rust
 //! use std::hash::BuildHasher;
 //! use foldhash::quality::RandomState;

@@ -12,7 +12,7 @@
 // commit#ea76fa1b1b273e65e3b0b1046643715b49bec51f which is licensed under the
 // MIT/Apache 2.0 license.
 
-#![doc = include_str!("../../../../../docs/upstream/clap_derive-4.6.7/README.md")]
+#![doc = include_str!("../../../../../docs/dependencies/origins/clap_derive-4.6.7/README.md")]
 #![doc(html_logo_url = "https://raw.githubusercontent.com/clap-rs/clap/master/assets/clap.png")]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![forbid(unsafe_code)]
@@ -47,8 +47,8 @@ pub fn value_enum(input: TokenStream) -> TokenStream {
 
 /// Generates the `Parser` implementation.
 ///
-/// This is far less verbose than defining the `clap::Command` struct manually,
-/// receiving an instance of `clap::ArgMatches` from conducting parsing, and then
+/// This is far less verbose than defining the `blog_cli_arguments::Command` struct manually,
+/// receiving an instance of `blog_cli_arguments::ArgMatches` from conducting parsing, and then
 /// implementing a conversion code to instantiate an instance of the user
 /// context struct.
 #[proc_macro_derive(Parser, attributes(clap, structopt, command, arg, group))]

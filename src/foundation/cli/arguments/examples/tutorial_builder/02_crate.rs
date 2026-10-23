@@ -1,4 +1,4 @@
-use command_line::{arg, command};
+use blog_cli_arguments::{arg, command};
 
 fn main() {
     // requires `cargo` feature, reading name, version, author, and description from `Cargo.toml`

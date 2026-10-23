@@ -201,24 +201,24 @@ impl<'i> FontFeatureValuesRule<'i> {
 #[cfg_attr(any(), derive(schemars::JsonSchema))]
 #[cfg_attr(any(), derive(static_self::IntoOwned))]
 pub enum FontFeatureSubruleType {
-  /// @stylistic = @stylistic { <declaration-list> }
+  /// @stylistic = @stylistic { `<declaration-list>` }
   Stylistic,
-  /// @historical-forms = @historical-forms { <declaration-list> }
+  /// @historical-forms = @historical-forms { `<declaration-list>` }
   HistoricalForms,
-  /// @styleset = @styleset { <declaration-list> }
+  /// @styleset = @styleset { `<declaration-list>` }
   Styleset,
-  /// @character-variant = @character-variant { <declaration-list> }
+  /// @character-variant = @character-variant { `<declaration-list>` }
   CharacterVariant,
-  /// @swash = @swash { <declaration-list> }
+  /// @swash = @swash { `<declaration-list>` }
   Swash,
-  /// @ornaments = @ornaments { <declaration-list> }
+  /// @ornaments = @ornaments { `<declaration-list>` }
   Ornaments,
-  /// @annotation = @annotation { <declaration-list> }
+  /// @annotation = @annotation { `<declaration-list>` }
   Annotation,
 }
 
 /// A sub-rule of `@font-feature-values`
-/// https://drafts.csswg.org/css-fonts/#font-feature-values-syntax
+/// <https://drafts.csswg.org/css-fonts/#font-feature-values-syntax>
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(any(), derive(static_self::IntoOwned))]

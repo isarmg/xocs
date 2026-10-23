@@ -20,18 +20,18 @@ without having to slice the haystack yourself. In contrast, a meta `Regex`
 returns match objects that only have offsets in them.
 * At time of writing, a meta `Regex` doesn't have some of the convenience
 routines that the `regex` crate has, such as replacements. Note though that
-[`Captures::interpolate_string`](blog_text_pattern_search::automata::util::captures::Captures::interpolate_string)
+[`Captures::interpolate_string`](crate::automata::util::captures::Captures::interpolate_string)
 will handle the replacement string interpolation for you.
-* A meta `Regex` supports the [`Input`](blog_text_pattern_search::automata::Input) abstraction, which
+* A meta `Regex` supports the [`Input`](crate::automata::Input) abstraction, which
 provides a way to configure a search in more ways than is supported by the
-`regex` crate. For example, [`Input::anchored`](blog_text_pattern_search::automata::Input::anchored) can
+`regex` crate. For example, [`Input::anchored`](crate::automata::Input::anchored) can
 be used to run an anchored search, regardless of whether the pattern is itself
 anchored with a `^`.
 * A meta `Regex` supports multi-pattern searching everywhere.
-Indeed, every [`Match`](blog_text_pattern_search::automata::Match) returned by the search APIs
-include a [`PatternID`](blog_text_pattern_search::automata::PatternID) indicating which pattern
+Indeed, every [`Match`](crate::automata::Match) returned by the search APIs
+include a [`PatternID`](crate::automata::PatternID) indicating which pattern
 matched. In the single pattern case, all matches correspond to
-[`PatternID::ZERO`](blog_text_pattern_search::automata::PatternID::ZERO). In contrast, the `regex` crate
+[`PatternID::ZERO`](crate::automata::PatternID::ZERO). In contrast, the `regex` crate
 has distinct `Regex` and a `RegexSet` APIs. The former only supports a single
 pattern, while the latter supports multiple patterns but cannot report the
 offsets of a match.

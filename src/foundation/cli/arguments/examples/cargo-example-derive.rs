@@ -1,4 +1,5 @@
-use command_line::Parser;
+extern crate blog_cli_arguments as clap;
+use blog_cli_arguments::Parser;
 
 #[derive(Parser)] // requires `derive` feature
 #[command(name = "cargo")]
@@ -9,7 +10,7 @@ enum CargoCli {
 }
 
 // See also `command_line_cargo::style::COMMAND_LINE_STYLING`
-pub const COMMAND_LINE_STYLING: command_line::builder::styling::Styles = command_line::builder::styling::Styles::styled()
+pub const COMMAND_LINE_STYLING: blog_cli_arguments::builder::styling::Styles = blog_cli_arguments::builder::styling::Styles::styled()
     .header(command_line_cargo::style::HEADER)
     .usage(command_line_cargo::style::USAGE)
     .literal(command_line_cargo::style::LITERAL)
@@ -18,7 +19,7 @@ pub const COMMAND_LINE_STYLING: command_line::builder::styling::Styles = command
     .valid(command_line_cargo::style::VALID)
     .invalid(command_line_cargo::style::INVALID);
 
-#[derive(command_line::Args)]
+#[derive(blog_cli_arguments::Args)]
 #[command(version, about, long_about = None)]
 struct ExampleDeriveArgs {
     #[arg(long)]

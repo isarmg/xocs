@@ -155,7 +155,7 @@ pub struct RegExpLiteral<'a> {
     pub node_id: Cell<NodeId>,
     /// Node location in source code.
     pub span: Span,
-    /// The parsed regular expression. See [`oxc_regular_expression`] for more
+    /// The parsed regular expression. See [`crate::regular_expression`] for more
     /// details.
     pub regex: RegExp<'a>,
     /// The regular expression as it appears in source code

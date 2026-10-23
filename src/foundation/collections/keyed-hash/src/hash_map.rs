@@ -51,14 +51,14 @@ impl<K, V> Into<HashMap<K, V, crate::RandomState>> for AHashMap<K, V> {
 }
 
 impl<K, V> AHashMap<K, V, RandomState> {
-    /// This creates a hashmap using [RandomState::new] which obtains its keys from [RandomSource].
-    /// See the documentation in [RandomSource] for notes about key strength.
+    /// This creates a hashmap using [RandomState::new] which obtains its keys from [`RandomSource`](crate::random_state::RandomSource).
+    /// See the documentation in [`RandomSource`](crate::random_state::RandomSource) for notes about key strength.
     pub fn new() -> Self {
         AHashMap(HashMap::with_hasher(RandomState::new()))
     }
 
     /// This creates a hashmap with the specified capacity using [RandomState::new].
-    /// See the documentation in [RandomSource] for notes about key strength.
+    /// See the documentation in [`RandomSource`](crate::random_state::RandomSource) for notes about key strength.
     pub fn with_capacity(capacity: usize) -> Self {
         AHashMap(HashMap::with_capacity_and_hasher(
             capacity,
@@ -352,7 +352,7 @@ where
     K: Eq + Hash,
 {
     /// This creates a hashmap from the provided iterator using [RandomState::new].
-    /// See the documentation in [RandomSource] for notes about key strength.
+    /// See the documentation in [`RandomSource`](crate::random_state::RandomSource) for notes about key strength.
     fn from_iter<T: IntoIterator<Item = (K, V)>>(iter: T) -> Self {
         let mut inner = HashMap::with_hasher(RandomState::new());
         inner.extend(iter);

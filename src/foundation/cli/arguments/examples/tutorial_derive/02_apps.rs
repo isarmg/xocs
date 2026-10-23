@@ -1,4 +1,5 @@
-use command_line::Parser;
+extern crate blog_cli_arguments as clap;
+use blog_cli_arguments::Parser;
 
 #[derive(Parser)]
 #[command(name = "MyApp")]

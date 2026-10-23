@@ -1,12 +1,3 @@
-// Contributing
-//
-// New example code:
-// - Please update the corresponding section in the derive tutorial
-// - Building: They must be added to `Cargo.toml` with the appropriate `required-features`.
-// - Testing: Ensure there is a markdown file with [trycmd](https://docs.rs/trycmd) syntax
-//
-// See also the general CONTRIBUTING
-
 //! ## Tutorial for the Builder API
 //!
 //! *See the side bar for the Table of Contents*
@@ -15,17 +6,15 @@
 //!
 //! You can create an application with several arguments using usage strings.
 //!
-//! First, ensure `command_line` is available:
-//! ```console
-//! $ cargo add command-line
-//! ```
+//! The local `blog-cli-arguments` package supplies the `blog_cli_arguments` library.
+//! Use a path dependency on `src/foundation/cli/arguments` in this workspace.
 //!
 //! Here is a preview of the type of application you can make:
 //! ```rust
 #![doc = include_str!("../examples/tutorial_builder/01_quick.rs")]
 //! ```
 //!
-#![doc = include_str!("../../../../../docs/reference/zxs/command-line/docs/architecture/command-line-reference/runtime/examples/tutorial_builder/01_quick.md")]
+#![doc = include_str!("../../../../../docs/dependencies/guides/cli/runtime/examples/tutorial_builder/01_quick.md")]
 //!
 //! See also
 //! - [FAQ: When should I use the builder vs derive APIs?][crate::_faq#when-should-i-use-the-builder-vs-derive-apis]
@@ -39,7 +28,7 @@
 #![doc = include_str!("../examples/tutorial_builder/02_apps.rs")]
 //! ```
 //!
-#![doc = include_str!("../../../../../docs/reference/zxs/command-line/docs/architecture/command-line-reference/runtime/examples/tutorial_builder/02_apps.md")]
+#![doc = include_str!("../../../../../docs/dependencies/guides/cli/runtime/examples/tutorial_builder/02_apps.md")]
 //!
 //! You can use [`command!()`][crate::command!] to fill these fields in from your `Cargo.toml`
 //! file.  **This requires the [`cargo` feature flag][crate::_features].**
@@ -47,15 +36,15 @@
 //! ```rust
 #![doc = include_str!("../examples/tutorial_builder/02_crate.rs")]
 //! ```
-#![doc = include_str!("../../../../../docs/reference/zxs/command-line/docs/architecture/command-line-reference/runtime/examples/tutorial_builder/02_crate.md")]
+#![doc = include_str!("../../../../../docs/dependencies/guides/cli/runtime/examples/tutorial_builder/02_crate.md")]
 //!
 //! You can use [`Command`][crate::Command] methods to change the application level behavior of
-//! command_line, like [`Command::next_line_help`].
+//! blog_cli_arguments, like [`Command::next_line_help`].
 //!
 //! ```rust
 #![doc = include_str!("../examples/tutorial_builder/02_app_settings.rs")]
 //! ```
-#![doc = include_str!("../../../../../docs/reference/zxs/command-line/docs/architecture/command-line-reference/runtime/examples/tutorial_builder/02_app_settings.md")]
+#![doc = include_str!("../../../../../docs/dependencies/guides/cli/runtime/examples/tutorial_builder/02_app_settings.md")]
 //!
 //! ## Adding Arguments
 //!
@@ -74,14 +63,14 @@
 //! ```rust
 #![doc = include_str!("../examples/tutorial_builder/03_03_positional.rs")]
 //! ```
-#![doc = include_str!("../../../../../docs/reference/zxs/command-line/docs/architecture/command-line-reference/runtime/examples/tutorial_builder/03_03_positional.md")]
+#![doc = include_str!("../../../../../docs/dependencies/guides/cli/runtime/examples/tutorial_builder/03_03_positional.md")]
 //!
 //! Note that the default [`ArgAction`][crate::ArgAction] is [`Set`][crate::ArgAction::Set].  To
 //! accept multiple values, override the [action][Arg::action] with [`Append`][crate::ArgAction::Append]:
 //! ```rust
 #![doc = include_str!("../examples/tutorial_builder/03_03_positional_mult.rs")]
 //! ```
-#![doc = include_str!("../../../../../docs/reference/zxs/command-line/docs/architecture/command-line-reference/runtime/examples/tutorial_builder/03_03_positional_mult.md")]
+#![doc = include_str!("../../../../../docs/dependencies/guides/cli/runtime/examples/tutorial_builder/03_03_positional_mult.md")]
 //!
 //! ### Options
 //!
@@ -92,14 +81,14 @@
 //! ```rust
 #![doc = include_str!("../examples/tutorial_builder/03_02_option.rs")]
 //! ```
-#![doc = include_str!("../../../../../docs/reference/zxs/command-line/docs/architecture/command-line-reference/runtime/examples/tutorial_builder/03_02_option.md")]
+#![doc = include_str!("../../../../../docs/dependencies/guides/cli/runtime/examples/tutorial_builder/03_02_option.md")]
 //!
 //! Note that the default [`ArgAction`][crate::ArgAction] is [`Set`][crate::ArgAction::Set].  To
 //! accept multiple occurrences, override the [action][Arg::action] with [`Append`][crate::ArgAction::Append]:
 //! ```rust
 #![doc = include_str!("../examples/tutorial_builder/03_02_option_mult.rs")]
 //! ```
-#![doc = include_str!("../../../../../docs/reference/zxs/command-line/docs/architecture/command-line-reference/runtime/examples/tutorial_builder/03_02_option_mult.md")]
+#![doc = include_str!("../../../../../docs/dependencies/guides/cli/runtime/examples/tutorial_builder/03_02_option_mult.md")]
 //!
 //! ### Flags
 //!
@@ -108,14 +97,14 @@
 //! ```rust
 #![doc = include_str!("../examples/tutorial_builder/03_01_flag_bool.rs")]
 //! ```
-#![doc = include_str!("../../../../../docs/reference/zxs/command-line/docs/architecture/command-line-reference/runtime/examples/tutorial_builder/03_01_flag_bool.md")]
+#![doc = include_str!("../../../../../docs/dependencies/guides/cli/runtime/examples/tutorial_builder/03_01_flag_bool.md")]
 //!
 //! To accept multiple flags, use [`Count`][crate::ArgAction::Count]:
 //!
 //! ```rust
 #![doc = include_str!("../examples/tutorial_builder/03_01_flag_count.rs")]
 //! ```
-#![doc = include_str!("../../../../../docs/reference/zxs/command-line/docs/architecture/command-line-reference/runtime/examples/tutorial_builder/03_01_flag_count.md")]
+#![doc = include_str!("../../../../../docs/dependencies/guides/cli/runtime/examples/tutorial_builder/03_01_flag_count.md")]
 //!
 //! ### Required
 //!
@@ -124,7 +113,7 @@
 //! ```rust
 #![doc = include_str!("../examples/tutorial_builder/03_06_required.rs")]
 //! ```
-#![doc = include_str!("../../../../../docs/reference/zxs/command-line/docs/architecture/command-line-reference/runtime/examples/tutorial_builder/03_06_required.md")]
+#![doc = include_str!("../../../../../docs/dependencies/guides/cli/runtime/examples/tutorial_builder/03_06_required.md")]
 //!
 //! ### Defaults
 //!
@@ -135,7 +124,7 @@
 //! ```rust
 #![doc = include_str!("../examples/tutorial_builder/03_05_default_values.rs")]
 //! ```
-#![doc = include_str!("../../../../../docs/reference/zxs/command-line/docs/architecture/command-line-reference/runtime/examples/tutorial_builder/03_05_default_values.md")]
+#![doc = include_str!("../../../../../docs/dependencies/guides/cli/runtime/examples/tutorial_builder/03_05_default_values.md")]
 //!
 //! ### Subcommands
 //!
@@ -146,7 +135,7 @@
 //! ```rust
 #![doc = include_str!("../examples/tutorial_builder/03_04_subcommands.rs")]
 //! ```
-#![doc = include_str!("../../../../../docs/reference/zxs/command-line/docs/architecture/command-line-reference/runtime/examples/tutorial_builder/03_04_subcommands.md")]
+#![doc = include_str!("../../../../../docs/dependencies/guides/cli/runtime/examples/tutorial_builder/03_04_subcommands.md")]
 //!
 //! ## Validation
 //!
@@ -171,7 +160,7 @@
 //! ```rust
 #![doc = include_str!("../examples/tutorial_builder/04_01_possible.rs")]
 //! ```
-#![doc = include_str!("../../../../../docs/reference/zxs/command-line/docs/architecture/command-line-reference/runtime/examples/tutorial_builder/04_01_possible.md")]
+#![doc = include_str!("../../../../../docs/dependencies/guides/cli/runtime/examples/tutorial_builder/04_01_possible.md")]
 //!
 //! When enabling the [`derive` feature][crate::_features], you can use
 //! [`ValueEnum`][crate::ValueEnum] to take care of the boiler plate for you, giving the same
@@ -180,7 +169,7 @@
 //! ```rust
 #![doc = include_str!("../examples/tutorial_builder/04_01_enum.rs")]
 //! ```
-#![doc = include_str!("../../../../../docs/reference/zxs/command-line/docs/architecture/command-line-reference/runtime/examples/tutorial_builder/04_01_enum.md")]
+#![doc = include_str!("../../../../../docs/dependencies/guides/cli/runtime/examples/tutorial_builder/04_01_enum.md")]
 //!
 //! ### Validated values
 //!
@@ -189,14 +178,14 @@
 //! ```rust
 #![doc = include_str!("../examples/tutorial_builder/04_02_parse.rs")]
 //! ```
-#![doc = include_str!("../../../../../docs/reference/zxs/command-line/docs/architecture/command-line-reference/runtime/examples/tutorial_builder/04_02_parse.md")]
+#![doc = include_str!("../../../../../docs/dependencies/guides/cli/runtime/examples/tutorial_builder/04_02_parse.md")]
 //!
 //! A [custom parser][TypedValueParser] can be used to improve the error messages or provide additional validation:
 //!
 //! ```rust
 #![doc = include_str!("../examples/tutorial_builder/04_02_validate.rs")]
 //! ```
-#![doc = include_str!("../../../../../docs/reference/zxs/command-line/docs/architecture/command-line-reference/runtime/examples/tutorial_builder/04_02_validate.md")]
+#![doc = include_str!("../../../../../docs/dependencies/guides/cli/runtime/examples/tutorial_builder/04_02_validate.md")]
 //!
 //! See [`Arg::value_parser`][crate::Arg::value_parser] for more details.
 //!
@@ -216,20 +205,20 @@
 //! ```rust
 #![doc = include_str!("../examples/tutorial_builder/04_03_relations.rs")]
 //! ```
-#![doc = include_str!("../../../../../docs/reference/zxs/command-line/docs/architecture/command-line-reference/runtime/examples/tutorial_builder/04_03_relations.md")]
+#![doc = include_str!("../../../../../docs/dependencies/guides/cli/runtime/examples/tutorial_builder/04_03_relations.md")]
 //!
 //! ### Custom Validation
 //!
-//! As a last resort, you can create custom errors with the basics of command_line's formatting.
+//! As a last resort, you can create custom errors with the basics of blog_cli_arguments's formatting.
 //!
 //! ```rust
 #![doc = include_str!("../examples/tutorial_builder/04_04_custom.rs")]
 //! ```
-#![doc = include_str!("../../../../../docs/reference/zxs/command-line/docs/architecture/command-line-reference/runtime/examples/tutorial_builder/04_04_custom.md")]
+#![doc = include_str!("../../../../../docs/dependencies/guides/cli/runtime/examples/tutorial_builder/04_04_custom.md")]
 //!
 //! ## Testing
 //!
-//! command_line reports most development errors as `debug_assert!`s.  Rather than checking every
+//! blog_cli_arguments reports most development errors as `debug_assert!`s.  Rather than checking every
 //! subcommand, you should have a test that calls
 //! [`Command::debug_assert`][crate::Command::debug_assert]:
 //! ```rust,no_run

@@ -68,7 +68,7 @@ const VERSION: u32 = 2;
 /// a "quit" error, although it is possible for a search to fail if
 /// [`Config::starts_for_each_pattern`] wasn't enabled (which it is
 /// not by default) and an [`Anchored::Pattern`] mode is requested via
-/// [`Input`](blog_text_pattern_search::automata::Input).
+/// [`Input`](crate::automata::Input).
 #[cfg(feature = "dfa-build")]
 #[derive(Clone, Debug, Default)]
 pub struct Config {
@@ -310,7 +310,7 @@ impl Config {
     /// corresponds to the leftmost starting position.
     ///
     /// Note that if you need the starting position then
-    /// [`dfa::regex::Regex`](blog_text_pattern_search::automata::dfa::regex::Regex) will handle this for
+    /// [`dfa::regex::Regex`](crate::automata::dfa::regex::Regex) will handle this for
     /// you, so it's usually not necessary to do this yourself.
     ///
     /// ```
@@ -416,7 +416,7 @@ impl Config {
     /// 1. When looking for the start of an overlapping match (using a
     /// reverse DFA), doing it correctly requires starting the reverse search
     /// using the starting state of the pattern that matched in the forward
-    /// direction. Indeed, when building a [`Regex`](blog_text_pattern_search::automata::dfa::regex::Regex),
+    /// direction. Indeed, when building a [`Regex`](crate::automata::dfa::regex::Regex),
     /// it will automatically enable this option when building the reverse DFA
     /// internally.
     /// 2. When you want to use a DFA with multiple patterns to both search
@@ -515,7 +515,7 @@ impl Config {
     /// When set, this will attempt to implement Unicode word boundaries as if
     /// they were ASCII word boundaries. This only works when the search input
     /// is ASCII only. If a non-ASCII byte is observed while searching, then a
-    /// [`MatchError::quit`](blog_text_pattern_search::automata::MatchError::quit) error is returned.
+    /// [`MatchError::quit`](crate::automata::MatchError::quit) error is returned.
     ///
     /// A possible alternative to enabling this option is to simply use an
     /// ASCII word boundary, e.g., via `(?-u:\b)`. The main reason to use this
@@ -535,11 +535,11 @@ impl Config {
     /// pattern.
     ///
     /// When enabling this option, callers _must_ be prepared to handle
-    /// a [`MatchError`](blog_text_pattern_search::automata::MatchError) error during search.
-    /// When using a [`Regex`](blog_text_pattern_search::automata::dfa::regex::Regex), this corresponds
+    /// a [`MatchError`](crate::automata::MatchError) error during search.
+    /// When using a [`Regex`](crate::automata::dfa::regex::Regex), this corresponds
     /// to using the `try_` suite of methods. Alternatively, if
     /// callers can guarantee that their input is ASCII only, then a
-    /// [`MatchError::quit`](blog_text_pattern_search::automata::MatchError::quit) error will never be
+    /// [`MatchError::quit`](crate::automata::MatchError::quit) error will never be
     /// returned while searching.
     ///
     /// This is disabled by default.
@@ -605,7 +605,7 @@ impl Config {
     /// Add a "quit" byte to the DFA.
     ///
     /// When a quit byte is seen during search time, then search will return
-    /// a [`MatchError::quit`](blog_text_pattern_search::automata::MatchError::quit) error indicating the
+    /// a [`MatchError::quit`](crate::automata::MatchError::quit) error indicating the
     /// offset at which the search stopped.
     ///
     /// A quit byte will always overrule any other aspects of a regex. For
@@ -626,8 +626,8 @@ impl Config {
     /// Unicode word boundary is in the pattern.)
     ///
     /// When enabling this option, callers _must_ be prepared to handle a
-    /// [`MatchError`](blog_text_pattern_search::automata::MatchError) error during search. When using a
-    /// [`Regex`](blog_text_pattern_search::automata::dfa::regex::Regex), this corresponds to using the
+    /// [`MatchError`](crate::automata::MatchError) error during search. When using a
+    /// [`Regex`](crate::automata::dfa::regex::Regex), this corresponds to using the
     /// `try_` suite of methods.
     ///
     /// By default, there are no quit bytes set.
@@ -1087,8 +1087,8 @@ impl Config {
 /// can only be used to construct regexes that either detect the presence
 /// of a match or find the end location of a match. A single DFA cannot
 /// produce both the start and end of a match. For that information, use a
-/// [`Regex`](blog_text_pattern_search::automata::dfa::regex::Regex), which can be similarly configured
-/// using [`blog_text_pattern_search::Builder`](blog_text_pattern_search::automata::dfa::regex::Builder). The main reason to
+/// [`Regex`](crate::automata::dfa::regex::Regex), which can be similarly configured
+/// using [`crate::Builder`](crate::automata::dfa::regex::Builder). The main reason to
 /// use a DFA directly is if the end location of a match is enough for your use
 /// case. Namely, a `Regex` will construct two DFAs instead of one, since a
 /// second reverse DFA is needed to find the start of a match.
@@ -1288,7 +1288,7 @@ impl Builder {
     }
 
     /// Set the syntax configuration for this builder using
-    /// [`syntax::Config`](blog_text_pattern_search::automata::util::syntax::Config).
+    /// [`syntax::Config`](crate::automata::util::syntax::Config).
     ///
     /// This permits setting things like case insensitivity, Unicode and multi
     /// line mode.
@@ -1305,7 +1305,7 @@ impl Builder {
     }
 
     /// Set the Thompson NFA configuration for this builder using
-    /// [`nfa::thompson::Config`](blog_text_pattern_search::automata::nfa::thompson::Config).
+    /// [`nfa::thompson::Config`](crate::automata::nfa::thompson::Config).
     ///
     /// This permits setting things like whether the DFA should match the regex
     /// in reverse or if additional time should be spent shrinking the size of
@@ -1370,7 +1370,7 @@ pub(crate) type OwnedDFA = DFA<alloc::vec::Vec<u32>>;
 /// A notable absence from the above list of capabilities is the location of
 /// the *start* of a match. In order to provide both the start and end of
 /// a match, *two* DFAs are required. This functionality is provided by a
-/// [`Regex`](blog_text_pattern_search::automata::dfa::regex::Regex).
+/// [`Regex`](crate::automata::dfa::regex::Regex).
 ///
 /// # Type parameters
 ///
@@ -2325,7 +2325,7 @@ impl<'a> DFA<&'a [u32]> {
     /// assert_eq!(expected, RE.try_search_fwd(&Input::new("foo12345")));
     /// ```
     ///
-    /// An alternative to [`util::lazy::Lazy`](blog_text_pattern_search::automata::util::lazy::Lazy)
+    /// An alternative to [`util::lazy::Lazy`](crate::automata::util::lazy::Lazy)
     /// is [`lazy_static`](https://crates.io/crates/lazy_static) or
     /// [`once_cell`](https://crates.io/crates/once_cell), which provide
     /// stronger guarantees (like the initialization function only being
@@ -2334,7 +2334,7 @@ impl<'a> DFA<&'a [u32]> {
     /// in most circumstances.
     ///
     /// Note that regardless of which initialization method you use, you
-    /// will still need to use the [`AlignAs`](blog_text_pattern_search::automata::util::wire::AlignAs)
+    /// will still need to use the [`AlignAs`](crate::automata::util::wire::AlignAs)
     /// trick above to force correct alignment, but this is safe to do and
     /// `from_bytes` will return an error if you get it wrong.
     pub fn from_bytes(

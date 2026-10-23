@@ -38,6 +38,6 @@ digest package. The package is `no_std`; the product's supported targets remain
 Linux AMD64 GNU/glibc and browser WASM.
 
 The original upstream README and its broader CPU matrix remain under
-`docs/upstream/sha2-0.11.0`. Original archives and licenses are retained under
+`docs/dependencies/origins/sha2-0.11.0`. Original archives and licenses are retained under
 `compliance/`. The maintained standard-vector tests cover SHA-256 and SHA-512,
 including incremental input and multi-block padding cases.

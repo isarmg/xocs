@@ -2,7 +2,7 @@
 #![cfg_attr(test, deny(warnings))]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-//! Utilities for [`http_body::Body`].
+//! Utilities for [`crate::Body`].
 //!
 //! [`BodyExt`] adds extensions to the common trait.
 //!
@@ -33,7 +33,7 @@ pub use self::stream::{BodyDataStream, BodyStream, StreamBody};
 #[cfg(feature = "channel")]
 pub use self::channel::Channel;
 
-/// An extension trait for [`http_body::Body`] adding various combinators and adapters
+/// An extension trait for [`crate::Body`] adding various combinators and adapters
 pub trait BodyExt: crate::Body {
     /// Returns a future that resolves to the next [`Frame`], if any.
     ///
@@ -172,7 +172,7 @@ pub trait BodyExt: crate::Body {
 
     /// Creates a "fused" body.
     ///
-    /// This [`Body`][http_body::Body] yields `Poll::Ready(None)` forever after the underlying
+    /// This [`Body`][crate::Body] yields `Poll::Ready(None)` forever after the underlying
     /// body yields `Poll::Ready(None)`, or an error `Poll::Ready(Some(Err(_)))`, once.
     ///
     /// See [`Fuse<B>`][combinators::Fuse] for more information.

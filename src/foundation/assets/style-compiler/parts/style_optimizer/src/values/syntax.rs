@@ -30,7 +30,7 @@ pub enum SyntaxString {
 }
 
 /// A [syntax component](https://drafts.css-houdini.org/css-properties-values-api/#syntax-component)
-/// within a [SyntaxString](SyntaxString).
+/// within a [SyntaxString].
 ///
 /// A syntax component consists of a component kind an a multiplier, which indicates how the component
 /// may repeat during parsing.
@@ -90,7 +90,7 @@ pub enum SyntaxComponentKind {
 }
 
 /// A [multiplier](https://drafts.css-houdini.org/css-properties-values-api/#multipliers) for a
-/// [SyntaxComponent](SyntaxComponent). Indicates whether and how the component may be repeated.
+/// [SyntaxComponent]. Indicates whether and how the component may be repeated.
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(
@@ -109,7 +109,7 @@ pub enum Multiplier {
   Comma,
 }
 
-/// A parsed value for a [SyntaxComponent](SyntaxComponent).
+/// A parsed value for a [SyntaxComponent].
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(any(), derive(static_self::IntoOwned))]

@@ -9,7 +9,8 @@ use serde::Deserialize;
 ///
 /// # Examples
 ///
-/// Deserialize a struct by reading chunks from a [`Read`]er.
+/// Deserialize a struct from caller-supplied chunks. This example reads from
+/// a `std::io::Read` source; the accumulator itself accepts byte slices.
 ///
 /// ```rust
 /// use postcard::accumulator::{CobsAccumulator, FeedResult};
@@ -60,7 +61,6 @@ use serde::Deserialize;
 /// }
 /// ```
 ///
-/// [`Read`]: std::io::Read
 #[cfg_attr(feature = "use-defmt", derive(defmt::Format))]
 pub struct CobsAccumulator<const N: usize> {
     buf: [u8; N],

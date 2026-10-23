@@ -97,8 +97,7 @@ fn main() {
     // Also bind relocated include_str! documentation and preserved notices.
     for name in [
         "src/foundation",
-        "docs/upstream",
-        "docs/reference",
+        "docs/dependencies",
         "test/foundation",
         "compliance/licenses/upstream",
     ] {

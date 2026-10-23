@@ -1,4 +1,4 @@
-#![doc = include_str!("../../../../../docs/upstream/bumpalo-3.20.3/README.md")]
+#![doc = include_str!("../../../../../docs/dependencies/origins/bumpalo-3.20.3/README.md")]
 #![deny(missing_debug_implementations)]
 #![deny(missing_docs)]
 #![cfg_attr(not(feature = "std"), no_std)]
@@ -2120,7 +2120,8 @@ impl<const MIN_ALIGN: usize> Bump<MIN_ALIGN> {
     ///
     /// Finally, you must also ensure that any values allocated into the bump
     /// arena have not had their `Drop` implementations called on them,
-    /// e.g. after dropping a [`bumpalo::boxed::Box<T>`][crate::boxed::Box].
+    /// e.g. after dropping an arena-owned `boxed::Box<T>` when the `boxed`
+    /// feature is enabled.
     ///
     /// ## Example
     ///

@@ -1,8 +1,8 @@
 //! Visitors for traversing the values in a StyleSheet.
 //!
-//! The [Visitor](Visitor) trait includes methods for visiting and transforming rules, properties, and values within a StyleSheet.
-//! Each value implements the [Visit](Visit) trait, which knows how to visit the value itself, as well as its children.
-//! A Visitor is configured to only visit specific types of values using [VisitTypes](VisitTypes) flags. This enables
+//! The [Visitor] trait includes methods for visiting and transforming rules, properties, and values within a StyleSheet.
+//! Each value implements the [Visit] trait, which knows how to visit the value itself, as well as its children.
+//! A Visitor is configured to only visit specific types of values using [VisitTypes] flags. This enables
 //! entire branches to be skipped when a type does not contain any relevant values.
 //!
 //! # Example
@@ -88,9 +88,9 @@ use smallvec::SmallVec;
 pub(crate) use lightningcss_derive::Visit;
 
 bitflags! {
-  /// Describes what a [Visitor](Visitor) will visit when traversing a StyleSheet.
+  /// Describes what a [`Visitor`] will visit when traversing a StyleSheet.
   ///
-  /// Flags may be combined to visit multiple types. The [visit_types](visit_types) macro allows
+  /// Flags may be combined to visit multiple types. The [`visit_types`] macro allows
   /// combining flags in a `const` expression.
   #[derive(PartialEq, Eq, Clone, Copy)]
   pub struct VisitTypes: u32 {
@@ -135,7 +135,7 @@ bitflags! {
   }
 }
 
-/// Constructs a constant [VisitTypes](VisitTypes) from flags.
+/// Constructs a constant [`VisitTypes`] from flags.
 #[macro_export]
 macro_rules! visit_types {
   ($( $flag: ident )|+) => {
@@ -314,7 +314,7 @@ pub trait Visitor<'i, T: Visit<'i, T, Self> = DefaultAtRule> {
   }
 }
 
-/// A trait for values that can be visited by a [Visitor](Visitor).
+/// A trait for values that can be visited by a [Visitor].
 pub trait Visit<'i, T: Visit<'i, T, V>, V: ?Sized + Visitor<'i, T>> {
   /// The types of values contained within this value and its children.
   /// This is used to skip branches that don't have any values requested

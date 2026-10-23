@@ -306,7 +306,7 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream as MacroTokenStream;
 
-/// A list of all the attributes can be found here: https://wasm-bindgen.github.io/wasm-bindgen/reference/attributes/index.html
+/// A list of all the attributes can be found here: <https://wasm-bindgen.github.io/wasm-bindgen/reference/attributes/index.html>
 #[proc_macro_attribute]
 pub fn wasm_bindgen(attr: MacroTokenStream, input: MacroTokenStream) -> MacroTokenStream {
     match expand(attr.into(), input.into()) {

@@ -1,5 +1,5 @@
 #![no_std]
-#![doc = include_str!("../../../../../docs/upstream/cpufeatures-0.3.1/README.md")]
+#![doc = include_str!("../../../../../docs/dependencies/origins/cpufeatures-0.3.1/README.md")]
 #![doc(
     html_logo_url = "https://raw.githubusercontent.com/RustCrypto/media/6ee8e381/logo.svg",
     html_favicon_url = "https://raw.githubusercontent.com/RustCrypto/media/6ee8e381/logo.svg"

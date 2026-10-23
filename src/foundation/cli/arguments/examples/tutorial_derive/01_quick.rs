@@ -1,6 +1,7 @@
+extern crate blog_cli_arguments as clap;
 use std::path::PathBuf;
 
-use command_line::{Parser, Subcommand};
+use blog_cli_arguments::{Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -13,7 +14,7 @@ struct Cli {
     config: Option<PathBuf>,
 
     /// Turn debugging information on
-    #[arg(short, long, action = command_line::ArgAction::Count)]
+    #[arg(short, long, action = blog_cli_arguments::ArgAction::Count)]
     debug: u8,
 
     #[command(subcommand)]

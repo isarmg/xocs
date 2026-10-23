@@ -8,7 +8,7 @@
 #![doc = include_str!("../../examples/typed-derive/implicit.rs")]
 //! ```
 //!
-#![doc = include_str!("../../../../../../docs/reference/zxs/command-line/docs/architecture/command-line-reference/runtime/examples/typed-derive/implicit.md")]
+#![doc = include_str!("../../../../../../docs/dependencies/guides/cli/runtime/examples/typed-derive/implicit.md")]
 //!
 //! ## Built-in [`TypedValueParser`][crate::builder::TypedValueParser]
 //!
@@ -16,7 +16,7 @@
 #![doc = include_str!("../../examples/typed-derive/builtin.rs")]
 //! ```
 //!
-#![doc = include_str!("../../../../../../docs/reference/zxs/command-line/docs/architecture/command-line-reference/runtime/examples/typed-derive/builtin.md")]
+#![doc = include_str!("../../../../../../docs/dependencies/guides/cli/runtime/examples/typed-derive/builtin.md")]
 //!
 //! ## Custom parser function
 //!
@@ -24,7 +24,7 @@
 #![doc = include_str!("../../examples/typed-derive/fn_parser.rs")]
 //! ```
 //!
-#![doc = include_str!("../../../../../../docs/reference/zxs/command-line/docs/architecture/command-line-reference/runtime/examples/typed-derive/fn_parser.md")]
+#![doc = include_str!("../../../../../../docs/dependencies/guides/cli/runtime/examples/typed-derive/fn_parser.md")]
 //!
 //! ## Custom [`TypedValueParser`][crate::builder::TypedValueParser]
 //!
@@ -32,4 +32,4 @@
 #![doc = include_str!("../../examples/typed-derive/custom.rs")]
 //! ```
 //!
-#![doc = include_str!("../../../../../../docs/reference/zxs/command-line/docs/architecture/command-line-reference/runtime/examples/typed-derive/custom.md")]
+#![doc = include_str!("../../../../../../docs/dependencies/guides/cli/runtime/examples/typed-derive/custom.md")]

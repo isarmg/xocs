@@ -3,7 +3,7 @@ Add another route to the router that calls a [`Service`].
 # Example
 
 ```rust,no_run
-use axum::{
+use http_routing::{
     Router,
     body::Body,
     routing::{any_service, get_service},
@@ -11,17 +11,16 @@ use axum::{
     http::StatusCode,
     error_handling::HandleErrorLayer,
 };
-use tower_http::services::ServeFile;
 use http::Response;
 use std::{convert::Infallible, io};
-use tower::service_fn;
+use service_stack::service_fn;
 
 let app = Router::new()
     .route(
         // Any request to `/` goes to a service
         "/",
-        // Services whose response body is not `axum::body::BoxBody`
-        // can be wrapped in `axum::routing::any_service` (or one of the other routing filters)
+        // Services whose response body is not `http_routing::body::Body`
+        // can be wrapped in `http_routing::routing::any_service` (or one of the other routing filters)
         // to have the response body mapped
         any_service(service_fn(|_: Request| async {
             let res = Response::new(Body::from("Hi from `GET /`"));
@@ -30,18 +29,13 @@ let app = Router::new()
     )
     .route_service(
         "/foo",
-        // This service's response body is `axum::body::BoxBody` so
+        // This service's response body is `http_routing::body::Body` so
         // it can be routed to directly.
         service_fn(|req: Request| async move {
             let body = Body::from(format!("Hi from `{} /foo`", req.method()));
             let res = Response::new(body);
             Ok::<_, Infallible>(res)
         })
-    )
-    .route_service(
-        // GET `/static/Cargo.toml` goes to a service from tower-http
-        "/static/Cargo.toml",
-        ServeFile::new("Cargo.toml"),
     );
 # let _: Router = app;
 ```
@@ -56,7 +50,7 @@ Panics for the same reasons as [`Router::route`] or if you attempt to route to a
 `Router`:
 
 ```rust,should_panic
-use axum::{routing::get, Router};
+use http_routing::{routing::get, Router};
 
 let app = Router::new().route_service(
     "/",

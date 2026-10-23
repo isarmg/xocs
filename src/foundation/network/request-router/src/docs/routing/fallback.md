@@ -3,7 +3,7 @@ Add a fallback [`Handler`] to the router.
 This service will be called if no routes matches the incoming request.
 
 ```rust
-use axum::{
+use http_routing::{
     Router,
     routing::get,
     handler::Handler,
@@ -35,7 +35,7 @@ Using `Router::new().fallback(...)` to accept all request regardless of path or
 method, if you don't have other routes, isn't optimal:
 
 ```rust
-use axum::Router;
+use http_routing::Router;
 
 async fn handler() {}
 
@@ -43,19 +43,19 @@ let app = Router::new().fallback(handler);
 
 # async {
 let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-axum::serve(listener, app).await.unwrap();
+http_routing::serve(listener, app).await.unwrap();
 # };
 ```
 
 Running the handler directly is faster since it avoids the overhead of routing:
 
 ```rust
-use axum::handler::HandlerWithoutStateExt;
+use http_routing::handler::HandlerWithoutStateExt;
 
 async fn handler() {}
 
 # async {
 let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-axum::serve(listener, handler.into_make_service()).await.unwrap();
+http_routing::serve(listener, handler.into_make_service()).await.unwrap();
 # };
 ```

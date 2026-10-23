@@ -1,4 +1,4 @@
-#![doc = include_str!("../../../../../docs/upstream/compact_str-0.10.0/README.md")]
+#![doc = include_str!("../../../../../docs/dependencies/origins/compact_str-0.10.0/README.md")]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![no_std]
 

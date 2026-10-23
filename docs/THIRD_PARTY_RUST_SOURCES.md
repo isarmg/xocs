@@ -1,13 +1,9 @@
-# Rust 第三方源码与离线构建
+# 第三方 Rust 源码清单
 
-当前源码按产品用途组织；Cargo 内部包名与版本不是原始上游身份。原始发布版本只用于来源、法律材料和按原始身份执行的安全审计。
-compliance/provenance/origins.json 与原始 .crate 档案保持原始身份及逐文件摘要，compliance/rust-sources.json 单独记录当前源码摘要。
-compliance/provenance/source-migrations.json 从首次启用前的完整包身份基线出发，逐事件记录重命名、版本变化、合并、拆分、导入和退役。
-verify 完整重放日志并核对实际 manifest 与当前映射；refresh 只允许追加迁移事件，不能重写历史或原始来源。
-源码收据与空 Cargo home 的 Linux/WASM metadata 是构建输入证据，不替代编译、原生测试、浏览器、安装或正式发行验收。
-Rust 工具链、系统原生构建材料、审计数据库和非 Rust 测试工具另行管理。
+本表由当前源码映射生成，列出各包的原始名称、版本和许可证。内部 Cargo 包名和版本用于本项目，原始发布身份用于来源和安全审计。
+完整原始归档、逐文件摘要和许可文本保存在 `compliance/`，当前源码摘要保存在 `compliance/rust-sources.json`。
 
-用途架构、入口和实际声明的包依赖关系见 [Rust 用途架构](RUST_SOURCE_ARCHITECTURE.md)。
+阅读实现请从[依赖文档](dependencies/README.md)进入；构建入口和直接消费者见 [Cargo 依赖关系](RUST_SOURCE_ARCHITECTURE.md)，校验命令见[源码布局与校验](source-layout.md)。
 
 ## 当前源码与原始来源
 
@@ -242,74 +238,3 @@ Rust 工具链、系统原生构建材料、审计数据库和非 Rust 测试工
 | test/browser-domain | blog-browser-domain-tests | 项目实现或已有独立来源记录 | 沿用组件独立法律材料 |
 | tools/assets | blog-assets | 项目实现或已有独立来源记录 | 沿用组件独立法律材料 |
 | tools/setup | blog-setup | 项目实现或已有独立来源记录 | 沿用组件独立法律材料 |
-
-## 已退役来源
-
-退役只移除当前实现；原始归档、许可材料及历史仍完整保留。
-
-| 原始身份 | 迁移事件 | 退役原因 |
-| --- | --- | --- |
-| async-lock@3.4.2 | browser-csr-module-specialization | Remove unselected async resource/transition functionality from the browser CSR kernel; no implementation from this package remains. |
-| async-once-cell@0.5.4 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
-| atoi@2.0.0 | review-base64-and-unused-sqlite-support | SQLite positional parameters now use strict standard-library positive-integer parsing; no other manifest consumes this prefix parser. |
-| attribute-derive-macro@0.11.0 | browser-csr-module-specialization | Replace the unused macro/casing/import support with the scoped CSR component compiler and independent Unicode name conversion; no implementation from this origin remains. |
-| attribute-derive@0.11.0 | browser-csr-module-specialization | Replace the unused macro/casing/import support with the scoped CSR component compiler and independent Unicode name conversion; no implementation from this origin remains. |
-| base16@0.2.1 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
-| base64@0.22.1 | review-base64-and-unused-sqlite-support | Unify ordinary Base64 consumers on application-base-encoding after wire-format and malformed-input differential checks; no code from the older implementation remains active. |
-| byteorder@1.5.0 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
-| camino@1.2.6 | unused-optional-source-retirement | No supported native, browser, build or test graph selects this source; all incoming unused optional declarations have been removed. |
-| chacha20@0.10.2 | unused-optional-source-retirement | No supported native, browser, build or test graph selects this source; all incoming unused optional declarations have been removed. |
-| collection_literals@1.0.3 | browser-csr-module-specialization | Replace the unused macro/casing/import support with the scoped CSR component compiler and independent Unicode name conversion; no implementation from this origin remains. |
-| const_str_slice_concat@0.1.0 | remove-html-only-dom-support | No remaining implementation or consumer after removal of server HTML and template rendering. |
-| convert_case@0.11.0 | browser-csr-module-specialization | Replace the unused macro/casing/import support with the scoped CSR component compiler and independent Unicode name conversion; no implementation from this origin remains. |
-| convert_case_extras@0.2.0 | browser-csr-module-specialization | Replace the unused macro/casing/import support with the scoped CSR component compiler and independent Unicode name conversion; no implementation from this origin remains. |
-| crc-catalog@2.5.0 | unused-optional-source-retirement | No supported native, browser, build or test graph selects this source; all incoming unused optional declarations have been removed. |
-| crc@3.4.0 | unused-optional-source-retirement | No supported native, browser, build or test graph selects this source; all incoming unused optional declarations have been removed. |
-| ctutils@0.4.3 | retire-vulnerable-ctutils-0-4-3 | Entire implementation replaced by ctutils 0.4.4, including optimization barriers for masks and 32-bit u128 constant-time comparisons. |
-| derive-where@1.7.0 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
-| dotenvy@0.15.7 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
-| embedded-io@0.4.0 | retire-unused-embedded-binary-streams | No remaining consumer after removing unused embedded stream adapters from binary-record. |
-| embedded-io@0.6.1 | retire-unused-embedded-binary-streams | No remaining consumer after removing unused embedded stream adapters from binary-record. |
-| event-listener-strategy@0.5.4 | browser-csr-module-specialization | Remove unselected async resource/transition functionality from the browser CSR kernel; no implementation from this package remains. |
-| find-msvc-tools@0.1.14 | linux-amd64-retire-unused-backends | Restrict native compiler discovery to the supported AMD64 Linux GNU host; no product Windows compiler consumer remains. |
-| futures-intrusive@0.5.0 | unify-sqlite-worker-fair-mutex | No remaining implementation or consumer after SQLite worker synchronization moved to Tokio. |
-| getrandom@0.2.17 | unify-password-system-entropy | No remaining implementation or consumer after password OsRng moved to the maintained system-entropy source. |
-| getrandom@0.3.4 | linux-amd64-retire-unused-backends | Use the existing system-entropy implementation for keyed-hash seeds; remove the unused compiler declaration and duplicate entropy implementation. |
-| hkdf@0.13.0 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
-| html-escape@0.2.15 | remove-html-only-dom-support | No remaining implementation or consumer after removal of server HTML and template rendering. |
-| interpolator@0.5.0 | browser-csr-module-specialization | Replace the unused macro/casing/import support with the scoped CSR component compiler and independent Unicode name conversion; no implementation from this origin remains. |
-| ipnet@2.12.2 | linux-amd64-retire-unused-backends | Remove proxy discovery and IP-network matching support after the sole transport proxy consumer was retired; no remaining source consumer uses ipnet. |
-| is_terminal_polyfill@1.70.2 | linux-amd64-retire-unused-backends | Remove the configuration parser terminal tracer, which referenced a nonexistent debug feature and was never an enabled product path; no remaining consumer uses terminal probing. |
-| manyhow-macros@0.14.1 | browser-csr-module-specialization | Replace the unused macro/casing/import support with the scoped CSR component compiler and independent Unicode name conversion; no implementation from this origin remains. |
-| manyhow@0.14.1 | browser-csr-module-specialization | Replace the unused macro/casing/import support with the scoped CSR component compiler and independent Unicode name conversion; no implementation from this origin remains. |
-| md-5@0.11.0 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
-| phf_codegen@0.11.3 | browser-csr-module-specialization | No retained product, browser, compiler or test manifest declares this package; retain its original archive and historical maintained-source snapshot. |
-| pkg-config@0.3.34 | linux-amd64-retire-unused-backends | Build the repository SQLite implementation directly; no product consumer requires external pkg-config discovery. |
-| prettyplease@0.3.0 | browser-csr-module-specialization | Replace the unused macro/casing/import support with the scoped CSR component compiler and independent Unicode name conversion; no implementation from this origin remains. |
-| proc-macro-utils@0.10.0 | browser-csr-module-specialization | Replace the unused macro/casing/import support with the scoped CSR component compiler and independent Unicode name conversion; no implementation from this origin remains. |
-| proc-macro2-diagnostics@0.11.0 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
-| quote-use-macros@0.9.0 | browser-csr-module-specialization | Replace the unused macro/casing/import support with the scoped CSR component compiler and independent Unicode name conversion; no implementation from this origin remains. |
-| quote-use@0.9.0 | browser-csr-module-specialization | Replace the unused macro/casing/import support with the scoped CSR component compiler and independent Unicode name conversion; no implementation from this origin remains. |
-| rand@0.10.3 | unused-optional-source-retirement | No supported native, browser, build or test graph selects this source; all incoming unused optional declarations have been removed. |
-| rand_core@0.10.1 | unused-optional-source-retirement | No supported native, browser, build or test graph selects this source; all incoming unused optional declarations have been removed. |
-| reqwest@0.13.5 | linux-amd64-retire-unused-backends | The loopback development proxy now directly uses the existing Hyper HTTP/1 pool with explicit streaming, header and deadline contracts; no general-purpose reqwest consumer remains. |
-| rstml@0.13.1 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
-| rustc_version@0.4.1 | browser-csr-module-specialization | Replace the unused macro/casing/import support with the scoped CSR component compiler and independent Unicode name conversion; no implementation from this origin remains. |
-| same-file@1.0.6 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
-| sha1@0.11.0 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
-| sha2@0.10.9 | unused-optional-source-retirement | No supported native, browser, build or test graph selects this source; all incoming unused optional declarations have been removed. |
-| sqlx-mysql@0.9.0 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
-| sqlx-postgres@0.9.0 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
-| stringprep@0.1.5 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
-| tinyvec@1.13.3 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
-| tokio-stream@0.1.19 | review-base64-and-unused-sqlite-support | Remove the unused SQLite stream-adapter dependency; no current manifest or source consumer remains. |
-| unicode-bidi@0.3.18 | unused-optional-source-retirement | No supported native, browser, build or test graph selects this source; all incoming unused optional declarations have been removed. |
-| unicode-normalization@0.1.25 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
-| unicode-properties@0.1.4 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
-| vcpkg@0.2.15 | linux-amd64-retire-unused-backends | Build repository SQLite on the supported Linux host; no product consumer requires vcpkg or Windows library discovery. |
-| version_check@0.9.5 | retire-obsolete-compiler-version-probe | No remaining implementation or consumer after deleting old compiler feature probes. |
-| walkdir@2.5.0 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
-| wasm_split_helpers@0.2.3 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
-| wasm_split_macros@0.2.2 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
-| whoami@2.1.3 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
-| zlib-rs@0.6.8 | browser-csr-module-specialization | No retained product, browser, compiler or test manifest declares this package; retain its original archive and historical maintained-source snapshot. |

@@ -409,7 +409,7 @@ pub enum PrinterErrorKind {
     /// The ambiguous URL.
     url: String,
   },
-  /// A [std::fmt::Error](std::fmt::Error) was encountered in the underlying destination.
+  /// A [std::fmt::Error] was encountered in the underlying destination.
   FmtError,
   /// The CSS modules `composes` property cannot be used within nested rules.
   InvalidComposesNesting,

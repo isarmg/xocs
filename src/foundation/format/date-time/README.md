@@ -25,5 +25,5 @@ of compatibility with upstream extension crates or old public APIs.
 Use `TimeDelta`, `DateTime`, and the checked date/time constructors in new
 consumers. Remaining inherited aliases and deprecated methods are not a
 compatibility commitment. The Rust source documents the maintained API; the
-README under `docs/upstream/chrono-0.4.45` describes the original upstream
+README under `docs/dependencies/origins/chrono-0.4.45` describes the original upstream
 release only. Original archives and licenses remain under `compliance/`.

@@ -18,9 +18,8 @@
 //! - [`StoreIterable`] for methods that return iterators
 //! - [`StoreFromIterator`] to enable `FromIterator` for [`LiteMap`]
 //!
-//! To test your implementation, enable the `"testing"` Cargo feature and use [`check_store()`].
-//!
-//! [`check_store()`]: crate::testing::check_store
+//! To test your implementation, enable the `testing` Cargo feature and call
+//! `testing::check_store()`, which is available with that feature.
 
 mod slice_impl;
 #[cfg(feature = "alloc")]

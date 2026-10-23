@@ -1,8 +1,9 @@
 //! This crate implements a structure that can be used as a generic array type.
-//! Core Rust array types `[T; N]` can't be used generically with
-//! respect to `N`, so for example this:
+//! It represents the length with a type parameter implementing [`ArrayLength`].
+//! Rust arrays use a const length parameter instead, so a type parameter cannot
+//! be used directly as their length:
 //!
-//! ```rust{compile_fail}
+//! ```compile_fail
 //! struct Foo<T, N> {
 //!     data: [T; N]
 //! }

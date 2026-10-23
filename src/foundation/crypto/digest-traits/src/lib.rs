@@ -2,7 +2,7 @@
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![deny(unsafe_code)]
-#![doc = include_str!("../../../../../docs/reference/zxs/cryptographic-core/docs/components/cryptographic-core.md")]
+#![doc = include_str!("../../../../../docs/dependencies/guides/cryptography.md")]
 
 #[cfg(feature = "alloc")]
 #[macro_use]

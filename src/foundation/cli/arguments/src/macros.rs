@@ -4,9 +4,9 @@
 /// # Examples
 ///
 /// ```no_run
-/// # use command_line;
-/// # use command_line::crate_version;
-/// # use command_line::Command;
+/// # use blog_cli_arguments;
+/// # use blog_cli_arguments::crate_version;
+/// # use blog_cli_arguments::Command;
 /// let m = Command::new("cmd")
 ///             .version(crate_version!())
 ///             .get_matches();
@@ -31,9 +31,9 @@ macro_rules! crate_version {
 /// # Examples
 ///
 /// ```no_run
-/// # use command_line;
-/// # use command_line::crate_authors;
-/// # use command_line::Command;
+/// # use blog_cli_arguments;
+/// # use blog_cli_arguments::crate_authors;
+/// # use blog_cli_arguments::Command;
 /// let m = Command::new("cmd")
 ///             .author(crate_authors!("\n"))
 ///             .get_matches();
@@ -62,9 +62,9 @@ macro_rules! crate_authors {
 /// # Examples
 ///
 /// ```no_run
-/// # use command_line;
-/// # use command_line::crate_description;
-/// # use command_line::Command;
+/// # use blog_cli_arguments;
+/// # use blog_cli_arguments::crate_description;
+/// # use blog_cli_arguments::Command;
 /// let m = Command::new("cmd")
 ///             .about(crate_description!())
 ///             .get_matches();
@@ -92,9 +92,9 @@ macro_rules! crate_description {
 /// # Examples
 ///
 /// ```no_run
-/// # use command_line;
-/// # use command_line::crate_name;
-/// # use command_line::Command;
+/// # use blog_cli_arguments;
+/// # use blog_cli_arguments::crate_name;
+/// # use blog_cli_arguments::Command;
 /// let m = Command::new(crate_name!())
 ///             .get_matches();
 /// ```
@@ -122,8 +122,8 @@ macro_rules! crate_name {
 /// # Examples
 ///
 /// ```no_run
-/// # use command_line;
-/// # use command_line::command;
+/// # use blog_cli_arguments;
+/// # use blog_cli_arguments::command;
 /// let m = command!().get_matches();
 /// ```
 #[cfg(feature = "cargo")]
@@ -463,14 +463,14 @@ macro_rules! arg_impl {
 ///  2. Long
 ///  3. Value Name
 ///
-/// See [`Arg::id`][command_line::Arg::id].
+/// See [`Arg::id`][crate::Arg::id].
 ///
 /// ### Short
 ///
 /// A short flag is a `-` followed by either a bare-character or quoted character, like `-f` or
 /// `-'f'`.
 ///
-/// See [`Arg::short`][command_line::Arg::short].
+/// See [`Arg::short`][crate::Arg::short].
 ///
 /// ### Long
 ///
@@ -484,7 +484,7 @@ macro_rules! arg_impl {
 ///
 /// </div>
 ///
-/// See [`Arg::long`][command_line::Arg::long].
+/// See [`Arg::long`][crate::Arg::long].
 ///
 /// ### Values (Value Notation)
 ///
@@ -494,14 +494,14 @@ macro_rules! arg_impl {
 ///   - Named argument: optional value
 /// - `<>` like `<FOO>`: required
 ///
-/// See [`Arg::value_name`][command_line::Arg::value_name].
+/// See [`Arg::value_name`][crate::Arg::value_name].
 ///
 /// ### `...`
 ///
 /// `...` (three consecutive dots/periods) specifies that this argument may occur multiple
 /// times (not to be confused with multiple values per occurrence).
 ///
-/// See [`ArgAction::Count`][crate::ArgAction::Count] and [`ArgAction::Append`][command_line::ArgAction::Append].
+/// See [`ArgAction::Count`][crate::ArgAction::Count] and [`ArgAction::Append`][crate::ArgAction::Append].
 ///
 /// ### Help String
 ///
@@ -511,8 +511,8 @@ macro_rules! arg_impl {
 /// # Examples
 ///
 /// ```rust
-/// # use command_line;
-/// # use command_line::{Command, Arg, arg};
+/// # use blog_cli_arguments;
+/// # use blog_cli_arguments::{Command, Arg, arg};
 /// let cmd = Command::new("prog")
 ///     .args(&[
 ///         arg!(--config <FILE> "a required file for the configuration and no short"),
@@ -525,7 +525,7 @@ macro_rules! arg_impl {
 /// assert_eq!(*m.get_one::<u8>("debug").unwrap(), 0);
 /// assert_eq!(m.get_one::<String>("input"), None);
 /// ```
-/// [`Arg`]: command_line::Arg
+/// [`Arg`]: crate::Arg
 #[macro_export]
 macro_rules! arg {
     ( -$($tail:tt)+ ) => {{

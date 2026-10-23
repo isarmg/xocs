@@ -12,16 +12,9 @@ use service_stack::Layer;
 /// Note that if an extractor consumes the body directly with [`Body::poll_frame`], or similar, the
 /// default limit is _not_ applied.
 ///
-/// # Difference between `DefaultBodyLimit` and [`RequestBodyLimit`]
-///
-/// `DefaultBodyLimit` and [`RequestBodyLimit`] serve similar functions but in different ways.
-///
-/// `DefaultBodyLimit` is local in that it only applies to [`FromRequest`] implementations that
-/// explicitly apply it (or call another extractor that does). You can apply the limit with
-/// [`RequestExt::with_limited_body`] or [`RequestExt::into_limited_body`]
-///
-/// [`RequestBodyLimit`] is applied globally to all requests, regardless of which extractors are
-/// used or how the body is consumed.
+/// The limit applies only to extractors that explicitly use the limited-body
+/// API, such as [`Bytes`], `String`, [`Json`] and [`Form`]. Custom streaming
+/// extractors must bound their own reads.
 ///
 /// # Example
 ///
@@ -39,10 +32,6 @@ use service_stack::Layer;
 ///     .layer(DefaultBodyLimit::max(1024));
 /// # let _: Router = app;
 /// ```
-///
-/// In general using `DefaultBodyLimit` is recommended but if you need to use third party
-/// extractors and want to make sure a limit is also applied there then [`RequestBodyLimit`] should
-/// be used.
 ///
 /// # Different limits for different routes
 ///
@@ -70,7 +59,6 @@ use service_stack::Layer;
 /// [`Json`]: https://docs.rs/axum/0.8/axum/struct.Json.html
 /// [`Form`]: https://docs.rs/axum/0.8/axum/struct.Form.html
 /// [`FromRequest`]: crate::kernel::extract::FromRequest
-/// [`RequestBodyLimit`]: tower_http::limit::RequestBodyLimit
 /// [`RequestExt::with_limited_body`]: crate::kernel::RequestExt::with_limited_body
 /// [`RequestExt::into_limited_body`]: crate::kernel::RequestExt::into_limited_body
 #[derive(Debug, Clone, Copy)]
@@ -91,31 +79,13 @@ impl DefaultBodyLimit {
     /// This must be used to receive bodies larger than the default limit of 2MB using [`Bytes`] or
     /// an extractor built on it such as `String`, [`Json`], [`Form`].
     ///
-    /// Note that if you're accepting data from untrusted remotes it is recommend to add your own
-    /// limit such as [`tower_http::limit`].
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use http_routing::{
-    ///     Router,
-    ///     routing::get,
-    ///     body::{Bytes, Body},
-    ///     extract::DefaultBodyLimit,
-    /// };
-    /// use tower_http::limit::RequestBodyLimitLayer;
-    ///
-    /// let app: Router<()> = Router::new()
-    ///     .route("/", get(|body: Bytes| async {}))
-    ///     // Disable the default limit
-    ///     .layer(DefaultBodyLimit::disable())
-    ///     // Set a different limit
-    ///     .layer(RequestBodyLimitLayer::new(10 * 1000 * 1000));
-    /// ```
+    /// Untrusted streaming bodies still require a bound enforced by the caller.
+    /// To increase the extractor limit while keeping a finite bound, use
+    /// [`DefaultBodyLimit::max`] instead of disabling it.
     ///
     /// [`Bytes`]: bytes::Bytes
-    /// [`Json`]: https://docs.rs/axum/0.8/axum/struct.Json.html
-    /// [`Form`]: https://docs.rs/axum/0.8/axum/struct.Form.html
+    /// [`Json`]: crate::Json
+    /// [`Form`]: crate::Form
     pub const fn disable() -> Self {
         Self {
             kind: DefaultBodyLimitKind::Disable,

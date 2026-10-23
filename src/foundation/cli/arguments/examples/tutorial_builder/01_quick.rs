@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use command_line::{ArgAction, Command, arg, command, value_parser};
+use blog_cli_arguments::{ArgAction, Command, arg, command, value_parser};
 
 fn main() {
     let matches = command!() // requires `cargo` feature

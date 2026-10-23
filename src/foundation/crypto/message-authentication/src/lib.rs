@@ -10,7 +10,7 @@
 //! [`block_api::HmacResetCore`]: block_api::HmacResetCore
 
 #![no_std]
-#![doc = include_str!("../../../../../docs/upstream/hmac-0.13.0/README.md")]
+#![doc = include_str!("../../../../../docs/dependencies/origins/hmac-0.13.0/README.md")]
 #![doc(
     html_logo_url = "https://raw.githubusercontent.com/RustCrypto/media/26acc39f/logo.svg",
     html_favicon_url = "https://raw.githubusercontent.com/RustCrypto/media/26acc39f/logo.svg"

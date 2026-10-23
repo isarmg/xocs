@@ -8,11 +8,12 @@
 //! can be printed back to CSS syntax, either minified to remove whitespace and compress
 //! the output as much as possible, or pretty printed.
 //!
-//! The [StyleSheet](stylesheet::StyleSheet) struct is the main entrypoint for Lightning CSS,
-//! and supports parsing and transforming entire CSS files. You can also parse and manipulate
-//! individual CSS [rules](rules), [properties](properties), or [values](values). The [bundler](bundler)
-//! module also can be used to combine a CSS file and all of its dependencies together into a single
-//! style sheet. See the individual module documentation for more details and examples.
+//! The [stylesheet API](crate::style_optimizer::stylesheet::StyleSheet) parses
+//! and transforms entire CSS files. Individual [CSS rules](crate::style_optimizer::rules),
+//! [property types](crate::style_optimizer::properties) and [value types](crate::style_optimizer::values)
+//! can also be parsed and manipulated. The product's `blog-assets` tool combines
+//! CSS imports before invoking this compiler. See each module for API details
+//! and examples.
 
 #![deny(missing_docs)]
 #![cfg_attr(docsrs, feature(doc_cfg))]

@@ -144,7 +144,7 @@ pub mod monge;
 ///
 /// This provides the functionality needed to represent a read-only
 /// numeric matrix. You can query the size of the matrix and access
-/// elements. Modeled after [`ndarray::Array2`] from the [ndarray
+/// elements. Modeled after `ndarray::Array2` from the [ndarray
 /// crate](https://crates.io/crates/ndarray).
 pub trait Matrix<T: Copy> {
     /// Return the number of rows.

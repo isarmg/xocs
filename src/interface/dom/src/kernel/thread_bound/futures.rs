@@ -1,4 +1,5 @@
-//! [`Future`] and [`Stream`] support for [`SendWrapper`].
+//! [`Future`](std::future::Future) and [`Stream`](futures::Stream) support for
+//! [`SendWrapper`](crate::thread_bound::SendWrapper).
 use std::{
     future::Future,
     ops::{Deref as _, DerefMut as _},

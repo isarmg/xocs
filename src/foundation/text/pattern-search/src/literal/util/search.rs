@@ -50,7 +50,7 @@ use crate::literal::util::primitives::PatternID;
 /// # Example: `&str` and `&[u8]` automatically convert to an `Input`
 ///
 /// There is a `From<&T> for Input` implementation for all `T: AsRef<[u8]>`.
-/// Additionally, the [`AhoCorasick`](blog_text_pattern_search::literal::AhoCorasick) search APIs accept
+/// Additionally, the [`AhoCorasick`](crate::literal::AhoCorasick) search APIs accept
 /// a `Into<Input>`. These two things combined together mean you can provide
 /// things like `&str` and `&[u8]` to search APIs when the defaults are
 /// suitable, but also an `Input` when they're not. For example:
@@ -191,18 +191,18 @@ impl<'h> Input<'h> {
     /// Anchored or unanchored searches might not always be available,
     /// depending on the type of searcher used and its configuration:
     ///
-    /// * [`noncontiguous::NFA`](blog_text_pattern_search::literal::nfa::noncontiguous::NFA) always
+    /// * [`noncontiguous::NFA`](crate::literal::nfa::noncontiguous::NFA) always
     /// supports both unanchored and anchored searches.
-    /// * [`contiguous::NFA`](blog_text_pattern_search::literal::nfa::contiguous::NFA) always supports both
+    /// * [`contiguous::NFA`](crate::literal::nfa::contiguous::NFA) always supports both
     /// unanchored and anchored searches.
-    /// * [`dfa::DFA`](blog_text_pattern_search::literal::dfa::DFA) supports only unanchored
+    /// * [`dfa::DFA`](crate::literal::dfa::DFA) supports only unanchored
     /// searches by default.
-    /// [`dfa::Builder::start_kind`](blog_text_pattern_search::literal::dfa::Builder::start_kind) can
+    /// [`dfa::Builder::start_kind`](crate::literal::dfa::Builder::start_kind) can
     /// be used to change the default to supporting both kinds of searches
     /// or even just anchored searches.
-    /// * [`AhoCorasick`](blog_text_pattern_search::literal::AhoCorasick) inherits the same setup as a
+    /// * [`AhoCorasick`](crate::literal::AhoCorasick) inherits the same setup as a
     /// `DFA`. Namely, it only supports unanchored searches by default, but
-    /// [`AhoCorasickBuilder::start_kind`](blog_text_pattern_search::literal::AhoCorasickBuilder::start_kind)
+    /// [`AhoCorasickBuilder::start_kind`](crate::literal::AhoCorasickBuilder::start_kind)
     /// can change this.
     ///
     /// If you try to execute a search using a `try_` ("fallible") method with
@@ -1127,9 +1127,9 @@ impl MatchKind {
 /// searcher.
 ///
 /// Depending on which searcher is used internally by
-/// [`AhoCorasick`](blog_text_pattern_search::literal::AhoCorasick), supporting both unanchored
+/// [`AhoCorasick`](crate::literal::AhoCorasick), supporting both unanchored
 /// and anchored searches can be quite costly. For this reason,
-/// [`AhoCorasickBuilder::start_kind`](blog_text_pattern_search::literal::AhoCorasickBuilder::start_kind)
+/// [`AhoCorasickBuilder::start_kind`](crate::literal::AhoCorasickBuilder::start_kind)
 /// can be used to configure whether your searcher supports unanchored,
 /// anchored or both kinds of searches.
 ///

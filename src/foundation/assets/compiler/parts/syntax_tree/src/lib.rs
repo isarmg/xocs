@@ -19,7 +19,7 @@
 //!
 //! ## Parsing
 //!
-//! You can obtain an AST by parsing source code with a [`Parser`] from [`oxc_parser`].
+//! You can obtain an AST by parsing source code with a [`Parser`] from [`crate::parser`].
 //!
 //! ## Cargo Features
 //! * `"serialize"` enables support for serialization to ESTree JSON
@@ -31,7 +31,7 @@
 //! [`BooleanLiteral`]: ast::BooleanLiteral
 //! [`NumericLiteral`]: ast::NumericLiteral
 //! [`StringLiteral`]: ast::StringLiteral
-//! [`oxc_parser`]: <https://docs.rs/oxc_parser>
+//! [`crate::parser`]: <https://docs.rs/oxc_parser>
 //! [`Parser`]: <https://docs.rs/oxc_parser/latest/oxc_parser/struct.Parser.html>
 //! [estree]: <https://github.com/estree/estree>
 //! [typescript-eslint]: <https://github.com/typescript-eslint/typescript-eslint/tree/v8.9.0/packages/ast-spec>

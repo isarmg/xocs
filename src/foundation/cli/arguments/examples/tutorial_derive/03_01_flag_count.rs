@@ -1,9 +1,10 @@
-use command_line::Parser;
+extern crate blog_cli_arguments as clap;
+use blog_cli_arguments::Parser;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Cli {
-    #[arg(short, long, action = command_line::ArgAction::Count)]
+    #[arg(short, long, action = blog_cli_arguments::ArgAction::Count)]
     verbose: u8,
 }
 

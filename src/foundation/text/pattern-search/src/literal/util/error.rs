@@ -119,7 +119,7 @@ impl core::fmt::Display for BuildError {
 /// Examples of misconfiguration:
 ///
 /// * Executing a stream or overlapping search on a searcher that was built was
-/// something other than [`MatchKind::Standard`](blog_text_pattern_search::literal::MatchKind::Standard)
+/// something other than [`MatchKind::Standard`](crate::literal::MatchKind::Standard)
 /// semantics.
 /// * Requested an anchored or an unanchored search on a searcher that doesn't
 /// support unanchored or anchored searches, respectively.

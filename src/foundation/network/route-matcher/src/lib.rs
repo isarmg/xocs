@@ -126,6 +126,6 @@ pub use router::{Match, Router};
 #[cfg(doctest)]
 mod readme {
     #[allow(dead_code)]
-    #[doc = include_str!("../../../../../docs/upstream/matchit-0.8.4/README.md")]
+    #[doc = include_str!("../../../../../docs/dependencies/origins/matchit-0.8.4/README.md")]
     struct Readme;
 }

@@ -9,13 +9,13 @@ memory. Thus, when searching with a lazy DFA, one must supply a mutable "cache"
 in which the actual DFA's transition table is stored.
 
 If you're looking for fully compiled DFAs, then please see the top-level
-[`dfa` module](blog_text_pattern_search::automata::dfa).
+[`dfa` module](crate::automata::dfa).
 
 # Overview
 
 This section gives a brief overview of the primary types in this module:
 
-* A [`blog_text_pattern_search::Regex`] provides a way to search for matches of a regular
+* A [`crate::Regex`] provides a way to search for matches of a regular
 expression using lazy DFAs. This includes iterating over matches with both the
 start and end positions of each match.
 * A [`dfa::DFA`] provides direct low level access to a lazy DFA.
@@ -69,7 +69,7 @@ and you don't need things like capturing groups or Unicode word boundary
 support in non-ASCII text, then a lazy DFA is likely a robust choice with
 respect to both search speed and memory usage. Note however that its speed
 may be worse than a general purpose regex engine if you don't select a good
-[prefilter](blog_text_pattern_search::automata::util::prefilter).
+[prefilter](crate::automata::util::prefilter).
 
 If you know ahead of time that your pattern would result in a very large DFA
 if it was fully compiled, it may be better to use an NFA simulation instead
@@ -81,8 +81,8 @@ speed significantly.
 
 # Differences with fully compiled DFAs
 
-A [`hybrid::regex::Regex`](blog_text_pattern_search::automata::hybrid::regex::Regex) and a
-[`dfa::regex::Regex`](blog_text_pattern_search::automata::dfa::regex::Regex) both have the same capabilities
+A [`hybrid::regex::Regex`](crate::automata::hybrid::regex::Regex) and a
+[`dfa::regex::Regex`](crate::automata::dfa::regex::Regex) both have the same capabilities
 (and similarly for their underlying DFAs), but they achieve them through
 different means. The main difference is that a hybrid or "lazy" regex builds
 its DFA lazily during search, where as a fully compiled regex will build its
@@ -114,7 +114,7 @@ same parser. You can find an exhaustive list of supported syntax in the
 
 There are two things that are not supported by the lazy DFAs in this module:
 
-* Capturing groups. The DFAs (and [`Regex`](blog_text_pattern_search::Regex)es built on top
+* Capturing groups. The DFAs (and [`Regex`](crate::Regex)es built on top
 of them) can only find the offsets of an entire match, but cannot resolve
 the offsets of each capturing group. This is because DFAs do not have the
 expressive power necessary. Note that it is okay to build a lazy DFA from an

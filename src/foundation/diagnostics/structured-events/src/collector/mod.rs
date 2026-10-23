@@ -1,132 +1,31 @@
-//! Utilities for implementing and composing [`tracing`] subscribers.
+//! Composable collectors for tracing spans and events.
 //!
-//! [`tracing`] is a framework for instrumenting Rust programs to collect
-//! scoped, structured, and async-aware diagnostics. The [`Subscriber`] trait
-//! represents the functionality necessary to collect this trace data. This
-//! crate contains tools for composing subscribers out of smaller units of
-//! behaviour, and batteries-included implementations of common subscriber
-//! functionality.
+//! A [`Layer` trait](crate::collector::layer::Layer) adds one collection behavior to a
+//! [`Subscriber` trait](crate::primitives::Subscriber). Multiple layers can share a
+//! registry and apply either global or per-layer filtering. See
+//! [layer composition](crate::collector::layer#composing-layers) and
+//! [filtering](crate::collector::layer#per-layer-filtering).
 //!
-//! `tracing-subscriber` is intended for use by both `Subscriber` authors and
-//! application authors using `tracing` to instrument their applications.
+//! Target-prefix and level filtering is provided by
+//! [`Targets`](crate::collector::filter::Targets) and
+//! [`LevelFilter`](crate::collector::filter::LevelFilter). Filters do not parse
+//! span-field expressions.
 //!
-//! *Compiler support: [requires `rustc` 1.65+][msrv]*
+//! ## Features
 //!
-//! [msrv]: #supported-rust-versions
+//! The `collector` feature enables this module. Additional capabilities are
+//! selected explicitly:
 //!
-//! ## `Layer`s and `Filter`s
+//! - `registry` adds span storage and lookup, and requires `std`.
+//! - `fmt` adds formatting subscribers and requires `registry` and `std`.
+//! - `ansi` adds terminal colors and the pretty formatter.
+//! - `json` adds newline-delimited JSON formatting.
+//! - `smallvec` uses inline storage for span data.
+//! - `parking` selects the repository's synchronization provider.
 //!
-//! The most important component of the `tracing-subscriber` API is the
-//! [`Layer`] trait, which provides a composable abstraction for building
-//! [`Subscriber`]s. Like the [`Subscriber`] trait, a [`Layer`] defines a
-//! particular behavior for collecting trace data. Unlike [`Subscriber`]s,
-//! which implement a *complete* strategy for how trace data is collected,
-//! [`Layer`]s provide *modular* implementations of specific behaviors.
-//! Therefore, they can be [composed together] to form a [`Subscriber`] which is
-//! capable of recording traces in a variety of ways. See the [`layer` module's
-//! documentation][layer] for details on using [`Layer`]s.
-//!
-//! In addition, the [`Filter`] trait defines an interface for filtering what
-//! spans and events are recorded by a particular layer. This allows different
-//! [`Layer`]s to handle separate subsets of the trace data emitted by a
-//! program. See the [documentation on per-layer filtering][plf] for more
-//! information on using [`Filter`]s.
-//!
-//! [`Layer`]: crate::collector::layer::Layer
-//! [composed together]: crate::collector::layer#composing-layers
-//! [layer]: crate::collector::layer
-//! [`Filter`]: crate::collector::layer::Filter
-//! [plf]: crate::collector::layer#per-layer-filtering
-//!
-//! ## Included Subscribers
-//!
-//! The following `Subscriber`s are provided for application authors:
-//!
-//! - [`fmt`] - Formats and logs tracing data (requires the `fmt` feature flag)
-//!
-//! ## Feature Flags
-//!
-//! - `std`: Enables APIs that depend on the Rust standard library
-//!   (enabled by default).
-//! - `alloc`: Depend on [`liballoc`] (enabled by "std").
-//! - `env-filter`: Enables the [`EnvFilter`] type, which implements filtering
-//!   similar to the [`env_logger` crate]. **Requires "std"**.
-//! - `fmt`: Enables the [`fmt`] module, which provides a subscriber
-//!   implementation for printing formatted representations of trace events.
-//!   Selected by `collector-default`. **Requires "registry" and "std"**.
-//! - `ansi`: Enables `fmt` support for ANSI terminal colors. Enabled by
-//!   `collector-default`.
-//! - `registry`: enables the [`registry`] module. Selected by `collector-default`.
-//!   **Requires "std"**.
-//! - `json`: Enables `fmt` support for JSON output. In JSON output, the ANSI
-//!   feature does nothing. **Requires "fmt" and "std"**.
-//!
-//! [`registry`]: mod@registry
-//!
-//! ### Optional Dependencies
-//!
-//! - `log-bridge`: Enables better formatting for events emitted by `log`
-//!   macros in the `fmt` subscriber. Enabled by default.
-//! - [`time`][`time` crate]: Enables support for using the [`time` crate] for timestamp
-//!   formatting in the `fmt` subscriber.
-//! - [`smallvec`]: Causes the `EnvFilter` type to use the `smallvec` crate (rather
-//!   than `Vec`) as a performance optimization. Enabled by default.
-//! - `parking`: Use the project-owned `synchronization` provider's `RwLock` implementation
-//!   rather than the Rust standard library's implementation.
-//!
-//! ### `no_std` Support
-//!
-//! In embedded systems and other bare-metal applications, `tracing` can be
-//! used without requiring the Rust standard library, although some features are
-//! disabled. Although most of the APIs provided by `tracing-subscriber`, such
-//! as [`fmt`] and [`EnvFilter`], require the standard library, some
-//! functionality, such as the [`Layer`] trait, can still be used in
-//! `no_std` environments.
-//!
-//! The dependency on the standard library is controlled by two crate feature
-//! flags, "std", which enables the dependency on [`libstd`], and "alloc", which
-//! enables the dependency on [`liballoc`] (and is enabled by the "std"
-//! feature). These features are enabled by default, but `no_std` users can
-//! disable them using:
-//!
-//! ```toml
-//! # Cargo.toml
-//! tracing = { version = "0.1", default-features = false, features = ["collector"] }
-//! ```
-//!
-//! Additional APIs are available when [`liballoc`] is available. To enable
-//! `liballoc` but not `std`, use:
-//!
-//! ```toml
-//! # Cargo.toml
-//! tracing = { version = "0.1", default-features = false, features = ["collector"] }
-//! ```
-//!
-//! ## Supported Rust Versions
-//!
-//! Tracing is built against the latest stable release. The minimum supported
-//! version is 1.65. The current Tracing version is not guaranteed to build on
-//! Rust versions earlier than the minimum supported version.
-//!
-//! Tracing follows the same compiler support policies as the rest of the Tokio
-//! project. The current stable Rust compiler and the three most recent minor
-//! versions before it will always be supported. For example, if the current
-//! stable compiler version is 1.69, the minimum supported version will not be
-//! increased past 1.66, three minor versions prior. Increasing the minimum
-//! supported compiler version is not considered a semver breaking change as
-//! long as doing so complies with this policy.
-//!
-//! [`Subscriber`]: tracing::primitives::subscriber::Subscriber
-//! [`tracing`]: https://docs.rs/tracing/latest/tracing
-//! [`EnvFilter`]: filter::EnvFilter
-//! [`fmt`]: mod@fmt
-//! [`tracing`]: https://crates.io/crates/tracing
-//! [`tracing-log`]: https://crates.io/crates/tracing-log
-//! [`smallvec`]: https://crates.io/crates/smallvec
-//! [`env_logger` crate]: https://crates.io/crates/env_logger
-//! [`time` crate]: https://crates.io/crates/time
-//! [`liballoc`]: https://doc.rust-lang.org/alloc/index.html
-//! [`libstd`]: https://doc.rust-lang.org/std/index.html
+//! `collector-default` selects formatting, ANSI output, inline span storage and
+//! the log tracer. The `log-bridge` feature converts log records into events;
+//! `log-tracer` also exposes the installable logger.
 
 #![cfg_attr(
     docsrs,

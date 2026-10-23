@@ -2,14 +2,14 @@
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum ErrorKind {
-    /// Occurs when an [`Arg`][command_line::Arg] has a set of possible values,
+    /// Occurs when an [`Arg`][crate::Arg] has a set of possible values,
     /// and the user provides a value which isn't in that set.
     ///
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind};
     /// let result = Command::new("prog")
     ///     .arg(Arg::new("speed")
     ///         .value_parser(["fast", "slow"]))
@@ -24,8 +24,8 @@ pub enum ErrorKind {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, arg, error::ErrorKind};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, arg, error::ErrorKind};
     /// let result = Command::new("prog")
     ///     .arg(arg!(--flag "some flag"))
     ///     .try_get_matches_from(vec!["prog", "--other"]);
@@ -43,8 +43,8 @@ pub enum ErrorKind {
     ///
     /// ```rust
     /// # #[cfg(feature = "suggestions")] {
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind, };
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind, };
     /// let result = Command::new("prog")
     ///     .subcommand(Command::new("config")
     ///         .about("Used for configuration")
@@ -56,7 +56,7 @@ pub enum ErrorKind {
     /// # }
     /// ```
     ///
-    /// [`Subcommand`]: command_line::Subcommand
+    /// [`Subcommand`]: crate::Subcommand
     /// [`UnknownArgument`]: ErrorKind::UnknownArgument
     InvalidSubcommand,
 
@@ -64,8 +64,8 @@ pub enum ErrorKind {
     /// sign to provide values.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind, ArgAction};
     /// let res = Command::new("prog")
     ///     .arg(Arg::new("color")
     ///          .action(ArgAction::Set)
@@ -83,8 +83,8 @@ pub enum ErrorKind {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind, value_parser};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind, value_parser};
     /// fn is_numeric(val: &str) -> Result<(), String> {
     ///     match val.parse::<i64>() {
     ///         Ok(..) => Ok(()),
@@ -107,8 +107,8 @@ pub enum ErrorKind {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind};
     /// let result = Command::new("prog")
     ///     .arg(Arg::new("arg")
     ///         .num_args(1..=2))
@@ -116,7 +116,7 @@ pub enum ErrorKind {
     /// assert!(result.is_err());
     /// assert_eq!(result.unwrap_err().kind(), ErrorKind::TooManyValues);
     /// ```
-    /// [`Arg::num_args`]: command_line::Arg::num_args()
+    /// [`Arg::num_args`]: crate::Arg::num_args()
     TooManyValues,
 
     /// Occurs when the user provides fewer values for an argument than were defined by setting
@@ -125,8 +125,8 @@ pub enum ErrorKind {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind};
     /// let result = Command::new("prog")
     ///     .arg(Arg::new("some_opt")
     ///         .long("opt")
@@ -135,7 +135,7 @@ pub enum ErrorKind {
     /// assert!(result.is_err());
     /// assert_eq!(result.unwrap_err().kind(), ErrorKind::TooFewValues);
     /// ```
-    /// [`Arg::num_args`]: command_line::Arg::num_args()
+    /// [`Arg::num_args`]: crate::Arg::num_args()
     TooFewValues,
 
     /// Occurs when the user provides a different number of values for an argument than what's
@@ -145,8 +145,8 @@ pub enum ErrorKind {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind, ArgAction};
     /// let result = Command::new("prog")
     ///     .arg(Arg::new("some_opt")
     ///         .long("opt")
@@ -157,8 +157,8 @@ pub enum ErrorKind {
     /// assert_eq!(result.unwrap_err().kind(), ErrorKind::WrongNumberOfValues);
     /// ```
     ///
-    /// [`Arg::num_args`]: command_line::Arg::num_args()
-    /// [`Arg::value_names`]: command_line::Arg::value_names()
+    /// [`Arg::num_args`]: crate::Arg::num_args()
+    /// [`Arg::value_names`]: crate::Arg::value_names()
     WrongNumberOfValues,
 
     /// Occurs when the user provides two values which conflict with each other and can't be used
@@ -167,8 +167,8 @@ pub enum ErrorKind {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind, ArgAction};
     /// let result = Command::new("prog")
     ///     .arg(Arg::new("debug")
     ///         .long("debug")
@@ -188,8 +188,8 @@ pub enum ErrorKind {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind};
     /// let result = Command::new("prog")
     ///     .arg(Arg::new("debug")
     ///         .required(true))
@@ -205,8 +205,8 @@ pub enum ErrorKind {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, error::ErrorKind};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, error::ErrorKind};
     /// let err = Command::new("prog")
     ///     .subcommand_required(true)
     ///     .subcommand(Command::new("test"))
@@ -218,13 +218,13 @@ pub enum ErrorKind {
     /// # ;
     /// ```
     ///
-    /// [`Command::subcommand_required`]: command_line::Command::subcommand_required
+    /// [`Command::subcommand_required`]: crate::Command::subcommand_required
     MissingSubcommand,
 
     /// Occurs when the user provides a value containing invalid UTF-8.
     ///
     /// To allow arbitrary data
-    /// - Set [`Arg::value_parser(value_parser!(OsString))`][command_line::Arg::value_parser] for argument values
+    /// - Set [`Arg::value_parser(value_parser!(OsString))`][crate::Arg::value_parser] for argument values
     /// - Set [`Command::external_subcommand_value_parser`] for external-subcommand
     ///   values
     ///
@@ -236,8 +236,8 @@ pub enum ErrorKind {
     ///
     /// ```rust
     /// # #[cfg(unix)] {
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind, ArgAction};
     /// # use std::os::unix::ffi::OsStringExt;
     /// # use std::ffi::OsString;
     /// let result = Command::new("prog")
@@ -252,7 +252,7 @@ pub enum ErrorKind {
     /// # }
     /// ```
     ///
-    /// [`Command::external_subcommand_value_parser`]: command_line::Command::external_subcommand_value_parser
+    /// [`Command::external_subcommand_value_parser`]: crate::Command::external_subcommand_value_parser
     InvalidUtf8,
 
     /// Not a true "error" as it means `--help` or similar was used.
@@ -265,8 +265,8 @@ pub enum ErrorKind {
     ///
     /// ```rust
     /// # #[cfg(feature = "help")] {
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind};
     /// let result = Command::new("prog")
     ///     .try_get_matches_from(vec!["prog", "--help"]);
     /// assert!(result.is_err());
@@ -282,8 +282,8 @@ pub enum ErrorKind {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind, };
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind, };
     /// let result = Command::new("prog")
     ///     .arg_required_else_help(true)
     ///     .subcommand(Command::new("config")
@@ -295,8 +295,8 @@ pub enum ErrorKind {
     /// assert_eq!(result.unwrap_err().kind(), ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand);
     /// ```
     ///
-    /// [`Subcommand`]: command_line::Subcommand
-    /// [`Command::arg_required_else_help`]: command_line::Command::arg_required_else_help
+    /// [`Subcommand`]: crate::Subcommand
+    /// [`Command::arg_required_else_help`]: crate::Command::arg_required_else_help
     DisplayHelpOnMissingArgumentOrSubcommand,
 
     /// Not a true "error" as it means `--version` or similar was used.
@@ -305,8 +305,8 @@ pub enum ErrorKind {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind};
     /// let result = Command::new("prog")
     ///     .version("3.0")
     ///     .try_get_matches_from(vec!["prog", "--version"]);

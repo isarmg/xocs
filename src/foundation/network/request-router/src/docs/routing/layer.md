@@ -1,4 +1,4 @@
-Apply a [`tower::Layer`] to all routes in the router.
+Apply a [`service_stack::Layer`] to all routes in the router.
 
 This can be used to add additional processing to a request for a group
 of routes.
@@ -12,46 +12,24 @@ If you want to add middleware to a single handler you can either use
 
 # Example
 
-Adding the [`tower_http::trace::TraceLayer`]:
+Attach an extension to a group of routes:
 
 ```rust
-use axum::{routing::get, Router};
-use tower_http::trace::TraceLayer;
+use http_routing::{extract::Extension, routing::get, Router};
 
-let app = Router::new()
+let app: Router = Router::new()
     .route("/foo", get(|| async {}))
     .route("/bar", get(|| async {}))
-    .layer(TraceLayer::new_for_http());
-# let _: Router = app;
+    .layer(Extension("Blog"));
 ```
 
-If you need to write your own middleware see ["Writing
-middleware"](crate::middleware#writing-middleware) for the different options.
-
-If you only want middleware on some routes you can use [`Router::merge`]:
-
-```rust
-use axum::{routing::get, Router};
-use tower_http::{trace::TraceLayer, compression::CompressionLayer};
-
-let with_tracing = Router::new()
-    .route("/foo", get(|| async {}))
-    .layer(TraceLayer::new_for_http());
-
-let with_compression = Router::new()
-    .route("/bar", get(|| async {}))
-    .layer(CompressionLayer::new());
-
-// Merge everything into one `Router`
-let app = Router::new()
-    .merge(with_tracing)
-    .merge(with_compression);
-# let _: Router = app;
-```
+Use [`Router::merge`] to combine routers with different layer stacks.
+See [writing middleware](crate::middleware#writing-middleware) to implement
+request and response wrappers.
 
 # Multiple middleware
 
-It's recommended to use [`tower::ServiceBuilder`] when applying multiple
+It's recommended to use [`service_stack::ServiceBuilder`] when applying multiple
 middleware. See [`middleware`](crate::middleware) for more details.
 
 # Runs after routing

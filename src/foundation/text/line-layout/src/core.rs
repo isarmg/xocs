@@ -107,7 +107,7 @@ fn ch_width(ch: char) -> usize {
 /// # Examples
 ///
 /// ```
-/// use textwrap::core::display_width;
+/// use blog_text_line_layout::core::display_width;
 ///
 /// assert_eq!(display_width("Café Plain"), 10);
 /// assert_eq!(display_width("\u{1b}[31mCafé Rouge\u{1b}[0m"), 10);
@@ -127,7 +127,7 @@ fn ch_width(ch: char) -> usize {
 /// U+1100 has a width of 1. This includes the combining accent:
 ///
 /// ```
-/// use textwrap::core::display_width;
+/// use blog_text_line_layout::core::display_width;
 ///
 /// assert_eq!(display_width("Cafe Plain"), 10);
 /// #[cfg(feature = "unicode-width")]
@@ -143,7 +143,7 @@ fn ch_width(ch: char) -> usize {
 /// even if the `unicode-width` feature is disabled:
 ///
 /// ```
-/// use textwrap::core::display_width;
+/// use blog_text_line_layout::core::display_width;
 ///
 /// assert_eq!(display_width("😂😭🥺🤣✨😍🙏🥰😊🔥"), 20);
 /// assert_eq!(display_width("你好"), 4);  // “Nǐ hǎo” or “Hello” in Chinese
@@ -168,7 +168,7 @@ fn ch_width(ch: char) -> usize {
 /// width differs depending on the use of the `unicode-width` feature:
 ///
 /// ```
-/// use textwrap::core::display_width;
+/// use blog_text_line_layout::core::display_width;
 ///
 /// assert_eq!("👨‍🦰".chars().collect::<Vec<char>>(), ['\u{1f468}', '\u{200d}', '\u{1f9b0}']);
 /// #[cfg(feature = "unicode-width")]
@@ -275,7 +275,7 @@ impl<'a> Word<'a> {
     /// # Examples
     ///
     /// ```
-    /// use textwrap::core::Word;
+    /// use blog_text_line_layout::core::Word;
     /// assert_eq!(
     ///     Word::from("Hello!  ").break_apart(3).collect::<Vec<_>>(),
     ///     vec![Word::from("Hel"), Word::from("lo!  ")]

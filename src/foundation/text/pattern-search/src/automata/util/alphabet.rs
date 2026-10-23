@@ -197,7 +197,7 @@ impl core::fmt::Debug for Unit {
 /// # Example
 ///
 /// This example shows how to get byte classes from an
-/// [`NFA`](blog_text_pattern_search::automata::nfa::thompson::NFA) and ask for the class of various bytes.
+/// [`NFA`](crate::automata::nfa::thompson::NFA) and ask for the class of various bytes.
 ///
 /// ```
 /// use blog_text_pattern_search::automata::nfa::thompson::NFA;

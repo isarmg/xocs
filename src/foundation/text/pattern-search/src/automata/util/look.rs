@@ -47,9 +47,9 @@ use crate::automata::util::{escape::DebugByte, utf8};
 ///
 /// # Assertions in an NFA
 ///
-/// An assertion in a [`thompson::NFA`](blog_text_pattern_search::automata::nfa::thompson::NFA) can be
+/// An assertion in a [`thompson::NFA`](crate::automata::nfa::thompson::NFA) can be
 /// thought of as a conditional epsilon transition. That is, a matching engine
-/// like the [`PikeVM`](blog_text_pattern_search::automata::nfa::thompson::pikevm::PikeVM) only permits
+/// like the [`PikeVM`](crate::automata::nfa::thompson::pikevm::PikeVM) only permits
 /// moving through conditional epsilon transitions when their condition
 /// is satisfied at whatever position the `PikeVM` is currently at in the
 /// haystack.
@@ -238,7 +238,7 @@ impl Look {
 /// LookSet is a memory-efficient set of look-around assertions.
 ///
 /// This is useful for efficiently tracking look-around assertions. For
-/// example, a [`thompson::NFA`](blog_text_pattern_search::automata::nfa::thompson::NFA) provides properties
+/// example, a [`thompson::NFA`](crate::automata::nfa::thompson::NFA) provides properties
 /// that return `LookSet`s.
 #[derive(Clone, Copy, Default, Eq, PartialEq)]
 pub struct LookSet {
@@ -487,7 +487,7 @@ impl LookSet {
     /// contains a Unicode word boundary assertion.
     ///
     /// It can be useful to use this on the result of
-    /// [`NFA::look_set_any`](blog_text_pattern_search::automata::nfa::thompson::NFA::look_set_any)
+    /// [`NFA::look_set_any`](crate::automata::nfa::thompson::NFA::look_set_any)
     /// when building a matcher engine to ensure methods like
     /// [`LookMatcher::matches_set`] do not panic at search time.
     pub fn available(self) -> Result<(), UnicodeWordBoundaryError> {

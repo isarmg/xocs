@@ -56,9 +56,7 @@
 ///   or inner like `#![...]`
 /// - [`Punctuated<T, P>`] — parses zero or more `T` separated by punctuation
 ///   `P` with optional trailing punctuation
-/// - [`Vec<Stmt>`] — parses the same as `Block::parse_within`
-///
-/// [`Vec<Stmt>`]: Block::parse_within
+/// - `Vec<Stmt>` — with the `full` feature, parses statements as `Block::parse_within` does
 ///
 /// # Panics
 ///

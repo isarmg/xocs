@@ -26,9 +26,9 @@ use crate::util::Id;
 /// # Examples
 ///
 /// ```no_run
-/// # use command_line;
-/// # use command_line::{Command, Arg, ArgAction};
-/// # use command_line::parser::ValueSource;
+/// # use blog_cli_arguments;
+/// # use blog_cli_arguments::{Command, Arg, ArgAction};
+/// # use blog_cli_arguments::parser::ValueSource;
 /// let matches = Command::new("MyApp")
 ///     .arg(Arg::new("out")
 ///         .long("output")
@@ -48,7 +48,7 @@ use crate::util::Id;
 ///
 /// // The ArgMatches::get_one method returns an Option because the user may not have supplied
 /// // that argument at runtime. But if we specified that the argument was "required" as we did
-/// // with the "out" argument, we can safely unwrap because `command_line` verifies that was actually
+/// // with the "out" argument, we can safely unwrap because `blog_cli_arguments` verifies that was actually
 /// // used at runtime.
 /// println!("Value for --output: {}", matches.get_one::<String>("out").unwrap());
 ///
@@ -62,7 +62,7 @@ use crate::util::Id;
 ///     }
 /// }
 /// ```
-/// [`Command::get_matches`]: command_line::Command::get_matches()
+/// [`Command::get_matches`]: crate::Command::get_matches()
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ArgMatches {
     #[cfg(debug_assertions)]
@@ -77,7 +77,7 @@ pub struct ArgMatches {
 impl ArgMatches {
     /// Gets the value of a specific option or positional argument.
     ///
-    /// i.e. an argument that [takes an additional value][command_line::Arg::num_args] at runtime.
+    /// i.e. an argument that [takes an additional value][crate::Arg::num_args] at runtime.
     ///
     /// Returns an error if the wrong type was used.
     ///
@@ -98,8 +98,8 @@ impl ArgMatches {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, value_parser, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, value_parser, ArgAction};
     /// let m = Command::new("myapp")
     ///     .arg(Arg::new("port")
     ///         .value_parser(value_parser!(usize))
@@ -112,30 +112,30 @@ impl ArgMatches {
     ///     .expect("`port`is required");
     /// assert_eq!(port, 2020);
     /// ```
-    /// [positional]: command_line::Arg::index()
-    /// [`default_value`]: command_line::Arg::default_value()
+    /// [positional]: crate::Arg::index()
+    /// [`default_value`]: crate::Arg::default_value()
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn get_one<T: Any + Clone + Send + Sync + 'static>(&self, id: &str) -> Option<&T> {
         MatchesError::unwrap(id, self.try_get_one(id))
     }
 
-    /// Gets the value of a specific [`ArgAction::Count`][command_line::ArgAction::Count] flag
+    /// Gets the value of a specific [`ArgAction::Count`][crate::ArgAction::Count] flag
     ///
     /// # Panic
     ///
-    /// If the argument's action is not [`ArgAction::Count`][command_line::ArgAction::Count]
+    /// If the argument's action is not [`ArgAction::Count`][crate::ArgAction::Count]
     ///
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::Command;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Command;
+    /// # use blog_cli_arguments::Arg;
     /// let cmd = Command::new("mycmd")
     ///     .arg(
     ///         Arg::new("flag")
     ///             .long("flag")
-    ///             .action(command_line::ArgAction::Count)
+    ///             .action(blog_cli_arguments::ArgAction::Count)
     ///     );
     ///
     /// let matches = cmd.clone().try_get_matches_from(["mycmd", "--flag", "--flag"]).unwrap();
@@ -151,23 +151,23 @@ impl ArgMatches {
         })
     }
 
-    /// Gets the value of a specific [`ArgAction::SetTrue`][crate::ArgAction::SetTrue] or [`ArgAction::SetFalse`][command_line::ArgAction::SetFalse] flag
+    /// Gets the value of a specific [`ArgAction::SetTrue`][crate::ArgAction::SetTrue] or [`ArgAction::SetFalse`][crate::ArgAction::SetFalse] flag
     ///
     /// # Panic
     ///
-    /// If the argument's action is not [`ArgAction::SetTrue`][crate::ArgAction::SetTrue] or [`ArgAction::SetFalse`][command_line::ArgAction::SetFalse]
+    /// If the argument's action is not [`ArgAction::SetTrue`][crate::ArgAction::SetTrue] or [`ArgAction::SetFalse`][crate::ArgAction::SetFalse]
     ///
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::Command;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Command;
+    /// # use blog_cli_arguments::Arg;
     /// let cmd = Command::new("mycmd")
     ///     .arg(
     ///         Arg::new("flag")
     ///             .long("flag")
-    ///             .action(command_line::ArgAction::SetTrue)
+    ///             .action(blog_cli_arguments::ArgAction::SetTrue)
     ///     );
     ///
     /// let matches = cmd.clone().try_get_matches_from(["mycmd", "--flag"]).unwrap();
@@ -204,8 +204,8 @@ impl ArgMatches {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, value_parser, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, value_parser, ArgAction};
     /// let m = Command::new("myprog")
     ///     .arg(Arg::new("ports")
     ///         .action(ArgAction::Append)
@@ -246,8 +246,8 @@ impl ArgMatches {
     ///
     /// # Examples
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command,Arg, ArgAction, value_parser};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command,Arg, ArgAction, value_parser};
     /// let m = Command::new("myprog")
     ///     .arg(Arg::new("x")
     ///         .short('x')
@@ -284,8 +284,8 @@ impl ArgMatches {
     ///
     /// ```rust
     /// # #[cfg(unix)] {
-    /// # use command_line;
-    /// # use command_line::{Command, arg, value_parser};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, arg, value_parser};
     /// # use std::ffi::{OsStr,OsString};
     /// # use std::os::unix::ffi::{OsStrExt,OsStringExt};
     /// use std::path::PathBuf;
@@ -333,8 +333,8 @@ impl ArgMatches {
     ///
     /// ```rust
     /// # #[cfg(unix)] {
-    /// # use command_line;
-    /// # use command_line::{Command, arg, value_parser, ArgAction, Arg};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, arg, value_parser, ArgAction, Arg};
     /// # use std::ffi::{OsStr,OsString};
     /// # use std::os::unix::ffi::{OsStrExt,OsStringExt};
     /// use std::path::PathBuf;
@@ -370,7 +370,7 @@ impl ArgMatches {
 
     /// Returns the value of a specific option or positional argument.
     ///
-    /// i.e. an argument that [takes an additional value][command_line::Arg::num_args] at runtime.
+    /// i.e. an argument that [takes an additional value][crate::Arg::num_args] at runtime.
     ///
     /// Returns an error if the wrong type was used.  No item will have been removed.
     ///
@@ -391,8 +391,8 @@ impl ArgMatches {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, value_parser, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, value_parser, ArgAction};
     /// let mut m = Command::new("myprog")
     ///     .arg(Arg::new("file")
     ///         .required(true)
@@ -404,8 +404,8 @@ impl ArgMatches {
     ///     .expect("`file`is required");
     /// assert_eq!(vals, "file.txt");
     /// ```
-    /// [positional]: command_line::Arg::index()
-    /// [`default_value`]: command_line::Arg::default_value()
+    /// [positional]: crate::Arg::index()
+    /// [`default_value`]: crate::Arg::default_value()
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn remove_one<T: Any + Clone + Send + Sync + 'static>(&mut self, id: &str) -> Option<T> {
         MatchesError::unwrap(id, self.try_remove_one(id))
@@ -427,8 +427,8 @@ impl ArgMatches {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, value_parser, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, value_parser, ArgAction};
     /// let mut m = Command::new("myprog")
     ///     .arg(Arg::new("file")
     ///         .action(ArgAction::Append)
@@ -468,8 +468,8 @@ impl ArgMatches {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, value_parser, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, value_parser, ArgAction};
     /// let mut m = Command::new("myprog")
     ///     .arg(Arg::new("x")
     ///         .short('x')
@@ -506,8 +506,8 @@ impl ArgMatches {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("myprog")
     ///     .arg(Arg::new("debug")
     ///         .short('d')
@@ -519,18 +519,18 @@ impl ArgMatches {
     /// assert!(m.contains_id("debug"));
     /// ```
     ///
-    /// [`default_value`]: command_line::Arg::default_value()
+    /// [`default_value`]: crate::Arg::default_value()
     pub fn contains_id(&self, id: &str) -> bool {
         MatchesError::unwrap(id, self.try_contains_id(id))
     }
 
-    /// Iterate over [`Arg`][crate::Arg] and [`ArgGroup`][command_line::ArgGroup] [`Id`]s via [`ArgMatches::ids`].
+    /// Iterate over [`Arg`][crate::Arg] and [`ArgGroup`][crate::ArgGroup] [`Id`]s via [`ArgMatches::ids`].
     ///
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, arg, value_parser};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, arg, value_parser};
     ///
     /// let m = Command::new("myprog")
     ///     .arg(arg!(--color <when>)
@@ -552,7 +552,7 @@ impl ArgMatches {
         }
     }
 
-    /// Check if any [`Arg`][command_line::Arg]s were present on the command line
+    /// Check if any [`Arg`][crate::Arg]s were present on the command line
     ///
     /// See [`ArgMatches::subcommand_name()`] or [`ArgMatches::subcommand()`] to check if a
     /// subcommand was present on the command line.
@@ -560,8 +560,8 @@ impl ArgMatches {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let mut cmd = Command::new("myapp")
     ///     .arg(Arg::new("output")
     ///         .action(ArgAction::Set));
@@ -590,9 +590,9 @@ impl ArgMatches {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
-    /// # use command_line::parser::ValueSource;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments::parser::ValueSource;
     /// let m = Command::new("myprog")
     ///     .arg(Arg::new("debug")
     ///         .short('d')
@@ -604,7 +604,7 @@ impl ArgMatches {
     /// assert_eq!(m.value_source("debug"), Some(ValueSource::CommandLine));
     /// ```
     ///
-    /// [`default_value`]: command_line::Arg::default_value()
+    /// [`default_value`]: crate::Arg::default_value()
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn value_source(&self, id: &str) -> Option<ValueSource> {
         let value = self.get_arg(id);
@@ -621,8 +621,8 @@ impl ArgMatches {
     /// refer to the *values* `-o val` would therefore not represent two distinct indices, only the
     /// index for `val` would be recorded. This is by design.
     ///
-    /// Besides the flag/option discrepancy, the primary difference between an argv index and command_line
-    /// index, is that command_line continues counting once all arguments have properly separated, whereas
+    /// Besides the flag/option discrepancy, the primary difference between an argv index and blog_cli_arguments
+    /// index, is that blog_cli_arguments continues counting once all arguments have properly separated, whereas
     /// an argv index does not.
     ///
     /// The examples should clear this up.
@@ -640,13 +640,13 @@ impl ArgMatches {
     ///
     /// # Examples
     ///
-    /// The argv indices are listed in the comments below. See how they correspond to the command_line
-    /// indices. Note that if it's not listed in a command_line index, this is because it's not saved in
+    /// The argv indices are listed in the comments below. See how they correspond to the blog_cli_arguments
+    /// indices. Note that if it's not listed in a blog_cli_arguments index, this is because it's not saved in
     /// in an `ArgMatches` struct for querying.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("myapp")
     ///     .arg(Arg::new("flag")
     ///         .short('f')
@@ -656,7 +656,7 @@ impl ArgMatches {
     ///         .action(ArgAction::Set))
     ///     .get_matches_from(vec!["myapp", "-f", "-o", "val"]);
     ///            // ARGV indices: ^0       ^1    ^2    ^3
-    ///            // command_line indices:          ^1          ^3
+    ///            // blog_cli_arguments indices:          ^1          ^3
     ///
     /// assert_eq!(m.index_of("flag"), Some(1));
     /// assert_eq!(m.index_of("option"), Some(3));
@@ -665,8 +665,8 @@ impl ArgMatches {
     /// Now notice, if we use one of the other styles of options:
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("myapp")
     ///     .arg(Arg::new("flag")
     ///         .short('f')
@@ -676,7 +676,7 @@ impl ArgMatches {
     ///         .action(ArgAction::Set))
     ///     .get_matches_from(vec!["myapp", "-f", "-o=val"]);
     ///            // ARGV indices: ^0       ^1    ^2
-    ///            // command_line indices:          ^1       ^3
+    ///            // blog_cli_arguments indices:          ^1       ^3
     ///
     /// assert_eq!(m.index_of("flag"), Some(1));
     /// assert_eq!(m.index_of("option"), Some(3));
@@ -686,8 +686,8 @@ impl ArgMatches {
     /// flags. Let's also throw in the final option style for good measure.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("myapp")
     ///     .arg(Arg::new("flag")
     ///         .short('f')
@@ -703,9 +703,9 @@ impl ArgMatches {
     ///         .action(ArgAction::Set))
     ///     .get_matches_from(vec!["myapp", "-fzF", "-oval"]);
     ///            // ARGV indices: ^0      ^1       ^2
-    ///            // command_line indices:         ^1,2,3    ^5
+    ///            // blog_cli_arguments indices:         ^1,2,3    ^5
     ///            //
-    ///            // command_line sees the above as 'myapp -f -z -F -o val'
+    ///            // blog_cli_arguments sees the above as 'myapp -f -z -F -o val'
     ///            //                         ^0    ^1 ^2 ^3 ^4 ^5
     /// assert_eq!(m.index_of("flag"), Some(1));
     /// assert_eq!(m.index_of("flag2"), Some(3));
@@ -716,8 +716,8 @@ impl ArgMatches {
     /// One final combination of flags/options to see how they combine:
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("myapp")
     ///     .arg(Arg::new("flag")
     ///         .short('f')
@@ -733,9 +733,9 @@ impl ArgMatches {
     ///         .action(ArgAction::Set))
     ///     .get_matches_from(vec!["myapp", "-fzFoval"]);
     ///            // ARGV indices: ^0       ^1
-    ///            // command_line indices:          ^1,2,3^5
+    ///            // blog_cli_arguments indices:          ^1,2,3^5
     ///            //
-    ///            // command_line sees the above as 'myapp -f -z -F -o val'
+    ///            // blog_cli_arguments sees the above as 'myapp -f -z -F -o val'
     ///            //                         ^0    ^1 ^2 ^3 ^4 ^5
     /// assert_eq!(m.index_of("flag"), Some(1));
     /// assert_eq!(m.index_of("flag2"), Some(3));
@@ -746,8 +746,8 @@ impl ArgMatches {
     /// The last part to mention is when values are sent in multiple groups with a [delimiter].
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg};
     /// let m = Command::new("myapp")
     ///     .arg(Arg::new("option")
     ///         .short('o')
@@ -755,14 +755,14 @@ impl ArgMatches {
     ///         .num_args(1..))
     ///     .get_matches_from(vec!["myapp", "-o=val1,val2,val3"]);
     ///            // ARGV indices: ^0       ^1
-    ///            // command_line indices:             ^2   ^3   ^4
+    ///            // blog_cli_arguments indices:             ^2   ^3   ^4
     ///            //
-    ///            // command_line sees the above as 'myapp -o val1 val2 val3'
+    ///            // blog_cli_arguments sees the above as 'myapp -o val1 val2 val3'
     ///            //                         ^0    ^1 ^2   ^3   ^4
     /// assert_eq!(m.index_of("option"), Some(2));
     /// assert_eq!(m.indices_of("option").unwrap().collect::<Vec<_>>(), &[2, 3, 4]);
     /// ```
-    /// [delimiter]: command_line::Arg::value_delimiter()
+    /// [delimiter]: crate::Arg::value_delimiter()
     #[cfg_attr(debug_assertions, track_caller)]
     pub fn index_of(&self, id: &str) -> Option<usize> {
         let arg = some!(self.get_arg(id));
@@ -781,7 +781,7 @@ impl ArgMatches {
     ///
     /// <div class="warning">
     ///
-    /// *NOTE:* For more information about how command_line indices compared to argv indices, see
+    /// *NOTE:* For more information about how blog_cli_arguments indices compared to argv indices, see
     /// [`ArgMatches::index_of`]
     ///
     /// </div>
@@ -793,17 +793,17 @@ impl ArgMatches {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg};
     /// let m = Command::new("myapp")
     ///     .arg(Arg::new("option")
     ///         .short('o')
     ///         .value_delimiter(','))
     ///     .get_matches_from(vec!["myapp", "-o=val1,val2,val3"]);
     ///            // ARGV indices: ^0       ^1
-    ///            // command_line indices:             ^2   ^3   ^4
+    ///            // blog_cli_arguments indices:             ^2   ^3   ^4
     ///            //
-    ///            // command_line sees the above as 'myapp -o val1 val2 val3'
+    ///            // blog_cli_arguments sees the above as 'myapp -o val1 val2 val3'
     ///            //                         ^0    ^1 ^2   ^3   ^4
     /// assert_eq!(m.indices_of("option").unwrap().collect::<Vec<_>>(), &[2, 3, 4]);
     /// ```
@@ -811,8 +811,8 @@ impl ArgMatches {
     /// Another quick example is when flags and options are used together
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("myapp")
     ///     .arg(Arg::new("option")
     ///         .short('o')
@@ -823,7 +823,7 @@ impl ArgMatches {
     ///         .action(ArgAction::Count))
     ///     .get_matches_from(vec!["myapp", "-o", "val1", "-f", "-o", "val2", "-f"]);
     ///            // ARGV indices: ^0       ^1    ^2      ^3    ^4    ^5      ^6
-    ///            // command_line indices:                ^2      ^3          ^5      ^6
+    ///            // blog_cli_arguments indices:                ^2      ^3          ^5      ^6
     ///
     /// assert_eq!(m.indices_of("option").unwrap().collect::<Vec<_>>(), &[2, 5]);
     /// assert_eq!(m.indices_of("flag").unwrap().collect::<Vec<_>>(), &[6]);
@@ -835,8 +835,8 @@ impl ArgMatches {
     /// index.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("myapp")
     ///     .arg(Arg::new("option")
     ///         .short('o')
@@ -844,9 +844,9 @@ impl ArgMatches {
     ///         .num_args(1..))
     ///     .get_matches_from(vec!["myapp", "-o=val1,val2,val3"]);
     ///            // ARGV indices: ^0       ^1
-    ///            // command_line indices:             ^2
+    ///            // blog_cli_arguments indices:             ^2
     ///            //
-    ///            // command_line sees the above as 'myapp -o "val1,val2,val3"'
+    ///            // blog_cli_arguments sees the above as 'myapp -o "val1,val2,val3"'
     ///            //                         ^0    ^1  ^2
     /// assert_eq!(m.indices_of("option").unwrap().collect::<Vec<_>>(), &[2]);
     /// ```
@@ -873,8 +873,8 @@ impl ArgMatches {
     /// # Examples
     ///
     /// ```no_run
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, };
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, };
     ///  let app_m = Command::new("git")
     ///      .subcommand(Command::new("clone"))
     ///      .subcommand(Command::new("push"))
@@ -894,10 +894,10 @@ impl ArgMatches {
     /// with pattern matching!
     ///
     /// ```rust
-    /// # use command_line;
+    /// # use blog_cli_arguments;
     /// # use std::ffi::OsString;
     /// # use std::ffi::OsStr;
-    /// # use command_line::Command;
+    /// # use blog_cli_arguments::Command;
     /// // Assume there is an external subcommand named "subcmd"
     /// let app_m = Command::new("myprog")
     ///     .allow_external_subcommands(true)
@@ -917,7 +917,7 @@ impl ArgMatches {
     ///     _ => {},
     /// }
     /// ```
-    /// [subcommand]: command_line::Command::subcommand
+    /// [subcommand]: crate::Command::subcommand
     #[inline]
     pub fn subcommand(&self) -> Option<(&str, &Self)> {
         self.subcommand.as_ref().map(|sc| (&*sc.name, &sc.matches))
@@ -932,8 +932,8 @@ impl ArgMatches {
     /// # Examples
     ///
     /// ```no_run
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, };
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, };
     ///  let mut app_m = Command::new("git")
     ///      .subcommand(Command::new("clone"))
     ///      .subcommand(Command::new("push"))
@@ -955,9 +955,9 @@ impl ArgMatches {
     /// with pattern matching!
     ///
     /// ```rust
-    /// # use command_line;
+    /// # use blog_cli_arguments;
     /// # use std::ffi::OsString;
-    /// # use command_line::Command;
+    /// # use blog_cli_arguments::Command;
     /// // Assume there is an external subcommand named "subcmd"
     /// let mut app_m = Command::new("myprog")
     ///     .allow_external_subcommands(true)
@@ -978,7 +978,7 @@ impl ArgMatches {
     ///     _ => {},
     /// }
     /// ```
-    /// [subcommand]: command_line::Command::subcommand
+    /// [subcommand]: crate::Command::subcommand
     pub fn remove_subcommand(&mut self) -> Option<(String, Self)> {
         self.subcommand.take().map(|sc| (sc.name, sc.matches))
     }
@@ -996,8 +996,8 @@ impl ArgMatches {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let app_m = Command::new("myprog")
     ///     .arg(Arg::new("debug")
     ///         .short('d')
@@ -1021,8 +1021,8 @@ impl ArgMatches {
     /// }
     /// ```
     ///
-    /// [subcommand]: command_line::Command::subcommand
-    /// [`Command`]: command_line::Command
+    /// [subcommand]: crate::Command::subcommand
+    /// [`Command`]: crate::Command
     pub fn subcommand_matches(&self, name: &str) -> Option<&Self> {
         self.get_subcommand(name).map(|sc| &sc.matches)
     }
@@ -1034,8 +1034,8 @@ impl ArgMatches {
     /// # Examples
     ///
     /// ```no_run
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, };
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, };
     ///  let app_m = Command::new("git")
     ///      .subcommand(Command::new("clone"))
     ///      .subcommand(Command::new("push"))
@@ -1049,8 +1049,8 @@ impl ArgMatches {
     ///     _              => {}, // Either no subcommand or one not tested for...
     /// }
     /// ```
-    /// [subcommand]: command_line::Command::subcommand
-    /// [`Command`]: command_line::Command
+    /// [subcommand]: crate::Command::subcommand
+    /// [`Command`]: crate::Command
     #[inline]
     pub fn subcommand_name(&self) -> Option<&str> {
         self.subcommand.as_ref().map(|sc| &*sc.name)
@@ -1359,13 +1359,13 @@ pub(crate) struct SubCommand {
     pub(crate) matches: ArgMatches,
 }
 
-/// Iterate over [`Arg`][crate::Arg] and [`ArgGroup`][command_line::ArgGroup] [`Id`]s via [`ArgMatches::ids`].
+/// Iterate over [`Arg`][crate::Arg] and [`ArgGroup`][crate::ArgGroup] [`Id`]s via [`ArgMatches::ids`].
 ///
 /// # Examples
 ///
 /// ```rust
-/// # use command_line;
-/// # use command_line::{Command, arg, value_parser};
+/// # use blog_cli_arguments;
+/// # use blog_cli_arguments::{Command, arg, value_parser};
 ///
 /// let m = Command::new("myprog")
 ///     .arg(arg!(--color <when>)
@@ -1409,8 +1409,8 @@ impl ExactSizeIterator for IdsRef<'_> {}
 /// # Examples
 ///
 /// ```rust
-/// # use command_line;
-/// # use command_line::{Command, Arg, ArgAction};
+/// # use blog_cli_arguments;
+/// # use blog_cli_arguments::{Command, Arg, ArgAction};
 /// let mut m = Command::new("myapp")
 ///     .arg(Arg::new("output")
 ///         .short('o')
@@ -1476,8 +1476,8 @@ impl<T> Default for Values<T> {
 /// # Examples
 ///
 /// ```rust
-/// # use command_line;
-/// # use command_line::{Command, Arg, ArgAction};
+/// # use blog_cli_arguments;
+/// # use blog_cli_arguments::{Command, Arg, ArgAction};
 /// let m = Command::new("myapp")
 ///     .arg(Arg::new("output")
 ///         .short('o')
@@ -1545,8 +1545,8 @@ impl<'a, T: 'a> Default for ValuesRef<'a, T> {
 ///
 /// ```rust
 /// # #[cfg(unix)] {
-/// # use command_line;
-/// # use command_line::{Command, arg, value_parser};
+/// # use blog_cli_arguments;
+/// # use blog_cli_arguments::{Command, arg, value_parser};
 /// use std::ffi::OsString;
 /// use std::os::unix::ffi::{OsStrExt,OsStringExt};
 ///
@@ -1822,8 +1822,8 @@ impl ExactSizeIterator for RawOccurrenceValues<'_> {}
 /// # Examples
 ///
 /// ```rust
-/// # use command_line;
-/// # use command_line::{Command, Arg, ArgAction};
+/// # use blog_cli_arguments;
+/// # use blog_cli_arguments::{Command, Arg, ArgAction};
 /// let m = Command::new("myapp")
 ///     .arg(Arg::new("output")
 ///         .short('o')

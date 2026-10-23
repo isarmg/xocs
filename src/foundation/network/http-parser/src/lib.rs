@@ -314,7 +314,7 @@ impl ParserConfig {
     ///
     /// This is not allowed by spec but some browsers ignore it. So this an option for
     /// compatibility.
-    /// See https://github.com/curl/curl/issues/11605 for reference
+    /// See <https://github.com/curl/curl/issues/11605> for reference
     /// # Example
     ///
     /// ```rust

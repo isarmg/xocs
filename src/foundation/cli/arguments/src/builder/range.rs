@@ -40,8 +40,8 @@ impl ValueRange {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::builder::ValueRange;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::builder::ValueRange;
     /// let range = ValueRange::new(5);
     /// let range = ValueRange::new(5..10);
     /// let range = ValueRange::new(5..=10);
@@ -52,13 +52,13 @@ impl ValueRange {
     ///
     /// While these will panic:
     /// ```should_panic
-    /// # use command_line;
-    /// # use command_line::builder::ValueRange;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::builder::ValueRange;
     /// let range = ValueRange::new(10..5);  // Panics! (reversed)
     /// ```
     /// ```should_panic
-    /// # use command_line;
-    /// # use command_line::builder::ValueRange;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::builder::ValueRange;
     /// let range = ValueRange::new(5..5);  // Panics! (empty)
     /// ```
     pub fn new(range: impl Into<Self>) -> Self {
@@ -88,8 +88,8 @@ impl ValueRange {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::builder::ValueRange;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::builder::ValueRange;
     /// let range = ValueRange::new(5);
     /// assert!(range.takes_values());
     ///

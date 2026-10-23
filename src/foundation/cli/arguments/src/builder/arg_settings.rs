@@ -35,10 +35,10 @@ impl std::ops::BitOr for ArgFlags {
 /// methods [`Arg::setting`], [`Arg::unset_setting`], and [`Arg::is_set`]. This is what the
 /// [`Arg`] methods which accept a `bool` use internally.
 ///
-/// [`Arg`]: command_line::Arg
-/// [`Arg::setting`]: command_line::Arg::setting()
-/// [`Arg::unset_setting`]: command_line::Arg::unset_setting()
-/// [`Arg::is_set`]: command_line::Arg::is_set()
+/// [`Arg`]: crate::Arg
+/// [`Arg::setting`]: crate::Arg::setting()
+/// [`Arg::unset_setting`]: crate::Arg::unset_setting()
+/// [`Arg::is_set`]: crate::Arg::is_set()
 #[derive(Debug, PartialEq, Copy, Clone)]
 #[repr(u8)]
 pub(crate) enum ArgSettings {

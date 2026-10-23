@@ -8,7 +8,7 @@ use crate::editor::key::Key;
 use crate::editor::repr::{Decor, Formatted};
 use crate::editor::{Array, InlineTable, InternalString, RawString};
 
-/// For [`Key`]/Value pairs under a [`Table`][blog_format_configuration::editor::Table] header or inside another
+/// For [`Key`]/Value pairs under a [`crate::editor::Table`] header or inside another
 /// Value
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -210,7 +210,7 @@ impl Value {
 
     /// The location within the original document
     ///
-    /// This generally requires an [`ImDocument`][blog_format_configuration::editor::ImDocument].
+    /// This generally requires an [`crate::editor::ImDocument`].
     pub fn span(&self) -> Option<std::ops::Range<usize>> {
         match self {
             Value::String(f) => f.span(),

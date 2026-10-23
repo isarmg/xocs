@@ -4,7 +4,7 @@ use std::str::FromStr;
 use crate::editor::table::Iter;
 use crate::editor::{Item, RawString, Table};
 
-/// The root TOML [`Table`], containing [`Key`][blog_format_configuration::editor::Key]/[`Value`][blog_format_configuration::editor::Value] pairs and all other logic [`Table`]s
+/// The root TOML [`Table`], containing [`crate::editor::Key`]/[`crate::editor::Value`] pairs and all other logic [`Table`]s
 #[derive(Debug, Clone)]
 pub struct ImDocument<S> {
     pub(crate) root: Item,
@@ -118,7 +118,7 @@ impl<S> std::ops::Deref for ImDocument<S> {
     }
 }
 
-/// The editable root TOML [`Table`], containing [`Key`][blog_format_configuration::editor::Key]/[`Value`][blog_format_configuration::editor::Value] pairs and all other logic [`Table`]s
+/// The editable root TOML [`Table`], containing [`crate::editor::Key`]/[`crate::editor::Value`] pairs and all other logic [`Table`]s
 #[derive(Debug, Clone)]
 pub struct DocumentMut {
     pub(crate) root: Item,

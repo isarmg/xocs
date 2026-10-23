@@ -22,8 +22,7 @@ use crate::Result;
 /// a function that applies the operator to its operand, and the
 /// operator's associativity (infix only).
 ///
-/// For a more full-featured example, look at the [C-style Expression][crate::_topic::arithmetic#c-style-expression]
-/// topic.
+/// The example below combines prefix, postfix and infix operators.
 ///
 /// # Example
 ///
@@ -233,9 +232,9 @@ where
     /// If you don't understand why this is useful to have, this section tries
     /// to explain in more detail.
     ///
-    /// The [C-style Expressions][crate::_topic::arithmetic#c-style-expression]
-    /// example has source code for parsing the expression described below, and
-    /// can provide a clearer usage example.
+    /// The [`expression`] function demonstrates configuring binding powers for
+    /// prefix, postfix and infix operators. The same mechanism can represent
+    /// the C-style expression described below.
     ///
     /// Consider the following expression in the C language:
     ///

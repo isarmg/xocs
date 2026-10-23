@@ -1,6 +1,7 @@
+extern crate blog_cli_arguments as clap;
 use std::io::Write;
 
-use command_line::{Parser, Subcommand};
+use blog_cli_arguments::{Parser, Subcommand};
 
 fn main() -> Result<(), String> {
     loop {

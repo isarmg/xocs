@@ -28,7 +28,7 @@ error[E0277]: the trait bound `fn(bool) -> impl Future {handler}: Handler<_, _>`
    ::: axum/src/handler/mod.rs:116:8
     |
 116 |     H: Handler<T, B>,
-    |        ------------- required by this bound in `axum::routing::get`
+    |        ------------- required by this bound in `http_routing::routing::get`
 ```
 
 This error doesn't tell you _why_ your function doesn't implement

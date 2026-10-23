@@ -41,7 +41,8 @@ impl ModuleProducers {
         self.field("sdk", sdk, version);
     }
 
-    /// Returns the [`ProducerField`]s of this producers section
+    /// Returns the field records of this producers section.
+    /// Each record exposes its name and versioned values.
     pub fn fields(&self) -> &[ProducerField] {
         &self.fields
     }

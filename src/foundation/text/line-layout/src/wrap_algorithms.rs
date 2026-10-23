@@ -66,8 +66,8 @@ pub enum WrapAlgorithm {
     /// # Example
     ///
     /// ```
-    /// use textwrap::core::Word;
-    /// use textwrap::{wrap, Options, WrapAlgorithm};
+    /// use blog_text_line_layout::core::Word;
+    /// use blog_text_line_layout::{wrap, Options, WrapAlgorithm};
     ///
     /// fn stair<'a, 'b>(words: &'b [Word<'a>], _: &'b [usize]) -> Vec<&'b [Word<'a>]> {
     ///     let mut lines = Vec::new();
@@ -94,7 +94,7 @@ impl PartialEq for WrapAlgorithm {
     /// Compare two wrap algorithms.
     ///
     /// ```
-    /// use textwrap::WrapAlgorithm;
+    /// use blog_text_line_layout::WrapAlgorithm;
     ///
     /// assert_eq!(WrapAlgorithm::FirstFit, WrapAlgorithm::FirstFit);
     /// #[cfg(feature = "smawk")] {
@@ -105,7 +105,7 @@ impl PartialEq for WrapAlgorithm {
     /// Note that `WrapAlgorithm::Custom` values never compare equal:
     ///
     /// ```
-    /// use textwrap::WrapAlgorithm;
+    /// use blog_text_line_layout::WrapAlgorithm;
     ///
     /// assert_ne!(WrapAlgorithm::Custom(|words, line_widths| vec![words]),
     ///            WrapAlgorithm::Custom(|words, line_widths| vec![words]));
@@ -208,9 +208,9 @@ impl Default for WrapAlgorithm {
 /// a large gap:
 ///
 /// ```
-/// use textwrap::core::Word;
-/// use textwrap::wrap_algorithms::wrap_first_fit;
-/// use textwrap::WordSeparator;
+/// use blog_text_line_layout::core::Word;
+/// use blog_text_line_layout::wrap_algorithms::wrap_first_fit;
+/// use blog_text_line_layout::WordSeparator;
 ///
 /// // Helper to convert wrapped lines to a Vec<String>.
 /// fn lines_to_strings(lines: Vec<&[Word<'_>]>) -> Vec<String> {
@@ -230,7 +230,7 @@ impl Default for WrapAlgorithm {
 ///
 /// // We can avoid the short line if we look ahead:
 /// #[cfg(feature = "smawk")]
-/// use textwrap::wrap_algorithms::{wrap_optimal_fit, Penalties};
+/// use blog_text_line_layout::wrap_algorithms::{wrap_optimal_fit, Penalties};
 /// #[cfg(feature = "smawk")]
 /// assert_eq!(lines_to_strings(wrap_optimal_fit(&words, &[15.0], &Penalties::new()).unwrap()),
 ///            vec!["These few",
@@ -261,8 +261,8 @@ impl Default for WrapAlgorithm {
 /// on your estimates. You can model this with a program like this:
 ///
 /// ```
-/// use textwrap::core::{Fragment, Word};
-/// use textwrap::wrap_algorithms::wrap_first_fit;
+/// use blog_text_line_layout::core::{Fragment, Word};
+/// use blog_text_line_layout::wrap_algorithms::wrap_first_fit;
 ///
 /// #[derive(Debug)]
 /// struct Task<'a> {

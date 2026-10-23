@@ -729,7 +729,7 @@ macro_rules! index_type_impls {
 /// a pattern ID to be a "small index."
 ///
 /// Note that this type is defined in the
-/// [`util::primitives`](blog_text_pattern_search::automata::util::primitives) module, but it is also
+/// [`util::primitives`](crate::automata::util::primitives) module, but it is also
 /// re-exported at the crate root due to how common it is.
 #[derive(Clone, Copy, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
 #[repr(transparent)]

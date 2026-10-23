@@ -16,72 +16,19 @@ use crate::Service;
 ///
 /// # Example
 ///
-/// `BoxCloneServiceLayer` can, for example, be useful to create layers dynamically that otherwise wouldn't have
-/// the same types, when the underlying service must be clone (for example, when building a MakeService)
-/// In this example, we include a [`Timeout`] layer only if an environment variable is set. We can use
-/// `BoxCloneService` to return a consistent type regardless of runtime configuration:
+/// Box a layer when callers need a consistent service type:
 ///
 /// ```
-/// use std::time::Duration;
-/// use service_stack::{Service, ServiceBuilder, BoxError};
-/// use service_stack::util::{BoxCloneServiceLayer, BoxCloneService};
+/// use service_stack::{Identity, Service, util::BoxCloneServiceLayer};
 ///
-/// #
-/// # struct Request;
-/// # struct Response;
-/// # impl Response {
-/// #     fn new() -> Self { Self }
-/// # }
-///
-/// fn common_layer<S, T>() -> BoxCloneServiceLayer<S, T, S::Response, BoxError>
+/// fn boxed<S, R>() -> BoxCloneServiceLayer<S, R, S::Response, S::Error>
 /// where
-///     S: Service<T> + Clone + Send + 'static,
+///     S: Service<R> + Send + Clone + 'static,
 ///     S::Future: Send + 'static,
-///     S::Error: Into<BoxError> + 'static,
 /// {
-///     let builder = ServiceBuilder::new()
-///         .concurrency_limit(100);
-///
-///     if std::env::var("SET_TIMEOUT").is_ok() {
-///         let layer = builder
-///             .timeout(Duration::from_secs(30))
-///             .into_inner();
-///
-///         BoxCloneServiceLayer::new(layer)
-///     } else {
-///         let layer = builder
-///             .map_err(Into::into)
-///             .into_inner();
-///
-///         BoxCloneServiceLayer::new(layer)
-///     }
+///     BoxCloneServiceLayer::new(Identity::new())
 /// }
-///
-/// // We can clone the layer (this is true of BoxLayer as well)
-/// let boxed_clone_layer = common_layer();
-///
-/// let cloned_layer = boxed_clone_layer.clone();
-///
-/// // Using the `BoxCloneServiceLayer` we can create a `BoxCloneService`
-/// let service: BoxCloneService<Request, Response, BoxError> = ServiceBuilder::new().layer(boxed_clone_layer)
-///      .service_fn(|req: Request| async {
-///         Ok::<_, BoxError>(Response::new())
-///     });
-///
-/// # let service = assert_service(service);
-///
-/// // And we can still clone the service
-/// let cloned_service = service.clone();
-/// #
-/// # fn assert_service<S, R>(svc: S) -> S
-/// # where S: Service<R> { svc }
-///
 /// ```
-///
-/// [`Layer`]: crate::Layer
-/// [`Service`]: crate::Service
-/// [`BoxService`]: super::BoxService
-/// [`Timeout`]: crate::timeout
 pub struct BoxCloneServiceLayer<In, T, U, E> {
     boxed: Arc<dyn Layer<In, Service = BoxCloneService<T, U, E>> + Send + Sync + 'static>,
 }

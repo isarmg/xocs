@@ -26,7 +26,7 @@ impl<'a> AstNode<'a> {
         Self { kind, scope_id }
     }
 
-    /// Access the underlying struct from [`oxc_ast`].
+    /// Access the underlying struct from [`crate::syntax_tree`].
     #[inline]
     pub fn kind(&self) -> AstKind<'a> {
         self.kind

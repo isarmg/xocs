@@ -11,7 +11,7 @@ Internally, a `Regex` is composed of two DFAs. One is a "forward" DFA that
 finds the end offset of a match, where as the other is a "reverse" DFA that
 find the start offset of a match.
 
-See the [parent module](blog_text_pattern_search::automata::hybrid) for examples.
+See the [parent module](crate::automata::hybrid) for examples.
 */
 
 use crate::automata::{
@@ -718,7 +718,7 @@ impl Cache {
 /// configuration that might not make sense. For example, there are two
 /// different UTF-8 modes:
 ///
-/// * [`syntax::Config::utf8`](blog_text_pattern_search::automata::util::syntax::Config::utf8) controls
+/// * [`syntax::Config::utf8`](crate::automata::util::syntax::Config::utf8) controls
 /// whether the pattern itself can contain sub-expressions that match invalid
 /// UTF-8.
 /// * [`thompson::Config::utf8`] controls how the regex iterators themselves
@@ -853,7 +853,7 @@ impl Builder {
     }
 
     /// Set the syntax configuration for this builder using
-    /// [`syntax::Config`](blog_text_pattern_search::automata::util::syntax::Config).
+    /// [`syntax::Config`](crate::automata::util::syntax::Config).
     ///
     /// This permits setting things like case insensitivity, Unicode and multi
     /// line mode.

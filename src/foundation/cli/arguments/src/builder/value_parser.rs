@@ -9,38 +9,38 @@ use crate::util::AnyValueId;
 
 /// Parse/validate argument values
 ///
-/// Specified with [`Arg::value_parser`][command_line::Arg::value_parser].
+/// Specified with [`Arg::value_parser`][crate::Arg::value_parser].
 ///
 /// `ValueParser` defines how to convert a raw argument value into a validated and typed value for
 /// use within an application.
 ///
 /// See
-/// - [`value_parser!`][command_line::value_parser] for automatically selecting an implementation for a given type
+/// - [`value_parser!`][crate::value_parser] for automatically selecting an implementation for a given type
 /// - [`ValueParser::new`] for additional [`TypedValueParser`] that can be used
 ///
 /// # Example
 ///
 /// ```rust
-/// # use command_line;
-/// let mut cmd = command_line::Command::new("raw")
+/// # use blog_cli_arguments;
+/// let mut cmd = blog_cli_arguments::Command::new("raw")
 ///     .arg(
-///         command_line::Arg::new("color")
+///         blog_cli_arguments::Arg::new("color")
 ///             .long("color")
 ///             .value_parser(["always", "auto", "never"])
 ///             .default_value("auto")
 ///     )
 ///     .arg(
-///         command_line::Arg::new("hostname")
+///         blog_cli_arguments::Arg::new("hostname")
 ///             .long("hostname")
-///             .value_parser(command_line::builder::NonEmptyStringValueParser::new())
-///             .action(command_line::ArgAction::Set)
+///             .value_parser(blog_cli_arguments::builder::NonEmptyStringValueParser::new())
+///             .action(blog_cli_arguments::ArgAction::Set)
 ///             .required(true)
 ///     )
 ///     .arg(
-///         command_line::Arg::new("port")
+///         blog_cli_arguments::Arg::new("port")
 ///             .long("port")
-///             .value_parser(command_line::value_parser!(u16).range(3000..))
-///             .action(command_line::ArgAction::Set)
+///             .value_parser(blog_cli_arguments::value_parser!(u16).range(3000..))
+///             .action(blog_cli_arguments::ArgAction::Set)
 ///             .required(true)
 ///     );
 ///
@@ -87,7 +87,7 @@ impl ValueParser {
     /// # Example
     ///
     /// ```rust
-    /// # use command_line;
+    /// # use blog_cli_arguments;
     /// type EnvVar = (String, Option<String>);
     /// fn parse_env_var(env: &str) -> Result<EnvVar, std::io::Error> {
     ///     if let Some((var, value)) = env.split_once('=') {
@@ -97,10 +97,10 @@ impl ValueParser {
     ///     }
     /// }
     ///
-    /// let mut cmd = command_line::Command::new("raw")
+    /// let mut cmd = blog_cli_arguments::Command::new("raw")
     ///     .arg(
-    ///         command_line::Arg::new("env")
-    ///             .value_parser(command_line::builder::ValueParser::new(parse_env_var))
+    ///         blog_cli_arguments::Arg::new("env")
+    ///             .value_parser(blog_cli_arguments::builder::ValueParser::new(parse_env_var))
     ///             .required(true)
     ///     );
     ///
@@ -125,11 +125,11 @@ impl ValueParser {
     /// # Example
     ///
     /// ```rust
-    /// # use command_line;
-    /// let mut cmd = command_line::Command::new("raw")
+    /// # use blog_cli_arguments;
+    /// let mut cmd = blog_cli_arguments::Command::new("raw")
     ///     .arg(
-    ///         command_line::Arg::new("download")
-    ///             .value_parser(command_line::value_parser!(bool))
+    ///         blog_cli_arguments::Arg::new("download")
+    ///             .value_parser(blog_cli_arguments::value_parser!(bool))
     ///             .required(true)
     ///     );
     ///
@@ -152,11 +152,11 @@ impl ValueParser {
     /// # Example
     ///
     /// ```rust
-    /// # use command_line;
-    /// let mut cmd = command_line::Command::new("raw")
+    /// # use blog_cli_arguments;
+    /// let mut cmd = blog_cli_arguments::Command::new("raw")
     ///     .arg(
-    ///         command_line::Arg::new("port")
-    ///             .value_parser(command_line::value_parser!(String))
+    ///         blog_cli_arguments::Arg::new("port")
+    ///             .value_parser(blog_cli_arguments::value_parser!(String))
     ///             .required(true)
     ///     );
     ///
@@ -175,8 +175,8 @@ impl ValueParser {
     ///
     /// ```rust
     /// # #[cfg(unix)] {
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, builder::ValueParser};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, builder::ValueParser};
     /// use std::ffi::OsString;
     /// use std::os::unix::ffi::{OsStrExt,OsStringExt};
     /// let r = Command::new("myprog")
@@ -206,13 +206,13 @@ impl ValueParser {
     /// # Example
     ///
     /// ```rust
-    /// # use command_line;
+    /// # use blog_cli_arguments;
     /// # use std::path::PathBuf;
     /// # use std::path::Path;
-    /// let mut cmd = command_line::Command::new("raw")
+    /// let mut cmd = blog_cli_arguments::Command::new("raw")
     ///     .arg(
-    ///         command_line::Arg::new("output")
-    ///             .value_parser(command_line::value_parser!(PathBuf))
+    ///         blog_cli_arguments::Arg::new("output")
+    ///             .value_parser(blog_cli_arguments::value_parser!(PathBuf))
     ///             .required(true)
     ///     );
     ///
@@ -273,13 +273,13 @@ impl ValueParser {
 /// # Example
 ///
 /// ```rust
-/// # use command_line;
-/// let mut cmd = command_line::Command::new("raw")
+/// # use blog_cli_arguments;
+/// let mut cmd = blog_cli_arguments::Command::new("raw")
 ///     .arg(
-///         command_line::Arg::new("hostname")
+///         blog_cli_arguments::Arg::new("hostname")
 ///             .long("hostname")
-///             .value_parser(command_line::builder::NonEmptyStringValueParser::new())
-///             .action(command_line::ArgAction::Set)
+///             .value_parser(blog_cli_arguments::builder::NonEmptyStringValueParser::new())
+///             .action(blog_cli_arguments::ArgAction::Set)
 ///             .required(true)
 ///     );
 ///
@@ -315,13 +315,13 @@ impl From<_AnonymousValueParser> for ValueParser {
 /// # Examples
 ///
 /// ```rust
-/// # use command_line;
-/// let mut cmd = command_line::Command::new("raw")
+/// # use blog_cli_arguments;
+/// let mut cmd = blog_cli_arguments::Command::new("raw")
 ///     .arg(
-///         command_line::Arg::new("port")
+///         blog_cli_arguments::Arg::new("port")
 ///             .long("port")
 ///             .value_parser(3000..4000)
-///             .action(command_line::ArgAction::Set)
+///             .action(blog_cli_arguments::ArgAction::Set)
 ///             .required(true)
 ///     );
 ///
@@ -346,13 +346,13 @@ impl From<std::ops::Range<i64>> for ValueParser {
 /// # Examples
 ///
 /// ```rust
-/// # use command_line;
-/// let mut cmd = command_line::Command::new("raw")
+/// # use blog_cli_arguments;
+/// let mut cmd = blog_cli_arguments::Command::new("raw")
 ///     .arg(
-///         command_line::Arg::new("port")
+///         blog_cli_arguments::Arg::new("port")
 ///             .long("port")
 ///             .value_parser(3000..=4000)
-///             .action(command_line::ArgAction::Set)
+///             .action(blog_cli_arguments::ArgAction::Set)
 ///             .required(true)
 ///     );
 ///
@@ -377,13 +377,13 @@ impl From<std::ops::RangeInclusive<i64>> for ValueParser {
 /// # Examples
 ///
 /// ```rust
-/// # use command_line;
-/// let mut cmd = command_line::Command::new("raw")
+/// # use blog_cli_arguments;
+/// let mut cmd = blog_cli_arguments::Command::new("raw")
 ///     .arg(
-///         command_line::Arg::new("port")
+///         blog_cli_arguments::Arg::new("port")
 ///             .long("port")
 ///             .value_parser(3000..)
-///             .action(command_line::ArgAction::Set)
+///             .action(blog_cli_arguments::ArgAction::Set)
 ///             .required(true)
 ///     );
 ///
@@ -408,13 +408,13 @@ impl From<std::ops::RangeFrom<i64>> for ValueParser {
 /// # Examples
 ///
 /// ```rust
-/// # use command_line;
-/// let mut cmd = command_line::Command::new("raw")
+/// # use blog_cli_arguments;
+/// let mut cmd = blog_cli_arguments::Command::new("raw")
 ///     .arg(
-///         command_line::Arg::new("port")
+///         blog_cli_arguments::Arg::new("port")
 ///             .long("port")
 ///             .value_parser(..3000)
-///             .action(command_line::ArgAction::Set)
+///             .action(blog_cli_arguments::ArgAction::Set)
 ///             .required(true)
 ///     );
 ///
@@ -439,13 +439,13 @@ impl From<std::ops::RangeTo<i64>> for ValueParser {
 /// # Examples
 ///
 /// ```rust
-/// # use command_line;
-/// let mut cmd = command_line::Command::new("raw")
+/// # use blog_cli_arguments;
+/// let mut cmd = blog_cli_arguments::Command::new("raw")
 ///     .arg(
-///         command_line::Arg::new("port")
+///         blog_cli_arguments::Arg::new("port")
 ///             .long("port")
 ///             .value_parser(..=3000)
-///             .action(command_line::ArgAction::Set)
+///             .action(blog_cli_arguments::ArgAction::Set)
 ///             .required(true)
 ///     );
 ///
@@ -470,13 +470,13 @@ impl From<std::ops::RangeToInclusive<i64>> for ValueParser {
 /// # Examples
 ///
 /// ```rust
-/// # use command_line;
-/// let mut cmd = command_line::Command::new("raw")
+/// # use blog_cli_arguments;
+/// let mut cmd = blog_cli_arguments::Command::new("raw")
 ///     .arg(
-///         command_line::Arg::new("port")
+///         blog_cli_arguments::Arg::new("port")
 ///             .long("port")
 ///             .value_parser(..)
-///             .action(command_line::ArgAction::Set)
+///             .action(blog_cli_arguments::ArgAction::Set)
 ///             .required(true)
 ///     );
 ///
@@ -495,15 +495,15 @@ impl From<std::ops::RangeFull> for ValueParser {
 /// Create a [`ValueParser`] with [`PossibleValuesParser`]
 ///
 /// See [`PossibleValuesParser`] for more flexibility in creating the
-/// [`PossibleValue`][command_line::builder::PossibleValue]s.
+/// [`PossibleValue`][crate::builder::PossibleValue]s.
 ///
 /// # Examples
 ///
 /// ```rust
-/// # use command_line;
-/// let mut cmd = command_line::Command::new("raw")
+/// # use blog_cli_arguments;
+/// let mut cmd = blog_cli_arguments::Command::new("raw")
 ///     .arg(
-///         command_line::Arg::new("color")
+///         blog_cli_arguments::Arg::new("color")
 ///             .long("color")
 ///             .value_parser(["always", "auto", "never"])
 ///             .default_value("auto")
@@ -530,16 +530,16 @@ where
 /// Create a [`ValueParser`] with [`PossibleValuesParser`]
 ///
 /// See [`PossibleValuesParser`] for more flexibility in creating the
-/// [`PossibleValue`][command_line::builder::PossibleValue]s.
+/// [`PossibleValue`][crate::builder::PossibleValue]s.
 ///
 /// # Examples
 ///
 /// ```rust
-/// # use command_line;
+/// # use blog_cli_arguments;
 /// let possible = vec!["always", "auto", "never"];
-/// let mut cmd = command_line::Command::new("raw")
+/// let mut cmd = blog_cli_arguments::Command::new("raw")
 ///     .arg(
-///         command_line::Arg::new("color")
+///         blog_cli_arguments::Arg::new("color")
 ///             .long("color")
 ///             .value_parser(possible)
 ///             .default_value("auto")
@@ -664,37 +664,37 @@ where
 /// - [`TypedValueParser::map`] or [`TypedValueParser::try_map`] to adapt an existing `TypedValueParser`
 ///
 /// See `ValueParserFactory` to register `TypedValueParser::Value` with
-/// [`value_parser!`][command_line::value_parser].
+/// [`value_parser!`][crate::value_parser].
 ///
 /// # Example
 ///
 /// ```rust
 /// # #[cfg(feature = "error-context")] {
-/// # use command_line;
-/// # use command_line::error::ErrorKind;
-/// # use command_line::error::ContextKind;
-/// # use command_line::error::ContextValue;
+/// # use blog_cli_arguments;
+/// # use blog_cli_arguments::error::ErrorKind;
+/// # use blog_cli_arguments::error::ContextKind;
+/// # use blog_cli_arguments::error::ContextValue;
 /// #[derive(Clone)]
 /// struct Custom(u32);
 ///
 /// #[derive(Clone)]
 /// struct CustomValueParser;
 ///
-/// impl command_line::builder::TypedValueParser for CustomValueParser {
+/// impl blog_cli_arguments::builder::TypedValueParser for CustomValueParser {
 ///     type Value = Custom;
 ///
 ///     fn parse_ref(
 ///         &self,
-///         cmd: &command_line::Command,
-///         arg: Option<&command_line::Arg>,
+///         cmd: &blog_cli_arguments::Command,
+///         arg: Option<&blog_cli_arguments::Arg>,
 ///         value: &std::ffi::OsStr,
-///     ) -> Result<Self::Value, command_line::Error> {
-///         let inner = command_line::value_parser!(u32);
+///     ) -> Result<Self::Value, blog_cli_arguments::Error> {
+///         let inner = blog_cli_arguments::value_parser!(u32);
 ///         let val = inner.parse_ref(cmd, arg, value)?;
 ///
 ///         const INVALID_VALUE: u32 = 10;
 ///         if val == INVALID_VALUE {
-///             let mut err = command_line::Error::new(ErrorKind::ValueValidation)
+///             let mut err = blog_cli_arguments::Error::new(ErrorKind::ValueValidation)
 ///                 .with_cmd(cmd);
 ///             if let Some(arg) = arg {
 ///                 err.insert(ContextKind::InvalidArg, ContextValue::String(arg.to_string()));
@@ -775,16 +775,16 @@ pub trait TypedValueParser: Clone + Send + Sync + 'static {
     /// # Example
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::Command;
-    /// # use command_line::Arg;
-    /// # use command_line::builder::TypedValueParser as _;
-    /// # use command_line::builder::BoolishValueParser;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Command;
+    /// # use blog_cli_arguments::Arg;
+    /// # use blog_cli_arguments::builder::TypedValueParser as _;
+    /// # use blog_cli_arguments::builder::BoolishValueParser;
     /// let cmd = Command::new("mycmd")
     ///     .arg(
     ///         Arg::new("flag")
     ///             .long("flag")
-    ///             .action(command_line::ArgAction::SetTrue)
+    ///             .action(blog_cli_arguments::ArgAction::SetTrue)
     ///             .value_parser(
     ///                 BoolishValueParser::new()
     ///                 .map(|b| -> usize {
@@ -820,15 +820,15 @@ pub trait TypedValueParser: Clone + Send + Sync + 'static {
     /// # Example
     ///
     /// ```rust
-    /// # use command_line;
+    /// # use blog_cli_arguments;
     /// # use std::ffi::OsString;
     /// # use std::ffi::OsStr;
     /// # use std::path::PathBuf;
     /// # use std::path::Path;
-    /// # use command_line::Command;
-    /// # use command_line::Arg;
-    /// # use command_line::builder::TypedValueParser as _;
-    /// # use command_line::builder::OsStringValueParser;
+    /// # use blog_cli_arguments::Command;
+    /// # use blog_cli_arguments::Arg;
+    /// # use blog_cli_arguments::builder::TypedValueParser as _;
+    /// # use blog_cli_arguments::builder::OsStringValueParser;
     /// let cmd = Command::new("mycmd")
     ///     .arg(
     ///         Arg::new("flag")
@@ -1037,7 +1037,7 @@ impl Default for PathBufValueParser {
     }
 }
 
-/// Parse an [`ValueEnum`][command_line::ValueEnum] value.
+/// Parse an [`ValueEnum`][crate::ValueEnum] value.
 ///
 /// See also:
 /// - [`PossibleValuesParser`]
@@ -1045,18 +1045,18 @@ impl Default for PathBufValueParser {
 /// # Example
 ///
 /// ```rust
-/// # use command_line;
+/// # use blog_cli_arguments;
 /// # use std::ffi::OsStr;
-/// # use command_line::ColorChoice;
-/// # use command_line::builder::TypedValueParser;
-/// # let cmd = command_line::Command::new("test");
+/// # use blog_cli_arguments::ColorChoice;
+/// # use blog_cli_arguments::builder::TypedValueParser;
+/// # let cmd = blog_cli_arguments::Command::new("test");
 /// # let arg = None;
 ///
 /// // Usage
-/// let mut cmd = command_line::Command::new("raw")
+/// let mut cmd = blog_cli_arguments::Command::new("raw")
 ///     .arg(
-///         command_line::Arg::new("color")
-///             .value_parser(command_line::builder::EnumValueParser::<ColorChoice>::new())
+///         blog_cli_arguments::Arg::new("color")
+///             .value_parser(blog_cli_arguments::builder::EnumValueParser::<ColorChoice>::new())
 ///             .required(true)
 ///     );
 ///
@@ -1066,9 +1066,9 @@ impl Default for PathBufValueParser {
 /// assert_eq!(port, ColorChoice::Always);
 ///
 /// // Semantics
-/// let value_parser = command_line::builder::EnumValueParser::<ColorChoice>::new();
+/// let value_parser = blog_cli_arguments::builder::EnumValueParser::<ColorChoice>::new();
 /// // or
-/// let value_parser = command_line::value_parser!(ColorChoice);
+/// let value_parser = blog_cli_arguments::value_parser!(ColorChoice);
 /// assert!(value_parser.parse_ref(&cmd, arg, OsStr::new("random")).is_err());
 /// assert!(value_parser.parse_ref(&cmd, arg, OsStr::new("")).is_err());
 /// assert_eq!(value_parser.parse_ref(&cmd, arg, OsStr::new("always")).unwrap(), ColorChoice::Always);
@@ -1081,7 +1081,7 @@ pub struct EnumValueParser<E: crate::ValueEnum + Clone + Send + Sync + 'static>(
 );
 
 impl<E: crate::ValueEnum + Clone + Send + Sync + 'static> EnumValueParser<E> {
-    /// Parse an [`ValueEnum`][command_line::ValueEnum]
+    /// Parse an [`ValueEnum`][crate::ValueEnum]
     pub fn new() -> Self {
         let phantom: std::marker::PhantomData<E> = Default::default();
         Self(phantom)
@@ -1153,22 +1153,22 @@ impl<E: crate::ValueEnum + Clone + Send + Sync + 'static> Default for EnumValueP
     }
 }
 
-/// Verify the value is from an enumerated set of [`PossibleValue`][command_line::builder::PossibleValue].
+/// Verify the value is from an enumerated set of [`PossibleValue`][crate::builder::PossibleValue].
 ///
 /// See also:
-/// - [`EnumValueParser`] for directly supporting [`ValueEnum`][command_line::ValueEnum] types
+/// - [`EnumValueParser`] for directly supporting [`ValueEnum`][crate::ValueEnum] types
 /// - [`TypedValueParser::map`] for adapting values to a more specialized type, like an external
-///   enums that can't implement [`ValueEnum`][command_line::ValueEnum]
+///   enums that can't implement [`ValueEnum`][crate::ValueEnum]
 ///
 /// # Example
 ///
 /// Usage:
 /// ```rust
-/// # use command_line;
-/// let mut cmd = command_line::Command::new("raw")
+/// # use blog_cli_arguments;
+/// let mut cmd = blog_cli_arguments::Command::new("raw")
 ///     .arg(
-///         command_line::Arg::new("color")
-///             .value_parser(command_line::builder::PossibleValuesParser::new(["always", "auto", "never"]))
+///         blog_cli_arguments::Arg::new("color")
+///             .value_parser(blog_cli_arguments::builder::PossibleValuesParser::new(["always", "auto", "never"]))
 ///             .required(true)
 ///     );
 ///
@@ -1180,12 +1180,12 @@ impl<E: crate::ValueEnum + Clone + Send + Sync + 'static> Default for EnumValueP
 ///
 /// Semantics:
 /// ```rust
-/// # use command_line;
+/// # use blog_cli_arguments;
 /// # use std::ffi::OsStr;
-/// # use command_line::builder::TypedValueParser;
-/// # let cmd = command_line::Command::new("test");
+/// # use blog_cli_arguments::builder::TypedValueParser;
+/// # let cmd = blog_cli_arguments::Command::new("test");
 /// # let arg = None;
-/// let value_parser = command_line::builder::PossibleValuesParser::new(["always", "auto", "never"]);
+/// let value_parser = blog_cli_arguments::builder::PossibleValuesParser::new(["always", "auto", "never"]);
 /// assert!(value_parser.parse_ref(&cmd, arg, OsStr::new("random")).is_err());
 /// assert!(value_parser.parse_ref(&cmd, arg, OsStr::new("")).is_err());
 /// assert_eq!(value_parser.parse_ref(&cmd, arg, OsStr::new("always")).unwrap(), "always");
@@ -1196,7 +1196,7 @@ impl<E: crate::ValueEnum + Clone + Send + Sync + 'static> Default for EnumValueP
 pub struct PossibleValuesParser(Vec<super::PossibleValue>);
 
 impl PossibleValuesParser {
-    /// Verify the value is from an enumerated set of [`PossibleValue`][command_line::builder::PossibleValue].
+    /// Verify the value is from an enumerated set of [`PossibleValue`][crate::builder::PossibleValue].
     pub fn new(values: impl Into<Self>) -> Self {
         values.into()
     }
@@ -1270,8 +1270,8 @@ where
 /// <div class="warning">
 ///
 /// **NOTE:** To capture negative values, you will also need to set
-/// [`Arg::allow_negative_numbers`][command_line::Arg::allow_negative_numbers] or
-/// [`Arg::allow_hyphen_values`][command_line::Arg::allow_hyphen_values].
+/// [`Arg::allow_negative_numbers`][crate::Arg::allow_negative_numbers] or
+/// [`Arg::allow_hyphen_values`][crate::Arg::allow_hyphen_values].
 ///
 /// </div>
 ///
@@ -1279,13 +1279,13 @@ where
 ///
 /// Usage:
 /// ```rust
-/// # use command_line;
-/// let mut cmd = command_line::Command::new("raw")
+/// # use blog_cli_arguments;
+/// let mut cmd = blog_cli_arguments::Command::new("raw")
 ///     .arg(
-///         command_line::Arg::new("port")
+///         blog_cli_arguments::Arg::new("port")
 ///             .long("port")
-///             .value_parser(command_line::value_parser!(u16).range(3000..))
-///             .action(command_line::ArgAction::Set)
+///             .value_parser(blog_cli_arguments::value_parser!(u16).range(3000..))
+///             .action(blog_cli_arguments::ArgAction::Set)
 ///             .required(true)
 ///     );
 ///
@@ -1297,12 +1297,12 @@ where
 ///
 /// Semantics:
 /// ```rust
-/// # use command_line;
+/// # use blog_cli_arguments;
 /// # use std::ffi::OsStr;
-/// # use command_line::builder::TypedValueParser;
-/// # let cmd = command_line::Command::new("test");
+/// # use blog_cli_arguments::builder::TypedValueParser;
+/// # let cmd = blog_cli_arguments::Command::new("test");
 /// # let arg = None;
-/// let value_parser = command_line::builder::RangedI64ValueParser::<i32>::new().range(-1..200);
+/// let value_parser = blog_cli_arguments::builder::RangedI64ValueParser::<i32>::new().range(-1..200);
 /// assert!(value_parser.parse_ref(&cmd, arg, OsStr::new("random")).is_err());
 /// assert!(value_parser.parse_ref(&cmd, arg, OsStr::new("")).is_err());
 /// assert!(value_parser.parse_ref(&cmd, arg, OsStr::new("-200")).is_err());
@@ -1478,13 +1478,13 @@ impl<T: TryFrom<i64> + Clone + Send + Sync> Default for RangedI64ValueParser<T> 
 ///
 /// Usage:
 /// ```rust
-/// # use command_line;
-/// let mut cmd = command_line::Command::new("raw")
+/// # use blog_cli_arguments;
+/// let mut cmd = blog_cli_arguments::Command::new("raw")
 ///     .arg(
-///         command_line::Arg::new("port")
+///         blog_cli_arguments::Arg::new("port")
 ///             .long("port")
-///             .value_parser(command_line::value_parser!(u64).range(3000..))
-///             .action(command_line::ArgAction::Set)
+///             .value_parser(blog_cli_arguments::value_parser!(u64).range(3000..))
+///             .action(blog_cli_arguments::ArgAction::Set)
 ///             .required(true)
 ///     );
 ///
@@ -1496,12 +1496,12 @@ impl<T: TryFrom<i64> + Clone + Send + Sync> Default for RangedI64ValueParser<T> 
 ///
 /// Semantics:
 /// ```rust
-/// # use command_line;
+/// # use blog_cli_arguments;
 /// # use std::ffi::OsStr;
-/// # use command_line::builder::TypedValueParser;
-/// # let cmd = command_line::Command::new("test");
+/// # use blog_cli_arguments::builder::TypedValueParser;
+/// # let cmd = blog_cli_arguments::Command::new("test");
 /// # let arg = None;
-/// let value_parser = command_line::builder::RangedU64ValueParser::<u32>::new().range(0..200);
+/// let value_parser = blog_cli_arguments::builder::RangedU64ValueParser::<u32>::new().range(0..200);
 /// assert!(value_parser.parse_ref(&cmd, arg, OsStr::new("random")).is_err());
 /// assert!(value_parser.parse_ref(&cmd, arg, OsStr::new("")).is_err());
 /// assert!(value_parser.parse_ref(&cmd, arg, OsStr::new("-200")).is_err());
@@ -1743,11 +1743,11 @@ impl Default for BoolValueParser {
 ///
 /// Usage:
 /// ```rust
-/// # use command_line;
-/// let mut cmd = command_line::Command::new("raw")
+/// # use blog_cli_arguments;
+/// let mut cmd = blog_cli_arguments::Command::new("raw")
 ///     .arg(
-///         command_line::Arg::new("append")
-///             .value_parser(command_line::builder::FalseyValueParser::new())
+///         blog_cli_arguments::Arg::new("append")
+///             .value_parser(blog_cli_arguments::builder::FalseyValueParser::new())
 ///             .required(true)
 ///     );
 ///
@@ -1759,12 +1759,12 @@ impl Default for BoolValueParser {
 ///
 /// Semantics:
 /// ```rust
-/// # use command_line;
+/// # use blog_cli_arguments;
 /// # use std::ffi::OsStr;
-/// # use command_line::builder::TypedValueParser;
-/// # let cmd = command_line::Command::new("test");
+/// # use blog_cli_arguments::builder::TypedValueParser;
+/// # let cmd = blog_cli_arguments::Command::new("test");
 /// # let arg = None;
-/// let value_parser = command_line::builder::FalseyValueParser::new();
+/// let value_parser = blog_cli_arguments::builder::FalseyValueParser::new();
 /// assert_eq!(value_parser.parse_ref(&cmd, arg, OsStr::new("random")).unwrap(), true);
 /// assert_eq!(value_parser.parse_ref(&cmd, arg, OsStr::new("100")).unwrap(), true);
 /// assert_eq!(value_parser.parse_ref(&cmd, arg, OsStr::new("")).unwrap(), false);
@@ -1838,11 +1838,11 @@ impl Default for FalseyValueParser {
 ///
 /// Usage:
 /// ```rust
-/// # use command_line;
-/// let mut cmd = command_line::Command::new("raw")
+/// # use blog_cli_arguments;
+/// let mut cmd = blog_cli_arguments::Command::new("raw")
 ///     .arg(
-///         command_line::Arg::new("append")
-///             .value_parser(command_line::builder::BoolishValueParser::new())
+///         blog_cli_arguments::Arg::new("append")
+///             .value_parser(blog_cli_arguments::builder::BoolishValueParser::new())
 ///             .required(true)
 ///     );
 ///
@@ -1854,12 +1854,12 @@ impl Default for FalseyValueParser {
 ///
 /// Semantics:
 /// ```rust
-/// # use command_line;
+/// # use blog_cli_arguments;
 /// # use std::ffi::OsStr;
-/// # use command_line::builder::TypedValueParser;
-/// # let cmd = command_line::Command::new("test");
+/// # use blog_cli_arguments::builder::TypedValueParser;
+/// # let cmd = blog_cli_arguments::Command::new("test");
 /// # let arg = None;
-/// let value_parser = command_line::builder::BoolishValueParser::new();
+/// let value_parser = blog_cli_arguments::builder::BoolishValueParser::new();
 /// assert!(value_parser.parse_ref(&cmd, arg, OsStr::new("random")).is_err());
 /// assert!(value_parser.parse_ref(&cmd, arg, OsStr::new("")).is_err());
 /// assert!(value_parser.parse_ref(&cmd, arg, OsStr::new("100")).is_err());
@@ -1938,11 +1938,11 @@ impl Default for BoolishValueParser {
 ///
 /// Usage:
 /// ```rust
-/// # use command_line;
-/// let mut cmd = command_line::Command::new("raw")
+/// # use blog_cli_arguments;
+/// let mut cmd = blog_cli_arguments::Command::new("raw")
 ///     .arg(
-///         command_line::Arg::new("append")
-///             .value_parser(command_line::builder::NonEmptyStringValueParser::new())
+///         blog_cli_arguments::Arg::new("append")
+///             .value_parser(blog_cli_arguments::builder::NonEmptyStringValueParser::new())
 ///             .required(true)
 ///     );
 ///
@@ -1954,12 +1954,12 @@ impl Default for BoolishValueParser {
 ///
 /// Semantics:
 /// ```rust
-/// # use command_line;
+/// # use blog_cli_arguments;
 /// # use std::ffi::OsStr;
-/// # use command_line::builder::TypedValueParser;
-/// # let cmd = command_line::Command::new("test");
+/// # use blog_cli_arguments::builder::TypedValueParser;
+/// # let cmd = blog_cli_arguments::Command::new("test");
 /// # let arg = None;
-/// let value_parser = command_line::builder::NonEmptyStringValueParser::new();
+/// let value_parser = blog_cli_arguments::builder::NonEmptyStringValueParser::new();
 /// assert_eq!(value_parser.parse_ref(&cmd, arg, OsStr::new("random")).unwrap(), "random");
 /// assert!(value_parser.parse_ref(&cmd, arg, OsStr::new("")).is_err());
 /// ```
@@ -2122,16 +2122,16 @@ where
     }
 }
 
-/// When encountered, report [`ErrorKind::UnknownArgument`][command_line::error::ErrorKind::UnknownArgument]
+/// When encountered, report [`ErrorKind::UnknownArgument`][crate::error::ErrorKind::UnknownArgument]
 ///
 /// Useful to help users migrate, either from old versions or similar tools.
 ///
 /// # Examples
 ///
 /// ```rust
-/// # use command_line;
-/// # use command_line::Command;
-/// # use command_line::Arg;
+/// # use blog_cli_arguments;
+/// # use blog_cli_arguments::Command;
+/// # use blog_cli_arguments::Arg;
 /// let cmd = Command::new("mycmd")
 ///     .args([
 ///         Arg::new("current-dir")
@@ -2139,7 +2139,7 @@ where
 ///         Arg::new("current-dir-unknown")
 ///             .long("cwd")
 ///             .aliases(["current-dir", "directory", "working-directory", "root"])
-///             .value_parser(command_line::builder::UnknownArgumentValueParser::suggest_arg("-C"))
+///             .value_parser(blog_cli_arguments::builder::UnknownArgumentValueParser::suggest_arg("-C"))
 ///             .hide(true),
 ///     ]);
 ///
@@ -2153,7 +2153,7 @@ where
 ///
 /// // Use one of the invalid versions
 /// let err = cmd.try_get_matches_from(["mycmd", "--cwd", ".."]).unwrap_err();
-/// assert_eq!(err.kind(), command_line::error::ErrorKind::UnknownArgument);
+/// assert_eq!(err.kind(), blog_cli_arguments::error::ErrorKind::UnknownArgument);
 /// ```
 #[derive(Clone, Debug)]
 pub struct UnknownArgumentValueParser {
@@ -2238,16 +2238,16 @@ impl TypedValueParser for UnknownArgumentValueParser {
     }
 }
 
-/// Register a type with [`value_parser!`][command_line::value_parser!]
+/// Register a type with [`value_parser!`][crate::value_parser!]
 ///
 /// # Example
 ///
 /// ```rust
-/// # use command_line;
+/// # use blog_cli_arguments;
 /// #[derive(Copy, Clone, Debug)]
 /// pub struct Custom(u32);
 ///
-/// impl command_line::builder::ValueParserFactory for Custom {
+/// impl blog_cli_arguments::builder::ValueParserFactory for Custom {
 ///     type Parser = CustomValueParser;
 ///     fn value_parser() -> Self::Parser {
 ///         CustomValueParser
@@ -2256,22 +2256,22 @@ impl TypedValueParser for UnknownArgumentValueParser {
 ///
 /// #[derive(Clone, Debug)]
 /// pub struct CustomValueParser;
-/// impl command_line::builder::TypedValueParser for CustomValueParser {
+/// impl blog_cli_arguments::builder::TypedValueParser for CustomValueParser {
 ///     type Value = Custom;
 ///
 ///     fn parse_ref(
 ///         &self,
-///         cmd: &command_line::Command,
-///         arg: Option<&command_line::Arg>,
+///         cmd: &blog_cli_arguments::Command,
+///         arg: Option<&blog_cli_arguments::Arg>,
 ///         value: &std::ffi::OsStr,
-///     ) -> Result<Self::Value, command_line::Error> {
-///         let inner = command_line::value_parser!(u32);
+///     ) -> Result<Self::Value, blog_cli_arguments::Error> {
+///         let inner = blog_cli_arguments::value_parser!(u32);
 ///         let val = inner.parse_ref(cmd, arg, value)?;
 ///         Ok(Custom(val))
 ///     }
 /// }
 ///
-/// let parser: CustomValueParser = command_line::value_parser!(Custom);
+/// let parser: CustomValueParser = blog_cli_arguments::value_parser!(Custom);
 /// ```
 pub trait ValueParserFactory {
     /// Generated parser, usually [`ValueParser`].
@@ -2573,7 +2573,7 @@ pub mod impl_prelude {
 /// - [`ValueParserFactory` types][ValueParserFactory], including
 ///   - [Native types][ValueParser]: `bool`, `String`, `OsString`, `PathBuf`
 ///   - [Ranged numeric types][RangedI64ValueParser]: `u8`, `i8`, `u16`, `i16`, `u32`, `i32`, `u64`, `i64`
-/// - [`ValueEnum` types][command_line::ValueEnum]
+/// - [`ValueEnum` types][crate::ValueEnum]
 /// - [`From<OsString>` types][std::convert::From] and [`From<&OsStr>` types][std::convert::From]
 /// - [`From<String>` types][std::convert::From] and [`From<&str>` types][std::convert::From]
 /// - [`FromStr` types][std::str::FromStr], including usize, isize
@@ -2582,13 +2582,13 @@ pub mod impl_prelude {
 ///
 /// Usage:
 /// ```rust
-/// # use command_line;
+/// # use blog_cli_arguments;
 /// # use std::path::PathBuf;
 /// # use std::path::Path;
-/// let mut cmd = command_line::Command::new("raw")
+/// let mut cmd = blog_cli_arguments::Command::new("raw")
 ///     .arg(
-///         command_line::Arg::new("output")
-///             .value_parser(command_line::value_parser!(PathBuf))
+///         blog_cli_arguments::Arg::new("output")
+///             .value_parser(blog_cli_arguments::value_parser!(PathBuf))
 ///             .required(true)
 ///     );
 ///
@@ -2600,24 +2600,24 @@ pub mod impl_prelude {
 ///
 /// Example mappings:
 /// ```rust
-/// # use command_line;
-/// # use command_line::ColorChoice;
+/// # use blog_cli_arguments;
+/// # use blog_cli_arguments::ColorChoice;
 /// // Built-in types
-/// let parser = command_line::value_parser!(String);
+/// let parser = blog_cli_arguments::value_parser!(String);
 /// assert_eq!(format!("{parser:?}"), "ValueParser::string");
-/// let parser = command_line::value_parser!(std::ffi::OsString);
+/// let parser = blog_cli_arguments::value_parser!(std::ffi::OsString);
 /// assert_eq!(format!("{parser:?}"), "ValueParser::os_string");
-/// let parser = command_line::value_parser!(std::path::PathBuf);
+/// let parser = blog_cli_arguments::value_parser!(std::path::PathBuf);
 /// assert_eq!(format!("{parser:?}"), "ValueParser::path_buf");
-/// command_line::value_parser!(u16).range(3000..);
-/// command_line::value_parser!(u64).range(3000..);
+/// blog_cli_arguments::value_parser!(u16).range(3000..);
+/// blog_cli_arguments::value_parser!(u64).range(3000..);
 ///
 /// // FromStr types
-/// let parser = command_line::value_parser!(usize);
+/// let parser = blog_cli_arguments::value_parser!(usize);
 /// assert_eq!(format!("{parser:?}"), "_AnonymousValueParser(ValueParser::other(usize))");
 ///
 /// // ValueEnum types
-/// command_line::value_parser!(ColorChoice);
+/// blog_cli_arguments::value_parser!(ColorChoice);
 /// ```
 #[macro_export]
 macro_rules! value_parser {

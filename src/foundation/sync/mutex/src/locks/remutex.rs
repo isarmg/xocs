@@ -36,7 +36,7 @@ unsafe impl GetThreadId for RawThreadId {
 /// - `ReentrantMutexGuard` does not give mutable references to the locked data.
 ///   Use a `RefCell` if you need this.
 ///
-/// See [`Mutex`](synchronization::Mutex) for more details about the underlying mutex
+/// See [`Mutex`](crate::Mutex) for more details about the underlying mutex
 /// primitive.
 pub type ReentrantMutex<T> = crate::api::ReentrantMutex<RawMutex, RawThreadId, T>;
 

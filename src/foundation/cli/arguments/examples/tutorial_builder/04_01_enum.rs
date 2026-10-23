@@ -1,4 +1,4 @@
-use command_line::{ValueEnum, arg, builder::PossibleValue, command, value_parser};
+use blog_cli_arguments::{ValueEnum, arg, builder::PossibleValue, command, value_parser};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 enum Mode {

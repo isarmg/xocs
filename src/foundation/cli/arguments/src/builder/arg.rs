@@ -35,17 +35,17 @@ use crate::util::AnyValueId;
 /// manually, or using a usage string which is far less verbose but has fewer options. You can also
 /// use a combination of the two methods to achieve the best of both worlds.
 ///
-/// - [Basic API][command_line::Arg#basic-api]
-/// - [Value Handling][command_line::Arg#value-handling]
-/// - [Help][command_line::Arg#help-1]
-/// - [Advanced Argument Relations][command_line::Arg#advanced-argument-relations]
-/// - [Reflection][command_line::Arg#reflection]
+/// - [Basic API][crate::Arg#basic-api]
+/// - [Value Handling][crate::Arg#value-handling]
+/// - [Help][crate::Arg#help-1]
+/// - [Advanced Argument Relations][crate::Arg#advanced-argument-relations]
+/// - [Reflection][crate::Arg#reflection]
 ///
 /// # Examples
 ///
 /// ```rust
-/// # use command_line;
-/// # use command_line::{Arg, arg, ArgAction};
+/// # use blog_cli_arguments;
+/// # use blog_cli_arguments::{Arg, arg, ArgAction};
 /// // Using the traditional builder pattern and setting each option manually
 /// let cfg = Arg::new("config")
 ///       .short('c')
@@ -113,8 +113,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg};
     /// Arg::new("config")
     /// # ;
     /// ```
@@ -123,7 +123,7 @@ impl Arg {
         Self::default().id(id)
     }
 
-    /// Set the identifier used for referencing this argument in the command_line API.
+    /// Set the identifier used for referencing this argument in the blog_cli_arguments API.
     ///
     /// See [`Arg::new`] for more details.
     #[must_use]
@@ -136,8 +136,8 @@ impl Arg {
     ///
     /// By default `V` and `h` are used by the auto-generated `version` and `help` arguments,
     /// respectively. You will need to disable the auto-generated flags
-    /// ([`disable_help_flag`][command_line::Command::disable_help_flag],
-    /// [`disable_version_flag`][command_line::Command::disable_version_flag]) and define your own.
+    /// ([`disable_help_flag`][crate::Command::disable_help_flag],
+    /// [`disable_version_flag`][crate::Command::disable_version_flag]) and define your own.
     ///
     /// # Examples
     ///
@@ -145,8 +145,8 @@ impl Arg {
     /// argument via a single hyphen (`-`) such as `-c`:
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg,  ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg,  ArgAction};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("config")
     ///         .short('c')
@@ -160,8 +160,8 @@ impl Arg {
     ///
     /// To use `-h` for your own flag and still have help:
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg,  ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg,  ArgAction};
     /// let m = Command::new("prog")
     ///     .disable_help_flag(true)
     ///     .arg(Arg::new("host")
@@ -193,7 +193,7 @@ impl Arg {
     ///
     /// By default `version` and `help` are used by the auto-generated `version` and `help`
     /// arguments, respectively. You may use the word `version` or `help` for the long form of your
-    /// own arguments, in which case `command_line` simply will not assign those to the auto-generated
+    /// own arguments, in which case `blog_cli_arguments` simply will not assign those to the auto-generated
     /// `version` or `help` arguments.
     ///
     /// <div class="warning">
@@ -211,8 +211,8 @@ impl Arg {
     /// Setting `long` allows using the argument via a double hyphen (`--`) such as `--config`
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .long("config")
@@ -238,8 +238,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("prog")
     ///             .arg(Arg::new("test")
     ///             .long("test")
@@ -268,8 +268,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("prog")
     ///             .arg(Arg::new("test")
     ///             .short('t')
@@ -299,8 +299,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("prog")
     ///             .arg(Arg::new("test")
     ///                     .long("test")
@@ -328,8 +328,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("prog")
     ///             .arg(Arg::new("test")
     ///                     .short('t')
@@ -358,8 +358,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("prog")
     ///             .arg(Arg::new("test")
     ///                 .visible_alias("something-awesome")
@@ -388,8 +388,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("prog")
     ///             .arg(Arg::new("test")
     ///                 .long("test")
@@ -418,8 +418,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("prog")
     ///             .arg(Arg::new("test")
     ///                 .long("test")
@@ -445,8 +445,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("prog")
     ///             .arg(Arg::new("test")
     ///                 .long("test")
@@ -506,16 +506,16 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg};
     /// Arg::new("config")
     ///     .index(1)
     /// # ;
     /// ```
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("mode")
     ///         .index(1))
@@ -533,7 +533,7 @@ impl Arg {
     /// [`Arg::short`]: Arg::short()
     /// [`Arg::long`]: Arg::long()
     /// [`Arg::num_args(true)`]: Arg::num_args()
-    /// [`Command`]: command_line::Command
+    /// [`Command`]: crate::Command
     #[inline]
     #[must_use]
     pub fn index(mut self, idx: impl IntoResettable<usize>) -> Self {
@@ -567,8 +567,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, arg};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, arg};
     /// let m = Command::new("myprog")
     ///     .arg(arg!(<cmd> ... "commands to run").trailing_var_arg(true))
     ///     .get_matches_from(vec!["myprog", "arg1", "-r", "val1"]);
@@ -576,7 +576,7 @@ impl Arg {
     /// let trail: Vec<_> = m.get_many::<String>("cmd").unwrap().collect();
     /// assert_eq!(trail, ["arg1", "-r", "val1"]);
     /// ```
-    /// [`Arg::num_args(..)`]: command_line::Arg::num_args()
+    /// [`Arg::num_args(..)`]: crate::Arg::num_args()
     pub fn trailing_var_arg(self, yes: bool) -> Self {
         if yes {
             self.setting(ArgSettings::TrailingVarArg)
@@ -603,7 +603,7 @@ impl Arg {
     ///
     /// <div class="warning">
     ///
-    /// **NOTE:** This setting will imply [`command_line::Command::dont_collapse_args_in_usage`] because failing
+    /// **NOTE:** This setting will imply [`crate::Command::dont_collapse_args_in_usage`] because failing
     /// to set this can make the usage string very confusing.
     ///
     /// </div>
@@ -624,8 +624,8 @@ impl Arg {
     ///
     /// **WARNING:** Using this setting *and* having child subcommands is not
     /// recommended with the exception of *also* using
-    /// [`command_line::Command::args_conflicts_with_subcommands`]
-    /// (or [`command_line::Command::subcommand_negates_reqs`] if the argument marked `Last` is also
+    /// [`crate::Command::args_conflicts_with_subcommands`]
+    /// (or [`crate::Command::subcommand_negates_reqs`] if the argument marked `Last` is also
     /// marked [`Arg::required`])
     ///
     /// </div>
@@ -633,8 +633,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Arg, ArgAction};
     /// Arg::new("args")
     ///     .action(ArgAction::Set)
     ///     .last(true)
@@ -645,8 +645,8 @@ impl Arg {
     /// and requires that the `--` syntax be used to access it early.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let res = Command::new("prog")
     ///     .arg(Arg::new("first"))
     ///     .arg(Arg::new("second"))
@@ -667,8 +667,8 @@ impl Arg {
     /// failing to use the `--` syntax results in an error.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind, ArgAction};
     /// let res = Command::new("prog")
     ///     .arg(Arg::new("first"))
     ///     .arg(Arg::new("second"))
@@ -683,7 +683,7 @@ impl Arg {
     /// assert_eq!(res.unwrap_err().kind(), ErrorKind::UnknownArgument);
     /// ```
     /// [index]: Arg::index()
-    /// [`UnknownArgument`]: command_line::error::ErrorKind::UnknownArgument
+    /// [`UnknownArgument`]: crate::error::ErrorKind::UnknownArgument
     #[inline]
     #[must_use]
     pub fn last(self, yes: bool) -> Self {
@@ -709,8 +709,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Arg;
     /// Arg::new("config")
     ///     .required(true)
     /// # ;
@@ -719,8 +719,8 @@ impl Arg {
     /// Setting required requires that the argument be used at runtime.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let res = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .required(true)
@@ -736,8 +736,8 @@ impl Arg {
     /// Setting required and then *not* supplying that argument at runtime is an error.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind, ArgAction};
     /// let res = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .required(true)
@@ -773,8 +773,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Arg;
     /// Arg::new("config")
     ///     .requires("input")
     /// # ;
@@ -785,8 +785,8 @@ impl Arg {
     /// required
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let res = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .action(ArgAction::Set)
@@ -803,8 +803,8 @@ impl Arg {
     /// Setting [`Arg::requires(name)`] and *not* supplying that argument is an error.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind, ArgAction};
     /// let res = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .action(ArgAction::Set)
@@ -836,8 +836,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Arg;
     /// Arg::new("config")
     ///     .exclusive(true)
     /// # ;
@@ -847,8 +847,8 @@ impl Arg {
     /// is an error.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind, ArgAction};
     /// let res = Command::new("prog")
     ///     .arg(Arg::new("exclusive")
     ///         .action(ArgAction::Set)
@@ -892,8 +892,8 @@ impl Arg {
     /// want to clutter the source with three duplicate [`Arg`] definitions.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("verb")
     ///         .long("verbose")
@@ -911,7 +911,7 @@ impl Arg {
     /// assert_eq!(sub_m.get_flag("verb"), true);
     /// ```
     ///
-    /// [`Subcommand`]: command_line::Subcommand
+    /// [`Subcommand`]: crate::Subcommand
     #[inline]
     #[must_use]
     pub fn global(self, yes: bool) -> Self {
@@ -964,14 +964,14 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::Command;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Command;
+    /// # use blog_cli_arguments::Arg;
     /// let cmd = Command::new("mycmd")
     ///     .arg(
     ///         Arg::new("flag")
     ///             .long("flag")
-    ///             .action(command_line::ArgAction::Append)
+    ///             .action(blog_cli_arguments::ArgAction::Append)
     ///     );
     ///
     /// let matches = cmd.try_get_matches_from(["mycmd", "--flag", "value"]).unwrap();
@@ -991,40 +991,40 @@ impl Arg {
     /// Specify the typed behavior of the argument.
     ///
     /// This allows parsing and validating a value before storing it into
-    /// [`ArgMatches`][command_line::ArgMatches] as the given type.
+    /// [`ArgMatches`][crate::ArgMatches] as the given type.
     ///
     /// Possible value parsers include:
-    /// - [`value_parser!(T)`][command_line::value_parser!] for auto-selecting a value parser for a given type
-    ///   - Or [range expressions like `0..=1`][std::ops::RangeBounds] as a shorthand for [`RangedI64ValueParser`][command_line::builder::RangedI64ValueParser]
+    /// - [`value_parser!(T)`][crate::value_parser!] for auto-selecting a value parser for a given type
+    ///   - Or [range expressions like `0..=1`][std::ops::RangeBounds] as a shorthand for [`RangedI64ValueParser`][crate::builder::RangedI64ValueParser]
     /// - `Fn(&str) -> Result<T, E>`
-    /// - `[&str]` and [`PossibleValuesParser`][command_line::builder::PossibleValuesParser] for static enumerated values
-    /// - [`BoolishValueParser`][crate::builder::BoolishValueParser], and [`FalseyValueParser`][command_line::builder::FalseyValueParser] for alternative `bool` implementations
-    /// - [`NonEmptyStringValueParser`][command_line::builder::NonEmptyStringValueParser] for basic validation for strings
-    /// - or any other [`TypedValueParser`][command_line::builder::TypedValueParser] implementation
+    /// - `[&str]` and [`PossibleValuesParser`][crate::builder::PossibleValuesParser] for static enumerated values
+    /// - [`BoolishValueParser`][crate::builder::BoolishValueParser], and [`FalseyValueParser`][crate::builder::FalseyValueParser] for alternative `bool` implementations
+    /// - [`NonEmptyStringValueParser`][crate::builder::NonEmptyStringValueParser] for basic validation for strings
+    /// - or any other [`TypedValueParser`][crate::builder::TypedValueParser] implementation
     ///
-    /// The default value is [`ValueParser::string`][command_line::builder::ValueParser::string].
+    /// The default value is [`ValueParser::string`][crate::builder::ValueParser::string].
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::ArgAction;
-    /// let mut cmd = command_line::Command::new("raw")
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::ArgAction;
+    /// let mut cmd = blog_cli_arguments::Command::new("raw")
     ///     .arg(
-    ///         command_line::Arg::new("color")
+    ///         blog_cli_arguments::Arg::new("color")
     ///             .long("color")
     ///             .value_parser(["always", "auto", "never"])
     ///             .default_value("auto")
     ///     )
     ///     .arg(
-    ///         command_line::Arg::new("hostname")
+    ///         blog_cli_arguments::Arg::new("hostname")
     ///             .long("hostname")
-    ///             .value_parser(command_line::builder::NonEmptyStringValueParser::new())
+    ///             .value_parser(blog_cli_arguments::builder::NonEmptyStringValueParser::new())
     ///             .action(ArgAction::Set)
     ///             .required(true)
     ///     )
     ///     .arg(
-    ///         command_line::Arg::new("port")
+    ///         blog_cli_arguments::Arg::new("port")
     ///             .long("port")
-    ///             .value_parser(command_line::value_parser!(u16).range(3000..))
+    ///             .value_parser(blog_cli_arguments::value_parser!(u16).range(3000..))
     ///             .action(ArgAction::Set)
     ///             .required(true)
     ///     );
@@ -1069,7 +1069,7 @@ impl Arg {
     /// Setting a variable number of values (e.g. `1..=10`) for an argument without
     /// other details can be dangerous in some circumstances. Because multiple values are
     /// allowed, `--option val1 val2 val3` is perfectly valid. Be careful when designing a CLI
-    /// where **positional arguments** or **subcommands** are *also* expected as `command_line` will continue
+    /// where **positional arguments** or **subcommands** are *also* expected as `blog_cli_arguments` will continue
     /// parsing *values* until one of the following happens:
     ///
     /// - It reaches the maximum number of values
@@ -1088,8 +1088,8 @@ impl Arg {
     ///
     /// Option:
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("mode")
     ///         .long("mode")
@@ -1103,8 +1103,8 @@ impl Arg {
     ///
     /// Flag/option hybrid (see also [`default_missing_value`][Arg::default_missing_value])
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind, ArgAction};
     /// let cmd = Command::new("prog")
     ///     .arg(Arg::new("mode")
     ///         .long("mode")
@@ -1133,8 +1133,8 @@ impl Arg {
     ///
     /// Tuples
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind, ArgAction};
     /// let cmd = Command::new("prog")
     ///     .arg(Arg::new("file")
     ///         .action(ArgAction::Set)
@@ -1160,8 +1160,8 @@ impl Arg {
     /// A common mistake is to define an option which allows multiple values and a positional
     /// argument.
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let cmd = Command::new("prog")
     ///     .arg(Arg::new("file")
     ///         .action(ArgAction::Set)
@@ -1184,13 +1184,13 @@ impl Arg {
     /// assert_eq!(files, ["file1", "file2", "file3"]);
     /// assert_eq!(m.get_one::<String>("word").unwrap(), "word");
     /// ```
-    /// The problem is `command_line` doesn't know when to stop parsing values for "file".
+    /// The problem is `blog_cli_arguments` doesn't know when to stop parsing values for "file".
     ///
     /// A solution for the example above is to limit how many values with a maximum, or specific
     /// number, or to say [`ArgAction::Append`] is ok, but multiple values are not.
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("file")
     ///         .action(ArgAction::Append)
@@ -1236,8 +1236,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg};
     /// Arg::new("cfg")
     ///     .long("config")
     ///     .value_name("FILE")
@@ -1245,9 +1245,9 @@ impl Arg {
     /// ```
     ///
     /// ```rust
-    /// # use command_line;
+    /// # use blog_cli_arguments;
     /// # #[cfg(feature = "help")] {
-    /// # use command_line::{Command, Arg};
+    /// # use blog_cli_arguments::{Command, Arg};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("config")
     ///         .long("config")
@@ -1310,17 +1310,17 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg};
     /// Arg::new("speed")
     ///     .short('s')
     ///     .value_names(["fast", "slow"]);
     /// ```
     ///
     /// ```rust
-    /// # use command_line;
+    /// # use blog_cli_arguments;
     /// # #[cfg(feature = "help")] {
-    /// # use command_line::{Command, Arg};
+    /// # use blog_cli_arguments::{Command, Arg};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("io")
     ///         .long("io-files")
@@ -1366,8 +1366,8 @@ impl Arg {
     /// For example, to take a username as argument:
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Arg, ValueHint};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Arg, ValueHint};
     /// Arg::new("user")
     ///     .short('u')
     ///     .long("user")
@@ -1377,8 +1377,8 @@ impl Arg {
     /// To take a full command line and its arguments (for example, when writing a command wrapper):
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ValueHint, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ValueHint, ArgAction};
     /// Command::new("prog")
     ///     .trailing_var_arg(true)
     ///     .arg(
@@ -1402,7 +1402,7 @@ impl Arg {
         self
     }
 
-    /// Match values against [`PossibleValuesParser`][command_line::builder::PossibleValuesParser] without matching case.
+    /// Match values against [`PossibleValuesParser`][crate::builder::PossibleValuesParser] without matching case.
     ///
     /// When other arguments are conditionally required based on the
     /// value of a case-insensitive argument, the equality check done
@@ -1425,8 +1425,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("pv")
     ///     .arg(Arg::new("option")
     ///         .long("option")
@@ -1443,8 +1443,8 @@ impl Arg {
     /// This setting also works when multiple values can be defined:
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("pv")
     ///     .arg(Arg::new("option")
     ///         .short('o')
@@ -1504,8 +1504,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("pat")
     ///         .action(ArgAction::Set)
@@ -1522,8 +1522,8 @@ impl Arg {
     /// hyphen is an error.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind, ArgAction};
     /// let res = Command::new("prog")
     ///     .arg(Arg::new("pat")
     ///         .action(ArgAction::Set)
@@ -1560,8 +1560,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg};
     /// let res = Command::new("myprog")
     ///     .arg(Arg::new("num").allow_negative_numbers(true))
     ///     .try_get_matches_from(vec![
@@ -1596,8 +1596,8 @@ impl Arg {
     /// it and the associated value.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let res = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .action(ArgAction::Set)
@@ -1614,8 +1614,8 @@ impl Arg {
     /// error.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind, ArgAction};
     /// let res = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .action(ArgAction::Set)
@@ -1657,13 +1657,13 @@ impl Arg {
     /// i.e. allow values (`val1,val2,val3`) to be parsed as three values (`val1`, `val2`,
     /// and `val3`) instead of one value (`val1,val2,val3`).
     ///
-    /// See also [`Command::dont_delimit_trailing_values`][command_line::Command::dont_delimit_trailing_values].
+    /// See also [`Command::dont_delimit_trailing_values`][crate::Command::dont_delimit_trailing_values].
     ///
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("config")
     ///         .short('c')
@@ -1687,7 +1687,7 @@ impl Arg {
     /// Sentinel to **stop** parsing multiple values of a given argument.
     ///
     /// By default when
-    /// one sets [`num_args(1..)`] on an argument, command_line will continue parsing values for that
+    /// one sets [`num_args(1..)`] on an argument, blog_cli_arguments will continue parsing values for that
     /// argument until it reaches another valid argument, or one of the other more specific settings
     /// for multiple values is used (such as [`num_args`]).
     ///
@@ -1707,8 +1707,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// Arg::new("vals")
     ///     .action(ArgAction::Set)
     ///     .num_args(1..)
@@ -1720,8 +1720,8 @@ impl Arg {
     /// to perform them
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("cmds")
     ///         .action(ArgAction::Set)
@@ -1730,11 +1730,11 @@ impl Arg {
     ///         .value_terminator(";"))
     ///     .arg(Arg::new("location"))
     ///     .get_matches_from(vec![
-    ///         "prog", "find", "-type", "f", "-name", "special", ";", "/home/command_line"
+    ///         "prog", "find", "-type", "f", "-name", "special", ";", "/home/blog_cli_arguments"
     ///     ]);
     /// let cmds: Vec<_> = m.get_many::<String>("cmds").unwrap().collect();
     /// assert_eq!(&cmds, &["find", "-type", "f", "-name", "special"]);
-    /// assert_eq!(m.get_one::<String>("location").unwrap(), "/home/command_line");
+    /// assert_eq!(m.get_one::<String>("location").unwrap(), "/home/blog_cli_arguments");
     /// ```
     /// [options]: Arg::action
     /// [positional arguments]: Arg::index()
@@ -1790,7 +1790,7 @@ impl Arg {
     ///
     /// **NOTE:** If the user *does not* use this argument at runtime [`ArgMatches::contains_id`] will
     /// still return `true`. If you wish to determine whether the argument was used at runtime or
-    /// not, consider [`ArgMatches::value_source`][command_line::ArgMatches::value_source].
+    /// not, consider [`ArgMatches::value_source`][crate::ArgMatches::value_source].
     ///
     /// </div>
     ///
@@ -1811,8 +1811,8 @@ impl Arg {
     /// First we use the default value without providing any value at runtime.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, parser::ValueSource};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, parser::ValueSource};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("opt")
     ///         .long("myopt")
@@ -1829,8 +1829,8 @@ impl Arg {
     /// Next we provide a value at runtime to override the default.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, parser::ValueSource};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, parser::ValueSource};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("opt")
     ///         .long("myopt")
@@ -1844,7 +1844,7 @@ impl Arg {
     /// assert_eq!(m.value_source("opt"), Some(ValueSource::CommandLine));
     /// ```
     /// [`Arg::action(ArgAction::Set)`]: Arg::action()
-    /// [`ArgMatches::contains_id`]: command_line::ArgMatches::contains_id()
+    /// [`ArgMatches::contains_id`]: crate::ArgMatches::contains_id()
     /// [`Arg::default_value_if`]: Arg::default_value_if()
     #[inline]
     #[must_use]
@@ -1913,8 +1913,8 @@ impl Arg {
     ///
     /// For POSIX style `--color`:
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, parser::ValueSource};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, parser::ValueSource};
     /// fn cli() -> Command {
     ///     Command::new("prog")
     ///         .arg(Arg::new("color").long("color")
@@ -1952,8 +1952,8 @@ impl Arg {
     ///
     /// For bool literals:
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, parser::ValueSource, value_parser};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, parser::ValueSource, value_parser};
     /// fn cli() -> Command {
     ///     Command::new("prog")
     ///         .arg(Arg::new("create").long("create")
@@ -2046,13 +2046,13 @@ impl Arg {
     /// If user sets the argument in the environment:
     /// - When [`Arg::action(ArgAction::Set)`] is not set, the flag is considered raised.
     /// - When [`Arg::action(ArgAction::Set)`] is set,
-    ///   [`ArgMatches::get_one`][command_line::ArgMatches::get_one] will
+    ///   [`ArgMatches::get_one`][crate::ArgMatches::get_one] will
     ///   return value of the environment variable.
     ///
     /// If user doesn't set the argument in the environment:
     /// - When [`Arg::action(ArgAction::Set)`] is not set, the flag is considered off.
     /// - When [`Arg::action(ArgAction::Set)`] is set,
-    ///   [`ArgMatches::get_one`][command_line::ArgMatches::get_one] will
+    ///   [`ArgMatches::get_one`][crate::ArgMatches::get_one] will
     ///   return the default specified.
     ///
     /// Like with command-line values, this will be split by [`Arg::value_delimiter`].
@@ -2062,9 +2062,9 @@ impl Arg {
     /// In this example, we show the variable coming from the environment:
     ///
     /// ```rust
-    /// # use command_line;
+    /// # use blog_cli_arguments;
     /// # use std::env;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// # unsafe {
     /// env::set_var("MY_FLAG", "env");
     /// # }
@@ -2085,15 +2085,15 @@ impl Arg {
     /// boolean literal.
     ///
     /// Note that the value parser controls how flags are parsed.  In this case we've selected
-    /// [`FalseyValueParser`][command_line::builder::FalseyValueParser].  A `false` literal is `n`, `no`,
+    /// [`FalseyValueParser`][crate::builder::FalseyValueParser].  A `false` literal is `n`, `no`,
     /// `f`, `false`, `off` or `0`.  An absent environment variable will also be considered as
     /// `false`.  Anything else will considered as `true`.
     ///
     /// ```rust
-    /// # use command_line;
+    /// # use blog_cli_arguments;
     /// # use std::env;
-    /// # use command_line::{Command, Arg, ArgAction};
-    /// # use command_line::builder::FalseyValueParser;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments::builder::FalseyValueParser;
     ///
     /// # unsafe {
     /// env::set_var("TRUE_FLAG", "true");
@@ -2128,9 +2128,9 @@ impl Arg {
     /// In this example, we show the variable coming from an option on the CLI:
     ///
     /// ```rust
-    /// # use command_line;
+    /// # use blog_cli_arguments;
     /// # use std::env;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     ///
     /// # unsafe {
     /// env::set_var("MY_FLAG", "env");
@@ -2152,9 +2152,9 @@ impl Arg {
     /// presence of a default:
     ///
     /// ```rust
-    /// # use command_line;
+    /// # use blog_cli_arguments;
     /// # use std::env;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     ///
     /// # unsafe {
     /// env::set_var("MY_FLAG", "env");
@@ -2176,9 +2176,9 @@ impl Arg {
     /// In this example, we show the use of multiple values in a single environment variable:
     ///
     /// ```rust
-    /// # use command_line;
+    /// # use blog_cli_arguments;
     /// # use std::env;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     ///
     /// # unsafe {
     /// env::set_var("MY_FLAG_MULTI", "env1,env2");
@@ -2248,8 +2248,8 @@ impl Arg {
     ///
     /// ```rust
     /// # #[cfg(feature = "help")] {
-    /// # use command_line;
-    /// # use command_line::{Command, Arg};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .long("config")
@@ -2304,8 +2304,8 @@ impl Arg {
     ///
     /// ```rust
     /// # #[cfg(feature = "help")] {
-    /// # use command_line;
-    /// # use command_line::{Command, Arg};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .long("config")
@@ -2354,11 +2354,11 @@ impl Arg {
     /// Those with the same display order will be sorted.
     ///
     /// `Arg`s are automatically assigned a display order based on the order they are added to the
-    /// [`Command`][command_line::Command].
+    /// [`Command`][crate::Command].
     /// Overriding this is helpful when the order arguments are added in isn't the same as the
     /// display order, whether in one-off cases or to automatically sort arguments.
     ///
-    /// To change, see [`Command::next_display_order`][command_line::Command::next_display_order].
+    /// To change, see [`Command::next_display_order`][crate::Command::next_display_order].
     ///
     /// <div class="warning">
     ///
@@ -2371,8 +2371,8 @@ impl Arg {
     ///
     /// ```rust
     /// # #[cfg(feature = "help")] {
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("boat")
     ///         .short('b')
@@ -2422,7 +2422,7 @@ impl Arg {
     /// Override the `--help` section this appears in.
     ///
     /// For more on the default help heading, see
-    /// [`Command::next_help_heading`][command_line::Command::next_help_heading].
+    /// [`Command::next_help_heading`][crate::Command::next_help_heading].
     #[inline]
     #[must_use]
     pub fn help_heading(mut self, heading: impl IntoResettable<Str>) -> Self {
@@ -2438,7 +2438,7 @@ impl Arg {
     /// <div class="warning">
     ///
     /// **NOTE:** To apply this setting to all arguments and subcommands, consider using
-    /// [`command_line::Command::next_line_help`]
+    /// [`crate::Command::next_line_help`]
     ///
     /// </div>
     ///
@@ -2446,8 +2446,8 @@ impl Arg {
     ///
     /// ```rust
     /// # #[cfg(feature = "help")] {
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("opt")
     ///         .long("long-option-flag")
@@ -2503,8 +2503,8 @@ impl Arg {
     ///
     /// ```rust
     /// # #[cfg(feature = "help")] {
-    /// # use command_line;
-    /// # use command_line::{Command, Arg};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .long("config")
@@ -2537,13 +2537,13 @@ impl Arg {
         }
     }
 
-    /// Do not display the [possible values][command_line::builder::ValueParser::possible_values] in the help message.
+    /// Do not display the [possible values][crate::builder::ValueParser::possible_values] in the help message.
     ///
     /// This is useful for args with many values, or ones which are explained elsewhere in the
     /// help text.
     ///
     /// To set this for all arguments, see
-    /// [`Command::hide_possible_values`][command_line::Command::hide_possible_values].
+    /// [`Command::hide_possible_values`][crate::Command::hide_possible_values].
     ///
     /// <div class="warning">
     ///
@@ -2554,8 +2554,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("mode")
     ///         .long("mode")
@@ -2588,8 +2588,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("connect")
     ///     .arg(Arg::new("host")
     ///         .long("host")
@@ -2618,8 +2618,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("mode")
     ///         .long("mode")
@@ -2648,8 +2648,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("connect")
     ///     .arg(Arg::new("host")
     ///         .long("host")
@@ -2690,8 +2690,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg};
     /// Arg::new("debug")
     ///     .hide_short_help(true);
     /// ```
@@ -2700,8 +2700,8 @@ impl Arg {
     ///
     /// ```rust
     /// # #[cfg(feature = "help")] {
-    /// # use command_line;
-    /// # use command_line::{Command, Arg};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .long("config")
@@ -2729,8 +2729,8 @@ impl Arg {
     ///
     /// ```rust
     /// # #[cfg(feature = "help")] {
-    /// # use command_line;
-    /// # use command_line::{Command, Arg};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .long("config")
@@ -2785,8 +2785,8 @@ impl Arg {
     ///
     /// ```rust
     /// # #[cfg(feature = "help")] {
-    /// # use command_line;
-    /// # use command_line::{Command, Arg};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .long("config")
@@ -2814,8 +2814,8 @@ impl Arg {
     ///
     /// ```rust
     /// # #[cfg(feature = "help")] {
-    /// # use command_line;
-    /// # use command_line::{Command, Arg};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .long("config")
@@ -2857,8 +2857,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// Arg::new("debug")
     ///     .long("debug")
     ///     .action(ArgAction::SetTrue)
@@ -2870,8 +2870,8 @@ impl Arg {
     /// was one of said arguments.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("debug")
     ///         .long("debug")
@@ -2887,7 +2887,7 @@ impl Arg {
     /// assert!(m.contains_id("mode"));
     /// ```
     ///
-    /// [`ArgGroup`]: command_line::ArgGroup
+    /// [`ArgGroup`]: crate::ArgGroup
     #[must_use]
     pub fn group(mut self, group_id: impl IntoResettable<Id>) -> Self {
         if let Some(group_id) = group_id.into_resettable().into_option() {
@@ -2903,8 +2903,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// Arg::new("debug")
     ///     .long("debug")
     ///     .action(ArgAction::SetTrue)
@@ -2916,8 +2916,8 @@ impl Arg {
     /// was one of said arguments.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("debug")
     ///         .long("debug")
@@ -2934,7 +2934,7 @@ impl Arg {
     /// assert!(m.contains_id("verbosity"));
     /// ```
     ///
-    /// [`ArgGroup`]: command_line::ArgGroup
+    /// [`ArgGroup`]: crate::ArgGroup
     #[must_use]
     pub fn groups(mut self, group_ids: impl IntoIterator<Item = impl Into<Id>>) -> Self {
         self.groups.extend(group_ids.into_iter().map(Into::into));
@@ -2963,9 +2963,9 @@ impl Arg {
     /// First we use the default value only if another arg is present at runtime.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
-    /// # use command_line::builder::{ArgPredicate};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments::builder::{ArgPredicate};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("flag")
     ///         .long("flag")
@@ -2983,8 +2983,8 @@ impl Arg {
     /// Next we run the same test, but without providing `--flag`.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("flag")
     ///         .long("flag")
@@ -3002,8 +3002,8 @@ impl Arg {
     /// Now lets only use the default value if `--opt` contains the value `special`.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("opt")
     ///         .action(ArgAction::Set)
@@ -3022,8 +3022,8 @@ impl Arg {
     /// default value.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("opt")
     ///         .action(ArgAction::Set)
@@ -3042,8 +3042,8 @@ impl Arg {
     /// value of some other Arg.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("flag")
     ///         .long("flag")
@@ -3085,9 +3085,9 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// use command_line::arg;
-    /// use command_line::Command;
-    /// use command_line::Arg;
+    /// use blog_cli_arguments::arg;
+    /// use blog_cli_arguments::Command;
+    /// use blog_cli_arguments::Arg;
     /// let r = Command::new("df")
     ///    .arg(arg!(--opt <FILE> "some arg"))
     ///    .arg(
@@ -3154,8 +3154,8 @@ impl Arg {
     /// First we use the default value only if another arg is present at runtime.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("flag")
     ///         .long("flag")
@@ -3179,8 +3179,8 @@ impl Arg {
     /// Next we run the same test, but without providing `--flag`.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("flag")
     ///         .long("flag")
@@ -3202,9 +3202,9 @@ impl Arg {
     /// true, only the first evaluated "wins"
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
-    /// # use command_line::builder::ArgPredicate;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments::builder::ArgPredicate;
     /// let m = Command::new("prog")
     ///     .arg(Arg::new("flag")
     ///         .long("flag")
@@ -3296,8 +3296,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Arg;
     /// Arg::new("config")
     ///     .required_unless_present("debug")
     /// # ;
@@ -3307,8 +3307,8 @@ impl Arg {
     /// but it's not an error because the `unless` arg has been supplied.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let res = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .required_unless_present("dbg")
@@ -3327,8 +3327,8 @@ impl Arg {
     /// Setting `Arg::required_unless_present(name)` and *not* supplying `name` or this arg is an error.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind, ArgAction};
     /// let res = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .required_unless_present("dbg")
@@ -3370,8 +3370,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Arg;
     /// Arg::new("config")
     ///     .required_unless_present_all(["cfg", "dbg"])
     /// # ;
@@ -3381,8 +3381,8 @@ impl Arg {
     /// because *all* of the `names` args have been supplied.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let res = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .required_unless_present_all(["dbg", "infile"])
@@ -3405,8 +3405,8 @@ impl Arg {
     /// either *all* of `unless` args or the `self` arg is an error.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind, ArgAction};
     /// let res = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .required_unless_present_all(["dbg", "infile"])
@@ -3453,8 +3453,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Arg;
     /// Arg::new("config")
     ///     .required_unless_present_any(["cfg", "dbg"])
     /// # ;
@@ -3466,8 +3466,8 @@ impl Arg {
     /// have been supplied.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let res = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .required_unless_present_any(["dbg", "infile"])
@@ -3490,8 +3490,8 @@ impl Arg {
     /// or this arg is an error.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind, ArgAction};
     /// let res = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .required_unless_present_any(["dbg", "infile"])
@@ -3528,16 +3528,16 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Arg;
     /// Arg::new("config")
     ///     .required_if_eq("other_arg", "value")
     /// # ;
     /// ```
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind, ArgAction};
     /// let res = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .action(ArgAction::Set)
@@ -3617,8 +3617,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Arg;
     /// Arg::new("config")
     ///     .required_if_eq_any([
     ///         ("extra", "val"),
@@ -3632,8 +3632,8 @@ impl Arg {
     /// anything other than `val`, this argument isn't required.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let res = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .required_if_eq_any([
@@ -3659,8 +3659,8 @@ impl Arg {
     /// value of `val` but *not* using this arg is an error.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind, ArgAction};
     /// let res = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .required_if_eq_any([
@@ -3703,8 +3703,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Arg;
     /// Arg::new("config")
     ///     .required_if_eq_all([
     ///         ("extra", "val"),
@@ -3718,8 +3718,8 @@ impl Arg {
     /// anything other than `val`, this argument isn't required.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let res = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .required_if_eq_all([
@@ -3745,8 +3745,8 @@ impl Arg {
     /// value of `val` but *not* using this arg is an error.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind, ArgAction};
     /// let res = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .required_if_eq_all([
@@ -3781,15 +3781,15 @@ impl Arg {
 
     /// Require another argument if this arg matches the [`ArgPredicate`]
     ///
-    /// This method takes `value, another_arg` pair. At runtime, command_line will check
+    /// This method takes `value, another_arg` pair. At runtime, blog_cli_arguments will check
     /// if this arg (`self`) matches the [`ArgPredicate`].
     /// If it does, `another_arg` will be marked as required.
     ///
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Arg;
     /// Arg::new("config")
     ///     .requires_if("val", "arg")
     /// # ;
@@ -3800,8 +3800,8 @@ impl Arg {
     /// `val`, the other argument isn't required.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgAction};
     /// let res = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .action(ArgAction::Set)
@@ -3819,8 +3819,8 @@ impl Arg {
     /// `arg` is an error.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind, ArgAction};
     /// let res = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .action(ArgAction::Set)
@@ -3851,8 +3851,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Arg;
     /// Arg::new("config")
     ///     .requires_ifs([
     ///         ("val", "arg"),
@@ -3866,8 +3866,8 @@ impl Arg {
     /// than `val`, `arg` isn't required.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind, ArgAction};
     /// let res = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .action(ArgAction::Set)
@@ -3892,8 +3892,8 @@ impl Arg {
     /// arguments is an error.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind, ArgAction, builder::ArgPredicate};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind, ArgAction, builder::ArgPredicate};
     /// let res = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .action(ArgAction::Set)
@@ -3973,8 +3973,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Arg;
     /// Arg::new("config")
     ///     .conflicts_with("debug")
     /// # ;
@@ -3983,8 +3983,8 @@ impl Arg {
     /// Setting conflicting argument, and having both arguments present at runtime is an error.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind, ArgAction};
     /// let res = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .action(ArgAction::Set)
@@ -4041,8 +4041,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Arg;
     /// Arg::new("config")
     ///     .conflicts_with_all(["debug", "input"])
     /// # ;
@@ -4052,8 +4052,8 @@ impl Arg {
     /// conflicting argument is an error.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, error::ErrorKind, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, error::ErrorKind, ArgAction};
     /// let res = Command::new("prog")
     ///     .arg(Arg::new("cfg")
     ///         .action(ArgAction::Set)
@@ -4099,8 +4099,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, arg};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, arg};
     /// let m = Command::new("prog")
     ///     .arg(arg!(-f --flag "some flag")
     ///         .conflicts_with("debug"))
@@ -4147,8 +4147,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, arg};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, arg};
     /// let m = Command::new("prog")
     ///     .arg(arg!(-f --flag "some flag")
     ///         .conflicts_with("color"))
@@ -4191,8 +4191,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Arg;
     /// let arg = Arg::new("foo").long_help("long help");
     /// assert_eq!(Some("long help".to_owned()), arg.get_long_help().map(|s| s.to_string()));
     /// ```
@@ -4390,9 +4390,9 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
+    /// # use blog_cli_arguments;
     /// # use std::ffi::OsStr;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments::Arg;
     /// let arg = Arg::new("foo").env("ENVIRONMENT");
     /// assert_eq!(arg.get_env(), Some(OsStr::new("ENVIRONMENT")));
     /// ```
@@ -4406,8 +4406,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Arg;
     /// let arg = Arg::new("foo").default_value("default value");
     /// assert_eq!(arg.get_default_values(), &["default value"]);
     /// ```
@@ -4420,8 +4420,8 @@ impl Arg {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::Arg;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Arg;
     /// let arg = Arg::new("foo");
     /// assert_eq!(arg.is_positional(), true);
     ///
@@ -4468,11 +4468,11 @@ impl Arg {
     /// # Example
     ///
     /// ```rust
-    /// # use command_line;
-    /// let cmd = command_line::Command::new("raw")
+    /// # use blog_cli_arguments;
+    /// let cmd = blog_cli_arguments::Command::new("raw")
     ///     .arg(
-    ///         command_line::Arg::new("port")
-    ///             .value_parser(command_line::value_parser!(usize))
+    ///         blog_cli_arguments::Arg::new("port")
+    ///             .value_parser(blog_cli_arguments::value_parser!(usize))
     ///     );
     /// let value_parser = cmd.get_arguments()
     ///     .find(|a| a.get_id() == "port").unwrap()

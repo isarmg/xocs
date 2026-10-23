@@ -48,13 +48,13 @@ impl<T> Into<HashSet<T, RandomState>> for AHashSet<T> {
 
 impl<T> AHashSet<T, RandomState> {
     /// This creates a hashset using [RandomState::new].
-    /// See the documentation in [RandomSource] for notes about key strength.
+    /// See the documentation in [`RandomSource`](crate::random_state::RandomSource) for notes about key strength.
     pub fn new() -> Self {
         AHashSet(HashSet::with_hasher(RandomState::new()))
     }
 
     /// This craetes a hashset with the specified capacity using [RandomState::new].
-    /// See the documentation in [RandomSource] for notes about key strength.
+    /// See the documentation in [`RandomSource`](crate::random_state::RandomSource) for notes about key strength.
     pub fn with_capacity(capacity: usize) -> Self {
         AHashSet(HashSet::with_capacity_and_hasher(
             capacity,
@@ -249,7 +249,7 @@ where
     T: Eq + Hash,
 {
     /// This creates a hashset from the provided iterator using [RandomState::new].
-    /// See the documentation in [RandomSource] for notes about key strength.
+    /// See the documentation in [`RandomSource`](crate::random_state::RandomSource) for notes about key strength.
     #[inline]
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> AHashSet<T> {
         let mut inner = HashSet::with_hasher(RandomState::new());

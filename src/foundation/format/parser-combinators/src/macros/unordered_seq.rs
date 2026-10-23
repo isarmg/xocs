@@ -9,7 +9,7 @@
 /// - `_: <parser>` fields can exist to run a parser but ignore the result
 ///
 /// To stop on an error, rather than trying further permutations, see
-/// [`cut_err`][crate::combinator::cut_err] ([example][crate::_tutorial::chapter_7]).
+/// [`cut_err`][crate::combinator::cut_err].
 ///
 /// # Example
 ///

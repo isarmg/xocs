@@ -7,7 +7,7 @@
 //!   [spans][crate::Parser::with_span]
 //! - [`Stateful`] to thread global state through your parsers
 //! - [`Partial`] can mark an input as partial buffer that is being streamed into
-//! - [Custom stream types][crate::_topic::stream]
+//! - [Custom stream types][crate::stream::Stream]
 
 use core::hash::BuildHasher;
 use core::num::NonZeroUsize;

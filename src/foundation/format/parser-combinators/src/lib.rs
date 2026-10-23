@@ -1,50 +1,32 @@
-//! > winnow, making parsing a breeze
+//! Parser combinators for strings, byte slices and token streams.
 //!
-//! `winnow` is a parser combinator library
+//! [`Parser`] is the core interface. Functions, literals and composed parsers
+//! implement it. Use [`Parser::parse`] for a complete input and
+//! [`Parser::parse_next`] when a caller controls the remaining input buffer.
 //!
-//! Quick links:
-//! - [List of combinators][crate::combinator]
-//! - [Tutorial][_tutorial::chapter_0]
-//! - [Special Topics][_topic]
-//! - [Discussions](https://github.com/winnow-rs/winnow/discussions)
-//! - [CHANGELOG](https://github.com/winnow-rs/winnow/blob/v0.7.15/CHANGELOG.md) (includes major version migration
-//!   guides)
-//!
-//! ## Aspirations
-//!
-//! `winnow` aims to be your "do everything" parser, much like people treat regular expressions.
-//!
-//! In roughly priority order:
-//! 1. Support writing parser declaratively while not getting in the way of imperative-style
-//!    parsing when needed, working as an open-ended toolbox rather than a close-ended framework.
-//! 2. Flexible enough to be used for any application, including parsing strings, binary data,
-//!    or separate [lexing and parsing phases][_topic::lexing]
-//! 3. Zero-cost abstractions, making it easy to write high performance parsers
-//! 4. Easy to use, making it trivial for one-off uses
-//!
-//! In addition:
-//! - Resilient maintainership, including
-//!   - Willing to break compatibility rather than batching up breaking changes in large releases
-//!   - Leverage feature flags to keep one active branch
-//! - We will support the last 6 months of rust releases (MSRV, currently 1.64.0)
-//!
-//! See also [Special Topic: Why winnow?][crate::_topic::why]
+//! - [`combinator`] provides sequencing, alternatives, repetition and error cuts.
+//! - [`ascii`], [`binary`] and [`token`] provide primitive parsers.
+//! - [`stream::Partial`] marks incomplete input and reports the additional data
+//!   required through [`error::ErrMode::Incomplete`].
+//! - [`stream::TokenSlice`] accepts tokens produced by a separate lexer.
+//! - [`error::ParserError`] and [`Parser::context`] define error and context handling.
 //!
 //! ## Example
 //!
-//! Run
-//! ```console
-//! $ cargo add winnow
-//! ```
-//!
-//! Then use it to parse:
 //! ```rust
-//! # #[cfg(feature = "alloc")] {
-#![doc = include_str!("../examples/css/parser.rs")]
-//! # }
+//! use blog_format_parser_combinators::{ascii::dec_uint, prelude::*};
+//!
+//! fn number(input: &mut &str) -> ModalResult<u64> {
+//!     dec_uint.parse_next(input)
+//! }
+//!
+//! assert_eq!(number.parse("42").unwrap(), 42);
 //! ```
 //!
-//! See also the [Tutorial][_tutorial::chapter_0] and [Special Topics][_topic]
+//! `std` is enabled by default and includes `alloc`. Allocation-free consumers
+//! can disable default features. The product uses the APIs selected by its local
+//! Cargo consumers; parser errors and streaming state remain explicit at each
+//! boundary.
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(docsrs, feature(extended_key_value_attributes))]
@@ -60,7 +42,7 @@
 #[allow(unused_extern_crates)]
 extern crate alloc;
 
-#[doc = include_str!("../../../../../docs/upstream/winnow-0.7.15/README.md")]
+#[doc = include_str!("../../../../../docs/dependencies/origins/winnow-0.7.15/README.md")]
 #[cfg(doctest)]
 pub struct ReadmeDoctests;
 

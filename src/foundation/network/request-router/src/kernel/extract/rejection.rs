@@ -42,8 +42,7 @@ define_rejection! {
     #[body = "Failed to buffer the request body"]
     /// Encountered some other error when buffering the body.
     ///
-    /// This can _only_ happen when you're using [`tower_http::limit::RequestBodyLimitLayer`] or
-    /// otherwise wrapping request bodies in [`http_body::Limited`].
+    /// The body was wrapped in [`http_body::Limited`] and exceeded its limit.
     pub struct LengthLimitError(Error);
 }
 

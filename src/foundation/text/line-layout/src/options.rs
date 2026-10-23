@@ -62,7 +62,7 @@ impl<'a> Options<'a> {
     /// The other fields are given default values as follows:
     ///
     /// ```
-    /// # use textwrap::{LineEnding, Options, WordSplitter, WordSeparator, WrapAlgorithm};
+    /// # use blog_text_line_layout::{LineEnding, Options, WordSplitter, WordSeparator, WrapAlgorithm};
     /// # let width = 80;
     /// let options = Options::new(width);
     /// assert_eq!(options.line_ending, LineEnding::LF);
@@ -108,7 +108,7 @@ impl<'a> Options<'a> {
     /// # Examples
     ///
     /// ```
-    /// use textwrap::{refill, LineEnding, Options};
+    /// use blog_text_line_layout::{refill, LineEnding, Options};
     ///
     /// let options = Options::new(15).line_ending(LineEnding::CRLF);
     /// assert_eq!(refill("This is a little example.", options),
@@ -139,7 +139,7 @@ impl<'a> Options<'a> {
     /// initial indentation and wrapping each paragraph by itself:
     ///
     /// ```
-    /// use textwrap::{wrap, Options};
+    /// use blog_text_line_layout::{wrap, Options};
     ///
     /// let options = Options::new(16).initial_indent("    ");
     /// assert_eq!(wrap("This is a little example.", options),
@@ -164,7 +164,7 @@ impl<'a> Options<'a> {
     /// single paragraph as a bullet list:
     ///
     /// ```
-    /// use textwrap::{wrap, Options};
+    /// use blog_text_line_layout::{wrap, Options};
     ///
     /// let options = Options::new(12)
     ///     .initial_indent("* ")
@@ -201,7 +201,7 @@ impl<'a> Options<'a> {
     /// # Examples
     ///
     /// ```
-    /// use textwrap::{wrap, Options};
+    /// use blog_text_line_layout::{wrap, Options};
     ///
     /// let options = Options::new(4).break_words(true);
     /// assert_eq!(wrap("This is a little example.", options),
@@ -254,7 +254,7 @@ impl<'a> Options<'a> {
     /// # Examples
     ///
     /// ```
-    /// use textwrap::{wrap, Options, WordSplitter};
+    /// use blog_text_line_layout::{wrap, Options, WordSplitter};
     ///
     /// // The default is WordSplitter::HyphenSplitter.
     /// let options = Options::new(5);

@@ -1,7 +1,7 @@
 //! CSS style sheets and style attributes.
 //!
-//! A [StyleSheet](StyleSheet) represents a `.css` file or `<style>` element in HTML.
-//! A [StyleAttribute](StyleAttribute) represents an inline `style` attribute in HTML.
+//! A [StyleSheet] represents a `.css` file or `<style>` element in HTML.
+//! A [StyleAttribute] represents an inline `style` attribute in HTML.
 
 use crate::style_optimizer::context::{DeclarationContext, PropertyHandlerContext};
 use crate::style_optimizer::css_modules::{hash, CssModule, CssModuleExports, CssModuleReferences};
@@ -27,9 +27,9 @@ pub use crate::style_optimizer::printer::PseudoClasses;
 
 /// A CSS style sheet, representing a `.css` file or inline `<style>` element.
 ///
-/// Style sheets can be parsed from a string, constructed from scratch,
-/// or created using a [Bundler](super::bundler::Bundler). Then, they can be
-/// minified and transformed for a set of target browsers, and serialied to a string.
+/// Style sheets can be parsed from a string or constructed from scratch.
+/// They can then be minified and transformed for a set of target browsers,
+/// and serialized to a string.
 ///
 /// # Example
 ///
@@ -90,8 +90,8 @@ pub struct StyleSheet<'i, 'o, T = DefaultAtRule> {
   options: ParserOptions<'o, 'i>,
 }
 
-/// Options for the `minify` function of a [StyleSheet](StyleSheet)
-/// or [StyleAttribute](StyleAttribute).
+/// Options for the `minify` function of a [StyleSheet]
+/// or [StyleAttribute].
 #[derive(Default)]
 pub struct MinifyOptions {
   /// Targets to compile the CSS for.

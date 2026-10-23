@@ -3,14 +3,14 @@
 //! Extra iterator adaptors, functions and macros.
 //!
 //! To extend [`Iterator`] with methods in this crate, import
-//! the [`Itertools`] trait:
+//! the [`Itertools`](crate::iterators::Itertools) trait:
 //!
 //! ```
 //! # #[allow(unused_imports)]
 //! use blog_dom::iterators::Itertools;
 //! ```
 //!
-//! Now, new methods like [`interleave`](Itertools::interleave)
+//! Now, new methods like [`interleave`](crate::iterators::Itertools::interleave)
 //! are available on all iterators:
 //!
 //! ```
@@ -32,22 +32,6 @@
 //! }
 //! ```
 //!
-//! ## Crate Features
-//!
-//! - `use_std`
-//!   - Enabled by default.
-//!   - Disable to compile itertools using `#![no_std]`. This disables
-//!     any item that depend on allocations (see the `use_alloc` feature)
-//!     and hash maps (like `unique`, `counts`, `into_grouping_map` and more).
-//! - `use_alloc`
-//!   - Enabled by default.
-//!   - Enables any item that depend on allocations (like `chunk_by`,
-//!     `kmerge`, `join` and many more).
-//!
-//! ## Rust Version
-//!
-//! This version of itertools requires Rust 1.63.0 or later.
-
 use alloc::{collections::VecDeque, string::String, vec::Vec};
 
 pub use either::Either;

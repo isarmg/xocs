@@ -101,7 +101,7 @@ impl<'a> AstNodes<'a> {
         self.ancestor_ids(node_id).map(|id| (id, self.get_node(id)))
     }
 
-    /// Access the underlying struct from [`oxc_ast`].
+    /// Access the underlying struct from [`crate::syntax_tree`].
     #[inline]
     pub fn kind(&self, node_id: NodeId) -> AstKind<'a> {
         self.nodes[node_id].kind()

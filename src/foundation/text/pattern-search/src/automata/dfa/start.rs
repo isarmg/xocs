@@ -8,7 +8,7 @@ use crate::automata::util::wire::{self, DeserializeError, Endian, SerializeError
 /// starting configurations to support. The reason for not just supporting
 /// everything unconditionally is that it can use more resources (such as
 /// memory and build time). The downside of this is that if you try to execute
-/// a search using an [`Anchored`](blog_text_pattern_search::automata::Anchored) mode that is not supported
+/// a search using an [`Anchored`](crate::automata::Anchored) mode that is not supported
 /// by the DFA, then the search will return an error.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum StartKind {

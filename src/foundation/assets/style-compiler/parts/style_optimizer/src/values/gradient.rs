@@ -434,7 +434,7 @@ impl IsCompatible for RadialGradient {
 
 /// The direction of a CSS `linear-gradient()`.
 ///
-/// See [LinearGradient](LinearGradient).
+/// See [LinearGradient].
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(
@@ -602,7 +602,7 @@ fn convert_to_legacy_degree(degree: f32) -> f32 {
 
 /// A `radial-gradient()` [ending shape](https://www.w3.org/TR/css-images-3/#valdef-radial-gradient-ending-shape).
 ///
-/// See [RadialGradient](RadialGradient).
+/// See [RadialGradient].
 #[derive(Debug, Clone, PartialEq, Parse, ToCss)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(
@@ -627,7 +627,7 @@ impl Default for EndingShape {
 
 /// A circle ending shape for a `radial-gradient()`.
 ///
-/// See [RadialGradient](RadialGradient).
+/// See [RadialGradient].
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(
@@ -696,7 +696,7 @@ impl ToCss for Circle {
 
 /// An ellipse ending shape for a `radial-gradient()`.
 ///
-/// See [RadialGradient](RadialGradient).
+/// See [RadialGradient].
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(
@@ -775,7 +775,7 @@ impl ToCss for Ellipse {
 enum_property! {
   /// A shape extent for a `radial-gradient()`.
   ///
-  /// See [RadialGradient](RadialGradient).
+  /// See [`RadialGradient`].
   pub enum ShapeExtent {
     /// The closest side of the box to the gradient's center.
     ClosestSide,
@@ -874,8 +874,8 @@ impl IsCompatible for ConicGradient {
 
 /// A [`<color-stop>`](https://www.w3.org/TR/css-images-4/#color-stop-syntax) within a gradient.
 ///
-/// This type is generic, and may be either a [LengthPercentage](super::length::LengthPercentage)
-/// or [Angle](super::angle::Angle) depending on what type of gradient it is within.
+/// This type is generic, and may be either a [LengthPercentage]
+/// or [Angle] depending on what type of gradient it is within.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(any(), derive(serde::Serialize, serde::Deserialize))]
@@ -911,8 +911,8 @@ impl<D: ToCss> ToCss for ColorStop<D> {
 
 /// Either a color stop or interpolation hint within a gradient.
 ///
-/// This type is generic, and items may be either a [LengthPercentage](super::length::LengthPercentage)
-/// or [Angle](super::angle::Angle) depending on what type of gradient it is within.
+/// This type is generic, and items may be either a [LengthPercentage]
+/// or [Angle] depending on what type of gradient it is within.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(
@@ -1316,7 +1316,7 @@ impl ToCss for WebKitGradientPoint {
   }
 }
 
-/// A keyword or number within a [WebKitGradientPoint](WebKitGradientPoint).
+/// A keyword or number within a [WebKitGradientPoint].
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(

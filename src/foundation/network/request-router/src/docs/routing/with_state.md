@@ -9,7 +9,7 @@ including when to use `Arc`, how to extract substates with [`FromRef`], and what
 [`FromRef`]: crate::extract::FromRef
 
 ```rust
-use axum::{Router, routing::get, extract::State};
+use http_routing::{Router, routing::get, extract::State};
 
 #[derive(Clone)]
 struct AppState {}
@@ -22,7 +22,7 @@ let routes = Router::new()
 
 # async {
 let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-axum::serve(listener, routes).await.unwrap();
+http_routing::serve(listener, routes).await.unwrap();
 # };
 ```
 
@@ -32,7 +32,7 @@ When returning `Router`s from functions, it is generally recommended not to set 
 state directly:
 
 ```rust
-use axum::{Router, routing::get, extract::State};
+use http_routing::{Router, routing::get, extract::State};
 
 #[derive(Clone)]
 struct AppState {}
@@ -48,7 +48,7 @@ let routes = routes().with_state(AppState {});
 
 # async {
 let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-axum::serve(listener, routes).await.unwrap();
+http_routing::serve(listener, routes).await.unwrap();
 # };
 ```
 
@@ -56,7 +56,7 @@ If you do need to provide the state, and you're _not_ nesting/merging the router
 into another router, then return `Router` without any type parameters:
 
 ```rust
-# use axum::{Router, routing::get, extract::State};
+# use http_routing::{Router, routing::get, extract::State};
 # #[derive(Clone)]
 # struct AppState {}
 #
@@ -71,7 +71,7 @@ let routes = routes(AppState {});
 
 # async {
 let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-axum::serve(listener, routes).await.unwrap();
+http_routing::serve(listener, routes).await.unwrap();
 # };
 ```
 
@@ -84,7 +84,7 @@ If you are nesting/merging the router it is recommended to use a generic state
 type on the resulting router:
 
 ```rust
-# use axum::{Router, routing::get, extract::State};
+# use http_routing::{Router, routing::get, extract::State};
 # #[derive(Clone)]
 # struct AppState {}
 #
@@ -98,7 +98,7 @@ let routes = Router::new().nest("/api", routes(AppState {}));
 
 # async {
 let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-axum::serve(listener, routes).await.unwrap();
+http_routing::serve(listener, routes).await.unwrap();
 # };
 ```
 
@@ -110,7 +110,7 @@ handle requests. It does _not_ mean a `Router` that _has_ a state of type `S`.
 For example:
 
 ```rust
-# use axum::{Router, routing::get, extract::State};
+# use http_routing::{Router, routing::get, extract::State};
 # #[derive(Clone)]
 # struct AppState {}
 # 
@@ -131,7 +131,7 @@ let router: Router<()> = router.with_state(AppState {});
 // because it is still missing an `AppState`.
 # async {
 let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-axum::serve(listener, router).await.unwrap();
+http_routing::serve(listener, router).await.unwrap();
 # };
 ```
 
@@ -139,7 +139,7 @@ Perhaps a little counter intuitively, `Router::with_state` doesn't always return
 `Router<()>`. Instead you get to pick what the new missing state type is:
 
 ```rust
-# use axum::{Router, routing::get, extract::State};
+# use http_routing::{Router, routing::get, extract::State};
 # #[derive(Clone)]
 # struct AppState {}
 # 
@@ -160,7 +160,7 @@ let final_router: Router<()> = string_router.with_state("foo".to_owned());
 // Since we have a `Router<()>` we can run it.
 # async {
 let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-axum::serve(listener, final_router).await.unwrap();
+http_routing::serve(listener, final_router).await.unwrap();
 # };
 ```
 
@@ -168,7 +168,7 @@ This is why returning `Router<AppState>` after calling `with_state` doesn't
 work:
 
 ```rust,compile_fail
-# use axum::{Router, routing::get, extract::State};
+# use http_routing::{Router, routing::get, extract::State};
 # #[derive(Clone)]
 # struct AppState {}
 # 
@@ -186,14 +186,14 @@ let app = routes(AppState {});
 // but `app` is a `Router<AppState>`
 # async {
 let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-axum::serve(listener, app).await.unwrap();
+http_routing::serve(listener, app).await.unwrap();
 # };
 ```
 
 Instead return `Router<()>` since we have provided all the state needed:
 
 ```rust
-# use axum::{Router, routing::get, extract::State};
+# use http_routing::{Router, routing::get, extract::State};
 # #[derive(Clone)]
 # struct AppState {}
 # 
@@ -209,7 +209,7 @@ let app = routes(AppState {});
 // We can now call `Router::into_make_service`
 # async {
 let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-axum::serve(listener, app).await.unwrap();
+http_routing::serve(listener, app).await.unwrap();
 # };
 ```
 
@@ -220,7 +220,7 @@ you're making a library that uses axum internally) then it is recommended to cal
 method before you start serving requests:
 
 ```rust
-use axum::{Router, routing::get};
+use http_routing::{Router, routing::get};
 
 let app = Router::new()
     .route("/", get(|| async { /* ... */ }))

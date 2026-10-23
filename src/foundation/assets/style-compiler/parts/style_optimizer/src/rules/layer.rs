@@ -82,7 +82,7 @@ impl<'i> ToCss for LayerName<'i> {
 
 /// A [@layer statement](https://drafts.csswg.org/css-cascade-5/#layer-empty) rule.
 ///
-/// See also [LayerBlockRule](LayerBlockRule).
+/// See also [LayerBlockRule].
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(any(), derive(static_self::IntoOwned))]

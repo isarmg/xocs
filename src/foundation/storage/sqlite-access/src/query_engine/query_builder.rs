@@ -18,13 +18,12 @@ use crate::query_engine::sql_str::SqlStr;
 use crate::query_engine::types::Type;
 use crate::query_engine::Either;
 
-/// A builder type for constructing queries at runtime.
+/// Construct a SQLite query from trusted SQL fragments and bound values.
 ///
-/// See [`.push_values()`][Self::push_values] for an example of building a bulk `INSERT` statement.
-/// Note, however, that with Postgres you can get much better performance by using arrays
-/// and `UNNEST()`. [See our FAQ] for details.
-///
-/// [See our FAQ]: https://github.com/launchbadge/sqlx/blob/master/FAQ.md#how-can-i-bind-an-array-to-a-values-clause-how-can-i-do-bulk-inserts
+/// Use [`QueryBuilder::push`] for validated SQL syntax and
+/// [`QueryBuilder::push_bind`] for input values. [`QueryBuilder::push_values`]
+/// constructs multi-row `INSERT` value lists. Keep the total number of parameters
+/// within the configured SQLite limit.
 pub struct QueryBuilder<DB>
 where
     DB: Database,
@@ -128,30 +127,15 @@ where
         self
     }
 
-    /// Push a bind argument placeholder (`?` or `$N` for Postgres) and bind a value to it.
+    /// Append a SQLite parameter placeholder and bind a value.
     ///
-    /// ### Note: Database-specific Limits
-    /// Note that every database has a practical limit on the number of bind parameters
-    /// you can add to a single query. This varies by database.
+    /// The builder uses the SQLite argument formatter. A statement's parameter count
+    /// must fit the configured `SQLITE_LIMIT_VARIABLE_NUMBER`; the repository's
+    /// SQLite build can set `SQLITE_MAX_VARIABLE_NUMBER`. Exceeding the active limit
+    /// returns an execution error or may trigger a builder sanity check.
     ///
-    /// While you should consult the manual of your specific database version and/or current
-    /// configuration for the exact value as it may be different than listed here,
-    /// the defaults for supported databases as of writing are as follows:
-    ///
-    /// * Postgres and MySQL: 65535
-    ///     * You may find sources that state that Postgres has a limit of 32767,
-    ///       but that is a misinterpretation of the specification by the JDBC driver implementation
-    ///       as discussed in [this Github issue][postgres-limit-issue]. Postgres itself
-    ///       asserts that the number of parameters is in the range `[0, 65535)`.
-    /// * SQLite: 32766 (configurable by [`SQLITE_LIMIT_VARIABLE_NUMBER`])
-    ///     * SQLite prior to 3.32.0: 999
-    /// * MSSQL: 2100
-    ///
-    /// Exceeding these limits may panic (as a sanity check) or trigger a database error at runtime
-    /// depending on the implementation.
-    ///
-    /// [`SQLITE_LIMIT_VARIABLE_NUMBER`]: https://www.sqlite.org/limits.html#max_variable_number
-    /// [postgres-limit-issue]: https://github.com/launchbadge/sqlx/issues/671#issuecomment-687043510
+    /// This separates input values from SQL syntax; it cannot bind a table name,
+    /// column name or SQL fragment.
     pub fn push_bind<'t, T>(&mut self, value: T) -> &mut Self
     where
         T: Encode<'t, DB> + Type<DB>,
@@ -172,32 +156,19 @@ where
         self
     }
 
-    /// Start a list separated by `separator`.
+    /// Start a list that inserts `separator` between successive items.
     ///
-    /// The returned type exposes identical [`.push()`][Separated::push] and
-    /// [`.push_bind()`][Separated::push_bind] methods which push `separator` to the query
-    /// before their normal behavior. [`.push_unseparated()`][Separated::push_unseparated] and [`.push_bind_unseparated()`][Separated::push_bind_unseparated] are also
-    /// provided to push a SQL fragment without the separator.
+    /// Use the returned helper's `push_bind` method for values, and `push` only for
+    /// trusted SQL fragments. Empty input yields an empty list, which the caller must
+    /// handle when the surrounding syntax requires at least one item.
     ///
-    /// ```rust
-    /// # #[cfg(feature = "mysql")] {
-    /// use sqlx::{Execute, MySql, QueryBuilder};
-    /// let foods = vec!["pizza".to_string(), "chips".to_string()];
-    /// let mut query_builder: QueryBuilder<MySql> = QueryBuilder::new(
-    ///     "SELECT * from food where name in ("
-    /// );
-    /// // One element vector is handled correctly but an empty vector
-    /// // would cause a sql syntax error
-    /// let mut separated = query_builder.separated(", ");
-    /// for value_type in foods.iter() {
-    ///   separated.push_bind(value_type);
-    /// }
-    /// separated.push_unseparated(") ");
+    /// ```
+    /// use blog_storage_sqlite_access::{QueryBuilder, Sqlite};
     ///
-    /// let mut query = query_builder.build();
-    /// let sql = query.sql();
-    /// assert!(sql.ends_with("in (?, ?) "));
-    /// # }
+    /// let mut builder: QueryBuilder<Sqlite> = QueryBuilder::new("SELECT 1 WHERE 1 IN (");
+    /// let mut values = builder.separated(", ");
+    /// values.push_bind(1_i64).push_bind(2_i64);
+    /// values.push_unseparated(")");
     /// ```
     pub fn separated<Sep>(&mut self, separator: Sep) -> Separated<'_, DB, Sep>
     where
@@ -214,101 +185,28 @@ where
 
     // Most of the `QueryBuilder` API is purposefully very low-level but this was a commonly
     // requested use-case so it made sense to support.
-    /// Push a `VALUES` clause where each item in `tuples` represents a tuple/row in the clause.
+    /// Append a `VALUES` list for a multi-row SQLite insert.
     ///
-    /// This can be used to construct a bulk `INSERT` statement, although keep in mind that all
-    /// databases have some practical limit on the number of bind arguments in a single query.
-    /// See [`.push_bind()`][Self::push_bind] for details.
+    /// The callback receives a separated tuple builder and one input item. Bind each
+    /// field through that tuple builder. Empty input produces invalid `VALUES` syntax,
+    /// so handle it before building the query. Chunk large batches so all bound fields
+    /// fit the active SQLite parameter limit.
     ///
-    /// To be safe, you can do `tuples.into_iter().take(N)` where `N` is the limit for your database
-    /// divided by the number of fields in each tuple; since integer division always rounds down,
-    /// this will ensure that you don't exceed the limit.
-    ///
-    /// ### Notes
-    ///
-    /// If `tuples` is empty, this will likely produce a syntactically invalid query as `VALUES`
-    /// generally expects to be followed by at least 1 tuple.
-    ///
-    /// If `tuples` can have many different lengths, you may want to call
-    /// [`.persistent(false)`][Query::persistent] after [`.build()`][Self::build] to avoid
-    /// filling up the connection's prepared statement cache.
-    ///
-    /// Because the `Arguments` API has a lifetime that must live longer than `Self`, you cannot
-    /// bind by-reference from an iterator unless that iterator yields references that live
-    /// longer than `Self`, even if the specific `Arguments` implementation doesn't actually
-    /// borrow the values (like `MySqlArguments` and `PgArguments` immediately encode the arguments
-    /// and don't borrow them past the `.add()` call).
-    ///
-    /// So basically, if you want to bind by-reference you need an iterator that yields references,
-    /// e.g. if you have values in a `Vec` you can do `.iter()` instead of `.into_iter()`. The
-    /// example below uses an iterator that creates values on the fly
-    /// and so cannot bind by-reference.
-    ///
-    /// ### Example (MySQL)
-    ///
-    /// ```rust
-    /// # #[cfg(feature = "mysql")]
-    /// # {
-    /// use sqlx::{Execute, MySql, QueryBuilder};
-    ///
-    /// struct User {
-    ///     id: i32,
-    ///     username: String,
-    ///     email: String,
-    ///     password: String,
-    /// }
-    ///
-    /// // The number of parameters in MySQL must fit in a `u16`.
-    /// const BIND_LIMIT: usize = 65535;
-    ///
-    /// // This would normally produce values forever!
-    /// let users = (0..).map(|i| User {
-    ///     id: i,
-    ///     username: format!("test_user_{i}"),
-    ///     email: format!("test-user-{i}@example.com"),
-    ///     password: format!("Test!User@Password#{i}"),
-    /// });
-    ///
-    /// let mut query_builder: QueryBuilder<MySql> = QueryBuilder::new(
-    ///     // Note the trailing space; most calls to `QueryBuilder` don't automatically insert
-    ///     // spaces as that might interfere with identifiers or quoted strings where exact
-    ///     // values may matter.
-    ///     "INSERT INTO users(id, username, email, password) "
-    /// );
-    ///
-    /// // Note that `.into_iter()` wasn't needed here since `users` is already an iterator.
-    /// query_builder.push_values(users.take(BIND_LIMIT / 4), |mut b, user| {
-    ///     // If you wanted to bind these by-reference instead of by-value,
-    ///     // you'd need an iterator that yields references that live as long as `query_builder`,
-    ///     // e.g. collect it to a `Vec` first.
-    ///     b.push_bind(user.id)
-    ///         .push_bind(user.username)
-    ///         .push_bind(user.email)
-    ///         .push_bind(user.password);
-    /// });
-    ///
-    /// let mut query = query_builder.build();
-    ///
-    /// // You can then call `query.execute()`, `.fetch_one()`, `.fetch_all()`, etc.
-    /// // For the sake of demonstration though, we're just going to assert the contents
-    /// // of the query.
-    ///
-    /// // These are methods of the `Execute` trait, not normally meant to be called in user code.
-    /// let sql = query.sql();
-    /// let arguments = query.take_arguments().unwrap();
-    ///
-    /// assert!(sql.starts_with(
-    ///     "INSERT INTO users(id, username, email, password) VALUES (?, ?, ?, ?), (?, ?, ?, ?)"
-    /// ));
-    ///
-    /// assert!(sql.ends_with("(?, ?, ?, ?)"));
-    ///
-    /// // Not a normally exposed function, only used for this doctest.
-    /// // 65535 / 4 = 16383 (rounded down)
-    /// // 16383 * 4 = 65532
-    /// assert_eq!(arguments.len(), 65532);
-    /// # }
     /// ```
+    /// use blog_storage_sqlite_access::{QueryBuilder, Sqlite};
+    ///
+    /// let entries = [(1_i64, "first"), (2, "second")];
+    /// let mut builder: QueryBuilder<Sqlite> =
+    ///     QueryBuilder::new("INSERT INTO entries(id, title) ");
+    /// builder.push_values(entries, |mut row, (id, title)| {
+    ///     row.push_bind(id).push_bind(title);
+    /// });
+    /// let query = builder.build();
+    /// ```
+    ///
+    /// Each distinct number of tuples produces a different statement shape. Disable
+    /// statement persistence when a highly variable batch size would fill the cache
+    /// with shapes that will not be reused.
     pub fn push_values<I, F>(&mut self, tuples: I, mut push_tuple: F) -> &mut Self
     where
         I: IntoIterator,
@@ -337,90 +235,12 @@ where
         separated.query_builder
     }
 
-    /// Creates `((a, b), (..)` statements, from `tuples`.
+    /// Append a parenthesized list of row-value tuples.
     ///
-    /// This can be used to construct a bulk `SELECT` statement like this:
-    /// ```sql
-    /// SELECT * FROM users WHERE (id, username) IN ((1, "test_user_1"), (2, "test_user_2"))
-    /// ```
-    ///
-    /// Although keep in mind that all
-    /// databases have some practical limit on the number of bind arguments in a single query.
-    /// See [`.push_bind()`][Self::push_bind] for details.
-    ///
-    /// To be safe, you can do `tuples.into_iter().take(N)` where `N` is the limit for your database
-    /// divided by the number of fields in each tuple; since integer division always rounds down,
-    /// this will ensure that you don't exceed the limit.
-    ///
-    /// ### Notes
-    ///
-    /// If `tuples` is empty, this will likely produce a syntactically invalid query
-    ///
-    /// ### Example (MySQL)
-    ///
-    /// ```rust
-    /// # #[cfg(feature = "mysql")]
-    /// # {
-    /// use sqlx::{Execute, MySql, QueryBuilder};
-    ///
-    /// struct User {
-    ///     id: i32,
-    ///     username: String,
-    ///     email: String,
-    ///     password: String,
-    /// }
-    ///
-    /// // The number of parameters in MySQL must fit in a `u16`.
-    /// const BIND_LIMIT: usize = 65535;
-    ///
-    /// // This would normally produce values forever!
-    /// let users = (0..).map(|i| User {
-    ///     id: i,
-    ///     username: format!("test_user_{i}"),
-    ///     email: format!("test-user-{i}@example.com"),
-    ///     password: format!("Test!User@Password#{i}"),
-    /// });
-    ///
-    /// let mut query_builder: QueryBuilder<MySql> = QueryBuilder::new(
-    ///     // Note the trailing space; most calls to `QueryBuilder` don't automatically insert
-    ///     // spaces as that might interfere with identifiers or quoted strings where exact
-    ///     // values may matter.
-    ///     "SELECT * FROM users WHERE (id, username, email, password) in"
-    /// );
-    ///
-    /// // Note that `.into_iter()` wasn't needed here since `users` is already an iterator.
-    /// query_builder.push_tuples(users.take(BIND_LIMIT / 4), |mut b, user| {
-    ///     // If you wanted to bind these by-reference instead of by-value,
-    ///     // you'd need an iterator that yields references that live as long as `query_builder`,
-    ///     // e.g. collect it to a `Vec` first.
-    ///     b.push_bind(user.id)
-    ///         .push_bind(user.username)
-    ///         .push_bind(user.email)
-    ///         .push_bind(user.password);
-    /// });
-    ///
-    /// let mut query = query_builder.build();
-    ///
-    /// // You can then call `query.execute()`, `.fetch_one()`, `.fetch_all()`, etc.
-    /// // For the sake of demonstration though, we're just going to assert the contents
-    /// // of the query.
-    ///
-    /// // These are methods of the `Execute` trait, not normally meant to be called in user code.
-    /// let sql = query.sql();
-    /// let arguments = query.take_arguments().unwrap();
-    ///
-    /// assert!(sql.starts_with(
-    ///     "SELECT * FROM users WHERE (id, username, email, password) in ((?, ?, ?, ?), (?, ?, ?, ?), "
-    /// ));
-    ///
-    /// assert!(sql.ends_with("(?, ?, ?, ?)) "));
-    ///
-    /// // Not a normally exposed function, only used for this doctest.
-    /// // 65535 / 4 = 16383 (rounded down)
-    /// // 16383 * 4 = 65532
-    /// assert_eq!(arguments.len(), 65532);
-    /// }
-    /// ```
+    /// The callback fills each tuple using bound values. This can express SQLite
+    /// row-value lists where accepted by the surrounding query. The caller supplies
+    /// the surrounding SQL and must handle empty input explicitly. Chunk the input to
+    /// respect the active SQLite parameter limit.
     pub fn push_tuples<I, F>(&mut self, tuples: I, mut push_tuple: F) -> &mut Self
     where
         I: IntoIterator,
@@ -600,10 +420,7 @@ where
         self
     }
 
-    /// Push a bind argument placeholder (`?` or `$N` for Postgres) and bind a value to it
-    /// without a separator.
-    ///
-    /// Simply calls [`QueryBuilder::push_bind()`] directly.
+    /// Append a bound SQLite parameter without inserting this list's separator.
     pub fn push_bind_unseparated<'t, T>(&mut self, value: T) -> &mut Self
     where
         T: Encode<'t, DB> + Type<DB>,

@@ -515,8 +515,7 @@ impl Builder {
     /// through [`spawn_blocking`], this includes but is not limited to:
     /// - [`fs`] operations
     /// - dns resolution through [`ToSocketAddrs`]
-    /// - writing to [`Stdout`] or [`Stderr`]
-    /// - reading from [`Stdin`]
+    /// - standard input and output operations when `io-std` is enabled
     ///
     /// Unlike the [`worker_threads`], they are not always active and will exit
     /// if left idle for too long. You can change this timeout duration with [`thread_keep_alive`].
@@ -539,17 +538,9 @@ impl Builder {
     ///
     /// This will panic if `val` is not larger than `0`.
     ///
-    /// # Upgrading from 0.x
-    ///
-    /// In old versions `max_threads` limited both blocking and worker threads, but the
-    /// current `max_blocking_threads` does not include async worker threads in the count.
-    ///
     /// [`spawn_blocking`]: fn@crate::task::spawn_blocking
     /// [`fs`]: mod@crate::fs
     /// [`ToSocketAddrs`]: trait@crate::net::ToSocketAddrs
-    /// [`Stdout`]: struct@crate::io::Stdout
-    /// [`Stdin`]: struct@crate::io::Stdin
-    /// [`Stderr`]: struct@crate::io::Stderr
     /// [`worker_threads`]: Self::worker_threads
     /// [`thread_keep_alive`]: Self::thread_keep_alive
     #[track_caller]

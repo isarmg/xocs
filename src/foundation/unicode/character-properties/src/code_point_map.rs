@@ -155,8 +155,8 @@ impl<T: TrieValue> CodePointMapData<T> {
     }
 }
 
-/// A borrowed wrapper around code point set data, returned by
-/// [`CodePointSetData::as_borrowed()`]. More efficient to query.
+/// A borrowed wrapper around code point map data, returned by
+/// [`CodePointMapData::as_borrowed()`]. More efficient to query.
 #[derive(Clone, Copy, Debug)]
 pub struct CodePointMapDataBorrowed<'a, T: TrieValue> {
     map: &'a PropertyCodePointMap<'a, T>,

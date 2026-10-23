@@ -22,7 +22,7 @@
 //! assert_eq!(rgb.to_css_string(PrinterOptions::default()).unwrap(), "#e1157b");
 //! ```
 //!
-//! If you have a [crate::style_parser::Parser](crate::style_parser::Parser) already, you can also use the `parse` and `to_css`
+//! If you have a [crate::style_parser::Parser] already, you can also use the `parse` and `to_css`
 //! methods instead, rather than parsing from a string.
 
 #![deny(missing_docs)]

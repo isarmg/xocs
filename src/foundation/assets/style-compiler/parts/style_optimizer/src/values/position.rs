@@ -301,7 +301,7 @@ impl IsCompatible for Position {
   }
 }
 
-/// A component within a [Position](Position) value, representing a position
+/// A component within a [Position] value, representing a position
 /// along either the horizontal or vertical axis of a box.
 ///
 /// This type is generic over side keywords.

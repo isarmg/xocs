@@ -2,7 +2,7 @@
 Provides direct access to a DFA implementation of Aho-Corasick.
 
 This is a low-level API that generally only needs to be used in niche
-circumstances. When possible, prefer using [`AhoCorasick`](blog_text_pattern_search::literal::AhoCorasick)
+circumstances. When possible, prefer using [`AhoCorasick`](crate::literal::AhoCorasick)
 instead of a DFA directly. Using an `DFA` directly is typically only necessary
 when one needs access to the [`Automaton`] trait implementation.
 */
@@ -25,7 +25,7 @@ use crate::literal::{
 
 /// A DFA implementation of Aho-Corasick.
 ///
-/// When possible, prefer using [`AhoCorasick`](blog_text_pattern_search::literal::AhoCorasick) instead of
+/// When possible, prefer using [`AhoCorasick`](crate::literal::AhoCorasick) instead of
 /// this type directly. Using a `DFA` directly is typically only necessary when
 /// one needs access to the [`Automaton`] trait implementation.
 ///
@@ -44,7 +44,7 @@ use crate::literal::{
 /// using a constant number of instructions. However, this comes at
 /// great cost. The memory usage of a DFA can be quite exorbitant.
 /// It is potentially multiple orders of magnitude greater than a
-/// [`contiguous::NFA`](blog_text_pattern_search::literal::nfa::contiguous::NFA) for example. In exchange,
+/// [`contiguous::NFA`](crate::literal::nfa::contiguous::NFA) for example. In exchange,
 /// a DFA will typically have better search speed than a `contiguous::NFA`, but
 /// not by orders of magnitude.
 ///
@@ -383,7 +383,7 @@ impl core::fmt::Debug for DFA {
 /// A builder for configuring an Aho-Corasick DFA.
 ///
 /// This builder has a subset of the options available to a
-/// [`AhoCorasickBuilder`](blog_text_pattern_search::literal::AhoCorasickBuilder). Of the shared options,
+/// [`AhoCorasickBuilder`](crate::literal::AhoCorasickBuilder). Of the shared options,
 /// their behavior is identical.
 #[derive(Clone, Debug)]
 pub struct Builder {
@@ -729,7 +729,7 @@ impl Builder {
     /// [`Builder::build_from_noncontiguous`].
     ///
     /// See
-    /// [`AhoCorasickBuilder::match_kind`](blog_text_pattern_search::literal::AhoCorasickBuilder::match_kind)
+    /// [`AhoCorasickBuilder::match_kind`](crate::literal::AhoCorasickBuilder::match_kind)
     /// for more documentation and examples.
     pub fn match_kind(&mut self, kind: MatchKind) -> &mut Builder {
         self.noncontiguous.match_kind(kind);
@@ -742,7 +742,7 @@ impl Builder {
     /// [`Builder::build_from_noncontiguous`].
     ///
     /// See
-    /// [`AhoCorasickBuilder::ascii_case_insensitive`](blog_text_pattern_search::literal::AhoCorasickBuilder::ascii_case_insensitive)
+    /// [`AhoCorasickBuilder::ascii_case_insensitive`](crate::literal::AhoCorasickBuilder::ascii_case_insensitive)
     /// for more documentation and examples.
     pub fn ascii_case_insensitive(&mut self, yes: bool) -> &mut Builder {
         self.noncontiguous.ascii_case_insensitive(yes);
@@ -755,7 +755,7 @@ impl Builder {
     /// [`Builder::build_from_noncontiguous`].
     ///
     /// See
-    /// [`AhoCorasickBuilder::prefilter`](blog_text_pattern_search::literal::AhoCorasickBuilder::prefilter)
+    /// [`AhoCorasickBuilder::prefilter`](crate::literal::AhoCorasickBuilder::prefilter)
     /// for more documentation and examples.
     pub fn prefilter(&mut self, yes: bool) -> &mut Builder {
         self.noncontiguous.prefilter(yes);
@@ -765,7 +765,7 @@ impl Builder {
     /// Sets the starting state configuration for the automaton.
     ///
     /// See
-    /// [`AhoCorasickBuilder::start_kind`](blog_text_pattern_search::literal::AhoCorasickBuilder::start_kind)
+    /// [`AhoCorasickBuilder::start_kind`](crate::literal::AhoCorasickBuilder::start_kind)
     /// for more documentation and examples.
     pub fn start_kind(&mut self, kind: StartKind) -> &mut Builder {
         self.start_kind = kind;
@@ -781,7 +781,7 @@ impl Builder {
     /// Disabling this confers no performance benefit at search time.
     ///
     /// See
-    /// [`AhoCorasickBuilder::byte_classes`](blog_text_pattern_search::literal::AhoCorasickBuilder::byte_classes)
+    /// [`AhoCorasickBuilder::byte_classes`](crate::literal::AhoCorasickBuilder::byte_classes)
     /// for more documentation and examples.
     pub fn byte_classes(&mut self, yes: bool) -> &mut Builder {
         self.byte_classes = yes;

@@ -88,7 +88,7 @@ pub use lifetime_free::LifetimeFree;
 /// to in this manner by this macro it must implement the [`LifetimeFree`]
 /// trait. This is implemented automatically for all primitive types and for
 /// several [`core`] types. If you enable the `std` crate feature, then it will
-/// also be implemented for several [`std`] types as well. If you enable the
+/// also be implemented for several `std` types as well. If you enable the
 /// `alloc` crate feature, then it will be implemented for several [`alloc`]
 /// types without linking to the standard library as the `std` feature would.
 ///

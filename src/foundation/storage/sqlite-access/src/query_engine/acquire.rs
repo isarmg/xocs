@@ -6,67 +6,29 @@ use crate::query_engine::transaction::Transaction;
 use futures::future::BoxFuture;
 use std::ops::{Deref, DerefMut};
 
-/// Acquire connections or transactions from a database in a generic way.
+/// Acquire a connection or begin a transaction through one interface.
 ///
-/// If you want to accept generic database connections that implement
-/// [`Acquire`] which then allows you to [`acquire`][`Acquire::acquire`] a
-/// connection or [`begin`][`Acquire::begin`] a transaction, then you can do it
-/// like that:
+/// Pool references and mutable SQLite connection references implement this trait.
+/// An acquired connection dereferences to the concrete connection; use
+/// `&mut *connection` when passing it to a query executor.
 ///
-/// ```rust,ignore
-/// # use sqlx::{Acquire, postgres::Postgres, error::BoxDynError};
-/// async fn run_query<'a, A>(conn: A) -> Result<(), BoxDynError>
+/// ```
+/// use blog_storage_sqlite_access::{Acquire, Sqlite};
+///
+/// async fn read_value<'a, A>(source: A) -> blog_storage_sqlite_access::Result<i64>
 /// where
-///     A: Acquire<'a, Database = Postgres>,
+///     A: Acquire<'a, Database = Sqlite>,
 /// {
-///     let mut conn = conn.acquire().await?;
-///
-///     sqlx::query!("SELECT 1 as v").fetch_one(&mut *conn).await?;
-///     sqlx::query!("SELECT 2 as v").fetch_one(&mut *conn).await?;
-///
-///     Ok(())
+///     let mut connection = source.acquire().await?;
+///     blog_storage_sqlite_access::query_scalar("SELECT 1")
+///         .fetch_one(&mut *connection)
+///         .await
 /// }
 /// ```
 ///
-/// If you run into a lifetime error about "implementation of `sqlx::Acquire` is
-/// not general enough", the [workaround] looks like this:
-///
-/// ```rust,ignore
-/// # use std::future::Future;
-/// # use sqlx::{Acquire, postgres::Postgres, error::BoxDynError};
-/// fn run_query<'a, 'c, A>(conn: A) -> impl Future<Output = Result<(), BoxDynError>> + Send + 'a
-/// where
-///     A: Acquire<'c, Database = Postgres> + Send + 'a,
-/// {
-///     async move {
-///         let mut conn = conn.acquire().await?;
-///
-///         sqlx::query!("SELECT 1 as v").fetch_one(&mut *conn).await?;
-///         sqlx::query!("SELECT 2 as v").fetch_one(&mut *conn).await?;
-///
-///         Ok(())
-///     }
-/// }
-/// ```
-///
-/// However, if you really just want to accept both, a transaction or a
-/// connection as an argument to a function, then it's easier to just accept a
-/// mutable reference to a database connection like so:
-///
-/// ```rust,ignore
-/// # use sqlx::{postgres::PgConnection, error::BoxDynError};
-/// async fn run_query(conn: &mut PgConnection) -> Result<(), BoxDynError> {
-///     sqlx::query!("SELECT 1 as v").fetch_one(&mut *conn).await?;
-///     sqlx::query!("SELECT 2 as v").fetch_one(&mut *conn).await?;
-///
-///     Ok(())
-/// }
-/// ```
-///
-/// The downside of this approach is that you have to `acquire` a connection
-/// from a pool first and can't directly pass the pool as argument.
-///
-/// [workaround]: https://github.com/launchbadge/sqlx/issues/1015#issuecomment-767787777
+/// A function that only needs an already-acquired connection can instead accept
+/// `&mut SqliteConnection`. Keep the connection borrow short, and begin a
+/// transaction explicitly when several writes must be atomic.
 pub trait Acquire<'c> {
     type Database: Database;
 

@@ -9,7 +9,7 @@ use crate::util::eq_ignore_case;
 ///
 /// This is used for specifying [possible values] of [Args].
 ///
-/// See also [`PossibleValuesParser`][command_line::builder::PossibleValuesParser]
+/// See also [`PossibleValuesParser`][crate::builder::PossibleValuesParser]
 ///
 /// <div class="warning">
 ///
@@ -22,8 +22,8 @@ use crate::util::eq_ignore_case;
 /// # Examples
 ///
 /// ```rust
-/// # use command_line;
-/// # use command_line::{Arg, builder::PossibleValue, ArgAction};
+/// # use blog_cli_arguments;
+/// # use blog_cli_arguments::{Arg, builder::PossibleValue, ArgAction};
 /// let cfg = Arg::new("config")
 ///     .action(ArgAction::Set)
 ///     .value_name("FILE")
@@ -34,8 +34,8 @@ use crate::util::eq_ignore_case;
 ///     ]);
 /// ```
 ///
-/// [Args]: command_line::Arg
-/// [possible values]: command_line::builder::ValueParser::possible_values
+/// [Args]: crate::Arg
+/// [possible values]: crate::builder::ValueParser::possible_values
 /// [hide]: PossibleValue::hide()
 /// [help]: PossibleValue::help()
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -61,14 +61,14 @@ impl PossibleValue {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::builder::PossibleValue;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::builder::PossibleValue;
     /// PossibleValue::new("fast")
     /// # ;
     /// ```
     /// [hidden]: PossibleValue::hide
-    /// [possible value]: command_line::builder::PossibleValuesParser
-    /// [`Arg::hide_possible_values(true)`]: command_line::Arg::hide_possible_values()
+    /// [possible value]: crate::builder::PossibleValuesParser
+    /// [`Arg::hide_possible_values(true)`]: crate::Arg::hide_possible_values()
     pub fn new(name: impl Into<Str>) -> Self {
         Self {
             name: name.into(),
@@ -84,8 +84,8 @@ impl PossibleValue {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::builder::PossibleValue;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::builder::PossibleValue;
     /// PossibleValue::new("slow")
     ///     .help("not fast")
     /// # ;
@@ -105,13 +105,13 @@ impl PossibleValue {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::builder::PossibleValue;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::builder::PossibleValue;
     /// PossibleValue::new("secret")
     ///     .hide(true)
     /// # ;
     /// ```
-    /// [`Arg::hide_possible_values(true)`]: command_line::Arg::hide_possible_values()
+    /// [`Arg::hide_possible_values(true)`]: crate::Arg::hide_possible_values()
     #[inline]
     #[must_use]
     pub fn hide(mut self, yes: bool) -> Self {
@@ -124,8 +124,8 @@ impl PossibleValue {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::builder::PossibleValue;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::builder::PossibleValue;
     /// PossibleValue::new("slow")
     ///     .alias("not-fast")
     /// # ;
@@ -145,8 +145,8 @@ impl PossibleValue {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::builder::PossibleValue;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::builder::PossibleValue;
     /// PossibleValue::new("slow")
     ///     .aliases(["not-fast", "snake-like"])
     /// # ;
@@ -208,8 +208,8 @@ impl PossibleValue {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::builder::PossibleValue;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::builder::PossibleValue;
     /// let arg_value = PossibleValue::new("fast").alias("not-slow");
     ///
     /// assert!(arg_value.matches("fast", false));

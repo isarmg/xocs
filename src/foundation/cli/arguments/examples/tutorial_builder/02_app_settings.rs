@@ -1,4 +1,4 @@
-use command_line::{ArgAction, arg, command};
+use blog_cli_arguments::{ArgAction, arg, command};
 
 fn main() {
     let matches = command!() // requires `cargo` feature

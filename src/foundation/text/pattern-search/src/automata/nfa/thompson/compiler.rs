@@ -59,7 +59,7 @@ impl Config {
     ///
     /// (1) is a guarantee made by whoever constructs the NFA.
     /// If you're parsing a regex from its concrete syntax, then
-    /// [`syntax::Config::utf8`](blog_text_pattern_search::automata::util::syntax::Config::utf8) can make
+    /// [`syntax::Config::utf8`](crate::automata::util::syntax::Config::utf8) can make
     /// this guarantee for you. It does it by returning an error if the regex
     /// pattern could every report a non-empty match span that contains invalid
     /// UTF-8. So long as `syntax::Config::utf8` mode is enabled and your regex
@@ -349,7 +349,7 @@ impl Config {
     }
 
     /// Configures what kinds of capture groups are compiled into
-    /// [`State::Capture`](blog_text_pattern_search::automata::nfa::thompson::State::Capture) states in a
+    /// [`State::Capture`](crate::automata::nfa::thompson::State::Capture) states in a
     /// Thompson NFA.
     ///
     /// Currently, using any option except for [`WhichCaptures::None`] requires
@@ -537,7 +537,7 @@ impl Config {
 }
 
 /// A configuration indicating which kinds of
-/// [`State::Capture`](blog_text_pattern_search::automata::nfa::thompson::State::Capture) states to include.
+/// [`State::Capture`](crate::automata::nfa::thompson::State::Capture) states to include.
 ///
 /// This configuration can be used with [`Config::which_captures`] to control
 /// which capture states are compiled into a Thompson NFA.
@@ -569,8 +569,8 @@ pub enum WhichCaptures {
     /// Callers must be exceedingly careful when using this
     /// option. In particular, not all regex engines support
     /// reporting match spans when using this option (for example,
-    /// [`PikeVM`](blog_text_pattern_search::automata::nfa::thompson::pikevm::PikeVM) or
-    /// [`BoundedBacktracker`](blog_text_pattern_search::automata::nfa::thompson::backtrack::BoundedBacktracker)).
+    /// [`PikeVM`](crate::automata::nfa::thompson::pikevm::PikeVM) or
+    /// [`BoundedBacktracker`](crate::automata::nfa::thompson::backtrack::BoundedBacktracker)).
     ///
     /// Perhaps more confusingly, using this option with such an
     /// engine means that an `is_match` routine could report `true`
@@ -578,7 +578,7 @@ pub enum WhichCaptures {
     /// that _should_ happen, but the low level control provided by
     /// this crate makes it possible.
     ///
-    /// Similarly, any regex engines (like [`meta::Regex`](blog_text_pattern_search::automata::meta::Regex))
+    /// Similarly, any regex engines (like [`meta::Regex`](crate::automata::meta::Regex))
     /// should always return `None` from `find` routines when this option is
     /// used, even if _some_ of its internal engines could find the match
     /// boundaries. This is because inputs from user data could influence
@@ -652,7 +652,7 @@ mutably both inside and outside the closure at the same time.
 /// a search (e.g., with a Pike VM), or it can be further used to build a DFA.
 ///
 /// This compiler provides APIs both for compiling regex patterns directly from
-/// their concrete syntax, or via a [`blog_text_pattern_search::syntax::hir::Hir`].
+/// their concrete syntax, or via a [`crate::syntax::hir::Hir`].
 ///
 /// This compiler has various options that may be configured via
 /// [`thompson::Config`](Config).
@@ -922,7 +922,7 @@ impl Compiler {
     }
 
     /// Set the syntax configuration for this builder using
-    /// [`syntax::Config`](blog_text_pattern_search::automata::util::syntax::Config).
+    /// [`syntax::Config`](crate::automata::util::syntax::Config).
     ///
     /// This permits setting things like case insensitivity, Unicode and multi
     /// line mode.

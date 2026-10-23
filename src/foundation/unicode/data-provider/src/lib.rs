@@ -52,9 +52,9 @@
 //!
 //! ### [`BufferProvider`](prelude::BufferProvider)
 //!
-//! These providers are able to return unstructured data typically represented as
-//! [`serde`]-serialized buffers. Users can call [`as_deserializing()`] to get an object
-//! implementing [`DataProvider`] by invoking Serde Deserialize.
+//! These providers return opaque serialized buffers. Buffer loading and decoding are
+//! separate operations: a consumer must decode the bytes with the format it expects,
+//! or use a typed [`DataProvider`] that already supplies the required data structure.
 //!
 //! Examples of [`BufferProvider`](prelude::BufferProvider)s:
 //!
@@ -86,7 +86,6 @@
 //! [`impl_dynamic_data_provider!`]: dynutil::impl_dynamic_data_provider
 //! [`icu_provider_adapters`]: https://docs.rs/icu_provider_adapters/latest/icu_provider_adapters/index.html
 //! [`SourceDataProvider`]: https://docs.rs/icu_provider_source/latest/icu_provider_source/struct.SourceDataProvider.html
-//! [`as_deserializing()`]: buf::AsDeserializingBufferProvider::as_deserializing
 //! [`FsDataProvider`]: https://docs.rs/icu_provider_fs/latest/icu_provider_fs/struct.FsDataProvider.html
 //! [`BlobDataProvider`]: https://docs.rs/icu_provider_blob/latest/icu_provider_blob/struct.BlobDataProvider.html
 

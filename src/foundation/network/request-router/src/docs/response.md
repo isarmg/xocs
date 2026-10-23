@@ -6,7 +6,7 @@ Anything that implements [`IntoResponse`] can be returned from a handler. axum
 provides implementations for common types:
 
 ```rust,no_run
-use axum::{
+use http_routing::{
     Json,
     response::{Html, IntoResponse},
     http::{StatusCode, Uri, header::{self, HeaderMap, HeaderName}},
@@ -69,7 +69,7 @@ Additionally you can return tuples to build more complex responses from
 individual parts.
 
 ```rust,no_run
-use axum::{
+use http_routing::{
     Json,
     response::IntoResponse,
     http::{StatusCode, HeaderMap, Uri, header},
@@ -163,7 +163,7 @@ setting headers and extensions.
 Use [`Response`] for more low level control:
 
 ```rust,no_run
-use axum::{
+use http_routing::{
     Json,
     response::{IntoResponse, Response},
     body::Body,
@@ -182,10 +182,10 @@ async fn response() -> Response {
 # Returning different response types
 
 If you need to return multiple response types, and `Result<T, E>` isn't appropriate, you can call
-`.into_response()` to turn things into `axum::response::Response`:
+`.into_response()` to turn things into `http_routing::response::Response`:
 
 ```rust
-use axum::{
+use http_routing::{
     response::{IntoResponse, Redirect, Response},
     http::StatusCode,
 };
@@ -220,7 +220,7 @@ You can use `impl IntoResponse` as the return type from handlers to avoid
 typing large types. For example
 
 ```rust
-use axum::http::StatusCode;
+use http_routing::http::StatusCode;
 
 async fn handler() -> (StatusCode, [(&'static str, &'static str); 1], &'static str) {
     (StatusCode::OK, [("x-foo", "bar")], "Hello, World!")
@@ -230,7 +230,7 @@ async fn handler() -> (StatusCode, [(&'static str, &'static str); 1], &'static s
 Becomes easier using `impl IntoResponse`:
 
 ```rust
-use axum::{http::StatusCode, response::IntoResponse};
+use http_routing::{http::StatusCode, response::IntoResponse};
 
 async fn impl_into_response() -> impl IntoResponse {
     (StatusCode::OK, [("x-foo", "bar")], "Hello, World!")
@@ -241,7 +241,7 @@ However `impl IntoResponse` has a few limitations. Firstly it can only be used
 to return a single type:
 
 ```rust,compile_fail
-use axum::{http::StatusCode, response::IntoResponse};
+use http_routing::{http::StatusCode, response::IntoResponse};
 
 async fn handler() -> impl IntoResponse {
     if check_something() {
@@ -264,7 +264,7 @@ Secondly `impl IntoResponse` can lead to type inference issues when used with
 `Result` and `?`:
 
 ```rust,compile_fail
-use axum::{http::StatusCode, response::IntoResponse};
+use http_routing::{http::StatusCode, response::IntoResponse};
 
 async fn handler() -> impl IntoResponse {
     create_thing()?;
@@ -284,7 +284,7 @@ specified `impl IntoResponse` as the return type.
 `Result<impl IntoResponse, impl IntoResponse>` doesn't always work either:
 
 ```rust,compile_fail
-use axum::{http::StatusCode, response::IntoResponse};
+use http_routing::{http::StatusCode, response::IntoResponse};
 
 async fn handler() -> Result<impl IntoResponse, impl IntoResponse> {
     create_thing()?;
@@ -300,7 +300,7 @@ fn create_thing() -> Result<(), StatusCode> {
 The solution is to use a concrete error type, such as `Result<impl IntoResponse, StatusCode>`:
 
 ```rust
-use axum::{http::StatusCode, response::IntoResponse};
+use http_routing::{http::StatusCode, response::IntoResponse};
 
 async fn handler() -> Result<impl IntoResponse, StatusCode> {
     create_thing()?;

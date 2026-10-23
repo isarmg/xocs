@@ -7,18 +7,18 @@ data type in this library. It is the result of what is commonly referred to as
 "regex compilation." That is, turning a regex pattern from its concrete syntax
 string into something that can run a search looks roughly like this:
 
-* A `&str` is parsed into a [`regex-syntax::ast::Ast`](blog_text_pattern_search::syntax::ast::Ast).
-* An `Ast` is translated into a [`regex-syntax::hir::Hir`](blog_text_pattern_search::syntax::hir::Hir).
+* A `&str` is parsed into a [`regex-syntax::ast::Ast`](crate::syntax::ast::Ast).
+* An `Ast` is translated into a [`regex-syntax::hir::Hir`](crate::syntax::hir::Hir).
 * An `Hir` is compiled into a [`NFA`].
 * The `NFA` is then used to build one of a few different regex engines:
   * An `NFA` is used directly in the `PikeVM` and `BoundedBacktracker` engines.
-  * An `NFA` is used by a [hybrid NFA/DFA](blog_text_pattern_search::automata::hybrid) to build out a DFA's
+  * An `NFA` is used by a [hybrid NFA/DFA](crate::automata::hybrid) to build out a DFA's
   transition table at search time.
   * An `NFA`, assuming it is one-pass, is used to build a full
-  [one-pass DFA](blog_text_pattern_search::automata::dfa::onepass) ahead of time.
-  * An `NFA` is used to build a [full DFA](blog_text_pattern_search::automata::dfa) ahead of time.
+  [one-pass DFA](crate::automata::dfa::onepass) ahead of time.
+  * An `NFA` is used to build a [full DFA](crate::automata::dfa) ahead of time.
 
-The [`meta`](blog_text_pattern_search::automata::meta) regex engine makes all of these choices for you based
+The [`meta`](crate::automata::meta) regex engine makes all of these choices for you based
 on various criteria. However, if you have a lower level use case, _you_ can
 build any of the above regex engines and use them directly. But you must start
 here by building an `NFA`.

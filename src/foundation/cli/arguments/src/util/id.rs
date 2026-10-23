@@ -2,11 +2,11 @@ use crate::builder::Str;
 #[cfg(feature = "string")]
 use std::borrow::Cow;
 
-/// [`Arg`][crate::Arg] or [`ArgGroup`][command_line::ArgGroup] identifier
+/// [`Arg`][crate::Arg] or [`ArgGroup`][crate::ArgGroup] identifier
 ///
-/// This is used for accessing the value in [`ArgMatches`][command_line::ArgMatches] or defining
+/// This is used for accessing the value in [`ArgMatches`][crate::ArgMatches] or defining
 /// relationships between `Arg`s and `ArgGroup`s with functions like
-/// [`Arg::conflicts_with`][command_line::Arg::conflicts_with].
+/// [`Arg::conflicts_with`][crate::Arg::conflicts_with].
 #[derive(Default, Clone, Eq, PartialEq, PartialOrd, Ord, Hash)]
 pub struct Id(Str);
 

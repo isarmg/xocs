@@ -46,7 +46,7 @@ impl<'t> Link<'t> {
 #[derive(Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum LinkKind {
-    /// URL links like "http://example.org".
+    /// URL links like `http://example.org`.
     Url,
     /// E-mail links like "foo@example.org"
     Email,

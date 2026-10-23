@@ -1,15 +1,9 @@
 //! A map of String to serde_json::Value.
 //!
-//! By default the map is backed by a [`BTreeMap`]. Enable the `preserve_order`
-//! feature of serde_json to use [`IndexMap`] instead.
+//! The maintained configuration uses a [`BTreeMap`], so keys iterate in sorted
+//! order. Removing an entry preserves the order of the remaining keys.
 //!
-//! In builds without the `std` feature, `preserve_order` hashes keys with
-//! [`foldhash::fast::RandomState`]. Foldhash provides minimal HashDoS
-//! resistance, but does not protect against interactive attackers. Builds with
-//! `std` use the standard library's [`std::hash::RandomState`].
-//!
-//! [`BTreeMap`]: std::collections::BTreeMap
-//! [`IndexMap`]: indexmap::IndexMap
+//! [`BTreeMap`]: alloc::collections::BTreeMap
 
 use crate::error::Error;
 use crate::value::Value;
@@ -157,11 +151,6 @@ impl Map<String, Value> {
     /// The key may be any borrowed form of the map's key type, but the ordering
     /// on the borrowed form *must* match the ordering on the key type.
     ///
-    /// If serde_json's "preserve_order" is enabled, `.remove(key)` is
-    /// equivalent to [`.swap_remove(key)`][Self::swap_remove], replacing this
-    /// entry's position with the last element. If you need to preserve the
-    /// relative order of the keys in the map, use
-    /// [`.shift_remove(key)`][Self::shift_remove] instead.
     #[inline]
     pub fn remove<Q>(&mut self, key: &Q) -> Option<Value>
     where
@@ -180,11 +169,6 @@ impl Map<String, Value> {
     /// The key may be any borrowed form of the map's key type, but the ordering
     /// on the borrowed form *must* match the ordering on the key type.
     ///
-    /// If serde_json's "preserve_order" is enabled, `.remove_entry(key)` is
-    /// equivalent to [`.swap_remove_entry(key)`][Self::swap_remove_entry],
-    /// replacing this entry's position with the last element. If you need to
-    /// preserve the relative order of the keys in the map, use
-    /// [`.shift_remove_entry(key)`][Self::shift_remove_entry] instead.
     #[inline]
     pub fn remove_entry<Q>(&mut self, key: &Q) -> Option<(String, Value)>
     where
@@ -927,11 +911,6 @@ impl<'a> OccupiedEntry<'a> {
 
     /// Takes the value of the entry out of the map, and returns it.
     ///
-    /// If serde_json's "preserve_order" is enabled, `.remove()` is
-    /// equivalent to [`.swap_remove()`][Self::swap_remove], replacing this
-    /// entry's position with the last element. If you need to preserve the
-    /// relative order of the keys in the map, use
-    /// [`.shift_remove()`][Self::shift_remove] instead.
     ///
     /// # Examples
     ///
@@ -988,11 +967,6 @@ impl<'a> OccupiedEntry<'a> {
 
     /// Removes the entry from the map, returning the stored key and value.
     ///
-    /// If serde_json's "preserve_order" is enabled, `.remove_entry()` is
-    /// equivalent to [`.swap_remove_entry()`][Self::swap_remove_entry],
-    /// replacing this entry's position with the last element. If you need to
-    /// preserve the relative order of the keys in the map, use
-    /// [`.shift_remove_entry()`][Self::shift_remove_entry] instead.
     ///
     /// # Examples
     ///

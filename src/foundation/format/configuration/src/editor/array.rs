@@ -88,7 +88,7 @@ impl Array {
 
     /// The location within the original document
     ///
-    /// This generally requires an [`ImDocument`][blog_format_configuration::editor::ImDocument].
+    /// This generally requires an [`crate::editor::ImDocument`].
     pub fn span(&self) -> Option<std::ops::Range<usize>> {
         self.span.clone()
     }

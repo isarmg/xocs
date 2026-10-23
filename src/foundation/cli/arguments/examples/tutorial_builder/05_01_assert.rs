@@ -1,4 +1,4 @@
-use command_line::{arg, command, value_parser};
+use blog_cli_arguments::{arg, command, value_parser};
 
 fn main() {
     let matches = cmd().get_matches();
@@ -10,7 +10,7 @@ fn main() {
     println!("PORT = {port}");
 }
 
-fn cmd() -> command_line::Command {
+fn cmd() -> blog_cli_arguments::Command {
     command!() // requires `cargo` feature
         .arg(
             arg!(<PORT>)

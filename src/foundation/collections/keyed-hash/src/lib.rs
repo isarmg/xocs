@@ -16,7 +16,7 @@
     all(feature = "std", any(feature = "runtime-rng", feature = "no-rng")),
     doc = r##"
 # Basic Usage
-AHash provides an implementation of the [Hasher] trait.
+AHash implements the [`Hasher`](core::hash::Hasher) trait.
 To construct a HashMap using aHash as its hasher do the following:
 ```
 use ahash::{AHasher, RandomState};

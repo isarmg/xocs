@@ -30,6 +30,6 @@ source. `u32` and `u64` are convenience functions over the same source.
 
 The maintained backend selection is fixed by these targets. The upstream
 backend matrix and custom-backend configuration in
-`docs/upstream/getrandom-0.4.3/README.md` are historical documentation, not
+`docs/dependencies/origins/getrandom-0.4.3/README.md` are historical documentation, not
 supported configuration for this package. Original archives and licenses are
 retained under `compliance/`.

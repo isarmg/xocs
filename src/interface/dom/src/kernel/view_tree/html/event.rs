@@ -367,7 +367,7 @@ macro_rules! generate_event_types {
   ),* $(,)?} => {
     blog_component_macros::paste! {
       $(
-        #[doc = "The `" [< $($event)+ >] "` event, which receives [" $web_event "](web_sys::" $web_event ") as its argument."]
+        #[doc = "The `" [< $($event)+ >] "` event, which receives [`web_sys::" $web_event "`] as its argument."]
         #[derive(Copy, Clone, Debug)]
         #[allow(non_camel_case_types)]
         pub struct [<$( $event )+ >];

@@ -1,4 +1,4 @@
-Apply a [`tower::Layer`] to all routes in the router.
+Apply a [`service_stack::Layer`] to all routes in the router.
 
 This can be used to add additional processing to a request for a group
 of routes.
@@ -13,15 +13,10 @@ more details.
 # Example
 
 ```rust
-use axum::{routing::get, Router};
-use tower::limit::ConcurrencyLimitLayer;
+use http_routing::{extract::Extension, routing::get, Router};
 
-async fn handler() {}
-
-let app = Router::new().route(
+let app: Router = Router::new().route(
     "/",
-    // All requests to `GET /` will be sent through `ConcurrencyLimitLayer`
-    get(handler).layer(ConcurrencyLimitLayer::new(64)),
+    get(|| async { "Blog" }).layer(Extension("label")),
 );
-# let _: Router = app;
 ```

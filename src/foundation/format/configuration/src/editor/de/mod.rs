@@ -91,7 +91,7 @@ impl From<Error> for crate::editor::TomlError {
 
 impl std::error::Error for Error {}
 
-/// Convert a TOML [documents][blog_format_configuration::editor::DocumentMut] into `T`.
+/// Convert a TOML [documents][crate::editor::DocumentMut] into `T`.
 #[cfg(feature = "parse")]
 pub fn from_str<T>(s: &'_ str) -> Result<T, Error>
 where
@@ -101,7 +101,7 @@ where
     T::deserialize(de)
 }
 
-/// Convert a TOML [documents][blog_format_configuration::editor::DocumentMut] into `T`.
+/// Convert a TOML [documents][crate::editor::DocumentMut] into `T`.
 #[cfg(feature = "parse")]
 pub fn from_slice<T>(s: &'_ [u8]) -> Result<T, Error>
 where
@@ -111,7 +111,7 @@ where
     from_str(s)
 }
 
-/// Convert a [`DocumentMut`][blog_format_configuration::editor::DocumentMut] into `T`.
+/// Convert a [`crate::editor::DocumentMut`] into `T`.
 pub fn from_document<T>(d: impl Into<Deserializer>) -> Result<T, Error>
 where
     T: DeserializeOwned,
@@ -120,7 +120,7 @@ where
     T::deserialize(deserializer)
 }
 
-/// Deserialization for TOML [documents][blog_format_configuration::editor::DocumentMut].
+/// Deserialization for TOML [documents][crate::editor::DocumentMut].
 pub struct Deserializer<S = String> {
     root: crate::editor::Item,
     raw: Option<S>,

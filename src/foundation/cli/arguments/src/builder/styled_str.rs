@@ -8,12 +8,12 @@ use std::borrow::Cow;
 /// # Examples
 ///
 /// ```rust
-/// # use command_line;
+/// # use blog_cli_arguments;
 /// // ANSI escapes encode styling without an additional formatting dependency.
 /// let after_help: &'static str = "\x1b[1;4mExamples\x1b[0m\n\n\x20\x20\x1b[2m$\x1b[0m \
 ///     \x1b[1mmybin --input file.toml\x1b[0m\n";
 ///
-/// let cmd = command_line::Command::new("mybin")
+/// let cmd = blog_cli_arguments::Command::new("mybin")
 ///     .after_help(after_help)  // The `&str` gets converted into a `StyledStr`
 ///     // ...
 /// #   ;

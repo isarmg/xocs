@@ -55,7 +55,7 @@ enum_property! {
   /// A value for the [-webkit-mask-source-type](https://github.com/WebKit/WebKit/blob/6eece09a1c31e47489811edd003d1e36910e9fd3/Source/WebCore/css/CSSProperties.json#L6578-L6587)
   /// property.
   ///
-  /// See also [MaskMode](MaskMode).
+  /// See also [`MaskMode`].
   pub enum WebKitMaskSourceType {
     /// Equivalent to `match-source` in the standard `mask-mode` syntax.
     Auto,
@@ -165,7 +165,7 @@ enum_property! {
   /// A value for the [-webkit-mask-composite](https://developer.mozilla.org/en-US/docs/Web/CSS/-webkit-mask-composite)
   /// property.
   ///
-  /// See also [MaskComposite](MaskComposite).
+  /// See also [`MaskComposite`].
   #[allow(missing_docs)]
   pub enum WebKitMaskComposite {
     Clear,

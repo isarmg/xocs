@@ -2,7 +2,7 @@
 //!
 //! Dependencies in CSS can be analyzed using the `analyze_dependencies` option
 //! when printing a style sheet. These include other style sheets referenved via
-//! the `@import` rule, as well as `url()` references. See [PrinterOptions](PrinterOptions).
+//! the `@import` rule, as well as `url()` references. See [PrinterOptions].
 //!
 //! When dependency analysis is enabled, `@import` rules are removed, and `url()`
 //! dependencies are replaced with hashed placeholders that can be substituted with

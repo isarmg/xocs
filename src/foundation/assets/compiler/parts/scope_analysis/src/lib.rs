@@ -60,13 +60,12 @@ use class::ClassTable;
 /// Semantic analysis of a JavaScript/TypeScript program.
 ///
 /// [`Semantic`] contains the results of analyzing a program, including the
-/// [`Abstract Syntax Tree (AST)`], [`scoping`], and [`control flow graph (CFG)`].
+/// [`Abstract Syntax Tree (AST)`] and [`scoping`].
 ///
 /// Do not construct this struct directly; instead, use [`SemanticBuilder`].
 ///
 /// [`Abstract Syntax Tree (AST)`]: crate::scope_analysis::AstNodes
 /// [`scoping`]: crate::scope_analysis::Scoping
-/// [`control flow graph (CFG)`]: crate::scope_analysis::ControlFlowGraph
 #[derive(Default)]
 pub struct Semantic<'a> {
     /// Source code of the JavaScript/TypeScript program being analyzed.

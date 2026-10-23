@@ -47,8 +47,8 @@ thread_local! {
 /// # Examples
 ///
 /// ```
-/// use textwrap::core::Word;
-/// use textwrap::WordSeparator::AsciiSpace;
+/// use blog_text_line_layout::core::Word;
+/// use blog_text_line_layout::WordSeparator::AsciiSpace;
 ///
 /// let words = AsciiSpace.find_words("Hello World!").collect::<Vec<_>>();
 /// assert_eq!(words, vec![Word::from("Hello "), Word::from("World!")]);
@@ -60,8 +60,8 @@ pub enum WordSeparator {
     /// # Examples
     ///
     /// ```
-    /// use textwrap::core::Word;
-    /// use textwrap::WordSeparator::AsciiSpace;
+    /// use blog_text_line_layout::core::Word;
+    /// use blog_text_line_layout::WordSeparator::AsciiSpace;
     ///
     /// let words = AsciiSpace.find_words("Hello   World!").collect::<Vec<_>>();
     /// assert_eq!(words, vec![Word::from("Hello   "),
@@ -88,8 +88,8 @@ pub enum WordSeparator {
     ///
     /// ```
     /// #[cfg(feature = "unicode-linebreak")] {
-    /// use textwrap::core::Word;
-    /// use textwrap::WordSeparator::UnicodeBreakProperties;
+    /// use blog_text_line_layout::core::Word;
+    /// use blog_text_line_layout::WordSeparator::UnicodeBreakProperties;
     ///
     /// assert_eq!(UnicodeBreakProperties.find_words("Emojis: 😂😍").collect::<Vec<_>>(),
     ///            vec![Word::from("Emojis: "),
@@ -108,8 +108,8 @@ pub enum WordSeparator {
     ///
     /// ```
     /// #[cfg(feature = "unicode-linebreak")] {
-    /// use textwrap::core::Word;
-    /// use textwrap::WordSeparator::UnicodeBreakProperties;
+    /// use blog_text_line_layout::core::Word;
+    /// use blog_text_line_layout::WordSeparator::UnicodeBreakProperties;
     ///
     /// assert_eq!(UnicodeBreakProperties.find_words("Emojis: 😂\u{2060}😍").collect::<Vec<_>>(),
     ///            vec![Word::from("Emojis: "),
@@ -122,8 +122,8 @@ pub enum WordSeparator {
     ///
     /// ```
     /// #[cfg(feature = "unicode-linebreak")] {
-    /// use textwrap::core::Word;
-    /// use textwrap::WordSeparator::UnicodeBreakProperties;
+    /// use blog_text_line_layout::core::Word;
+    /// use blog_text_line_layout::WordSeparator::UnicodeBreakProperties;
     ///
     /// assert_eq!(UnicodeBreakProperties.find_words("[ foo ] bar !").collect::<Vec<_>>(),
     ///            vec![Word::from("[ foo ] "),
@@ -141,7 +141,7 @@ impl PartialEq for WordSeparator {
     /// Compare two word separators.
     ///
     /// ```
-    /// use textwrap::WordSeparator;
+    /// use blog_text_line_layout::WordSeparator;
     ///
     /// assert_eq!(WordSeparator::AsciiSpace, WordSeparator::AsciiSpace);
     /// #[cfg(feature = "unicode-linebreak")] {
@@ -153,8 +153,8 @@ impl PartialEq for WordSeparator {
     /// Note that `WordSeparator::Custom` values never compare equal:
     ///
     /// ```
-    /// use textwrap::WordSeparator;
-    /// use textwrap::core::Word;
+    /// use blog_text_line_layout::WordSeparator;
+    /// use blog_text_line_layout::core::Word;
     /// fn word_separator(line: &str) -> Box<dyn Iterator<Item = Word<'_>> + '_> {
     ///     Box::new(line.split_inclusive(' ').map(Word::from))
     /// }

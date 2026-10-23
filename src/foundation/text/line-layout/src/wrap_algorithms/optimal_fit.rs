@@ -35,8 +35,8 @@ pub struct Penalties {
     /// character in extreme cases:
     ///
     /// ```
-    /// use textwrap::core::Word;
-    /// use textwrap::wrap_algorithms::{wrap_optimal_fit, Penalties};
+    /// use blog_text_line_layout::core::Word;
+    /// use blog_text_line_layout::wrap_algorithms::{wrap_optimal_fit, Penalties};
     ///
     /// let short = "foo ";
     /// let long = "x".repeat(50);
@@ -87,7 +87,7 @@ pub struct Penalties {
     /// ## Examples
     ///
     /// ```
-    /// use textwrap::{wrap, wrap_algorithms, Options, WrapAlgorithm};
+    /// use blog_text_line_layout::{wrap, wrap_algorithms, Options, WrapAlgorithm};
     ///
     /// let text = "This is a demo of the short last line penalty.";
     ///
@@ -276,8 +276,8 @@ impl core::error::Error for OverflowError {}
 /// (approximately 1e154):
 ///
 /// ```
-/// use textwrap::core::Fragment;
-/// use textwrap::wrap_algorithms::{wrap_optimal_fit, OverflowError, Penalties};
+/// use blog_text_line_layout::core::Fragment;
+/// use blog_text_line_layout::wrap_algorithms::{wrap_optimal_fit, OverflowError, Penalties};
 ///
 /// #[derive(Debug, PartialEq)]
 /// struct Word(f64);

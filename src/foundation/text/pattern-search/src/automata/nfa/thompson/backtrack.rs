@@ -208,7 +208,7 @@ impl Config {
 /// complexity, and the possibility of setting a configuration that might not
 /// make sense. For example, there are two different UTF-8 modes:
 ///
-/// * [`syntax::Config::utf8`](blog_text_pattern_search::automata::util::syntax::Config::utf8) controls
+/// * [`syntax::Config::utf8`](crate::automata::util::syntax::Config::utf8) controls
 /// whether the pattern itself can contain sub-expressions that match invalid
 /// UTF-8.
 /// * [`thompson::Config::utf8`] controls how the regex iterators themselves
@@ -312,7 +312,7 @@ impl Builder {
     }
 
     /// Set the syntax configuration for this builder using
-    /// [`syntax::Config`](blog_text_pattern_search::automata::util::syntax::Config).
+    /// [`syntax::Config`](crate::automata::util::syntax::Config).
     ///
     /// This permits setting things like case insensitivity, Unicode and multi
     /// line mode.
@@ -329,7 +329,7 @@ impl Builder {
     }
 
     /// Set the Thompson NFA configuration for this builder using
-    /// [`nfa::thompson::Config`](blog_text_pattern_search::automata::nfa::thompson::Config).
+    /// [`nfa::thompson::Config`](crate::automata::nfa::thompson::Config).
     ///
     /// This permits setting things like if additional time should be spent
     /// shrinking the size of the NFA.
@@ -1071,7 +1071,7 @@ impl BoundedBacktracker {
     /// If the regex engine returns an error at any point, then the iterator
     /// will yield that error.
     ///
-    /// **Tip:** See [`util::iter::Searcher`](blog_text_pattern_search::automata::util::iter::Searcher) for
+    /// **Tip:** See [`util::iter::Searcher`](crate::automata::util::iter::Searcher) for
     /// how to correctly iterate over all matches in a haystack while avoiding
     /// the creation of a new `Captures` value for every match. (Which you are
     /// forced to do with an `Iterator`.)
@@ -1235,11 +1235,11 @@ impl BoundedBacktracker {
     ///
     /// * An empty slice, if you only care about which pattern matched.
     /// * A slice with
-    /// [`pattern_len() * 2`](blog_text_pattern_search::automata::nfa::thompson::NFA::pattern_len)
+    /// [`pattern_len() * 2`](crate::automata::nfa::thompson::NFA::pattern_len)
     /// slots, if you only care about the overall match spans for each matching
     /// pattern.
     /// * A slice with
-    /// [`slot_len()`](blog_text_pattern_search::automata::util::captures::GroupInfo::slot_len) slots, which
+    /// [`slot_len()`](crate::automata::util::captures::GroupInfo::slot_len) slots, which
     /// permits recording match offsets for every capturing group in every
     /// pattern.
     ///

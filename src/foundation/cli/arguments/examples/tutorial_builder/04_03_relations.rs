@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use command_line::{ArgAction, ArgGroup, arg, command, value_parser};
+use blog_cli_arguments::{ArgAction, ArgGroup, arg, command, value_parser};
 
 fn main() {
     // Create application like normal

@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-//! https://drafts.csswg.org/css-syntax/#urange
+//! <https://drafts.csswg.org/css-syntax/#urange>
 
 use crate::style_parser::tokenizer::Token;
 use crate::style_parser::{BasicParseError, Parser, ToCss};
@@ -23,7 +23,7 @@ pub struct UnicodeRange {
 }
 
 impl UnicodeRange {
-    /// https://drafts.csswg.org/css-syntax/#urange-syntax
+    /// <https://drafts.csswg.org/css-syntax/#urange-syntax>
     pub fn parse<'i, 't>(input: &mut Parser<'i, 't>) -> Result<Self, BasicParseError<'i>> {
         // <urange> =
         //   u '+' <ident-token> '?'* |

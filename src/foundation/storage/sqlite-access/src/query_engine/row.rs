@@ -9,7 +9,7 @@ use crate::query_engine::value::ValueRef;
 
 /// Represents a single row from the database.
 ///
-/// [`FromRow`]: crate::query_engine::row::FromRow
+/// [`FromRow`]: crate::FromRow
 /// [`Query::fetch`]: crate::query_engine::query::Query::fetch
 pub trait Row: Unpin + Send + 'static {
     type Database: Database<Row = Self>;

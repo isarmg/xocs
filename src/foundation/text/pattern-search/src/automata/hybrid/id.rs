@@ -12,21 +12,21 @@
 ///
 /// * **Unknown** - The state has not yet been computed. The
 /// parameters used to get this state ID must be re-passed to
-/// [`DFA::next_state`](blog_text_pattern_search::automata::hybrid::dfa::DFA::next_state), which will never
+/// [`DFA::next_state`](crate::automata::hybrid::dfa::DFA::next_state), which will never
 /// return an unknown state ID.
 /// * **Dead** - A dead state only has transitions to itself. It indicates that
 /// the search cannot do anything else and should stop with whatever result it
 /// has.
 /// * **Quit** - A quit state indicates that the automaton could not answer
 /// whether a match exists or not. Correct search implementations must return a
-/// [`MatchError::quit`](blog_text_pattern_search::automata::MatchError::quit) when a DFA enters a quit
+/// [`MatchError::quit`](crate::automata::MatchError::quit) when a DFA enters a quit
 /// state.
 /// * **Start** - A start state is a state in which a search can begin.
 /// Lazy DFAs usually have more than one start state. Branching on
 /// this isn't required for correctness, but a common optimization is
 /// to run a prefilter when a search enters a start state. Note that
 /// start states are *not* tagged automatically, and one must enable the
-/// [`Config::specialize_start_states`](blog_text_pattern_search::automata::hybrid::dfa::Config::specialize_start_states)
+/// [`Config::specialize_start_states`](crate::automata::hybrid::dfa::Config::specialize_start_states)
 /// setting for start states to be tagged. The reason for this is
 /// that a DFA search loop is usually written to execute a prefilter once it
 /// enters a start state. But if there is no prefilter, this handling can be
@@ -52,9 +52,9 @@
 /// state.
 ///
 /// Notice also how a correct search implementation deals with
-/// [`CacheError`](blog_text_pattern_search::automata::hybrid::CacheError)s returned by some of
+/// [`CacheError`](crate::automata::hybrid::CacheError)s returned by some of
 /// the lazy DFA routines. When a `CacheError` occurs, it returns
-/// [`MatchError::gave_up`](blog_text_pattern_search::automata::MatchError::gave_up).
+/// [`MatchError::gave_up`](crate::automata::MatchError::gave_up).
 ///
 /// ```
 /// use blog_text_pattern_search::automata::{
@@ -305,7 +305,7 @@ impl LazyStateID {
     /// start state.
     ///
     /// Note that if
-    /// [`Config::specialize_start_states`](blog_text_pattern_search::automata::hybrid::dfa::Config) is
+    /// [`Config::specialize_start_states`](crate::automata::hybrid::dfa::Config) is
     /// disabled (which is the default), then this will always return false
     /// since start states won't be tagged.
     #[inline]

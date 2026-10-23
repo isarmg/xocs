@@ -7,7 +7,7 @@ use crate::Boundary;
 /// Defines the type of casing a string can be.
 ///
 /// ```
-/// use convert_case::{Case, Casing};
+/// use blog_text_style_identifier_case::{Case, Casing};
 ///
 /// let super_mario_title: String = "super_mario_64".to_case(Case::Title);
 /// assert_eq!("Super Mario 64", super_mario_title);
@@ -33,7 +33,7 @@ pub enum Case {
     /// * Delimeter: Space
     ///
     /// ```
-    /// use convert_case::{Case, Casing};
+    /// use blog_text_style_identifier_case::{Case, Casing};
     /// assert_eq!("MY VARIABLE NAME", "My variable NAME".to_case(Case::Upper))
     /// ```
     Upper,
@@ -44,7 +44,7 @@ pub enum Case {
     /// * Delimeter: Space
     ///
     /// ```
-    /// use convert_case::{Case, Casing};
+    /// use blog_text_style_identifier_case::{Case, Casing};
     /// assert_eq!("my variable name", "My variable NAME".to_case(Case::Lower))
     /// ```
     Lower,
@@ -57,7 +57,7 @@ pub enum Case {
     /// * Delimeter: Space
     ///
     /// ```
-    /// use convert_case::{Case, Casing};
+    /// use blog_text_style_identifier_case::{Case, Casing};
     /// assert_eq!("My Variable Name", "My variable NAME".to_case(Case::Title))
     /// ```
     Title,
@@ -69,7 +69,7 @@ pub enum Case {
     /// * Delimeter: Space
     ///
     /// ```
-    /// use convert_case::{Case, Casing};
+    /// use blog_text_style_identifier_case::{Case, Casing};
     /// assert_eq!("mY vARIABLE nAME", "My variable NAME".to_case(Case::Toggle))
     /// ```
     Toggle,
@@ -83,7 +83,7 @@ pub enum Case {
     /// * Delimeter: No delimeter
     ///
     /// ```
-    /// use convert_case::{Case, Casing};
+    /// use blog_text_style_identifier_case::{Case, Casing};
     /// assert_eq!("myVariableName", "My variable NAME".to_case(Case::Camel))
     /// ```
     Camel,
@@ -97,7 +97,7 @@ pub enum Case {
     /// * Delimeter: No delimeter
     ///
     /// ```
-    /// use convert_case::{Case, Casing};
+    /// use blog_text_style_identifier_case::{Case, Casing};
     /// assert_eq!("MyVariableName", "My variable NAME".to_case(Case::Pascal))
     /// ```
     Pascal,
@@ -111,7 +111,7 @@ pub enum Case {
     /// * Delimeter: Underscore `_`
     ///
     /// ```
-    /// use convert_case::{Case, Casing};
+    /// use blog_text_style_identifier_case::{Case, Casing};
     /// assert_eq!("my_variable_name", "My variable NAME".to_case(Case::Snake))
     /// ```
     Snake,
@@ -122,7 +122,7 @@ pub enum Case {
     /// * Delimeter: Underscore `_`
     ///
     /// ```
-    /// use convert_case::{Case, Casing};
+    /// use blog_text_style_identifier_case::{Case, Casing};
     /// assert_eq!("MY_VARIABLE_NAME", "My variable NAME".to_case(Case::UpperSnake))
     /// ```
     UpperSnake,
@@ -136,7 +136,7 @@ pub enum Case {
     /// * Delimeter: Hyphen `-`
     ///
     /// ```
-    /// use convert_case::{Case, Casing};
+    /// use blog_text_style_identifier_case::{Case, Casing};
     /// assert_eq!("my-variable-name", "My variable NAME".to_case(Case::Kebab))
     /// ```
     Kebab,
@@ -147,7 +147,7 @@ pub enum Case {
     /// * Delimeter: Hyphen `-`
     ///
     /// ```
-    /// use convert_case::{Case, Casing};
+    /// use blog_text_style_identifier_case::{Case, Casing};
     /// assert_eq!("MY-VARIABLE-NAME", "My variable NAME".to_case(Case::Cobol))
     /// ```
     Cobol,
@@ -162,7 +162,7 @@ pub enum Case {
     /// * Delimeter: Hyphen `-`
     ///
     /// ```
-    /// use convert_case::{Case, Casing};
+    /// use blog_text_style_identifier_case::{Case, Casing};
     /// assert_eq!("My-Variable-Name", "My variable NAME".to_case(Case::Train))
     /// ```
     Train,
@@ -173,7 +173,7 @@ pub enum Case {
     /// * Delimeter: No delimeter
     ///
     /// ```
-    /// use convert_case::{Case, Casing};
+    /// use blog_text_style_identifier_case::{Case, Casing};
     /// assert_eq!("myvariablename", "My variable NAME".to_case(Case::Flat))
     /// ```
     Flat,
@@ -184,7 +184,7 @@ pub enum Case {
     /// * Delimeter: No delimeter
     ///
     /// ```
-    /// use convert_case::{Case, Casing};
+    /// use blog_text_style_identifier_case::{Case, Casing};
     /// assert_eq!("MYVARIABLENAME", "My variable NAME".to_case(Case::UpperFlat))
     /// ```
     UpperFlat,
@@ -196,7 +196,7 @@ pub enum Case {
     /// * Delimeter: Space
     ///
     /// ```
-    /// use convert_case::{Case, Casing};
+    /// use blog_text_style_identifier_case::{Case, Casing};
     /// assert_eq!("mY vArIaBlE nAmE", "My variable NAME".to_case(Case::Alternating));
     /// ```
     Alternating,
@@ -205,11 +205,11 @@ pub enum Case {
     /// randomly upper case or lower case.  This uses the `rand` crate
     /// and is only available with the "random" feature.
     /// * Boundaries: [Space](Boundary::Space)
-    /// * Pattern: [Random](Pattern::Random)
+    /// * Pattern: `Pattern::Random`
     /// * Delimeter: Space
     ///
     /// ```
-    /// use convert_case::{Case, Casing};
+    /// use blog_text_style_identifier_case::{Case, Casing};
     /// let new = "My variable NAME".to_case(Case::Random);
     /// ```
     /// String `new` could be "My vaRIAbLE nAme" for example.
@@ -225,7 +225,7 @@ pub enum Case {
     /// * Delimeter: Space
     ///
     /// ```
-    /// use convert_case::{Case, Casing};
+    /// use blog_text_style_identifier_case::{Case, Casing};
     /// let new = "My variable NAME".to_case(Case::Random);
     /// ```
     /// String `new` could be "mY vArIAblE NamE" for example.

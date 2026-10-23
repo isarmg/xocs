@@ -4,7 +4,7 @@ Provides direct access to NFA implementations of Aho-Corasick.
 The principle characteristic of an NFA in this crate is that it may
 transition through multiple states per byte of haystack. In Aho-Corasick
 parlance, NFAs follow failure transitions during a search. In contrast,
-a [`DFA`](blog_text_pattern_search::literal::dfa::DFA) pre-computes all failure transitions during
+a [`DFA`](crate::literal::dfa::DFA) pre-computes all failure transitions during
 compilation at the expense of a much bigger memory footprint.
 
 Currently, there are two NFA implementations provided: noncontiguous and

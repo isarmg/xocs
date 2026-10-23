@@ -7,49 +7,26 @@
 //! It is an implementation of the code point portion of the existing
 //! [ICU4C UnicodeSet API](https://unicode-org.github.io/icu-docs/apidoc/released/icu4c/classicu_1_1UnicodeSet.html).
 //!
-//! # Architecture
-//! ICU4X [`CodePointInversionList`] is split up into independent levels, with [`CodePointInversionList`] representing the membership/query API,
-//! and [`CodePointInversionListBuilder`] representing the builder API.
+//! # Representation and construction
 //!
-//! # Examples:
+//! [`CodePointInversionList`] represents set membership using sorted,
+//! non-overlapping code point ranges. It can be constructed from serialized
+//! inversion lists with [`CodePointInversionList::try_from_inversion_list`],
+//! or obtained from a Unicode property provider. With the `alloc` feature,
+//! `CodePointInversionListBuilder` additionally supports incremental construction.
 //!
-//! ## Creating a `CodePointInversionList`
+//! # Querying a set
 //!
-//! `CodePointSets` are created from either serialized [`CodePointSets`](CodePointInversionList),
-//! represented by [inversion lists](https://unicode-org.github.io/icu/userguide/strings/properties.html),
-//! the [`CodePointInversionListBuilder`], or from the Properties API.
-//!
-//! ```
-//! use icu::collections::codepointinvlist::{
-//!     CodePointInversionList, CodePointInversionListBuilder,
-//! };
-//!
-//! let mut builder = CodePointInversionListBuilder::new();
-//! builder.add_range('A'..='Z');
-//! let set: CodePointInversionList = builder.build();
-//!
-//! assert!(set.contains('A'));
-//! ```
-//!
-//! ## Querying a `CodePointInversionList`
-//!
-//! Currently, you can check if a character/range of characters exists in the [`CodePointInversionList`], or iterate through the characters.
+//! Membership, range membership and character iteration do not require allocation:
 //!
 //! ```
-//! use icu::collections::codepointinvlist::{
-//!     CodePointInversionList, CodePointInversionListBuilder,
-//! };
+//! use blog_unicode_data_collections::codepointinvlist::CodePointInversionList;
 //!
-//! let mut builder = CodePointInversionListBuilder::new();
-//! builder.add_range('A'..='Z');
-//! let set: CodePointInversionList = builder.build();
-//!
+//! let set = CodePointInversionList::bmp();
 //! assert!(set.contains('A'));
 //! assert!(set.contains_range('A'..='C'));
-//! assert_eq!(set.iter_chars().next(), Some('A'));
+//! assert_eq!(set.iter_chars().next(), Some('\0'));
 //! ```
-//!
-//! [`ICU4X`]: ../icu/index.html
 
 #[cfg(feature = "alloc")]
 #[macro_use]

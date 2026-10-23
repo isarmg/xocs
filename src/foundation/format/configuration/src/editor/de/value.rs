@@ -3,10 +3,10 @@ use data_serialization::de::IntoDeserializer as _;
 use crate::editor::de::DatetimeDeserializer;
 use crate::editor::de::Error;
 
-/// Deserialization implementation for TOML [values][blog_format_configuration::editor::Value].
+/// Deserialization implementation for TOML [values][crate::editor::Value].
 ///
 /// Can be created either directly from TOML strings, using [`std::str::FromStr`],
-/// or from parsed [values][blog_format_configuration::editor::Value] using [`data_serialization::de::IntoDeserializer::into_deserializer`].
+/// or from parsed [values][crate::editor::Value] using [`data_serialization::de::IntoDeserializer::into_deserializer`].
 ///
 /// # Example
 ///

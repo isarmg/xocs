@@ -96,62 +96,6 @@
 //! Note that non-constant offsets may still cause issues when comparing timestamps,
 //! as the comparison operators are not timezone-aware.
 //!
-//! ### [`time`](https://crates.io/crates/time)
-//!
-//! Requires the `time` Cargo feature flag.
-//!
-//! | Rust type                             | Sqlite type(s)                                       |
-//! |---------------------------------------|------------------------------------------------------|
-//! | `time::PrimitiveDateTime`             | DATETIME (TEXT, INTEGER)                             |
-//! | `time::OffsetDateTime`                | DATETIME (TEXT, INTEGER)                             |
-//! | `time::Date`                          | DATE (TEXT only)                                     |
-//! | `time::Time`                          | TIME (TEXT only)                                     |
-//!
-//! ##### NOTE: `DATETIME` conversions
-//! The behavior here is identical to the corresponding `chrono` types, minus the support for `REAL`
-//! values as Julian days (it's just not implemented).
-//!
-//! `PrimitiveDateTime` and `OffsetDateTime` will always encode to a datetime string, either
-//! with a timezone offset (`OffsetDateTime`) or without (`PrimitiveDateTime`).
-//!
-//! ##### NOTE: `CURRENT_TIMESTAMP` and comparison/interoperability of `DATETIME` values
-//! As stated previously, `OffsetDateTime` always encodes to a datetime string _with_ a timezone offset,
-//! in [RFC 3339 format][::time::format_description::well_known::Rfc3339] (using `Z` for UTC offsets).
-//!
-//! However, most of SQLite's datetime functions
-//! (including `datetime()` and `DEFAULT CURRENT_TIMESTAMP`)
-//! do not use this format. They instead use `YYYY-MM-DD HH:MM:SS.SSSS` without a timezone offset.
-//!
-//! This may cause problems with interoperability with other applications, and especially
-//! when comparing datetime values, which compares the actual string values lexicographically.
-//!
-//! Date-time strings in the SQLite format will generally _not_ compare consistently
-//! with date-time strings in the RFC 3339 format.
-//!
-//! We recommend that you decide up-front whether `DATETIME` values should be stored
-//! with explicit time zones or not, and use the corresponding type
-//! (and its corresponding offset, if applicable) _consistently_ throughout your
-//! application:
-//!
-//! * RFC 3339 format: `OffsetDateTime` with a **constant** offset.
-//!   * Changing or mixing and matching offsets may break comparisons with existing timestamps.
-//!   * `OffsetDateTime::now_local()` is **not recommended** for portable applications.
-//!   * Non-UTC offsets are only recommended if the offset is **constant**.
-//! * SQLite format: `PrimitiveDateTime`
-//!
-//! Note that non-constant offsets may still cause issues when comparing timestamps,
-//! as the comparison operators are not timezone-aware.
-//!
-//! ### [`uuid`](https://crates.io/crates/uuid)
-//!
-//! Requires the `uuid` Cargo feature flag.
-//!
-//! | Rust type                             | Sqlite type(s)                                       |
-//! |---------------------------------------|------------------------------------------------------|
-//! | `uuid::Uuid`                          | BLOB, TEXT                                           |
-//! | `uuid::fmt::Hyphenated`               | TEXT                                                 |
-//! | `uuid::fmt::Simple`                   | TEXT                                                 |
-//!
 //! ### [`json`](https://crates.io/crates/serde_json)
 //!
 //! Requires the `json` Cargo feature flag.

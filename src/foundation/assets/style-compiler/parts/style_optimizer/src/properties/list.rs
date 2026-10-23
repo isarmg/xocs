@@ -260,7 +260,7 @@ enum_property! {
   /// A [`<symbols-type>`](https://www.w3.org/TR/css-counter-styles-3/#typedef-symbols-type) value,
   /// as used in the `symbols()` function.
   ///
-  /// See [CounterStyle](CounterStyle).
+  /// See [`CounterStyle`].
   #[allow(missing_docs)]
   pub enum SymbolsType {
     Cyclic,
@@ -280,7 +280,7 @@ impl Default for SymbolsType {
 /// A single [symbol](https://www.w3.org/TR/css-counter-styles-3/#funcdef-symbols) as used in the
 /// `symbols()` function.
 ///
-/// See [CounterStyle](CounterStyle).
+/// See [CounterStyle].
 #[derive(Debug, Clone, PartialEq, Parse, ToCss)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(any(), derive(static_self::IntoOwned))]

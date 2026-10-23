@@ -9,7 +9,7 @@ use rustc_hash::FxHashMap;
 ///
 /// See [1] for some discussion around the design tradeoffs.
 ///
-/// [1] https://bugzilla.mozilla.org/show_bug.cgi?id=1401855#c3
+/// [1]: <https://bugzilla.mozilla.org/show_bug.cgi?id=1401855#c3>
 #[derive(Default)]
 pub struct NthIndexCache {
   nth: NthIndexCacheInner,

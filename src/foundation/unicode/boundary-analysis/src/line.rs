@@ -141,7 +141,8 @@ impl LineBreakOptions<'_> {
 /// encodings.
 ///
 /// Most segmentation methods live on [`LineSegmenterBorrowed`], which can be obtained via
-/// [`LineSegmenter::new_auto()`] (etc) or [`LineSegmenter::as_borrowed()`].
+/// [`LineSegmenter::as_borrowed()`]. Constructors such as `LineSegmenter::new_auto()`
+/// return a borrowed segmenter directly when both `compiled_data` and `auto` are enabled.
 ///
 /// The segmenter returns mandatory breaks (as defined by [definition LD7][LD7] of
 /// Unicode Standard Annex #14, _Unicode Line Breaking Algorithm_) as well as

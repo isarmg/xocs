@@ -110,7 +110,7 @@ enum_property! {
   /// used within the `background-repeat` property to represent how a background image is repeated
   /// in a single direction.
   ///
-  /// See [BackgroundRepeat](BackgroundRepeat).
+  /// See [`BackgroundRepeat`].
   pub enum BackgroundRepeatKeyword {
     /// The image is repeated in this direction.
     Repeat,

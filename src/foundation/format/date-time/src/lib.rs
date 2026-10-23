@@ -1,4 +1,4 @@
-//! # Maintained date and time support
+//! # Date and time
 //!
 //! This package derives from Chrono and serves this repository's Linux AMD64 GNU/glibc
 //! and browser WASM consumers. It uses the workspace Rust toolchain and is maintained
@@ -12,7 +12,7 @@
 //!   [`MappedLocalTime`].
 //! * Configurable parsing and formatting with a `strftime` inspired date and time formatting
 //!   syntax.
-//! * The [`Local`] timezone works with the current timezone of the OS.
+//! * With `clock`, the `Local` timezone uses the host or browser local timezone.
 //! * Types and operations are implemented to be reasonably efficient.
 //!
 //! Timezone data is read from the Linux host or the browser; no timezone database is bundled.
@@ -28,7 +28,7 @@
 //! - `alloc`: Enables allocation-dependent formatting; included by `std`.
 //! - `std`: Enables standard-library integration.
 //! - `now`: Enables reading the system time; included by `clock` and enables `std`.
-//! - `clock`: Enables the system local timezone ([`Local`]).
+//! - `clock`: Enables the `Local` timezone and current-time access.
 //! - `wasmbind`: Uses the JavaScript Date API on browser WASM.
 //! - `serde`: Optional serialization through the repository's data-model package.
 //! - `core-error`: Enables error trait implementations when `std` is disabled.
@@ -66,7 +66,7 @@
 //!
 //! * [`Utc`] specifies the UTC time zone. It is most efficient.
 //!
-//! * [`Local`] specifies the system local time zone.
+//! * With `clock`, `Local` specifies the system local time zone.
 //!
 //! * [`FixedOffset`] specifies an arbitrary, fixed time zone such as UTC+09:00 or UTC-10:30.
 //!   This often results from the parsed textual date and time. Since it stores the most information
@@ -76,8 +76,9 @@
 //! [`DateTime`]s with different [`TimeZone`] types are distinct and do not mix, but can be
 //! converted to each other using the [`DateTime::with_timezone`] method.
 //!
-//! You can get the current date and time in the UTC time zone ([`Utc::now()`]) or in the local time
-//! zone ([`Local::now()`]).
+//! The `now` feature enables `Utc::now()` for reading the current instant in UTC.
+//! The `clock` feature additionally enables `Local::now()` for local-time access.
+//! Without these features, construct instants from explicit date or timestamp values.
 //!
 //! ```
 //! # #[cfg(feature = "now")] {
@@ -368,18 +369,17 @@
 //! * Leap seconds can be represented, but Chrono does not fully support them.
 //!   See [Leap Second Handling](NaiveTime#leap-second-handling).
 //!
-//! ## Maintenance and platform scope
+//! ## Platform and feature scope
 //!
-//! Build with the toolchain pinned in the workspace (`rust-toolchain.toml`). Historical upstream
-//! MSRV and release-compatibility policies do not describe this maintained package.
+//! Build with the toolchain pinned in the workspace (`rust-toolchain.toml`). The supported
+//! consumers are AMD64 Linux GNU/glibc and browser WASM. Select the features needed by each
+//! consumer; arithmetic, checked constructors and explicit timestamps do not need a live clock.
 //!
-//! Prefer [`TimeDelta`], [`DateTime`], and checked constructors in consumers. Inherited aliases
-//! and deprecated methods may still exist, but are not a promise of compatibility with old
-//! versions or external Chrono extensions. The original source and documentation remain in the
-//! repository's provenance archives and `docs/upstream/chrono-0.4.45`.
+//! Prefer [`TimeDelta`], [`DateTime`] and checked constructors. Original source material is
+//! available in the provenance archives and `docs/dependencies/origins/chrono-0.4.45`.
 //!
-//! On Linux, [`Local`] reads `TZ` and system timezone data through Rust implementations rather
-//! than calling `localtime_r`. If local timezone discovery fails, it falls back to UTC.
+//! With `clock` on Linux, `Local` reads `TZ` and system timezone data through Rust
+//! implementations. If local timezone discovery fails, it falls back to UTC.
 
 #![doc(test(attr(deny(warnings))))]
 #![warn(unreachable_pub)]

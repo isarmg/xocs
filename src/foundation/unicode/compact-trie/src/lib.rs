@@ -19,7 +19,8 @@
 //! on the efficient storage of ASCII strings. Strings are mapped to `usize` values.
 //!
 //! [`ZeroTrie`] does not support mutation because doing so would require recomputing the entire
-//! data structure. Instead, it supports conversion to and from [`LiteMap`] and [`BTreeMap`].
+//! data structure. With allocation enabled it supports conversion to and from [`BTreeMap`];
+//! the optional `litemap` feature adds conversions for `litemap::LiteMap`.
 //!
 //! There are multiple variants of [`ZeroTrie`] optimized for different use cases.
 //!
@@ -54,7 +55,6 @@
 //! cargo doc --document-private-items --all-features --no-deps --open
 //! ```
 //!
-//! [`LiteMap`]: litemap::LiteMap
 //! [`BTreeMap`]: alloc::collections::BTreeMap
 
 // To back up the claim in the docs:

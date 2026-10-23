@@ -288,7 +288,7 @@ impl Config {
 /// the possibility of setting a configuration that might not make sense. For
 /// example, there are two different UTF-8 modes:
 ///
-/// * [`syntax::Config::utf8`](blog_text_pattern_search::automata::util::syntax::Config::utf8) controls
+/// * [`syntax::Config::utf8`](crate::automata::util::syntax::Config::utf8) controls
 /// whether the pattern itself can contain sub-expressions that match invalid
 /// UTF-8.
 /// * [`thompson::Config::utf8`] controls whether empty matches that split a
@@ -420,7 +420,7 @@ impl Builder {
     }
 
     /// Set the syntax configuration for this builder using
-    /// [`syntax::Config`](blog_text_pattern_search::automata::util::syntax::Config).
+    /// [`syntax::Config`](crate::automata::util::syntax::Config).
     ///
     /// This permits setting things like case insensitivity, Unicode and multi
     /// line mode.
@@ -437,7 +437,7 @@ impl Builder {
     }
 
     /// Set the Thompson NFA configuration for this builder using
-    /// [`nfa::thompson::Config`](blog_text_pattern_search::automata::nfa::thompson::Config).
+    /// [`nfa::thompson::Config`](crate::automata::nfa::thompson::Config).
     ///
     /// This permits setting things like whether additional time should be
     /// spent shrinking the size of the NFA.
@@ -946,8 +946,8 @@ impl<'a> InternalBuilder<'a> {
 /// to many regexes simply not being one-pass, it implies that one-pass DFAs
 /// have limited utility. With that said, when a one-pass DFA can be used, it
 /// can potentially provide a dramatic speed up over alternatives like the
-/// [`BoundedBacktracker`](blog_text_pattern_search::automata::nfa::thompson::backtrack::BoundedBacktracker)
-/// and the [`PikeVM`](blog_text_pattern_search::automata::nfa::thompson::pikevm::PikeVM). In particular,
+/// [`BoundedBacktracker`](crate::automata::nfa::thompson::backtrack::BoundedBacktracker)
+/// and the [`PikeVM`](crate::automata::nfa::thompson::pikevm::PikeVM). In particular,
 /// a one-pass DFA is the only DFA capable of reporting the spans of matching
 /// capturing groups.
 ///
@@ -1050,7 +1050,7 @@ impl<'a> InternalBuilder<'a> {
 ///
 /// However, if you know that all of your matches are
 /// directly adjacent, then an iterator can be used. The
-/// [`util::iter::Searcher`](blog_text_pattern_search::automata::util::iter::Searcher) type can be used for
+/// [`util::iter::Searcher`](crate::automata::util::iter::Searcher) type can be used for
 /// this purpose:
 ///
 /// ```
@@ -1473,7 +1473,7 @@ impl DFA {
     /// Note also that unlike dense or sparse DFAs, a one-pass DFA does
     /// not have a special end-of-input (EOI) transition. This is because
     /// a one-pass DFA handles look-around assertions explicitly (like the
-    /// [`PikeVM`](blog_text_pattern_search::automata::nfa::thompson::pikevm::PikeVM)) and does not build
+    /// [`PikeVM`](crate::automata::nfa::thompson::pikevm::PikeVM)) and does not build
     /// them into the transitions of the DFA.
     #[inline]
     pub fn alphabet_len(&self) -> usize {
@@ -1915,11 +1915,11 @@ impl DFA {
     ///
     /// * An empty slice, if you only care about which pattern matched.
     /// * A slice with
-    /// [`pattern_len() * 2`](blog_text_pattern_search::automata::dfa::onepass::DFA::pattern_len)
+    /// [`pattern_len() * 2`](crate::automata::dfa::onepass::DFA::pattern_len)
     /// slots, if you only care about the overall match spans for each matching
     /// pattern.
     /// * A slice with
-    /// [`slot_len()`](blog_text_pattern_search::automata::util::captures::GroupInfo::slot_len) slots, which
+    /// [`slot_len()`](crate::automata::util::captures::GroupInfo::slot_len) slots, which
     /// permits recording match offsets for every capturing group in every
     /// pattern.
     ///

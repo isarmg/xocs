@@ -1,6 +1,6 @@
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
-#![doc = include_str!("../../../../../docs/upstream/password-hash-0.5.0/README.md")]
+#![doc = include_str!("../../../../../docs/dependencies/origins/password-hash-0.5.0/README.md")]
 #![doc(
     html_logo_url = "https://raw.githubusercontent.com/RustCrypto/media/8f1a9894/logo.svg",
     html_favicon_url = "https://raw.githubusercontent.com/RustCrypto/media/8f1a9894/logo.svg"

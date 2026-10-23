@@ -24,10 +24,8 @@
 //!   readability and visual appeal. See [here](Pretty#example-output)
 //!   for sample output.
 //!
-//! * [`Json`]: Outputs newline-delimited JSON logs. This is intended
-//!   for production use with systems where structured logs are consumed as JSON
-//!   by analysis and viewing tools. The JSON output is not optimized for human
-//!   readability. See [here](Json#example-output) for sample output.
+//! The optional `json` feature adds the `Json` formatter for newline-delimited
+//! structured logs consumed by analysis and viewing tools.
 use super::time::{FormatTime, SystemTime};
 use crate::collector::{
     field::{MakeOutput, MakeVisitor, RecordFields, VisitFmt, VisitOutput},
@@ -720,16 +718,11 @@ impl<F, T> Format<F, T> {
     ///
     /// See [`time` module] for the provided timer implementations.
     ///
-    /// Note that using the `"time"` feature flag enables the
-    /// additional time formatters [`UtcTime`] and [`LocalTime`], which use the
-    /// [`time` crate] to provide more sophisticated timestamp formatting
-    /// options.
+    /// The provided timers report wall-clock time or elapsed time. Implement
+    /// the timer trait to supply a different timestamp format.
     ///
     /// [`timer`]: super::time::FormatTime
     /// [`time` module]: mod@super::time
-    /// [`UtcTime`]: super::time::UtcTime
-    /// [`LocalTime`]: super::time::LocalTime
-    /// [`time` crate]: https://docs.rs/time/0.3
     pub fn with_timer<T2>(self, timer: T2) -> Format<F, T2> {
         Format {
             format: self.format,

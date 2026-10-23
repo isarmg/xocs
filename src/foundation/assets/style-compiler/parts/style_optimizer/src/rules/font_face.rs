@@ -34,7 +34,7 @@ pub struct FontFaceRule<'i> {
 
 /// A property within an `@font-face` rule.
 ///
-/// See [FontFaceRule](FontFaceRule).
+/// See [FontFaceRule].
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(any(), derive(static_self::IntoOwned))]
@@ -258,13 +258,13 @@ enum_property! {
     /// [src](https://drafts.csswg.org/css-fonts/#font-features-tech-values)
     /// property of an `@font-face` rule.
     /// Supports OpenType Features.
-    /// https://docs.microsoft.com/en-us/typography/opentype/spec/featurelist
+    /// <https://docs.microsoft.com/en-us/typography/opentype/spec/featurelist>
     "features-opentype": FeaturesOpentype,
     /// Supports Apple Advanced Typography Font Features.
-    /// https://developer.apple.com/fonts/TrueType-Reference-Manual/RM09/AppendixF.html
+    /// <https://developer.apple.com/fonts/TrueType-Reference-Manual/RM09/AppendixF.html>
     "features-aat": FeaturesAat,
     /// Supports Graphite Table Format.
-    /// https://scripts.sil.org/cms/scripts/render_download.php?site_id=nrsi&format=file&media_id=GraphiteBinaryFormat_3_0&filename=GraphiteBinaryFormat_3_0.pdf
+    /// <https://scripts.sil.org/cms/scripts/render_download.php?site_id=nrsi&format=file&media_id=GraphiteBinaryFormat_3_0&filename=GraphiteBinaryFormat_3_0.pdf>
     "features-graphite": FeaturesGraphite,
 
     /// A color font tech descriptor in the `tech()`function of the

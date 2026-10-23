@@ -20,8 +20,7 @@
 //!
 //! ```rust
 //! # fn main() {
-//! use num_bigint::BigUint;
-//! use num_traits::One;
+//! use blog_math_large_integer::BigUint;
 //!
 //! // Calculate large fibonacci numbers.
 //! fn fib(n: usize) -> BigUint {
@@ -40,75 +39,16 @@
 //! # }
 //! ```
 //!
-//! It's easy to generate large random numbers:
-//!
-
-#![doc = "```ignore"]
-//! # use ::rand_0_10 as rand;
-//! use rand::{SeedableRng, rngs::SmallRng};
-//! use num_bigint::{BigInt, BigRng010};
-//!
-//! // This seed is just for demonstration, but in most cases
-//! // you'll probably want a non-deterministic `rng`.
-//! let mut rng = SmallRng::seed_from_u64(42);
-//! let a = rng.random_bigint(1000);
-//!
-//! let low = BigInt::from(-10000);
-//! let high = BigInt::from(10000);
-//! let b = rng.random_bigint_range(&low, &high);
-//!
-//! // Probably an even larger number.
-//! println!("{}", a * b);
-#![doc = "```"]
-//!
-//! See the "Features" section for instructions for enabling random number generation.
-//!
 //! ## Features
 //!
-//! The `std` crate feature is enabled by default, which enables [`std::error::Error`]
-//! implementations and some internal use of floating point approximations. This can be disabled by
-//! depending on `num-bigint` with `default-features = false`. Either way, the `alloc` crate is
-//! always required for heap allocation of the [`BigInt`]/[`BigUint`] digits.
+//! The default `std` feature supplies `std::error::Error` implementations and
+//! enables internal floating-point approximations. Disabling it keeps the
+//! integer operations available through `core` and `alloc`; digit storage still
+//! requires heap allocation.
 //!
-//! ### Random Generation
-//!
-//! `num-bigint` supports the generation of random big integers when either of the `rand_0_9` or
-//! `rand_0_10` features are enabled. The [`BigRng09`] and [`BigRng010`] traits provide extension
-//! methods for any `rand_core` RNG of their respective version, while the structs [`RandomBits`],
-//! [`UniformBigInt`], and [`UniformBigUint`] fulfill further functionality for random
-//! distributions in `rand::distr`.
-//!
-//! For example, using `rand v0.10` in your `Cargo.toml` may look like this:
-//!
-//! ```toml
-//! rand = "0.10"
-//! num-bigint = { version = "0.5", features = ["rand_0_10"] }
-//! ```
-//!
-//! Note that you must use the same version of `rand` as the feature you enable in `num-bigint`.
-//! It's also fine for multiple versions to be enabled at once -- the random-distribution structs
-//! will be shared with trait implementations for each `rand` feature that is enabled, while the
-//! `BigRng` traits are distinct.
-//!
-//! You can instead use `rand_core_0_9` or `rand_core_0_10` for a more restricted subset, with
-//! *only* the `BigRng` traits.
-//!
-//! ### Arbitrary Big Integers
-//!
-//! `num-bigint` supports `arbitrary` and `quickcheck` features to implement
-//! [`arbitrary::Arbitrary`] and [`quickcheck::Arbitrary`], respectively, for both [`BigInt`] and
-//! [`BigUint`]. These are useful for fuzzing and other forms of randomized testing.
-//!
-//! ### Serialization
-//!
-//! The `serde` feature adds implementations of [`Serialize`][serde::Serialize] and
-//! [`Deserialize`][serde::Deserialize] for both [`BigInt`] and [`BigUint`]. Their serialized data is
-//! generated portably, regardless of platform differences like the internal digit size.
-//!
-//!
-//! ## Compatibility
-//!
-//! The `num-bigint` crate is tested for rustc 1.60 and greater.
+//! The optional `serde` feature adds `serde::Serialize` and
+//! `serde::Deserialize` implementations for [`BigInt`] and [`BigUint`]. The
+//! serialized representation is independent of the internal digit size.
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![warn(rust_2018_idioms)]

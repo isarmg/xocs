@@ -3,81 +3,63 @@
 // (see LICENSE or <http://opensource.org/licenses/MIT>) All files in the project carrying such
 // notice may not be copied, modified, or distributed except according to those terms.
 
-//! > **Command Line Argument Parser for Rust**
+//! Command-line argument parsing for the Blog server and setup tools.
 //!
-//! Quick Links:
-//! - Derive [tutorial][_derive::_tutorial] and [reference][_derive]
-//! - Builder [tutorial][_tutorial] and [reference][Command]
-//! - [Cookbook][_cookbook]
-//! - [CLI Concepts][_concepts]
-//! - [FAQ][_faq]
-//! - [Discussions](https://github.com/clap-rs/clap/discussions)
-//! - [CHANGELOG](https://github.com/clap-rs/clap/blob/v4.6.7/CHANGELOG.md) (includes major version migration
-//!   guides)
+//! [`Command`], [`Arg`] and [`ArgAction`] define a parser through the builder API.
+//! [`ArgMatches`] provides typed access to parsed values; [`Error`] includes
+//! structured error kinds and help/version outcomes.
 //!
-//! ## Aspirations
+//! # Builder example
 //!
-//! - Out of the box, users get a polished CLI experience
-//!   - Including common argument behavior, help generation, suggested fixes for users, colored output, [shell completions](https://github.com/clap-rs/clap/tree/master/clap_complete), etc
-//! - Flexible enough to port your existing CLI interface
-//!   - However, we won't necessarily streamline support for each use case
-//! - Reasonable parse performance
-//! - Resilient maintainership, including
-//!   - Willing to break compatibility rather than batching up breaking changes in large releases
-//!   - Leverage feature flags to keep to one active branch
-//!   - Being under [WG-CLI](https://github.com/rust-cli/team/) to increase the bus factor
-//! - We follow semver and will wait about 6-9 months between major breaking changes
-//! - We will support the last two minor Rust releases (MSRV, currently 1.74)
-//!
-//! While these aspirations can be at odds with fast build times and low binary
-//! size, we will still strive to keep these reasonable for the flexibility you
-//! get.  Check out the
-//! [argparse-benchmarks](https://github.com/rust-cli/argparse-benchmarks-rs) for
-//! CLI parsers optimized for other use cases.
-//!
-//! ## Example
-//!
-//! Run
-//! ```console
-//! $ cargo add command-line --features derive
 //! ```
-//! *(See also [feature flag reference][_features])*
+//! use blog_cli_arguments::{Arg, Command};
 //!
-//! Then define your CLI in `main.rs`:
-//! ```rust
-//! # #[cfg(feature = "derive")] {
-#![doc = include_str!("../examples/demo.rs")]
+//! let matches = Command::new("blog-tool")
+//!     .arg(Arg::new("root").long("root").required(true))
+//!     .try_get_matches_from(["blog-tool", "--root", "/srv/blog"])?;
+//! assert_eq!(matches.get_one::<String>("root").map(String::as_str), Some("/srv/blog"));
+//! # Ok::<(), blog_cli_arguments::Error>(())
+//! ```
+//!
+//! # Derive example
+//!
+//! The `derive` feature exports the [`Parser`], [`Args`], [`Subcommand`] and
+//! [`ValueEnum`] macros alongside their traits. The macros generate paths through
+//! the consumer name `clap`; examples therefore explicitly bind this local library
+//! to that name. Builder-only consumers use `blog_cli_arguments` directly.
+//!
+//! ```
+//! extern crate blog_cli_arguments as clap;
+//! # #[cfg(feature = "derive")]
+//! # fn main() -> Result<(), blog_cli_arguments::Error> {
+//! use blog_cli_arguments::Parser;
+//!
+//! #[derive(Parser)]
+//! struct Options {
+//!     #[arg(long)]
+//!     root: String,
+//! }
+//!
+//! let options = Options::try_parse_from(["blog-tool", "--root", "/srv/blog"])?;
+//! assert_eq!(options.root, "/srv/blog");
+//! # Ok(())
 //! # }
+//! # #[cfg(not(feature = "derive"))]
+//! # fn main() {}
 //! ```
 //!
-//! And try it out:
-#![doc = include_str!("../../../../../docs/reference/zxs/command-line/docs/architecture/command-line-reference/runtime/examples/demo.md")]
+//! # Features and reference material
 //!
-//! See also the derive [tutorial][_derive::_tutorial] and [reference][_derive]
+//! Default features include standard-library support, color, generated help and
+//! usage, error context and suggestions. `derive`, `cargo`, `env` and `string`
+//! enable parser macros, Cargo metadata macros, environment defaults and owned
+//! parser strings respectively. The product's local manifest selects these features.
 //!
-//! ### Related Projects
-//!
-//! Augment command_line:
-//! - [wild](https://crates.io/crates/wild) for supporting wildcards (`*`) on Windows like you do Linux
-//! - [argfile](https://crates.io/crates/argfile) for loading additional arguments from a file (aka response files)
-//! - [shadow-rs](https://crates.io/crates/shadow-rs) for generating `Command::long_version`
-//! - [clap_mangen](https://crates.io/crates/clap_mangen) for generating man page source (roff)
-//! - [clap_complete](https://crates.io/crates/clap_complete) for shell completion support
-//! - [clap-i18n-richformatter](https://crates.io/crates/clap-i18n-richformatter) for i18n support with `command_line::error::RichFormatter`
-//!
-//! CLI Helpers
-//! - [clio](https://crates.io/crates/clio) for reading/writing to files specified as arguments
-//! - [clap-verbosity-flag](https://crates.io/crates/clap-verbosity-flag)
-//! - [clap-cargo](https://crates.io/crates/clap-cargo)
-//! - [colorchoice-clap](https://crates.io/crates/colorchoice-clap)
-//!
-//! Testing
-//! - [`trycmd`](https://crates.io/crates/trycmd):  Bulk snapshot testing
-//! - [`snapbox`](https://crates.io/crates/snapbox):  Specialized snapshot testing
-//! - [`assert_cmd`](https://crates.io/crates/assert_cmd) and [`assert_fs`](https://crates.io/crates/assert_fs): Customized testing
-//!
-//! Documentation:
-//! - [Command-line Apps for Rust](https://rust-cli.github.io/book/index.html) book
+//! Full tutorials and examples are stored in this repository under
+//! `docs/dependencies/guides/cli/`; the `unstable-doc` feature also exposes the
+//! `_tutorial`, `_derive`, `_cookbook`, `_concepts`, `_faq` and `_features` modules
+//! in generated API documentation. Current product commands are described by
+//! `blog --help`, `blog-setup --help` and `blog-assets --help`.
 //!
 
 #![doc(html_logo_url = "https://raw.githubusercontent.com/clap-rs/clap/master/assets/clap.png")]
@@ -108,7 +90,7 @@ pub use crate::util::color::ColorChoice;
 ///
 /// See [`Command::error`] to create an error.
 ///
-/// [`Command::error`]: command_line::Command::error
+/// [`Command::error`]: crate::Command::error
 pub type Error = error::Error<error::DefaultFormatter>;
 
 pub use crate::derive::{Args, CommandFactory, FromArgMatches, Parser, Subcommand, ValueEnum};
@@ -130,7 +112,7 @@ mod util;
 const INTERNAL_ERROR_MSG: &str = "Fatal internal error. Please consider filing a bug \
                                   report at https://github.com/clap-rs/clap/issues";
 
-#[doc = include_str!("../../../../../docs/reference/zxs/command-line/docs/architecture/command-line-reference/builder/README.md")]
+#[doc = include_str!("../../../../../docs/dependencies/guides/cli/builder/README.md")]
 #[cfg(doctest)]
 pub struct BuilderReadmeDoctests;
 
@@ -155,6 +137,6 @@ pub mod _features;
 #[cfg(feature = "unstable-doc")]
 pub mod _tutorial;
 
-#[doc = include_str!("../../../../../docs/reference/zxs/command-line/docs/architecture/command-line-reference/runtime/README.md")]
+#[doc = include_str!("../../../../../docs/dependencies/guides/cli/runtime/README.md")]
 #[cfg(doctest)]
 pub struct ReadmeDoctests;

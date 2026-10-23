@@ -2,7 +2,7 @@
 
 //! Browser CSR runtime used by the public `blog-interface` crate.
 //! Use `blog_dom::prelude::*` and the DOM builders from that facade.
-//! See the package README for source and license history.
+//! See the package README for runtime responsibilities and license information.
 
 // This maintained CSR runtime uses the pinned stable Rust toolchain.
 // Stable closure implementations are kept below; nightly APIs are not enabled.

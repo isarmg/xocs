@@ -9,38 +9,17 @@ use alloc::vec::Vec;
 
 /// The `WordSplitter` enum describes where words can be split.
 ///
-/// If the textwrap crate has been compiled with the `hyphenation`
-/// Cargo feature enabled, you will find a
-/// [`WordSplitter::Hyphenation`] variant. Use this variant for
-/// language-aware hyphenation:
-///
-/// ```
-/// #[cfg(feature = "hyphenation")] {
-///     use hyphenation::{Language, Load, Standard};
-///     use textwrap::{wrap, Options, WordSplitter};
-///
-///     let text = "Oxidation is the loss of electrons.";
-///     let dictionary = Standard::from_embedded(Language::EnglishUS).unwrap();
-///     let options = Options::new(8).word_splitter(WordSplitter::Hyphenation(dictionary));
-///     assert_eq!(wrap(text, &options), vec!["Oxida-",
-///                                           "tion is",
-///                                           "the loss",
-///                                           "of elec-",
-///                                           "trons."]);
-/// }
-/// ```
-///
-/// Please see the documentation for the [hyphenation] crate for more
-/// details.
-///
-/// [hyphenation]: https://docs.rs/hyphenation/
+/// Choose [`WordSplitter::NoHyphenation`] to preserve whole words or
+/// [`WordSplitter::HyphenSplitter`] to split at existing hyphens. Custom
+/// splitting is supplied through [`WordSplitter::Custom`]; the package does
+/// not include an external language dictionary.
 #[derive(Debug, Clone)]
 pub enum WordSplitter {
     /// Use this as an [`Options.word_splitter`] to avoid any kind of
     /// hyphenation:
     ///
     /// ```
-    /// use textwrap::{wrap, Options, WordSplitter};
+    /// use blog_text_line_layout::{wrap, Options, WordSplitter};
     ///
     /// let options = Options::new(8).word_splitter(WordSplitter::NoHyphenation);
     /// assert_eq!(wrap("foo bar-baz", &options),
@@ -61,7 +40,7 @@ pub enum WordSplitter {
     /// # Examples
     ///
     /// ```
-    /// use textwrap::WordSplitter;
+    /// use blog_text_line_layout::WordSplitter;
     ///
     /// assert_eq!(WordSplitter::HyphenSplitter.split_points("--foo-bar"),
     ///            vec![6]);
@@ -76,7 +55,7 @@ pub enum WordSplitter {
     /// # Examples
     ///
     /// ```
-    /// use textwrap::WordSplitter;
+    /// use blog_text_line_layout::WordSplitter;
     ///
     /// fn split_at_underscore(word: &str) -> Vec<usize> {
     ///     word.match_indices('_').map(|(idx, _)| idx + 1).collect()
@@ -124,7 +103,7 @@ impl WordSplitter {
     /// # Examples
     ///
     /// ```
-    /// use textwrap::WordSplitter;
+    /// use blog_text_line_layout::WordSplitter;
     /// assert_eq!(WordSplitter::NoHyphenation.split_points("cannot-be-split"), vec![]);
     /// assert_eq!(WordSplitter::HyphenSplitter.split_points("can-be-split"), vec![4, 7]);
     /// assert_eq!(WordSplitter::Custom(|word| vec![word.len()/2]).split_points("middle"), vec![3]);

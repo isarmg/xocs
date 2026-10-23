@@ -52,9 +52,8 @@
 //!
 //! [`LiteMap`] supports const construction from any store that is const-constructible, such as a
 //! static slice, via [`LiteMap::from_sorted_store_unchecked()`]. This also makes [`LiteMap`]
-//! suitable for use with [`databake`]. See [`impl Bake for LiteMap`] for more details.
-//!
-//! [`impl Bake for LiteMap`]: ./struct.LiteMap.html#impl-Bake-for-LiteMap<K,+V,+S>
+//! suitable for static lookup tables. The optional `databake` feature provides
+//! the `Bake` implementation when a consumer enables it.
 //! [`Vec`]: alloc::vec::Vec
 
 // for intra doc links

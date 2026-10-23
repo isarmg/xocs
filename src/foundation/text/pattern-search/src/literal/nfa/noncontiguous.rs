@@ -2,7 +2,7 @@
 Provides a noncontiguous NFA implementation of Aho-Corasick.
 
 This is a low-level API that generally only needs to be used in niche
-circumstances. When possible, prefer using [`AhoCorasick`](blog_text_pattern_search::literal::AhoCorasick)
+circumstances. When possible, prefer using [`AhoCorasick`](crate::literal::AhoCorasick)
 instead of a noncontiguous NFA directly. Using an `NFA` directly is typically
 only necessary when one needs access to the [`Automaton`] trait implementation.
 */
@@ -28,7 +28,7 @@ use crate::literal::{
 
 /// A noncontiguous NFA implementation of Aho-Corasick.
 ///
-/// When possible, prefer using [`AhoCorasick`](blog_text_pattern_search::literal::AhoCorasick) instead of
+/// When possible, prefer using [`AhoCorasick`](crate::literal::AhoCorasick) instead of
 /// this type directly. Using an `NFA` directly is typically only necessary
 /// when one needs access to the [`Automaton`] trait implementation.
 ///
@@ -46,7 +46,7 @@ use crate::literal::{
 /// While the sparse representation keeps memory usage to somewhat reasonable
 /// levels, it is still quite large and also results in somewhat mediocre
 /// search performance. For this reason, it is almost always a good idea to
-/// use a [`contiguous::NFA`](blog_text_pattern_search::literal::nfa::contiguous::NFA) instead. It is
+/// use a [`contiguous::NFA`](crate::literal::nfa::contiguous::NFA) instead. It is
 /// marginally slower to build, but has higher throughput and can sometimes use
 /// an order of magnitude less memory. The main reason to use a noncontiguous
 /// NFA is when you need the fastest possible construction time, or when a
@@ -836,7 +836,7 @@ impl core::fmt::Debug for Match {
 /// A builder for configuring an Aho-Corasick noncontiguous NFA.
 ///
 /// This builder has a subset of the options available to a
-/// [`AhoCorasickBuilder`](blog_text_pattern_search::literal::AhoCorasickBuilder). Of the shared options,
+/// [`AhoCorasickBuilder`](crate::literal::AhoCorasickBuilder). Of the shared options,
 /// their behavior is identical.
 #[derive(Clone, Debug)]
 pub struct Builder {
@@ -885,7 +885,7 @@ impl Builder {
     /// Set the desired match semantics.
     ///
     /// See
-    /// [`AhoCorasickBuilder::match_kind`](blog_text_pattern_search::literal::AhoCorasickBuilder::match_kind)
+    /// [`AhoCorasickBuilder::match_kind`](crate::literal::AhoCorasickBuilder::match_kind)
     /// for more documentation and examples.
     pub fn match_kind(&mut self, kind: MatchKind) -> &mut Builder {
         self.match_kind = kind;
@@ -895,7 +895,7 @@ impl Builder {
     /// Enable ASCII-aware case insensitive matching.
     ///
     /// See
-    /// [`AhoCorasickBuilder::ascii_case_insensitive`](blog_text_pattern_search::literal::AhoCorasickBuilder::ascii_case_insensitive)
+    /// [`AhoCorasickBuilder::ascii_case_insensitive`](crate::literal::AhoCorasickBuilder::ascii_case_insensitive)
     /// for more documentation and examples.
     pub fn ascii_case_insensitive(&mut self, yes: bool) -> &mut Builder {
         self.ascii_case_insensitive = yes;
@@ -906,7 +906,7 @@ impl Builder {
     /// transitions. Other states will generally use a sparse representation.
     ///
     /// See
-    /// [`AhoCorasickBuilder::dense_depth`](blog_text_pattern_search::literal::AhoCorasickBuilder::dense_depth)
+    /// [`AhoCorasickBuilder::dense_depth`](crate::literal::AhoCorasickBuilder::dense_depth)
     /// for more documentation and examples.
     pub fn dense_depth(&mut self, depth: usize) -> &mut Builder {
         self.dense_depth = depth;
@@ -916,7 +916,7 @@ impl Builder {
     /// Enable heuristic prefilter optimizations.
     ///
     /// See
-    /// [`AhoCorasickBuilder::prefilter`](blog_text_pattern_search::literal::AhoCorasickBuilder::prefilter)
+    /// [`AhoCorasickBuilder::prefilter`](crate::literal::AhoCorasickBuilder::prefilter)
     /// for more documentation and examples.
     pub fn prefilter(&mut self, yes: bool) -> &mut Builder {
         self.prefilter = yes;

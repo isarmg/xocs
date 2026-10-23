@@ -1,5 +1,12 @@
 # blog-interface
 
-本项目维护的 Rust/WASM 浏览器组件、主题、HTTP 合同、启动与曲面绘制实现。应用位于 `src/browser`，通过本地 path 直接依赖 `blog-interface`。核心与过程宏分别位于 `vendor/blog-dom`、`vendor/blog-component-macros`，完整实现和 Cargo 图均在本仓库，不需要外部 xcss 仓库或同步工具。
+Rust/WASM 浏览器组件、主题、HTTP 客户端、应用挂载和曲面绘制。`src/browser` 通过本地路径依赖本包；DOM 核心在 `dom/`，过程宏在 `macros/`。
 
-原始 Apache-2.0/MIT 许可证保留在各组件目录。`ORIGIN.json` 记录原始 xcss 来源、精确修订、原逐文件摘要与完整导入快照归档以及本地修改。`compliance/web-origins` 中原始 `SOURCE.json` 与归档保持原字节；构建器记录当前代码摘要并检查构建期间源文件未变化。
+组件使用类型化 props、响应式状态和普通 Rust DOM builder，支持表单、受控输入、弹层、键盘交互及挂载清理。业务页面、路由和业务数据状态位于 `src/browser`。
+
+- [界面与浏览器依赖](../../docs/dependencies/README.md)
+- [架构](../../docs/architecture.md)
+- [开发与测试](../../docs/development.md)
+- [DOM 核心](dom/README.md)与[组件宏](macros/README.md)
+
+本包许可证位于当前目录，来源材料保存在 `compliance/`。构建器核对当前源码摘要并记录实际构建输入。

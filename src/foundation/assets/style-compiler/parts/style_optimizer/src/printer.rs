@@ -39,7 +39,7 @@ pub struct PrinterOptions<'a> {
 
 /// A mapping of user action pseudo classes to replace with class names.
 ///
-/// See [PrinterOptions](PrinterOptions).
+/// See [PrinterOptions].
 #[derive(Default, Debug)]
 pub struct PseudoClasses<'a> {
   /// The class name to replace `:hover` with.
@@ -56,7 +56,7 @@ pub struct PseudoClasses<'a> {
 
 /// A `Printer` represents a destination to output serialized CSS, as used in
 /// the [ToCss](super::traits::ToCss) trait. It can wrap any destination that
-/// implements [std::fmt::Write](std::fmt::Write), such as a [String](String).
+/// implements [std::fmt::Write], such as a [String].
 ///
 /// A `Printer` keeps track of the current line and column position, and uses
 /// this to generate a source map if provided in the options.

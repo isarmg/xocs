@@ -11,7 +11,7 @@ use alloc::string::String;
 /// # Examples
 ///
 /// ```
-/// use textwrap::indent;
+/// use blog_text_line_layout::indent;
 ///
 /// assert_eq!(indent("First line.\nSecond line.\n", "  "),
 ///            "  First line.\n  Second line.\n");
@@ -21,7 +21,7 @@ use alloc::string::String;
 /// This means that empty lines remain empty afterwards:
 ///
 /// ```
-/// use textwrap::indent;
+/// use blog_text_line_layout::indent;
 ///
 /// assert_eq!(indent("First line.\n\n\nSecond line.\n", "  "),
 ///            "  First line.\n\n\n  Second line.\n");
@@ -34,7 +34,7 @@ use alloc::string::String;
 /// want a trailing space on empty lines:
 ///
 /// ```
-/// use textwrap::indent;
+/// use blog_text_line_layout::indent;
 ///
 /// assert_eq!(indent("foo = 123\n\nprint(foo)\n", "# "),
 ///            "# foo = 123\n#\n# print(foo)\n");
@@ -47,7 +47,7 @@ use alloc::string::String;
 /// unchanged:
 ///
 /// ```
-/// use textwrap::indent;
+/// use blog_text_line_layout::indent;
 ///
 /// assert_eq!(indent(" \t  Foo   ", "->"), "-> \t  Foo   ");
 /// ```
@@ -82,7 +82,7 @@ pub fn indent(s: &str, prefix: &str) -> String {
 /// maximum amount of whitespace that can be removed from all lines:
 ///
 /// ```
-/// use textwrap::dedent;
+/// use blog_text_line_layout::dedent;
 ///
 /// assert_eq!(dedent("
 ///     1st line

@@ -6,7 +6,7 @@ them together.
 # Example
 
 ```rust
-use axum::{
+use http_routing::{
     routing::{get, post},
     Router,
 };
@@ -40,7 +40,7 @@ Take care when using `nest` together with dynamic routes as nesting also
 captures from the outer routes:
 
 ```rust
-use axum::{
+use http_routing::{
     extract::Path,
     routing::get,
     Router,
@@ -67,7 +67,7 @@ wildcard routes still see the whole URI whereas nested routes will have
 the prefix stripped:
 
 ```rust
-use axum::{routing::get, http::Uri, Router};
+use http_routing::{routing::get, http::Uri, Router};
 
 let nested_router = Router::new()
     .route("/", get(|uri: Uri| async {
@@ -93,7 +93,7 @@ If a nested router doesn't have its own fallback then it will inherit the
 fallback from the outer router:
 
 ```rust
-use axum::{routing::get, http::StatusCode, handler::Handler, Router};
+use http_routing::{routing::get, http::StatusCode, handler::Handler, Router};
 
 async fn fallback() -> (StatusCode, &'static str) {
     (StatusCode::NOT_FOUND, "Not Found")
@@ -115,7 +115,7 @@ If the nested router has its own fallback then the outer fallback will not be
 inherited:
 
 ```rust
-use axum::{
+use http_routing::{
     routing::get,
     http::StatusCode,
     handler::Handler,
@@ -153,7 +153,7 @@ same type of state. If your routers have different types you can use
 [`Router::with_state`] to provide the state and make the types match:
 
 ```rust
-use axum::{
+use http_routing::{
     Router,
     routing::get,
     extract::State,
@@ -177,7 +177,7 @@ let app = Router::new()
     .route("/", get(outer_handler))
     .nest("/foo", inner_router)
     .with_state(OuterState {});
-# let _: axum::Router = app;
+# let _: http_routing::Router = app;
 ```
 
 Note that the inner router will still inherit the fallback from the outer

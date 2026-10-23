@@ -4,14 +4,14 @@ pub use anstyle::*;
 
 /// Terminal styling definitions
 ///
-/// See also [`Command::styles`][command_line::Command::styles].
+/// See also [`Command::styles`][crate::Command::styles].
 ///
 /// # Example
 ///
-/// command_line v3 styling
+/// blog_cli_arguments v3 styling
 /// ```rust
-/// # use command_line;
-/// # use command_line::builder::styling::*;
+/// # use blog_cli_arguments;
+/// # use blog_cli_arguments::builder::styling::*;
 /// let styles = Styles::styled()
 ///     .header(AnsiColor::Yellow.on_default())
 ///     .usage(AnsiColor::Green.on_default())
@@ -72,7 +72,7 @@ impl Styles {
         }
     }
 
-    /// General Heading style, e.g. [`help_heading`][command_line::Arg::help_heading]
+    /// General Heading style, e.g. [`help_heading`][crate::Arg::help_heading]
     #[inline]
     pub const fn header(mut self, style: Style) -> Self {
         self.header = style;
@@ -100,7 +100,7 @@ impl Styles {
         self
     }
 
-    /// Descriptions within command-line syntax, e.g. [`value_name`][command_line::Arg::value_name]
+    /// Descriptions within command-line syntax, e.g. [`value_name`][crate::Arg::value_name]
     #[inline]
     pub const fn placeholder(mut self, style: Style) -> Self {
         self.placeholder = style;
@@ -142,7 +142,7 @@ impl Styles {
 
 /// Reflection
 impl Styles {
-    /// General Heading style, e.g. [`help_heading`][command_line::Arg::help_heading]
+    /// General Heading style, e.g. [`help_heading`][crate::Arg::help_heading]
     #[inline(always)]
     pub const fn get_header(&self) -> &Style {
         &self.header
@@ -166,7 +166,7 @@ impl Styles {
         &self.literal
     }
 
-    /// Descriptions within command-line syntax, e.g. [`value_name`][command_line::Arg::value_name]
+    /// Descriptions within command-line syntax, e.g. [`value_name`][crate::Arg::value_name]
     #[inline(always)]
     pub const fn get_placeholder(&self) -> &Style {
         &self.placeholder

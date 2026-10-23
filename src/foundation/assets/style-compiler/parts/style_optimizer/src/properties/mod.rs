@@ -1,20 +1,20 @@
 //! CSS property values.
 //!
-//! Each property provides parsing and serialization support using the [Parse](super::traits::Parse)
-//! and [ToCss](super::traits::ToCss) traits. Properties are fully parsed as defined by the CSS spec,
+//! Each property provides parsing and serialization support using the [Parse]
+//! and [ToCss] traits. Properties are fully parsed as defined by the CSS spec,
 //! and printed in their canonical form. For example, most CSS properties are case-insensitive, and
 //! may be written in various orders, but when printed they are lower cased as appropriate and in a
 //! standard order.
 //!
 //! CSS properties often also contain many implicit values that are automatically filled in during
 //! parsing when omitted. These are also omitted when possible during serialization. Many properties
-//! also implement the [Default](std::default::Default) trait, which returns the initial value for the property.
+//! also implement the [Default] trait, which returns the initial value for the property.
 //!
 //! Shorthand properties are represented as structs containing fields for each of the sub-properties.
 //! If some of the sub-properties are not specified in the shorthand, their default values are filled in.
 //!
-//! The [Property](Property) enum contains the values of all properties, and can be used to parse property values by name.
-//! The [PropertyId](PropertyId) enum represents only property names, and not values and is used to refer to known properties.
+//! The [Property] enum contains the values of all properties, and can be used to parse property values by name.
+//! The [PropertyId] enum represents only property names, and not values and is used to refer to known properties.
 //!
 //! # Example
 //!
@@ -75,18 +75,18 @@
 //! );
 //! ```
 //!
-//! If you have a [crate::style_parser::Parser](crate::style_parser::Parser) already, you can also use the `parse` and `to_css`
+//! If you have a [crate::style_parser::Parser] already, you can also use the `parse` and `to_css`
 //! methods instead, rather than parsing from a string.
 //!
 //! # Unparsed and custom properties
 //!
-//! Custom and unknown properties are represented by the [CustomProperty](custom::CustomProperty) struct, and the
+//! Custom and unknown properties are represented by the [CustomProperty] struct, and the
 //! `Property::Custom` variant. The value of these properties is not parsed, and is stored as a raw
-//! [TokenList](custom::TokenList), with the name as a string.
+//! [TokenList], with the name as a string.
 //!
 //! If a known property is unable to be parsed, e.g. it contains `var()` references, then it is represented by the
-//! [UnparsedProperty](custom::UnparsedProperty) struct, and the `Property::Unparsed` variant. The value is stored
-//! as a raw [TokenList](custom::TokenList), with a [PropertyId](PropertyId) as the name.
+//! [UnparsedProperty] struct, and the `Property::Unparsed` variant. The value is stored
+//! as a raw [TokenList], with a [PropertyId] as the name.
 
 #![deny(missing_docs)]
 

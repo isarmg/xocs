@@ -15,7 +15,7 @@
 /// These three types, despite being very different, all have the same size:
 ///
 /// ```
-/// # #[macro_use] extern crate static_assertions; fn main() {}
+/// # #[macro_use] extern crate blog_syntax_compile_assertions as static_assertions; fn main() {}
 /// assert_eq_size!([u8; 4], (u16, u16), u32);
 /// ```
 ///
@@ -23,7 +23,7 @@
 /// `u8`:
 ///
 /// ```compile_fail
-/// # #[macro_use] extern crate static_assertions; fn main() {}
+/// # #[macro_use] extern crate blog_syntax_compile_assertions as static_assertions; fn main() {}
 /// assert_eq_size!(u32, u8);
 /// ```
 ///
@@ -47,7 +47,7 @@ macro_rules! assert_eq_size {
 /// and ensuring the underlying values are the same size.
 ///
 /// ```
-/// # #[macro_use] extern crate static_assertions; fn main() {}
+/// # #[macro_use] extern crate blog_syntax_compile_assertions as static_assertions; fn main() {}
 /// fn operation(x: &(u32, u32), y: &[u16; 4]) {
 ///     assert_eq_size_ptr!(x, y);
 ///     // ...
@@ -58,7 +58,7 @@ macro_rules! assert_eq_size {
 /// lengths have different sizes:
 ///
 /// ```compile_fail
-/// # #[macro_use] extern crate static_assertions;
+/// # #[macro_use] extern crate blog_syntax_compile_assertions as static_assertions;
 /// # fn main() {
 /// static BYTES: &[u8; 4] = &[
 ///     /* ... */
@@ -71,6 +71,7 @@ macro_rules! assert_eq_size {
 /// ];
 ///
 /// assert_eq_size_ptr!(BYTES, TABLE);
+/// # }
 /// ```
 #[macro_export]
 macro_rules! assert_eq_size_ptr {
@@ -93,7 +94,7 @@ macro_rules! assert_eq_size_ptr {
 /// # Examples
 ///
 /// ```
-/// # #[macro_use] extern crate static_assertions;
+/// # #[macro_use] extern crate blog_syntax_compile_assertions as static_assertions;
 /// # fn main() {
 /// struct Byte(u8);
 ///
@@ -108,7 +109,7 @@ macro_rules! assert_eq_size_ptr {
 /// Even though both values are 0, they are of types with different sizes:
 ///
 /// ```compile_fail
-/// # #[macro_use] extern crate static_assertions;
+/// # #[macro_use] extern crate blog_syntax_compile_assertions as static_assertions;
 /// # fn main() {
 /// assert_eq_size_val!(0u8, 0u32);
 /// # }

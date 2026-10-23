@@ -3772,38 +3772,39 @@ extern "C" {
     /// is used to type the JS function. For example, `Function<fn () -> Number>` represents
     /// a function taking no arguments that returns a number.
     ///
-    /// The 8 generic argument parameters (`Arg1` through `Arg8`) are the argument
-    /// types. Arguments not provided enable strict arity checking at compile time.
+    /// Signatures implement [`JsFunction`] for zero through eight arguments.
+    /// The signature determines the argument and return types used by typed calls.
     ///
     /// A void function is represented by `fn (Arg) -> Undefined`, and **not** the `()` unit
     /// type. This is because generics must be based on JS values in the JS generic type system.
     ///
-    /// _The default without any parameters is as a void function - no arguments, `Undefined` return._
-    ///
-    /// _The default generic for `Function` is `fn (JsValue, JsValue, ...) -> JsValue`,
-    /// representing any function, since all functions safely upcast into this function._
+    /// The default signature accepts eight `JsValue` arguments and returns a
+    /// `JsValue`. Specify `Function<fn() -> Undefined>` for a no-argument void function.
     ///
     /// ### Arity Enforcement
     ///
     /// It is not possible to use `call4` or `bind4` on a function that does not have
-    /// at least 4 arguments — the compiler will reject this because only arguments that
-    /// are not `None` support the trait bound for `ErasableGeneric`.
+    /// at least 4 arguments: these methods require the signature to implement
+    /// [`JsFunction4`]. The generic [`call`](Function::call) method uses the exact
+    /// argument tuple required by the signature.
     ///
     /// ### Examples
     ///
     /// ```ignore
     /// // A function taking no args, returning Number
-    /// let f: Function<Number> = get_some_fn();
+    /// let f: Function<fn() -> Number> = get_some_fn();
     ///
     /// // A function taking (String, Number) and returning Boolean
-    /// let f: Function<Boolean, String, Number> = get_some_fn();
+    /// let f: Function<fn(JsString, Number) -> Boolean> = get_some_fn();
+    /// ```
     ///
     /// ### Upcasting
     ///
-    /// To pass a typed `Function` where a different generic Function is expected, `upcast()` may be used
-    /// to convert into any generic `Function` at zero cost with type-safety.
+    /// A typed `Function` can use `upcast()` when its signature has the required
+    /// [`UpcastFrom`] relation to the destination signature. This is a type-checked
+    /// conversion of the same JavaScript function.
     ///
-    /// MDN documentation (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function)
+    /// [MDN documentation](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function)
     pub type Function<
         T: JsFunction = fn(
             JsValue,

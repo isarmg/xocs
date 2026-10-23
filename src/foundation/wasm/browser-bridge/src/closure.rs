@@ -16,12 +16,12 @@
 //! - [`ScopedClosure::borrow`] creates an immutable `Fn` closure
 //! - [`ScopedClosure::borrow_mut`] creates a mutable `FnMut` closure
 //!
-//! Immutable closures can be upcasted to mutable closures using [`upcast_ref`](crate::Upcast::upcast_ref).
+//! Immutable closures can be upcasted to mutable closures using [`upcast`](crate::convert::Upcast::upcast).
 //!
 //! # Type Aliases
 //!
 //! - [`ScopedClosure<'a, T>`] — The unified closure type with a lifetime parameter
-//! - [`Closure<T>`] — Alias for `ScopedClosure<'static, T>` (for backwards compatibility)
+//! - [`Closure<T>`] — Alias for an owned `ScopedClosure<'static, T>`
 //!
 //! # Unwind Safety
 //!
@@ -83,11 +83,10 @@ extern "C" {
 ///
 /// - **`ScopedClosure<'a, T>`** (non-`'static`) - A borrowed closure referencing stack data.
 ///   Allows non-`'static` captures. Use for immediate/synchronous callbacks. Created with
-///   [`ScopedClosure::borrow`] (for `FnMut`) or [`ScopedClosure::borrow_immutable`] (for `Fn`).
+///   [`ScopedClosure::borrow_mut`] (for `FnMut`) or [`ScopedClosure::borrow`] (for `Fn`).
 ///   Cannot transfer ownership to JS GC.
 ///
-/// [`Closure<T>`] is currently a type alias for `ScopedClosure<'static, T>`. In
-/// a future release, a lifetime argument will be added to this alias.
+/// [`Closure<T>`] is an alias for an owned `ScopedClosure<'static, T>`.
 ///
 /// # Ownership Model
 ///
@@ -109,13 +108,13 @@ extern "C" {
 /// ```ignore
 /// let mut sum = 0;
 /// let mut f = |x: u32| { sum += x; };  // f borrows sum
-/// let closure = ScopedClosure::borrow(&mut f);  // closure borrows f
+/// let closure = ScopedClosure::borrow_mut(&mut f);  // closure borrows f
 /// // closure cannot outlive f, and f cannot outlive sum
 /// ```
 ///
 /// # Examples
 ///
-/// ## Borrowed closures with `ScopedClosure::borrow`
+/// ## Borrowed mutable closures with `ScopedClosure::borrow_mut`
 ///
 /// Use for immediate/synchronous callbacks where JS calls the closure right away:
 ///
@@ -130,7 +129,7 @@ extern "C" {
 /// let mut sum = 0;
 /// {
 ///     let mut f = |x: u32| { sum += x; };
-///     let closure = ScopedClosure::borrow(&mut f);
+///     let closure = ScopedClosure::borrow_mut(&mut f);
 ///     call_immediately(&closure);
 /// }  // closure dropped here, JS function invalidated
 /// assert_eq!(sum, 42);
@@ -286,7 +285,7 @@ where
     /// `ScopedClosure` with an associated lifetime.
     ///
     /// **Note: Not unwind safe. Prefer [`own`](Self::own) or `own` with
-    /// [`AssertUnwindSafe`](core::panic::AssertUnwindSafe) when possible.**
+    /// [`AssertUnwindSafe`] when possible.**
     pub fn own_aborting<F>(t: F) -> Self
     where
         F: IntoWasmClosure<T> + 'static,
@@ -380,7 +379,7 @@ where
     /// use [`borrow_assert_unwind_safe`](Self::borrow_assert_unwind_safe) or
     /// [`borrow_aborting`](Self::borrow_aborting) for non-unwind-safe functions.
     ///
-    /// The resulting closure can be upcasted to `FnMut` using [`upcast_ref`](crate::Upcast::upcast_ref).
+    /// The resulting closure can be upcasted to `FnMut` using [`upcast`](crate::convert::Upcast::upcast).
     ///
     /// # When to use scoped closures
     ///
@@ -417,7 +416,7 @@ where
     /// let closure = ScopedClosure::borrow(&f);
     /// call_with_value(&closure, 42);
     /// // Can also upcast to FnMut
-    /// call_fnmut(closure.upcast_ref(), 42);
+    /// call_fnmut(closure.upcast(), 42);
     /// ```
     pub fn borrow<'a, F>(t: &'a F) -> ScopedClosure<'a, T::Static>
     where
@@ -638,7 +637,7 @@ where
     /// than once.
     ///
     /// **Note: Not unwind safe. Prefer [`once`](Self::once) or `once` with
-    /// [`AssertUnwindSafe`](core::panic::AssertUnwindSafe) when possible.**
+    /// [`AssertUnwindSafe`] when possible.**
     ///
     /// Note: the `A` and `R` type parameters are here just for backward compat
     /// and will be removed in the future.

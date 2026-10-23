@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::ffi::OsString;
 use std::path::PathBuf;
 
-use command_line::{ArgMatches, Command, arg};
+use blog_cli_arguments::{ArgMatches, Command, arg};
 
 fn cli() -> Command {
     Command::new("git")
@@ -41,7 +41,7 @@ fn cli() -> Command {
             Command::new("add")
                 .about("adds things")
                 .arg_required_else_help(true)
-                .arg(arg!(<PATH> ... "Stuff to add").value_parser(command_line::value_parser!(PathBuf))),
+                .arg(arg!(<PATH> ... "Stuff to add").value_parser(blog_cli_arguments::value_parser!(PathBuf))),
         )
         .subcommand(
             Command::new("stash")
@@ -54,7 +54,7 @@ fn cli() -> Command {
         )
 }
 
-fn push_args() -> Vec<command_line::Arg> {
+fn push_args() -> Vec<blog_cli_arguments::Arg> {
     vec![arg!(-m --message <MESSAGE>)]
 }
 
@@ -65,7 +65,7 @@ fn aliases() -> HashMap<&'static str, Vec<&'static str>> {
     ])
 }
 
-fn parse_aliases() -> Result<ArgMatches, command_line::Error> {
+fn parse_aliases() -> Result<ArgMatches, blog_cli_arguments::Error> {
     let matches = cli().try_get_matches()?;
     expand_aliases(matches, Vec::new())
 }
@@ -73,7 +73,7 @@ fn parse_aliases() -> Result<ArgMatches, command_line::Error> {
 fn expand_aliases(
     matches: ArgMatches,
     mut expanded: Vec<String>,
-) -> Result<ArgMatches, command_line::Error> {
+) -> Result<ArgMatches, blog_cli_arguments::Error> {
     let Some((name, sub_matches)) = matches.subcommand() else {
         return Ok(matches);
     };
@@ -97,8 +97,8 @@ fn expand_aliases(
     let new_name = matches.subcommand_name().expect("subcommand required");
     expanded.push(name.to_owned());
     if expanded.iter().any(|name| name == new_name) {
-        return Err(command_line::Error::raw(
-            command_line::error::ErrorKind::InvalidSubcommand,
+        return Err(blog_cli_arguments::Error::raw(
+            blog_cli_arguments::error::ErrorKind::InvalidSubcommand,
             format!("recursive alias `{}`", expanded[0]),
         ));
     }

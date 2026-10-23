@@ -90,41 +90,21 @@
 //!
 //! ## Structured logging
 //!
-//! If you enable the `kv` feature you can associate structured values
-//! with your log records. If we take the example from before, we can include
-//! some additional context besides what's in the formatted message:
+//! The optional `kv` feature adds key-value fields to log records. Primitive
+//! values use the `ToValue` interface; `:?` and `:%` capture `Debug` and
+//! `Display` values respectively. The `kv` module provides field visitors.
 //!
 //! ```
-//! # use serde::Serialize;
-//! # #[derive(Debug, Serialize)] pub struct Yak(String);
-//! # impl Yak { fn shave(&mut self, _: u32) {} }
-//! # fn find_a_razor() -> Result<u32, std::io::Error> { Ok(1) }
-//! # #[cfg(feature = "kv_serde")]
+//! # #[cfg(feature = "kv")]
 //! # fn main() {
-//! use log::{info, warn};
+//! use log::info;
 //!
-//! pub fn shave_the_yak(yak: &mut Yak) {
-//!     info!(target: "yak_events", yak:serde; "Commencing yak shaving");
-//!
-//!     loop {
-//!         match find_a_razor() {
-//!             Ok(razor) => {
-//!                 info!(razor; "Razor located");
-//!                 yak.shave(razor);
-//!                 break;
-//!             }
-//!             Err(e) => {
-//!                 warn!(e:err; "Unable to locate a razor, retrying");
-//!             }
-//!         }
-//!     }
-//! }
+//! let item_count = 3;
+//! info!(item_count; "Finished processing");
 //! # }
-//! # #[cfg(not(feature = "kv_serde"))]
+//! # #[cfg(not(feature = "kv"))]
 //! # fn main() {}
 //! ```
-//!
-//! See the [`kv`] module documentation for more details.
 //!
 //! # Available logging implementations
 //!

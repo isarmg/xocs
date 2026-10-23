@@ -77,11 +77,11 @@ impl<DB: Database> Query<'_, DB, <DB as Database>::Arguments> {
     /// Bind a value for use with this SQL query.
     ///
     /// If the number of times this is called does not match the number of bind parameters that
-    /// appear in the query (`?` for most SQL flavors, `$1 .. $N` for Postgres) then an error
+    /// appear in the SQLite query, then an error
     /// will be returned when this query is executed.
     ///
     /// There is no validation that the value is of the type expected by the query. Most SQL
-    /// flavors will perform type coercion (Postgres will return a database error).
+    /// values may be coerced by SQLite; decoded output types are checked separately.
     ///
     /// If encoding the value fails, the error is stored and later surfaced when executing the query.
     pub fn bind<'t, T: Encode<'t, DB> + Type<DB>>(mut self, value: T) -> Self {
@@ -456,126 +456,29 @@ where
     }
 }
 
-/// Execute a single SQL query as a prepared statement (transparently cached).
+/// Execute a parameterized SQLite statement using a connection's statement cache.
 ///
-/// SQLite accepts one or more statements in the query string. Bound arguments
-/// apply across the statements; row-oriented fetch methods return their rows in order.
+/// Build the statement from trusted SQL, then bind untrusted values with
+/// [`Query::bind`]. SQLite placeholders such as `?1` may occur more than once;
+/// the bound value is separate from SQL syntax. Identifiers and SQL fragments
+/// cannot be supplied as value parameters and need separate validation.
 ///
-/// The connection will transparently prepare and cache the statement, which means it only needs to be parsed once
-/// in the connection's lifetime, and any generated query plans can be retained.
-/// Thus, the overhead of executing the statement is amortized.
-///
-/// See the [`Query`] type for the methods you may call.
-///
-/// ### Dynamic Input: Use Query Parameters (Prevents SQL Injection)
-/// At some point, you'll likely want to include some form of dynamic input in your query, possibly from the user.
-///
-/// Your first instinct might be to do something like this:
-/// ```rust,no_run
-/// # async fn example() -> sqlx::Result<()> {
-/// # let mut conn: sqlx::PgConnection = unimplemented!();
-/// // Imagine this is input from the user, e.g. a search form on a website.
-/// let user_input = "possibly untrustworthy input!";
-///
-/// // DO NOT DO THIS unless you're ABSOLUTELY CERTAIN it's what you need!
-/// let query = format!("SELECT * FROM articles WHERE content LIKE '%{user_input}%'");
-/// // where `conn` is `PgConnection` or `MySqlConnection`
-/// // or some other type that implements `Executor`.
-/// let results = sqlx::query(sqlx::AssertSqlSafe(query)).fetch_all(&mut conn).await?;
-/// # Ok(())
-/// # }
 /// ```
-///
-/// The example above showcases a **SQL injection vulnerability**, because it's trivial for a malicious user to craft
-/// an input that can "break out" of the string literal.
-///
-/// For example, if they send the input `foo'; DELETE FROM articles; --`
-/// then your application would send the following to the database server (line breaks added for clarity):
-///
-/// ```sql
-/// SELECT * FROM articles WHERE content LIKE '%foo';
-/// DELETE FROM articles;
-/// --%'
-/// ```
-///
-/// In this case, because this interface *always* uses prepared statements, you would likely be fine because prepared
-/// statements _generally_ (see above) are only allowed to contain a single query. This would simply return an error.
-///
-/// However, it would also break on legitimate user input.
-/// What if someone wanted to search for the string `Alice's Apples`? It would also return an error because
-/// the database would receive a query with a broken string literal (line breaks added for clarity):
-///
-/// ```sql
-/// SELECT * FROM articles WHERE content LIKE '%Alice'
-/// s Apples%'
-/// ```
-///
-/// Of course, it's possible to make this syntactically valid by escaping the apostrophe, but there's a better way.
-///
-/// ##### You should always prefer query parameters for dynamic input.
-///
-/// When using query parameters, you add placeholders to your query where a value
-/// should be substituted at execution time, then call [`.bind()`][Query::bind] with that value.
-///
-/// The syntax for placeholders is unfortunately not standardized and depends on the database:
-///
-/// * Postgres and SQLite: use `$1`, `$2`, `$3`, etc.
-///     * The number is the Nth bound value, starting from one.
-///     * The same placeholder can be used arbitrarily many times to refer to the same bound value.
-///     * SQLite technically supports MySQL's syntax as well as others, but we recommend using this syntax
-///       as SQLx's SQLite driver is written with it in mind.
-/// * MySQL and MariaDB: use `?`.
-///     * Placeholders are purely positional, similar to `println!("{}, {}", foo, bar)`.
-///     * The order of bindings must match the order of placeholders in the query.
-///     * To use a value in multiple places, you must bind it multiple times.
-///
-/// In both cases, the placeholder syntax acts as a variable expression representing the bound value:
-///
-/// ```rust,no_run
-/// # async fn example2() -> sqlx::Result<()> {
-/// # let mut conn: sqlx::PgConnection = unimplemented!();
-/// let user_input = "Alice's Apples";
-///
-/// // Postgres and SQLite
-/// let results = sqlx::query(
-///     // Notice how we only have to bind the argument once and we can use it multiple times:
-///     "SELECT * FROM articles
-///      WHERE title LIKE '%' || $1 || '%'
-///      OR content LIKE '%' || $1 || '%'"
-/// )
-///     .bind(user_input)
-///     .fetch_all(&mut conn)
-///     .await?;
-///
-/// // MySQL and MariaDB
-/// let results = sqlx::query(
-///     "SELECT * FROM articles
-///      WHERE title LIKE CONCAT('%', ?, '%')
-///      OR content LIKE CONCAT('%', ?, '%')"
-/// )
-///     // If we want to reference the same value multiple times, we have to bind it multiple times:
-///     .bind(user_input)
-///     .bind(user_input)
-///     .fetch_all(&mut conn)
+/// # async fn example(pool: &blog_storage_sqlite_access::SqlitePool) -> Result<(), blog_storage_sqlite_access::Error> {
+/// let title = "Blog";
+/// let rows = blog_storage_sqlite_access::query("SELECT ?1 AS title")
+///     .bind(title)
+///     .fetch_all(pool)
 ///     .await?;
 /// # Ok(())
 /// # }
 /// ```
-/// ##### The value bound to a query parameter is entirely separate from the query and does not affect its syntax.
-/// Thus, SQL injection is impossible (barring shenanigans like calling a SQL function that lets you execute a string
-/// as a statement) and *all* strings are valid.
 ///
-/// This also means you cannot use query parameters to add conditional SQL fragments.
-///
-/// **SQLx does not substitute placeholders on the client side**. It is done by the database server itself.
-///
-/// ##### SQLx supports many different types for parameter binding, not just strings.
-/// Any type that implements [`Encode<DB>`][Encode] and [`Type<DB>`] can be bound as a parameter.
-///
-/// See [the `types` module][crate::query_engine::types] (links to `crate::query_engine::types` but you should use `sqlx::types`) for details.
-///
-/// As an additional benefit, query parameters are usually sent in a compact binary encoding instead of a human-readable
-/// text encoding, which saves bandwidth.
+/// The query supports fetching rows, fetching an optional row, executing for a
+/// result count and mapping rows through the [`Query`] methods. Values must
+/// implement [`Encode`] and [`Type<DB>`]; see [`crate::sqlite::types`] for the
+/// SQLite conversions. SQL and returned column types are checked at execution
+/// and decode boundaries, not by compile-time query macros.
 pub fn query<'a, DB>(sql: impl SqlSafeStr) -> Query<'a, DB, <DB as Database>::Arguments>
 where
     DB: Database,

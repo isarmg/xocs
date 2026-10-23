@@ -11,7 +11,7 @@ use crate::query_engine::{error::Error, row::Row};
 /// struct field.
 ///
 /// ```rust,ignore
-/// #[derive(sqlx::FromRow)]
+/// #[derive(blog_storage_sqlite_access::FromRow)]
 /// struct User {
 ///     id: i32,
 ///     name: String,
@@ -29,7 +29,7 @@ use crate::query_engine::{error::Error, row::Row};
 /// For example:
 ///
 /// ```rust,ignore
-/// #[derive(sqlx::FromRow)]
+/// #[derive(blog_storage_sqlite_access::FromRow)]
 /// struct User {
 ///     id: i32,
 ///     name: String,
@@ -51,7 +51,7 @@ use crate::query_engine::{error::Error, row::Row};
 /// Placed at the struct level, this attribute changes how the field name is mapped to its SQL column name:
 ///
 /// ```rust,ignore
-/// #[derive(sqlx::FromRow)]
+/// #[derive(blog_storage_sqlite_access::FromRow)]
 /// #[sqlx(rename_all = "camelCase")]
 /// struct UserPost {
 ///     id: i32,
@@ -81,7 +81,7 @@ use crate::query_engine::{error::Error, row::Row};
 /// For example:
 ///
 /// ```rust,ignore
-/// #[derive(sqlx::FromRow)]
+/// #[derive(blog_storage_sqlite_access::FromRow)]
 /// struct User {
 ///     id: i32,
 ///     name: String,
@@ -105,7 +105,7 @@ use crate::query_engine::{error::Error, row::Row};
 /// For example:
 ///
 /// ```rust, ignore
-/// #[derive(Default, sqlx::FromRow)]
+/// #[derive(Default, blog_storage_sqlite_access::FromRow)]
 /// #[sqlx(default)]
 /// struct Options {
 ///     option_a: Option<i32>,
@@ -128,14 +128,14 @@ use crate::query_engine::{error::Error, row::Row};
 /// For example:
 ///
 /// ```rust,ignore
-/// #[derive(sqlx::FromRow)]
+/// #[derive(blog_storage_sqlite_access::FromRow)]
 /// struct Address {
 ///     country: String,
 ///     city: String,
 ///     road: String,
 /// }
 ///
-/// #[derive(sqlx::FromRow)]
+/// #[derive(blog_storage_sqlite_access::FromRow)]
 /// struct User {
 ///     id: i32,
 ///     name: String,
@@ -156,18 +156,18 @@ use crate::query_engine::{error::Error, row::Row};
 /// This is a variant of the `default` attribute which instead always takes the value from
 /// the `Default` implementation for this field type ignoring any results in your query.
 /// This can be useful, if some field does not satifisfy the trait bounds (i.e.
-/// `sqlx::decode::Decode`, `sqlx::type::Type`), in particular in case of nested structures.
+/// `blog_storage_sqlite_access::decode::Decode`, `blog_storage_sqlite_access::type::Type`), in particular in case of nested structures.
 /// For example:
 ///
 /// ```rust,ignore
-/// #[derive(sqlx::FromRow)]
+/// #[derive(blog_storage_sqlite_access::FromRow)]
 /// struct Address {
 ///     user_name: String,
 ///     street: String,
 ///     city: String,
 /// }
 ///
-/// #[derive(sqlx::FromRow)]
+/// #[derive(blog_storage_sqlite_access::FromRow)]
 /// struct User {
 ///     name: String,
 ///     #[sqlx(skip)]
@@ -178,7 +178,7 @@ use crate::query_engine::{error::Error, row::Row};
 /// Then when querying into `User`, only `name` needs to be set:
 ///
 /// ```rust,ignore
-/// let user: User = sqlx::query_as("SELECT name FROM users")
+/// let user: User = blog_storage_sqlite_access::query_as("SELECT name FROM users")
 ///    .fetch_one(&mut some_connection)
 ///    .await?;
 ///
@@ -194,22 +194,22 @@ use crate::query_engine::{error::Error, row::Row};
 /// For example:
 ///
 /// ```rust,ignore
-/// #[derive(sqlx::FromRow)]
+/// #[derive(blog_storage_sqlite_access::FromRow)]
 /// struct User {
 ///     id: i32,
 ///     name: String,
 ///     #[sqlx(try_from = "i64")]
-///     bigIntInMySql: u64
+///     value: u64
 /// }
 /// ```
 ///
 /// Given a query such as:
 ///
 /// ```sql
-/// SELECT id, name, bigIntInMySql FROM users;
+/// SELECT id, name, value FROM users;
 /// ```
 ///
-/// In MySql, `BigInt` type matches `i64`, but you can convert it to `u64` by `try_from`.
+/// SQLite integers decode as `i64`; `try_from` can perform a checked conversion to `u64`.
 ///
 /// #### `json`
 ///
@@ -223,7 +223,7 @@ use crate::query_engine::{error::Error, row::Row};
 ///     field2: u64
 /// }
 ///
-/// #[derive(sqlx::FromRow)]
+/// #[derive(blog_storage_sqlite_access::FromRow)]
 /// struct User {
 ///     id: i32,
 ///     name: String,
@@ -269,7 +269,7 @@ use crate::query_engine::{error::Error, row::Row};
 ///     field2: u64
 /// }
 ///
-/// #[derive(sqlx::FromRow)]
+/// #[derive(blog_storage_sqlite_access::FromRow)]
 /// struct User {
 ///     id: i32,
 ///     name: String,
@@ -287,7 +287,7 @@ use crate::query_engine::{error::Error, row::Row};
 ///
 ///
 /// ```rust,ignore
-/// use sqlx::{FromRow, sqlite::SqliteRow, sqlx::Row};
+/// use blog_storage_sqlite_access::{FromRow, sqlite::SqliteRow, blog_storage_sqlite_access::Row};
 /// struct MyCustomType {
 ///     custom: String,
 /// }
@@ -297,7 +297,7 @@ use crate::query_engine::{error::Error, row::Row};
 /// }
 ///
 /// impl FromRow<'_, SqliteRow> for Foo {
-///     fn from_row(row: &SqliteRow) -> sqlx::Result<Self> {
+///     fn from_row(row: &SqliteRow) -> blog_storage_sqlite_access::Result<Self> {
 ///         Ok(Self {
 ///             bar: MyCustomType {
 ///                 custom: row.try_get("custom")?

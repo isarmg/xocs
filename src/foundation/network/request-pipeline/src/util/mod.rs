@@ -769,10 +769,7 @@ pub trait ServiceExt<Request>: crate::Service<Request> {
     /// # }
     /// ```
     ///
-    /// Note that normally you wouldn't implement timeouts like this and instead use [`Timeout`].
-    ///
     /// [`call`]: crate::Service::call
-    /// [`Timeout`]: crate::timeout::Timeout
     fn map_future<F, Fut, Response, Error>(self, f: F) -> MapFuture<Self, F>
     where
         Self: Sized,
@@ -885,24 +882,16 @@ impl<T: ?Sized, Request> ServiceExt<Request> for T where T: crate::Service<Reque
 
 /// Convert an `Option<Layer>` into a [`Layer`].
 ///
-/// ```
-/// # use std::time::Duration;
-/// # use service_stack::Service;
-/// # use service_stack::builder::ServiceBuilder;
-/// use service_stack::util::option_layer;
-/// # use service_stack::timeout::TimeoutLayer;
-/// # async fn wrap<S>(svc: S) where S: Service<(), Error = &'static str> + 'static + Send, S::Future: Send {
-/// # let timeout = Some(Duration::new(10, 0));
-/// // Layer to apply a timeout if configured
-/// let maybe_timeout = option_layer(timeout.map(TimeoutLayer::new));
+/// A present layer is applied; `None` uses the identity layer.
 ///
-/// ServiceBuilder::new()
-///     .layer(maybe_timeout)
-///     .service(svc);
-/// # }
+/// ```
+/// use service_stack::{Identity, Layer, util::option_layer};
+///
+/// let optional = option_layer(Some(Identity::new()));
+/// let service = optional.layer("service");
 /// ```
 ///
-/// [`Layer`]: crate::layer::Layer
+/// [`Layer`]: crate::Layer
 pub fn option_layer<L>(layer: Option<L>) -> Either<L, Identity> {
     if let Some(layer) = layer {
         Either::Left(layer)

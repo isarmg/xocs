@@ -12,8 +12,8 @@ use crate::style_optimizer::visitor::Visit;
 
 /// A [@scope](https://drafts.csswg.org/css-cascade-6/#scope-atrule) rule.
 ///
-/// @scope (<scope-start>) [to (<scope-end>)]? {
-///  <stylesheet>
+/// @scope (`<scope-start>`) [to (`<scope-end>`)]? {
+///  `<stylesheet>`
 /// }
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(all(), derive(Visit))]

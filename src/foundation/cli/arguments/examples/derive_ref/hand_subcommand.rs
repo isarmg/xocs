@@ -1,6 +1,7 @@
+extern crate blog_cli_arguments as clap;
 #![allow(dead_code)]
-use command_line::error::{Error, ErrorKind};
-use command_line::{ArgMatches, Args as _, Command, FromArgMatches, Parser, Subcommand};
+use blog_cli_arguments::error::{Error, ErrorKind};
+use blog_cli_arguments::{ArgMatches, Args as _, Command, FromArgMatches, Parser, Subcommand};
 
 #[derive(Parser, Debug)]
 struct AddArgs {

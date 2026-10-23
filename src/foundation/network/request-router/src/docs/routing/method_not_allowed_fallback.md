@@ -4,7 +4,7 @@ Sets a fallback on all previously registered [`MethodRouter`]s,
 to be called when no matching method handler is set.
 
 ```rust,no_run
-use axum::{response::IntoResponse, routing::get, Router};
+use http_routing::{response::IntoResponse, routing::get, Router};
 
 async fn hello_world() -> impl IntoResponse {
     "Hello, world!\n"
@@ -27,7 +27,7 @@ async fn main() {
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
 
-    axum::serve(listener, router).await.unwrap();
+    http_routing::serve(listener, router).await.unwrap();
 }
 ```
 

@@ -33,7 +33,7 @@ pub enum Endianness {
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -77,7 +77,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -121,7 +121,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -165,7 +165,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -209,7 +209,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -253,7 +253,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -335,7 +335,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -379,7 +379,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -426,7 +426,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -481,7 +481,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -528,7 +528,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -575,7 +575,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -622,7 +622,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -666,7 +666,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -710,7 +710,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -754,7 +754,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -798,7 +798,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -842,7 +842,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -923,7 +923,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -967,7 +967,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -1014,7 +1014,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -1069,7 +1069,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -1116,7 +1116,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -1163,7 +1163,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -1216,7 +1216,7 @@ where
 ///
 /// *Complete version*: returns an error if there is not enough input data
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -1285,7 +1285,7 @@ where
 ///
 /// *Complete version*: returns an error if there is not enough input data
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -1356,7 +1356,7 @@ where
 ///
 /// *Complete version*: returns an error if there is not enough input data
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -1427,7 +1427,7 @@ where
 ///
 /// *Complete version*: returns an error if there is not enough input data
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -1498,7 +1498,7 @@ where
 ///
 /// *Complete version*: returns an error if there is not enough input data
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -1569,7 +1569,7 @@ where
 ///
 /// *Complete version*: returns an error if there is not enough input data
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -1643,7 +1643,7 @@ where
 ///
 /// *Complete version*: returns an error if there is not enough input data
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -1699,7 +1699,7 @@ where
 ///
 /// *Complete version*: returns an error if there is not enough input data
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -1770,7 +1770,7 @@ where
 ///
 /// *Complete version*: returns an error if there is not enough input data
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -1841,7 +1841,7 @@ where
 ///
 /// *Complete version*: returns an error if there is not enough input data
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -1912,7 +1912,7 @@ where
 ///
 /// *Complete version*: returns an error if there is not enough input data
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -1983,7 +1983,7 @@ where
 ///
 /// *Complete version*: returns an error if there is not enough input data
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -2051,7 +2051,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -2099,7 +2099,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -2146,7 +2146,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -2193,7 +2193,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -2243,7 +2243,7 @@ where
 ///
 /// *Complete version*: returns an error if there is not enough input data
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -2314,7 +2314,7 @@ where
 ///
 /// *Complete version*: returns an error if there is not enough input data
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -2386,7 +2386,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///
@@ -2430,7 +2430,7 @@ where
 ///
 /// *Complete version*: Returns an error if there is not enough input data.
 ///
-/// *[Partial version][crate::_topic::partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
+/// *[Partial input][crate::stream::Partial]*: Will return `Err(winnow::error::ErrMode::Incomplete(_))` if there is not enough data.
 ///
 /// # Example
 ///

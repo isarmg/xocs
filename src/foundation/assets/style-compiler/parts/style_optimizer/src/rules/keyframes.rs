@@ -34,7 +34,7 @@ use crate::style_parser::*;
 #[cfg_attr(any(), derive(schemars::JsonSchema))]
 pub struct KeyframesRule<'i> {
   /// The animation name.
-  /// <keyframes-name> = <custom-ident> | <string>
+  /// `<keyframes-name>` = `<custom-ident>` | `<string>`
   #[cfg_attr(any(), serde(borrow))]
   pub name: KeyframesName<'i>,
   /// A list of keyframes in the animation.
@@ -348,7 +348,7 @@ impl ToCss for KeyframeSelector {
 
 /// An individual keyframe within an `@keyframes` rule.
 ///
-/// See [KeyframesRule](KeyframesRule).
+/// See [KeyframesRule].
 #[derive(Debug, PartialEq, Clone)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(any(), derive(static_self::IntoOwned))]

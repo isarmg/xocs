@@ -10,7 +10,7 @@ For example, [`Json`] is an extractor that consumes the request body and
 deserializes it as JSON into some target type:
 
 ```rust,no_run
-use axum::{
+use http_routing::{
     extract::Json,
     routing::post,
     handler::Handler,
@@ -37,14 +37,14 @@ let app = Router::new().route("/users", post(create_user));
 Some commonly used extractors are:
 
 ```rust,no_run
-use axum::{
+use http_routing::{
     extract::{Request, Json, Path, Extension, Query},
     routing::post,
     http::header::HeaderMap,
     body::{Bytes, Body},
     Router,
 };
-use serde_json::Value;
+use json_codec::Value;
 use std::collections::HashMap;
 
 // `Path` gives you the path parameters and deserializes them. See its docs for
@@ -92,7 +92,7 @@ let app = Router::new()
 You can also apply multiple extractors:
 
 ```rust,no_run
-use axum::{
+use http_routing::{
     extract::{Path, Query},
     routing::get,
     Router,
@@ -130,7 +130,7 @@ handler takes.
 For example
 
 ```rust
-use axum::{extract::State, http::{Method, HeaderMap}};
+use http_routing::{extract::State, http::{Method, HeaderMap}};
 #
 # #[derive(Clone)]
 # struct AppState {
@@ -149,13 +149,13 @@ async fn handler(
     // ...
 }
 #
-# let _: axum::routing::MethodRouter<AppState> = axum::routing::get(handler);
+# let _: http_routing::routing::MethodRouter<AppState> = http_routing::routing::get(handler);
 ```
 
 We get a compile error if `String` isn't the last extractor:
 
 ```rust,compile_fail
-use axum::http::Method;
+use http_routing::http::Method;
 
 async fn handler(
     // this doesn't work since `String` must be the last argument
@@ -165,13 +165,13 @@ async fn handler(
     // ...
 }
 #
-# let _: axum::routing::MethodRouter = axum::routing::get(handler);
+# let _: http_routing::routing::MethodRouter = http_routing::routing::get(handler);
 ```
 
 This also means you cannot consume the request body twice:
 
 ```rust,compile_fail
-use axum::Json;
+use http_routing::Json;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -186,7 +186,7 @@ async fn handler(
     // ...
 }
 #
-# let _: axum::routing::MethodRouter = axum::routing::get(handler);
+# let _: http_routing::routing::MethodRouter = http_routing::routing::get(handler);
 ```
 
 axum enforces this by requiring the last extractor implements [`FromRequest`]
@@ -199,12 +199,12 @@ handler, you can wrap it in `Result`, with the error being the rejection type
 of the extractor:
 
 ```rust,no_run
-use axum::{
+use http_routing::{
     extract::{Json, rejection::JsonRejection},
     routing::post,
     Router,
 };
-use serde_json::Value;
+use json_codec::Value;
 
 async fn create_user(payload: Result<Json<Value>, JsonRejection>) {
     match payload {
@@ -247,9 +247,9 @@ header you're trying to extract is not part of the request, but if the header
 is present and fails to parse, the request is rejected.
 
 ```rust,no_run
-use axum::{routing::post, Router};
+use http_routing::{routing::post, Router};
 use axum_extra::{headers::UserAgent, TypedHeader};
-use serde_json::Value;
+use json_codec::Value;
 
 async fn foo(user_agent: Option<TypedHeader<UserAgent>>) {
     if let Some(TypedHeader(user_agent)) = user_agent {
@@ -282,19 +282,19 @@ axum's built-in extractors don't directly expose the inner error. This gives us
 more flexibility and allows us to change internal implementations without
 breaking the public API.
 
-For example that means while [`Json`] is implemented using [`serde_json`] it
-doesn't directly expose the [`serde_json::Error`] that's contained in
+For example that means while [`Json`] is implemented using [`json_codec`] it
+doesn't directly expose the [`json_codec::Error`] that's contained in
 [`JsonRejection::JsonDataError`]. However it is still possible to access via
 methods from [`std::error::Error`]:
 
 ```rust
 use std::error::Error;
-use axum::{
+use http_routing::{
     extract::{Json, rejection::JsonRejection},
     response::IntoResponse,
     http::StatusCode,
 };
-use serde_json::{json, Value};
+use json_codec::{json, Value};
 
 async fn handler(
     result: Result<Json<Value>, JsonRejection>,
@@ -329,7 +329,7 @@ async fn handler(
     }
 }
 
-// attempt to extract the inner `serde_path_to_error::Error<serde_json::Error>`,
+// attempt to extract the inner `serde_path_to_error::Error<json_codec::Error>`,
 // if that succeeds we can provide a more specific error.
 //
 // `Json` uses `serde_path_to_error` so the error will be wrapped in `serde_path_to_error::Error`.
@@ -337,7 +337,7 @@ fn serde_json_error_response<E>(err: E) -> (StatusCode, String)
 where
     E: Error + 'static,
 {
-    if let Some(err) = find_error_source::<serde_path_to_error::Error<serde_json::Error>>(&err) {
+    if let Some(err) = find_error_source::<serde_path_to_error::Error<json_codec::Error>>(&err) {
         let serde_json_err = err.inner();
         (
             StatusCode::BAD_REQUEST,
@@ -369,14 +369,14 @@ where
 # 
 # #[tokio::main]
 # async fn main() {
-#     use axum::extract::FromRequest;
+#     use http_routing::extract::FromRequest;
 # 
-#     let req = axum::http::Request::builder()
+#     let req = http_routing::http::Request::builder()
 #         .header("content-type", "application/json")
-#         .body(axum::body::Body::from("{"))
+#         .body(http_routing::body::Body::from("{"))
 #         .unwrap();
 # 
-#     let err = match Json::<serde_json::Value>::from_request(req, &()).await.unwrap_err() {
+#     let err = match Json::<json_codec::Value>::from_request(req, &()).await.unwrap_err() {
 #         JsonRejection::JsonSyntaxError(err) => err,
 #         _ => panic!(),
 #     };
@@ -401,7 +401,7 @@ Implement `FromRequestParts` if your extractor doesn't need access to the
 request body:
 
 ```rust,no_run
-use axum::{
+use http_routing::{
     extract::FromRequestParts,
     routing::get,
     Router,
@@ -442,7 +442,7 @@ let app = Router::new().route("/foo", get(handler));
 If your extractor needs to consume the request body you must implement [`FromRequest`]
 
 ```rust,no_run
-use axum::{
+use http_routing::{
     extract::{Request, FromRequest},
     response::{Response, IntoResponse},
     body::{Bytes, Body},
@@ -489,7 +489,7 @@ Note that you will make your extractor unusable by implementing both
 wrapping another extractor:
 
 ```rust,compile_fail
-use axum::{
+use http_routing::{
     Router,
     routing::get,
     extract::{FromRequest, Request, FromRequestParts},
@@ -547,7 +547,7 @@ When defining custom extractors you often need to access another extractor
 in your implementation.
 
 ```rust
-use axum::{
+use http_routing::{
     extract::{Extension, FromRequestParts},
     http::{StatusCode, HeaderMap, request::Parts},
     response::{IntoResponse, Response},
@@ -577,7 +577,7 @@ where
             .map_err(|err| match err {})?;
 
         // ... or use `extract` / `extract_with_state` from `RequestExt` / `RequestPartsExt`
-        use axum::RequestPartsExt;
+        use http_routing::RequestPartsExt;
         let Extension(state) = parts.extract::<Extension<State>>()
             .await
             .map_err(|err| err.into_response())?;
@@ -611,7 +611,7 @@ If you want to write an extractor that generically wraps another extractor
 [`FromRequest`] and [`FromRequestParts`]:
 
 ```rust
-use axum::{
+use http_routing::{
     Router,
     body::Body,
     routing::get,
@@ -670,15 +670,15 @@ async fn handler(
     // this uses the `FromRequest` impl
     _: Timing<String>,
 ) {}
-# let _: axum::routing::MethodRouter = axum::routing::get(handler);
+# let _: http_routing::routing::MethodRouter = http_routing::routing::get(handler);
 ```
 
 # Logging rejections
 
 All built-in extractors will log rejections for easier debugging. To see the
 logs, enable the `tracing` feature for axum (enabled by default) and the
-`axum::rejection=trace` tracing target, for example with
-`RUST_LOG=info,axum::rejection=trace cargo run`.
+`http_routing::rejection=trace` tracing target, for example with
+`RUST_LOG=info,http_routing::rejection=trace cargo run`.
 
 [axum-extra]: https://docs.rs/axum-extra/latest/axum_extra/extract/index.html
 [`body::Body`]: crate::body::Body

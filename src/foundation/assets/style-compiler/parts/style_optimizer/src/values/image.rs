@@ -394,7 +394,7 @@ impl<'i> IsCompatible for ImageSet<'i> {
   }
 }
 
-/// An image option within the `image-set()` function. See [ImageSet](ImageSet).
+/// An image option within the `image-set()` function. See [ImageSet].
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(any(), derive(static_self::IntoOwned))]

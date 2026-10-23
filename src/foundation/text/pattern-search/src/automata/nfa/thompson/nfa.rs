@@ -39,7 +39,7 @@ use crate::automata::{
 /// # Capabilities
 ///
 /// Using an NFA for searching via the
-/// [`PikeVM`](blog_text_pattern_search::automata::nfa::thompson::pikevm::PikeVM) provides the most amount
+/// [`PikeVM`](crate::automata::nfa::thompson::pikevm::PikeVM) provides the most amount
 /// of "power" of any regex engine in this crate. Namely, it supports the
 /// following in all cases:
 ///
@@ -62,7 +62,7 @@ use crate::automata::{
 ///
 /// Only the first two forms are said to be _capturing_. Capturing
 /// means that the last position at which they match is reportable. The
-/// [`Captures`](blog_text_pattern_search::automata::util::captures::Captures) type provides convenient
+/// [`Captures`](crate::automata::util::captures::Captures) type provides convenient
 /// access to the match positions of capturing groups, which includes looking
 /// up capturing groups by their name.
 ///
@@ -114,7 +114,7 @@ use crate::automata::{
 /// Unicode word boundaries on non-ASCII text and resolve the positions of
 /// capturing groups.
 ///
-/// Note that a [`hybrid::regex::Regex`](blog_text_pattern_search::automata::hybrid::regex::Regex) strikes a
+/// Note that a [`hybrid::regex::Regex`](crate::automata::hybrid::regex::Regex) strikes a
 /// good balance between an NFA and a DFA. It avoids the exponential build time
 /// of a DFA while maintaining its fast search time. The downside of a hybrid
 /// NFA/DFA is that in some cases it can be slower at search time than the NFA.

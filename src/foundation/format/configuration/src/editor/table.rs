@@ -111,7 +111,7 @@ impl Table {
     ///
     /// This sorts the syntactic table (everything under the `[header]`) and not the logical map of
     /// key-value pairs.
-    /// This does not affect the order of [sub-tables][Table] or [sub-arrays][blog_format_configuration::editor::ArrayOfTables].
+    /// This does not affect the order of [sub-tables][Table] or [sub-arrays][crate::editor::ArrayOfTables].
     /// This is not recursive.
     ///
     /// </div>
@@ -137,7 +137,7 @@ impl Table {
     ///
     /// This sorts the syntactic table (everything under the `[header]`) and not the logical map of
     /// key-value pairs.
-    /// This does not affect the order of [sub-tables][Table] or [sub-arrays][blog_format_configuration::editor::ArrayOfTables].
+    /// This does not affect the order of [sub-tables][Table] or [sub-arrays][crate::editor::ArrayOfTables].
     /// This is not recursive.
     ///
     /// </div>
@@ -209,12 +209,12 @@ impl Table {
         self.dotted
     }
 
-    /// Sets the position of the `Table` within the [`DocumentMut`][blog_format_configuration::editor::DocumentMut].
+    /// Sets the position of the `Table` within the [`crate::editor::DocumentMut`].
     pub fn set_position(&mut self, doc_position: usize) {
         self.doc_position = Some(doc_position);
     }
 
-    /// The position of the `Table` within the [`DocumentMut`][blog_format_configuration::editor::DocumentMut].
+    /// The position of the `Table` within the [`crate::editor::DocumentMut`].
     ///
     /// Returns `None` if the `Table` was created manually (i.e. not via parsing)
     /// in which case its position is set automatically.  This can be overridden with
@@ -265,7 +265,7 @@ impl Table {
 
     /// The location within the original document
     ///
-    /// This generally requires an [`ImDocument`][blog_format_configuration::editor::ImDocument].
+    /// This generally requires an [`crate::editor::ImDocument`].
     pub fn span(&self) -> Option<std::ops::Range<usize>> {
         self.span.clone()
     }
@@ -601,7 +601,7 @@ pub trait TableLike: crate::editor::private::Sealed {
     ///
     /// This sorts the syntactic table (everything under the `[header]`) and not the logical map of
     /// key-value pairs.
-    /// This does not affect the order of [sub-tables][Table] or [sub-arrays][blog_format_configuration::editor::ArrayOfTables].
+    /// This does not affect the order of [sub-tables][Table] or [sub-arrays][crate::editor::ArrayOfTables].
     /// This is not recursive.
     ///
     /// </div>

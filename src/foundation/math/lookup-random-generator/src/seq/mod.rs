@@ -12,13 +12,9 @@
 //!
 //! *   [`SliceRandom`] slice sampling and mutation
 //! *   [`IteratorRandom`] iterator sampling
-//! *   [`index::sample`] low-level API to choose multiple indices from
-//!     `0..length`
 //!
-//! Also see:
-//!
-//! *   [`crate::distributions::WeightedIndex`] distribution which provides
-//!     weighted index sampling.
+//! With `alloc`, `index::sample` chooses multiple indices from `0..length`,
+//! and `distributions::WeightedIndex` provides weighted index sampling.
 //!
 //! In order to make results reproducible across 32-64 bit architectures, all
 //! `usize` indices are sampled as a `u32` where possible (also providing a
@@ -446,7 +442,8 @@ pub trait IteratorRandom: Iterator + Sized {
     /// case this equals the number of elements available.
     ///
     /// Complexity is `O(n)` where `n` is the length of the iterator.
-    /// For slices, prefer [`SliceRandom::choose_multiple`].
+    /// For slices with `alloc` enabled, `SliceRandom::choose_multiple` provides
+    /// an allocation-backed alternative.
     fn choose_multiple_fill<R>(mut self, rng: &mut R, buf: &mut [Self::Item]) -> usize
     where
         R: Rng + ?Sized,
@@ -486,7 +483,8 @@ pub trait IteratorRandom: Iterator + Sized {
     /// elements available.
     ///
     /// Complexity is `O(n)` where `n` is the length of the iterator.
-    /// For slices, prefer [`SliceRandom::choose_multiple`].
+    /// For slices with `alloc` enabled, `SliceRandom::choose_multiple` provides
+    /// an allocation-backed alternative.
     #[cfg(feature = "alloc")]
     #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     fn choose_multiple<R>(mut self, rng: &mut R, amount: usize) -> Vec<Self::Item>

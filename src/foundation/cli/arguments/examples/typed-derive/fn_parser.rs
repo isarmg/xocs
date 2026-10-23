@@ -1,6 +1,7 @@
+extern crate blog_cli_arguments as clap;
 use std::error::Error;
 
-use command_line::Args;
+use blog_cli_arguments::Args;
 
 #[derive(Args, Debug)]
 pub(crate) struct FnParser {

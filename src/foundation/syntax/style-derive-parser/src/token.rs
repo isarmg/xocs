@@ -8,9 +8,8 @@
 //!
 //! # Example
 //!
-//! The [`ItemStatic`] syntax tree node is defined like this.
-//!
-//! [`ItemStatic`]: crate::ItemStatic
+//! A syntax node for a static declaration can be defined using token types
+//! as shown below. The parser exports its own `ItemStatic` with the `full` feature.
 //!
 //! ```
 //! # use syn::{Attribute, Expr, Ident, Token, Type, Visibility};

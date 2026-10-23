@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 /// Provide shell with hint on how to complete an argument.
 ///
-/// See [`Arg::value_hint`][command_line::Arg::value_hint] to set this on an argument.
+/// See [`Arg::value_hint`][crate::Arg::value_hint] to set this on an argument.
 ///
 /// See the `clap_complete` crate for completion script generation.
 ///
@@ -50,11 +50,11 @@ pub enum ValueHint {
     ///
     /// This hint is special, the argument must be a positional argument and have
     /// [`.num_args(1..)`] and Command must use [`Command::trailing_var_arg(true)`]. The result is that the
-    /// command line `my_app ls -la /` will be parsed as `["ls", "-la", "/"]` and command_line won't try to
+    /// command line `my_app ls -la /` will be parsed as `["ls", "-la", "/"]` and blog_cli_arguments won't try to
     /// parse the `-la` argument itself.
     ///
-    /// [`Command::trailing_var_arg(true)`]: command_line::Command::trailing_var_arg
-    /// [`.num_args(1..)`]: command_line::Arg::num_args()
+    /// [`Command::trailing_var_arg(true)`]: crate::Command::trailing_var_arg
+    /// [`.num_args(1..)`]: crate::Arg::num_args()
     CommandWithArguments,
     /// Name of a local operating system user.
     Username,

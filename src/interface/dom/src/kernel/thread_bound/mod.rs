@@ -6,19 +6,14 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-//! This [Rust] library implements a wrapper type called [`SendWrapper`] which allows you to move around non-[`Send`] types
-//! between threads, as long as you access the contained value only from within the original thread. You also have to
-//! make sure that the wrapper is dropped from within the original thread. If any of these constraints is violated,
-//! a panic occurs. [`SendWrapper<T>`] implements [`Send`] and [`Sync`] for any type `T`.
+//! Thread-bound values that can be transported between threads.
 //!
-//! The idea for this library was born in the context of a [`GTK+`]/[`gtk-rs`]-based application. [`GTK+`] applications
-//! are strictly single-threaded. It is not allowed to call any [`GTK+`] method from a thread different to the main
-//! thread. Consequently, all [`gtk-rs`] structs are non-[`Send`].
-//!
-//! Sometimes you still want to do some work in background. It is possible to enqueue [`GTK+`] calls from there to be
-//! executed in the main thread [using `Glib`]. This way you can know, that the [`gtk-rs`] structs involved are only
-//! accessed in the main thread and will also be dropped there. This library makes it possible that [`gtk-rs`] structs
-//! can leave the main thread at all.
+//! [`SendWrapper`](crate::thread_bound::SendWrapper) implements [`Send`] and
+//! [`Sync`] for any contained type. Access, polling and destruction remain bound
+//! to the thread that created the wrapper; violating that restriction panics.
+//! Moving the wrapper to another thread does not make its contained value safe
+//! to use there. Return the wrapper to its original thread before accessing or
+//! dropping it.
 //!
 //! # Examples
 //!
@@ -68,28 +63,12 @@
 //! let value: &mut Rc<_> = &mut wrapped_value;
 //! ```
 //!
-//! # Features
+//! # Asynchronous values
 //!
-//! This crate has a single feature called `futures` that enables [`Future`] and [`Stream`] implementations for [`SendWrapper`].
-//! You can enable it in `Cargo.toml` like so:
+//! Wrappers around a [`Future`](std::future::Future) or [`Stream`](futures::Stream)
+//! implement the corresponding asynchronous trait. Polling must occur on the
+//! original thread, just like direct access to the wrapped value.
 //!
-//! ```toml
-//! send_wrapper = { version = "...", features = ["futures"] }
-//! ```
-//!
-//! # License
-//!
-//! `send_wrapper` is distributed under the terms of both the MIT license and the Apache License (Version 2.0).
-//!
-//! See LICENSE-APACHE.txt, and LICENSE-MIT.txt for details.
-//!
-//! [Rust]: https://www.rust-lang.org
-//! [`gtk-rs`]: http://gtk-rs.org/
-//! [`GTK+`]: https://www.gtk.org/
-//! [using `Glib`]: http://gtk-rs.org/docs/glib/source/fn.idle_add.html
-//! [`Future`]: std::future::Future
-//! [`Stream`]: futures::Stream
-// To build docs locally use `RUSTDOCFLAGS="--cfg docsrs" cargo doc --open --all-features`
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg_attr(docsrs, doc(cfg(all())))]

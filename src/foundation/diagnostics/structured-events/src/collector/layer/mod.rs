@@ -486,13 +486,11 @@
 //! }
 //! ```
 //!
-//! <pre class="compile_fail" style="white-space:normal;font:inherit;">
 //!     <strong>Warning</strong>: Currently, the <a href="../struct.Registry.html">
 //!     <code>Registry</code></a> type defined in this crate is the only root
 //!     <code>Subscriber</code> capable of supporting <code>Layer</code>s with
 //!     per-layer filters. In the future, new APIs will be added to allow other
 //!     root <code>Subscriber</code>s to support per-layer filters.
-//! </pre>
 //!
 //! For example, to generate an HTTP access log based on spans with
 //! the `http_access` target, while logging other spans and events to
@@ -794,7 +792,6 @@ where
     /// By default, this returns [`Interest::always()`] if [`self.enabled`] returns
     /// true, or [`Interest::never()`] if it returns false.
     ///
-    /// <pre class="ignore" style="white-space:normal;font:inherit;">
     /// <strong>Note</strong>: This method (and <a href="#method.enabled">
     /// <code>Layer::enabled</code></a>) determine whether a span or event is
     /// globally enabled, <em>not</em> whether the individual layer will be
@@ -806,7 +803,6 @@ where
     /// <a href="#method.on_enter"><code>on_enter</code></a>,
     /// <a href="#method.on_exit"><code>on_exit</code></a>, and other notification
     /// methods.
-    /// </pre>
     ///
     /// See [the trait-level documentation] for more information on filtering
     /// with `Layer`s.
@@ -842,7 +838,6 @@ where
     /// By default, this always returns `true`, allowing the wrapped subscriber
     /// to choose to disable the span.
     ///
-    /// <pre class="ignore" style="white-space:normal;font:inherit;">
     /// <strong>Note</strong>: This method (and <a href="#method.register_callsite">
     /// <code>Layer::register_callsite</code></a>) determine whether a span or event is
     /// globally enabled, <em>not</em> whether the individual layer will be
@@ -854,7 +849,6 @@ where
     /// <a href="#method.on_enter"><code>on_enter</code></a>,
     /// <a href="#method.on_exit"><code>on_exit</code></a>, and other notification
     /// methods.
-    /// </pre>
     ///
     ///
     /// See [the trait-level documentation] for more information on filtering
@@ -902,8 +896,6 @@ where
 
     /// Called before [`on_event`], to determine if `on_event` should be called.
     ///
-    /// <div class="example-wrap" style="display:inline-block">
-    /// <pre class="ignore" style="white-space:normal;font:inherit;">
     ///
     /// **Note**: This method determines whether an event is globally enabled,
     /// *not* whether the individual `Layer` will be notified about the
@@ -912,7 +904,6 @@ where
     /// notified about certain events but do not wish to globally disable them
     /// should ignore those events in their [on_event][Self::on_event].
     ///
-    /// </pre></div>
     ///
     /// See [the trait-level documentation] for more information on filtering
     /// with `Layer`s.
@@ -1131,7 +1122,7 @@ where
     ///
     /// ```compile_fail
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// use tracing::collector::{Layer, filter::LevelFilter, prelude::*};
+    /// use tracing::collector::{Layer, filter::{LevelFilter, Targets}, prelude::*};
     /// use std::{path::PathBuf, fs::File, io};
     ///
     /// /// Configures whether logs are emitted to a file, to stdout, or to stderr.
@@ -1167,9 +1158,8 @@ where
     ///         // layer's type!
     ///         .pretty()
     ///         .with_writer(io::stdout)
-    ///         // Add a filter based on the RUST_LOG environment variable;
-    ///         // this changes the type too!
-    ///         .and_then(tracing::collector::EnvFilter::from_default_env()),
+    ///         // Target filtering changes the layer's type too.
+    ///         .with_filter(Targets::new().with_default(LevelFilter::INFO)),
     ///
     ///     // If logging to stdout, only log errors and warnings.
     ///     LogConfig::Stderr => tracing::collector::fmt::layer()
@@ -1191,7 +1181,7 @@ where
     ///
     /// ```
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// # use tracing::collector::{Layer, filter::LevelFilter, prelude::*};
+    /// # use tracing::collector::{Layer, filter::{LevelFilter, Targets}, prelude::*};
     /// # use std::{path::PathBuf, fs::File, io};
     /// # pub enum LogConfig {
     /// #    File(PathBuf),
@@ -1215,7 +1205,7 @@ where
     ///     LogConfig::Stdout => tracing::collector::fmt::layer()
     ///         .pretty()
     ///         .with_writer(io::stdout)
-    ///         .and_then(tracing::collector::EnvFilter::from_default_env())
+    ///         .with_filter(Targets::new().with_default(LevelFilter::INFO))
     ///         // Erase the type by boxing the layer
     ///         .boxed(),
     ///
@@ -1290,7 +1280,6 @@ feature! {
         /// never enable a particular callsite, providing an implementation of this
         /// function is recommended.
         ///
-        /// <pre class="ignore" style="white-space:normal;font:inherit;">
         /// <strong>Note</strong>: If a <code>Filter</code> will perform
         /// <em>dynamic filtering</em> that depends on the current context in which
         /// a span or event was observed (e.g. only enabling an event when it
@@ -1299,7 +1288,6 @@ feature! {
         /// <code>Interest::always()</code> or <code>Interest::never()</code>, the
         /// <code>enabled</code> method may not be called when a particular instance
         /// of that span or event is recorded.
-        /// </pre>
         ///
         /// This method is broadly similar to [`Subscriber::register_callsite`];
         /// however, since the returned value represents only the interest of
@@ -1431,7 +1419,7 @@ feature! {
         /// multiple invocations of this method. However, note that changes in the
         /// maximum level will **only** be reflected after the callsite [`Interest`]
         /// cache is rebuilt, by calling the
-        /// [`tracing::primitives::callsite::rebuild_interest_cache`][rebuild] function.
+        /// [`tracing::primitives::callsite::rebuild_interest_cache`] function.
         /// Therefore, if the `Filter will change the value returned by this
         /// method, it is responsible for ensuring that
         /// [`rebuild_interest_cache`][rebuild] is called after the value of the max

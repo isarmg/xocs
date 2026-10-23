@@ -12,7 +12,7 @@ Sparse representations use less memory, but are slower to traverse. Conversely,
 dense representations use more memory, but are faster to traverse. (Sometimes
 these lines are blurred. For example, an `NFA` might choose to represent a
 particular state in a dense fashion, and a DFA can be built using a sparse
-representation via [`sparse::DFA`](blog_text_pattern_search::automata::dfa::sparse::DFA).
+representation via [`sparse::DFA`](crate::automata::dfa::sparse::DFA).
 * NFAs have epsilon transitions and DFAs don't. In practice, this means that
 handling a single byte in a haystack with an NFA at search time may require
 visiting multiple NFA states. In a DFA, each byte only requires visiting
@@ -27,7 +27,7 @@ pattern ID) at which a match occurred. This is generally why we also compile
 DFAs in reverse, so that we can run them after finding the end of a match to
 also find the start of a match.
 * NFAs take worst case linear time to build, but DFAs take worst case
-exponential time to build. The [hybrid NFA/DFA](blog_text_pattern_search::automata::hybrid) mitigates this
+exponential time to build. The [hybrid NFA/DFA](crate::automata::hybrid) mitigates this
 challenge for DFAs in many practical cases.
 
 There are likely other differences, but the bottom line is that NFAs tend to be

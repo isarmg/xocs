@@ -8,48 +8,19 @@ use futures::stream::BoxStream;
 use futures::{FutureExt, StreamExt, TryFutureExt, TryStreamExt};
 use std::{fmt::Debug, future};
 
-/// A type that contains or can provide a database
-/// connection to use for executing queries against the database.
+/// Execute SQLite statements on a connection or pool reference.
 ///
-/// No guarantees are provided that successive queries run on the same
-/// physical database connection.
+/// Queries on one connection execute in order. A pool can use different worker
+/// connections for independent executions; acquire one connection or begin a
+/// transaction when operations must share a connection.
 ///
-/// A [`Connection`](crate::query_engine::connection::Connection) is an `Executor` that guarantees that
-/// successive queries are ran on the same physical database connection.
+/// A checked-out pool connection or transaction dereferences to its concrete
+/// connection. Pass `&mut *connection` or `&mut *transaction` to query methods.
 ///
-/// Implemented for the following:
-///
-///  * [`&Pool`](super::pool::Pool)
-///  * [`&mut Connection`](super::connection::Connection)
-///
-/// The [`Executor`] impls for [`Transaction`](crate::query_engine::transaction::Transaction)
-/// and [`PoolConnection`](crate::query_engine::pool::PoolConnection) have been deleted because they
-/// cannot exist in the new crate architecture without rewriting the Executor trait entirely.
-/// To fix this breakage, simply add a dereference where an impl [`Executor`] is expected, as
-/// they both dereference to the inner connection type which will still implement it:
-/// * `&mut transaction` -> `&mut *transaction`
-/// * `&mut connection` -> `&mut *connection`
-///
-/// # Note: Methods Not for General Use
-/// This is a building-block trait that is exposed mainly for use as a trait bound.
-///
-/// Instead of calling the methods of this trait, use the free functions in the `sqlx` crate root:
-/// * [`sqlx::query()`]: use for DML queries (`SELECT`, `INSERT`, `UPDATE`, `DELETE`, etc.)
-///     * uses and caches prepared statements internally per-connection
-///     * may use argument placeholders (MySQL/MariaDB: `?`, Postgres/SQLite: `$1`, `$2`, etc.)
-///     * one query per string
-/// * [`sqlx::query_as()`], [`sqlx::query_scalar()`]: preferred for DML queries with type mapping
-/// * [`sqlx::raw_sql()`]: for DDL (`CREATE`, `ALTER`, etc.), batch queries and administration functions
-///     * accepts multiple queries separated by semicolons (`;`) in the same string
-///     * never uses prepared statements
-///
-/// Consider also the `query!()` family of macros, which offer queries and type mapping checked
-/// at compile-time.
-///
-/// [`sqlx::query()`]: crate::query_engine::query::query
-/// [`sqlx::query_as()`]: crate::query_engine::query_as::query_as
-/// [`sqlx::query_scalar()`]: crate::query_engine::query_scalar::query_scalar
-/// [`sqlx::raw_sql()`]: crate::query_engine::raw_sql::raw_sql
+/// Use [`crate::query()`], [`crate::query_as`] and [`crate::query_scalar`] for
+/// parameterized statements with cached preparation. [`crate::raw_sql`] executes
+/// trusted SQL batches without retaining statements in the cache. Column types
+/// are validated at runtime; this package provides no compile-time SQL macros.
 pub trait Executor<'c>: Send + Debug + Sized {
     type Database: Database;
 
@@ -181,8 +152,7 @@ pub trait Executor<'c>: Send + Debug + Sized {
     /// Prepare the SQL query, with parameter type information, to inspect the
     /// type information about its parameters and results.
     ///
-    /// Only some database drivers (PostgreSQL, MSSQL) can take advantage of
-    /// this extra information to influence parameter type inference.
+    /// SQLite does not use the supplied parameter type hints to infer types.
     fn prepare_with<'e>(
         self,
         sql: SqlStr,

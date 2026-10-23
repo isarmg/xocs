@@ -131,7 +131,7 @@ pub fn is_non_value_js_keyword(keyword: &str) -> bool {
 }
 
 /// Returns whether a string is a valid JavaScript identifier.
-/// Defined at https://tc39.es/ecma262/#prod-IdentifierName.
+/// Defined at <https://tc39.es/ecma262/#prod-IdentifierName>.
 pub fn is_valid_ident(name: &str) -> bool {
     maybe_valid_chars(name).all(|opt| opt.is_some())
 }

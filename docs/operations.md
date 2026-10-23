@@ -1,15 +1,54 @@
-# 运行维护
+# 运行与排障
 
-运行程序使用 `blog --root ROOT`；初始化、离线结构检查和密码重置由仓库内编译的 `blog-setup` 执行。安装与权限见[部署说明](../deploy/linux-x86_64/README.md)。
+本页用于已初始化的站点。生产安装、服务账号和权限见[部署说明](../deploy/linux-x86_64/README.md)，实例配置见[配置参考](configuration.md)。
 
-- 新站点：`blog-setup --root ROOT initialize --username admin`，密码从标准输入读取。
-- 停服后检查：`blog-setup --root ROOT check`。
-- 停服后重置：`blog-setup --root ROOT admin-reset --username admin`，新密码从标准输入读取并撤销现有管理员会话。
+## 检查服务
 
-离线工具只以显式 ROOT/config/config.json 决定状态目录，忽略 BLOG_DATA_DIR、BLOG_MEDIA 等运行时环境覆盖，避免维护另一实例。需要外置状态目录时，将真实路径写入该 JSON，再启动和维护同一实例。
+默认安装的服务名为 `blog.service`：
 
-配置位于 ROOT/config/config.json，数据库位于 ROOT/state/site.sqlite，媒体默认 ROOT/media，日志 ROOT/logs，验证快照 ROOT/run。配置、状态和媒体的权限及物理路径检查由本地实现保留；不要通过复制版本字段绕过数据库结构验证。
+```sh
+sudo systemctl status blog.service
+sudo journalctl -u blog.service -n 100 --no-pager
+curl --fail http://127.0.0.1:8081/readyz
+```
 
-实际检查 `/readyz`、首页、文章和后台登录。HTTP 200、进程存在、构建成功、候选包通过和正式发布是不同层次的证据。生产需要 HTTPS 与同源 Cookie；开发 HTTP 只允许回环地址。
+监听地址不同时，相应修改检查 URL。`/readyz` 检查服务和数据库是否可用；同时打开首页、文章和 `/admin`，确认实际页面、内容读取与登录正常。
 
-本项目不再调用外部多产品安装/升级框架；当前不提供旧 xocs 数据或任意版本之间的自动迁移。升级前停服、备份数据与配置，先验证目标程序的结构和业务行为，不能宣称保留了原外部升级器的全部事务恢复能力。
+结构化运行日志位于 `ROOT/logs/server.jsonl`，轮转文件也保存在该目录。排查请求失败时，记录页面错误、发生时间、请求路径及 `X-Request-ID`，并用请求 ID 关联日志。时间统一按 UTC 查找。
+
+| 现象 | 检查项 |
+| --- | --- |
+| 服务启动失败 | 配置 JSON、绝对路径、目录属主与权限、数据库结构和实例锁 |
+| 首页无法启动 | WASM、JS、CSS、字体请求是否成功；浏览器是否显示启动错误；代理是否正确转发资源 |
+| 后台登录或保存失败 | HTTPS、Cookie、Host/Origin 同源配置、会话状态及错误请求 ID |
+| 提交显示“尚未确认” | 在原标签页确认原提交，避免重新发表；见[请求约定](contracts.md#重试与幂等) |
+| 返回 `503` | 查看服务停止状态和写入容量，稍后使用原提交标识重试 |
+| 文件无法删除 | 检查文章、随笔等内容是否仍引用该文件，先移除引用再重试 |
+
+## 离线检查
+
+离线操作必须停止服务，并以实例运行账号访问同一份配置和数据。源码构建使用 `blog-setup`；已安装实例使用发行包提供的 `maintenance.sh`，其账号和权限处理见部署说明。
+
+```sh
+blog-setup --root /absolute/instance check
+```
+
+检查核验当前数据库结构、实际数据、管理员凭据及私有目录，临时快照写入 `ROOT/run`。服务与离线工具使用同一实例锁；不要删除锁文件来绕过正在运行的进程。
+
+`blog-setup` 只读取 `ROOT/config/config.json`，忽略服务的 `BLOG_` 环境覆盖。若使用外置数据或媒体目录，将相同路径写入 JSON 后再操作。
+
+## 恢复管理员访问
+
+仍能登录时，在[账号设置](usage.md#修改管理员账号)修改用户名或密码。忘记密码时，停止服务，再对现有管理员用户名执行：
+
+```sh
+blog-setup --root /absolute/instance admin-reset --username admin
+```
+
+从标准输入提供新密码。不要将密码写入命令行或配置；安装实例可使用部署说明中的 `systemd-ask-password` 管道。重置在一个事务内修改密码并撤销所有现有管理员会话，成功后启动服务并重新登录。
+
+## 备份与替换程序
+
+停止服务后，备份 `ROOT/config/config.json`、完整状态目录和媒体目录，保留属主及私有权限。外置目录也必须纳入备份；数据库的 WAL 等伴随文件属于状态目录内容。将备份保存在受限位置，并在独立实例验证恢复结果。
+
+替换程序前先核验安装包、数据库结构要求与备份，使用目标程序执行离线检查，再启动并检查实际页面。结构不匹配时程序拒绝打开，不会自动迁移或重置数据。

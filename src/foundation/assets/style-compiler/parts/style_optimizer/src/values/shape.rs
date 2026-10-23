@@ -112,7 +112,7 @@ pub struct Polygon {
 
 /// A point within a `polygon()` shape.
 ///
-/// See [Polygon](Polygon).
+/// See [Polygon].
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(any(), derive(serde::Serialize, serde::Deserialize))]
@@ -128,7 +128,7 @@ enum_property! {
   /// A [`<fill-rule>`](https://www.w3.org/TR/css-shapes-1/#typedef-fill-rule) used to
   /// determine the interior of a `polygon()` shape.
   ///
-  /// See [Polygon](Polygon).
+  /// See [`Polygon`].
   pub enum FillRule {
     /// The `nonzero` fill rule.
     Nonzero,

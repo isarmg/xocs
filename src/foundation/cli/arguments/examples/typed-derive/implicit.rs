@@ -1,5 +1,6 @@
-use command_line::Args;
-use command_line::ValueEnum;
+extern crate blog_cli_arguments as clap;
+use blog_cli_arguments::Args;
+use blog_cli_arguments::ValueEnum;
 
 #[derive(Args, Debug)]
 pub(crate) struct ImplicitParsers {
@@ -8,7 +9,7 @@ pub(crate) struct ImplicitParsers {
     optimization: Option<usize>,
 
     /// Allow invalid UTF-8 paths
-    #[arg(short = 'I', value_name = "DIR", value_hint = command_line::ValueHint::DirPath)]
+    #[arg(short = 'I', value_name = "DIR", value_hint = blog_cli_arguments::ValueHint::DirPath)]
     include: Option<std::path::PathBuf>,
 
     /// Handle IP addresses
@@ -37,7 +38,7 @@ pub(crate) enum BumpLevel {
 
 impl std::fmt::Display for BumpLevel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        use command_line::ValueEnum;
+        use blog_cli_arguments::ValueEnum;
 
         self.to_possible_value()
             .expect("no values are skipped")
@@ -50,7 +51,7 @@ impl std::str::FromStr for BumpLevel {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        use command_line::ValueEnum;
+        use blog_cli_arguments::ValueEnum;
 
         for variant in Self::value_variants() {
             if variant.to_possible_value().unwrap().matches(s, false) {

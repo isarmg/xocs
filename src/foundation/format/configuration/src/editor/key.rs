@@ -9,8 +9,8 @@ use crate::writer::ToTomlKey as _;
 use crate::editor::repr::{Decor, Repr};
 use crate::editor::InternalString;
 
-/// For Key/[`Value`][blog_format_configuration::editor::Value] pairs under a [`Table`][blog_format_configuration::editor::Table] header or inside an
-/// [`InlineTable`][blog_format_configuration::editor::InlineTable]
+/// For Key/[`crate::editor::Value`] pairs under a [`crate::editor::Table`] header or inside an
+/// [`crate::editor::InlineTable`]
 ///
 /// # Examples
 ///
@@ -155,7 +155,7 @@ impl Key {
 
     /// The location within the original document
     ///
-    /// This generally requires an [`ImDocument`][blog_format_configuration::editor::ImDocument].
+    /// This generally requires an [`crate::editor::ImDocument`].
     pub fn span(&self) -> Option<std::ops::Range<usize>> {
         self.repr.as_ref().and_then(|r| r.span())
     }

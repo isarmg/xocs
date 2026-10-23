@@ -107,7 +107,7 @@ impl DisplayInside {
 
 /// A pair of inside and outside display values, as used in the `display` property.
 ///
-/// See [Display](Display).
+/// See [Display].
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(all(), derive(Visit))]
 #[cfg_attr(
@@ -306,7 +306,7 @@ impl ToCss for DisplayPair {
 enum_property! {
   /// A `display` keyword.
   ///
-  /// See [Display](Display).
+  /// See [`Display`].
   #[allow(missing_docs)]
   pub enum DisplayKeyword {
     None,

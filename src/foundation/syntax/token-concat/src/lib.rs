@@ -1,4 +1,4 @@
-#![doc = include_str!("../../../../../docs/upstream/pastey-0.1.1/README.md")]
+#![doc = include_str!("../../../../../docs/dependencies/origins/pastey-0.1.1/README.md")]
 #![allow(
     clippy::derive_partial_eq_without_eq,
     clippy::doc_markdown,

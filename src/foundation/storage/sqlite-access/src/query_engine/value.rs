@@ -101,8 +101,7 @@ pub trait ValueRef<'r>: Sized {
 
     /// Creates an owned value from this value reference.
     ///
-    /// This is just a reference increment in PostgreSQL and MySQL and thus is `O(1)`. In SQLite,
-    /// this is a copy.
+    /// SQLite copies the referenced value into independently owned storage.
     fn to_owned(&self) -> <Self::Database as Database>::Value;
 
     /// Get the type information for this value.

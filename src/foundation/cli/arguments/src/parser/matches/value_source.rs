@@ -2,9 +2,9 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[non_exhaustive]
 pub enum ValueSource {
-    /// Value came [`Arg::default_value`][command_line::Arg::default_value]
+    /// Value came [`Arg::default_value`][crate::Arg::default_value]
     DefaultValue,
-    /// Value came [`Arg::env`][command_line::Arg::env]
+    /// Value came from an environment default configured with `Arg::env` (`env` feature).
     EnvVariable,
     /// Value was passed in on the command-line
     CommandLine,

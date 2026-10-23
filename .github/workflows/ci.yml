@@ -19,7 +19,7 @@ jobs:
     permissions:
       contents: read
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -34,6 +34,11 @@ jobs:
           python3 -I -B scripts/test-installed-candidate-workflow.py
           python3 -I -B scripts/test-installed-lifecycle-adapter.py
           python3 -I -B scripts/test-package-release.py
+      - name: Check repository documentation
+        run: |
+          python3 -I -B tools/test-docs.py
+          python3 tools/rust-sources/docs.py --check
+          python3 tools/check-docs.py
       - name: Install exact Rust toolchain
         run: |
           rustup toolchain install 1.99.0 --profile minimal --component rustfmt,clippy --target wasm32-unknown-unknown
@@ -47,6 +52,12 @@ jobs:
 
       - name: Build web from repository Rust sources
         run: cargo run --quiet --locked --offline -p blog-assets -- build --product-root . --offline
+      - name: Build native and browser API documentation
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: |
+          cargo doc --locked --offline -p blog -p blog-setup -p blog-assets
+          cargo doc --locked --offline -p blog-browser --target wasm32-unknown-unknown
       - name: Prepare browser test dependencies
         working-directory: web
         run: npm ci

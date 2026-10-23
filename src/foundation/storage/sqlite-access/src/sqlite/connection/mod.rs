@@ -425,7 +425,7 @@ impl LockedSqliteHandle<'_> {
     /// the commit hook. Note that sqlite3_prepare_v2() and sqlite3_step() both modify their database connections
     /// in this context.
     ///
-    /// See https://www.sqlite.org/c3ref/commit_hook.html
+    /// See <https://www.sqlite.org/c3ref/commit_hook.html>
     pub fn set_commit_hook<F>(&mut self, callback: F)
     where
         F: FnMut() -> bool + Send + 'static,
@@ -449,7 +449,7 @@ impl LockedSqliteHandle<'_> {
     /// Sets a rollback hook that is invoked whenever a transaction rollback occurs. The rollback callback is not
     /// invoked if a transaction is automatically rolled back because the database connection is closed.
     ///
-    /// See https://www.sqlite.org/c3ref/commit_hook.html
+    /// See <https://www.sqlite.org/c3ref/commit_hook.html>
     pub fn set_rollback_hook<F>(&mut self, callback: F)
     where
         F: FnMut() + Send + 'static,

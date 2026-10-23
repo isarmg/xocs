@@ -44,11 +44,8 @@ use tracing::primitives::{Interest, Level, Metadata, Subscriber};
 /// This is similar to the behavior implemented by the [`env_logger` crate] in
 /// the `log` ecosystem.
 ///
-/// The [`EnvFilter`] type also provided by this crate is very similar to `Targets`,
-/// but is capable of a more sophisticated form of filtering where events may
-/// also be enabled or disabled based on the span they are recorded in.
-/// `Targets` can be thought of as a lighter-weight form of [`EnvFilter`] that
-/// can be used instead when this dynamic filtering is not required.
+/// Filtering uses metadata targets and levels. Span fields do not participate
+/// in the target-prefix matcher.
 ///
 /// # Examples
 ///
@@ -167,7 +164,6 @@ use tracing::primitives::{Interest, Level, Metadata, Subscriber};
 /// [global]: crate::collector::layer#global-filtering
 /// [filtering]: crate::collector::layer#filtering-with-layers
 /// [`env_logger` crate]: https://docs.rs/env_logger/0.9.0/env_logger/index.html#enabling-logging
-/// [`EnvFilter`]: crate::collector::filter::EnvFilter
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct Targets(DirectiveSet<StaticDirective>);
 

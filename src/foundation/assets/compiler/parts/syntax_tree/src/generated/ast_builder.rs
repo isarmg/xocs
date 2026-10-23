@@ -168,7 +168,7 @@ impl<'a> Expression<'a> {
     ///
     /// ## Parameters
     /// * `span`: Node location in source code.
-    /// * `regex`: The parsed regular expression. See [`oxc_regular_expression`] for more
+    /// * `regex`: The parsed regular expression. See [`crate::regular_expression`] for more
     /// * `raw`: The regular expression as it appears in source code
     #[inline]
     pub fn new_reg_exp_literal(
@@ -1696,7 +1696,7 @@ impl<'a> ArrayExpressionElement<'a> {
     ///
     /// ## Parameters
     /// * `span`: Node location in source code.
-    /// * `regex`: The parsed regular expression. See [`oxc_regular_expression`] for more
+    /// * `regex`: The parsed regular expression. See [`crate::regular_expression`] for more
     /// * `raw`: The regular expression as it appears in source code
     #[inline]
     pub fn new_reg_exp_literal(
@@ -3131,7 +3131,7 @@ impl<'a> PropertyKey<'a> {
     ///
     /// ## Parameters
     /// * `span`: Node location in source code.
-    /// * `regex`: The parsed regular expression. See [`oxc_regular_expression`] for more
+    /// * `regex`: The parsed regular expression. See [`crate::regular_expression`] for more
     /// * `raw`: The regular expression as it appears in source code
     #[inline]
     pub fn new_reg_exp_literal(
@@ -5073,7 +5073,7 @@ impl<'a> Argument<'a> {
     ///
     /// ## Parameters
     /// * `span`: Node location in source code.
-    /// * `regex`: The parsed regular expression. See [`oxc_regular_expression`] for more
+    /// * `regex`: The parsed regular expression. See [`crate::regular_expression`] for more
     /// * `raw`: The regular expression as it appears in source code
     #[inline]
     pub fn new_reg_exp_literal(
@@ -10409,7 +10409,7 @@ impl<'a> ForStatementInit<'a> {
     ///
     /// ## Parameters
     /// * `span`: Node location in source code.
-    /// * `regex`: The parsed regular expression. See [`oxc_regular_expression`] for more
+    /// * `regex`: The parsed regular expression. See [`crate::regular_expression`] for more
     /// * `raw`: The regular expression as it appears in source code
     #[inline]
     pub fn new_reg_exp_literal(
@@ -13471,7 +13471,7 @@ impl<'a> ArrowFunctionBody<'a> {
     ///
     /// ## Parameters
     /// * `span`: Node location in source code.
-    /// * `regex`: The parsed regular expression. See [`oxc_regular_expression`] for more
+    /// * `regex`: The parsed regular expression. See [`crate::regular_expression`] for more
     /// * `raw`: The regular expression as it appears in source code
     #[inline]
     pub fn new_reg_exp_literal(
@@ -16940,7 +16940,7 @@ impl<'a> ExportDefaultDeclarationKind<'a> {
     ///
     /// ## Parameters
     /// * `span`: Node location in source code.
-    /// * `regex`: The parsed regular expression. See [`oxc_regular_expression`] for more
+    /// * `regex`: The parsed regular expression. See [`crate::regular_expression`] for more
     /// * `raw`: The regular expression as it appears in source code
     #[inline]
     pub fn new_reg_exp_literal(
@@ -18487,7 +18487,7 @@ impl<'a> RegExpLiteral<'a> {
     ///
     /// ## Parameters
     /// * `span`: Node location in source code.
-    /// * `regex`: The parsed regular expression. See [`oxc_regular_expression`] for more
+    /// * `regex`: The parsed regular expression. See [`crate::regular_expression`] for more
     /// * `raw`: The regular expression as it appears in source code
     #[inline]
     pub fn new(
@@ -18507,7 +18507,7 @@ impl<'a> RegExpLiteral<'a> {
     ///
     /// ## Parameters
     /// * `span`: Node location in source code.
-    /// * `regex`: The parsed regular expression. See [`oxc_regular_expression`] for more
+    /// * `regex`: The parsed regular expression. See [`crate::regular_expression`] for more
     /// * `raw`: The regular expression as it appears in source code
     #[inline]
     pub fn boxed(
@@ -19131,7 +19131,7 @@ impl<'a> JSXExpression<'a> {
     ///
     /// ## Parameters
     /// * `span`: Node location in source code.
-    /// * `regex`: The parsed regular expression. See [`oxc_regular_expression`] for more
+    /// * `regex`: The parsed regular expression. See [`crate::regular_expression`] for more
     /// * `raw`: The regular expression as it appears in source code
     #[inline]
     pub fn new_reg_exp_literal(

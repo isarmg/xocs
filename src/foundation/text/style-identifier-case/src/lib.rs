@@ -1,11 +1,5 @@
 //! Converts to and from various cases.
 //!
-//! # Command Line Utility `ccase`
-//!
-//! This library was developed for the purposes of a command line utility for converting
-//! the case of strings and filenames.  You can check out
-//! [`ccase` on Github](https://github.com/rutrum/convert-case/tree/master/ccase).
-//!
 //! # Rust Library
 //!
 //! Provides a [`Case`](enum.Case.html) enum which defines a variety of cases to convert into.
@@ -14,7 +8,7 @@
 //!
 //! You can convert strings into a case using the [`to_case`](Casing::to_case) method.
 //! ```
-//! use convert_case::{Case, Casing};
+//! use blog_text_style_identifier_case::{Case, Casing};
 //!
 //! assert_eq!("Ronnie James Dio", "ronnie james dio".to_case(Case::Title));
 //! assert_eq!("ronnieJamesDio", "Ronnie_James_dio".to_case(Case::Camel));
@@ -33,7 +27,7 @@
 //! of a particular case.  For example, splitting from snake case will only use
 //! underscores as word boundaries.
 //! ```
-//! use convert_case::{Case, Casing};
+//! use blog_text_style_identifier_case::{Case, Casing};
 //!
 //! assert_eq!(
 //!     "2020 04 16 My Cat Cali",
@@ -48,7 +42,7 @@
 //! Case conversion can detect acronyms for camel-like strings.  It also ignores any leading,
 //! trailing, or duplicate delimiters.
 //! ```
-//! use convert_case::{Case, Casing};
+//! use blog_text_style_identifier_case::{Case, Casing};
 //!
 //! assert_eq!("io_stream", "IOStream".to_case(Case::Snake));
 //! assert_eq!("my_json_parser", "myJSONParser".to_case(Case::Snake));
@@ -61,7 +55,7 @@
 //! as two distinct Unicode characters.  However, `æ` would be capitalized.  Accuracy with unicode
 //! characters is done using the `unicode-segmentation` crate, the sole dependency of this crate.
 //! ```
-//! use convert_case::{Case, Casing};
+//! use blog_text_style_identifier_case::{Case, Casing};
 //!
 //! assert_eq!("granat-äpfel", "GranatÄpfel".to_case(Case::Kebab));
 //! assert_eq!("Перспектива 24", "ПЕРСПЕКТИВА24".to_case(Case::Title));
@@ -75,7 +69,7 @@
 //! considered word boundaries.  In addition, any special ASCII characters (besides `_` and `-`)
 //! are ignored.
 //! ```
-//! use convert_case::{Case, Casing};
+//! use blog_text_style_identifier_case::{Case, Casing};
 //!
 //! assert_eq!("e_5150", "E5150".to_case(Case::Snake));
 //! assert_eq!("10,000_days", "10,000Days".to_case(Case::Snake));
@@ -85,7 +79,7 @@
 //!
 //! You can also test what case a string is in.
 //! ```
-//! use convert_case::{Case, Casing};
+//! use blog_text_style_identifier_case::{Case, Casing};
 //!
 //! assert!( "css-class-name".is_case(Case::Kebab));
 //! assert!(!"css-class-name".is_case(Case::Snake));
@@ -98,7 +92,7 @@
 //! succeed.  However, the results can still be unexpected.  Failure to detect any word boundaries
 //! for a particular case means the entire string will be considered a single word.
 //! ```
-//! use convert_case::{Case, Casing};
+//! use blog_text_style_identifier_case::{Case, Casing};
 //!
 //! // Mistakenly parsing using Case::Snake
 //! assert_eq!("My-kebab-var", "my-kebab-var".from_case(Case::Snake).to_case(Case::Title));
@@ -118,7 +112,7 @@
 //! the string on.  `convert_case` provides some patterns for achieving this specificity.
 //! We can specify what boundaries we want to split on using the [`Boundary` enum](Boundary).
 //! ```
-//! use convert_case::{Boundary, Case, Casing};
+//! use blog_text_style_identifier_case::{Boundary, Case, Casing};
 //!
 //! // Not quite what we want
 //! assert_eq!(
@@ -160,7 +154,7 @@
 //! available as a `Case` variant, but you can create it by constructing the parameters of the
 //! `Converter`.
 //! ```
-//! use convert_case::{Case, Casing, Converter, Pattern};
+//! use blog_text_style_identifier_case::{Case, Casing, Converter, Pattern};
 //!
 //! let conv = Converter::new()
 //!     .set_pattern(Pattern::Camel)
@@ -179,17 +173,6 @@
 //!
 //! For more details on how strings are converted, see the docs for [`Converter`].
 //!
-//! # Random Feature
-//!
-//! To ensure this library had zero dependencies, randomness was moved to the _random_ feature,
-//! which requires the `rand` crate. You can enable this feature by including the
-//! following in your `Cargo.toml`.
-//! ```{toml}
-//! [dependencies]
-//! convert_case = { version = "^0.3.0", features = ["random"] }
-//! ```
-//! This will add two additional cases: Random and PseudoRandom.  You can read about their
-//! construction in the [Case enum](enum.Case.html).
 
 mod case;
 mod converter;
@@ -211,7 +194,7 @@ pub trait Casing<T: AsRef<str>> {
     /// `String` with the same pattern and delimeter as `case`.  It will split on boundaries
     /// defined at [`Boundary::defaults()`].
     /// ```
-    /// use convert_case::{Case, Casing};
+    /// use blog_text_style_identifier_case::{Case, Casing};
     ///
     /// assert_eq!(
     ///     "tetronimo-piece-border",
@@ -222,7 +205,7 @@ pub trait Casing<T: AsRef<str>> {
 
     /// Start the case conversion by storing the boundaries associated with the given case.
     /// ```
-    /// use convert_case::{Case, Casing};
+    /// use blog_text_style_identifier_case::{Case, Casing};
     ///
     /// assert_eq!(
     ///     "2020-08-10_dannie_birthday",
@@ -237,7 +220,7 @@ pub trait Casing<T: AsRef<str>> {
     /// Creates a `StateConverter` struct initialized with the boundaries
     /// provided.
     /// ```
-    /// use convert_case::{Boundary, Case, Casing};
+    /// use blog_text_style_identifier_case::{Boundary, Case, Casing};
     ///
     /// assert_eq!(
     ///     "e1_m1_hangar",
@@ -251,7 +234,7 @@ pub trait Casing<T: AsRef<str>> {
     /// Determines if `self` is of the given case.  This is done simply by applying
     /// the conversion and seeing if the result is the same.
     /// ```
-    /// use convert_case::{Case, Casing};
+    /// use blog_text_style_identifier_case::{Case, Casing};
     ///
     /// assert!( "kebab-case-string".is_case(Case::Kebab));
     /// assert!( "Train-Case-String".is_case(Case::Train));
@@ -289,7 +272,7 @@ where
 /// `Casing`.  For a more fine grained approach to case conversion, consider using the [`Converter`]
 /// struct.
 /// ```
-/// use convert_case::{Case, Casing};
+/// use blog_text_style_identifier_case::{Case, Casing};
 ///
 /// let title = "ninety-nine_problems".from_case(Case::Snake).to_case(Case::Title);
 /// assert_eq!("Ninety-nine Problems", title);
@@ -320,7 +303,7 @@ impl<'a, T: AsRef<str>> StateConverter<'a, T> {
     /// will overwrite any boundary information initialized before.  This method is
     /// likely not useful, but provided anyway.
     /// ```
-    /// use convert_case::{Case, Casing};
+    /// use blog_text_style_identifier_case::{Case, Casing};
     ///
     /// let name = "Chuck Schuldiner"
     ///     .from_case(Case::Snake) // from Casing trait
@@ -339,7 +322,7 @@ impl<'a, T: AsRef<str>> StateConverter<'a, T> {
     /// any boundary information initialized before.  This method is likely not useful, but
     /// provided anyway.
     /// ```
-    /// use convert_case::{Boundary, Case, Casing};
+    /// use blog_text_style_identifier_case::{Boundary, Case, Casing};
     ///
     /// let song = "theHumbling river-puscifer"
     ///     .from_case(Case::Kebab) // from Casing trait
@@ -358,7 +341,7 @@ impl<'a, T: AsRef<str>> StateConverter<'a, T> {
     /// case like `Case::Camel` has a lot of associated word boundaries, but you want to exclude
     /// some.
     /// ```
-    /// use convert_case::{Boundary, Case, Casing};
+    /// use blog_text_style_identifier_case::{Boundary, Case, Casing};
     ///
     /// assert_eq!(
     ///     "2d_transformation",
@@ -377,7 +360,7 @@ impl<'a, T: AsRef<str>> StateConverter<'a, T> {
 
     /// Consumes the `StateConverter` and returns the converted string.
     /// ```
-    /// use convert_case::{Boundary, Case, Casing};
+    /// use blog_text_style_identifier_case::{Boundary, Case, Casing};
     ///
     /// assert_eq!(
     ///     "ice-cream social",

@@ -42,7 +42,7 @@ impl std::ops::BitOr for AppFlags {
 ///
 /// </div>
 ///
-/// [`Command`]: command_line::Command
+/// [`Command`]: crate::Command
 #[derive(Debug, PartialEq, Copy, Clone)]
 #[repr(u8)]
 pub(crate) enum AppSettings {

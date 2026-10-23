@@ -17,10 +17,9 @@
 //!   They are intended to be implemented by low-level algorithm providers only.
 //!   Usually they should not be used in application-level code.
 //!
-//! Additionally hash functions implement traits from the standard library:
-//! [`Default`], [`Clone`], [`Write`][std::io::Write]. The latter is
-//! feature-gated behind `std` feature, which is usually enabled by default
-//! by hash implementation crates.
+//! Hash implementations commonly provide [`Default`] and [`Clone`]. An
+//! implementation of `std::io::Write` additionally requires this crate's `std`
+//! feature; it is not part of the `no_std` trait interface.
 
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]

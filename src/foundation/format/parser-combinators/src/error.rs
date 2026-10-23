@@ -17,7 +17,7 @@
 //! - [`ContextError`]
 //! - [`InputError`] (mostly for testing)
 //! - [`TreeError`] (mostly for testing)
-//! - [Custom errors][crate::_topic::error]
+//! - [Custom errors][crate::error::ParserError]
 
 #[cfg(feature = "alloc")]
 use alloc::borrow::ToOwned;
@@ -97,9 +97,9 @@ impl Needed {
 ///
 /// Needed for
 /// - [`Partial`][crate::stream::Partial] to track whether the [`Stream`] is [`ErrMode::Incomplete`].
-///   See also [`crate::_topic::partial`]
+///   Retry parsing after buffering the requested additional input.
 /// - Marking errors as unrecoverable ([`ErrMode::Cut`]) and not retrying alternative parsers.
-///   See also [`crate::_tutorial::chapter_7#error-cuts`]
+///   See [`cut_err`](crate::combinator::cut_err).
 #[derive(Debug, Clone, PartialEq)]
 pub enum ErrMode<E> {
     /// There was not enough data to determine the appropriate action
@@ -675,8 +675,8 @@ impl ErrorConvert<()> for () {
 
 /// Accumulate context while backtracking errors
 ///
-/// See the [tutorial][crate::_tutorial::chapter_7#error-adaptation-and-rendering]
-/// for an example of how to adapt this to an application error with custom rendering.
+/// [`Parser::parse`] returns a [`ParseError`] that combines this context with
+/// the input location for rendering an application error.
 #[derive(Debug)]
 pub struct ContextError<C = StrContext> {
     #[cfg(feature = "alloc")]

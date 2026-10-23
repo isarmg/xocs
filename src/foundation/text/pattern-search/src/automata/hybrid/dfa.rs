@@ -52,7 +52,7 @@ const SENTINEL_STATES: usize = 3;
 /// A hybrid NFA/DFA (also called a "lazy DFA") for regex searching.
 ///
 /// A lazy DFA is a DFA that builds itself at search time. It otherwise has
-/// very similar characteristics as a [`dense::DFA`](blog_text_pattern_search::automata::dfa::dense::DFA).
+/// very similar characteristics as a [`dense::DFA`](crate::automata::dfa::dense::DFA).
 /// Indeed, both support precisely the same regex features with precisely the
 /// same semantics.
 ///
@@ -94,7 +94,7 @@ const SENTINEL_STATES: usize = 3;
 /// A notable absence from the above list of capabilities is the location of
 /// the *start* of a match. In order to provide both the start and end of
 /// a match, *two* lazy DFAs are required. This functionality is provided by a
-/// [`Regex`](blog_text_pattern_search::automata::hybrid::regex::Regex).
+/// [`Regex`](crate::automata::hybrid::regex::Regex).
 ///
 /// # Example
 ///
@@ -644,7 +644,7 @@ impl DFA {
     ///
     /// This routine is principally useful when used in
     /// conjunction with the
-    /// [`nfa::thompson::Config::reverse`](blog_text_pattern_search::automata::nfa::thompson::Config::reverse)
+    /// [`nfa::thompson::Config::reverse`](crate::automata::nfa::thompson::Config::reverse)
     /// configuration. In general, it's unlikely to be correct to use both
     /// `try_search_fwd` and `try_search_rev` with the same DFA since any
     /// particular DFA will only support searching in one direction with
@@ -2971,7 +2971,7 @@ impl Config {
     /// corresponds to the leftmost starting position.
     ///
     /// Note that if you need the starting position then
-    /// [`hybrid::regex::Regex`](blog_text_pattern_search::automata::hybrid::regex::Regex) will handle this
+    /// [`hybrid::regex::Regex`](crate::automata::hybrid::regex::Regex) will handle this
     /// for you, so it's usually not necessary to do this yourself.
     ///
     /// ```
@@ -3118,7 +3118,7 @@ impl Config {
     /// 1. When looking for the start of an overlapping match (using a reverse
     /// DFA), doing it correctly requires starting the reverse search using the
     /// starting state of the pattern that matched in the forward direction.
-    /// Indeed, when building a [`Regex`](blog_text_pattern_search::automata::hybrid::regex::Regex), it
+    /// Indeed, when building a [`Regex`](crate::automata::hybrid::regex::Regex), it
     /// will automatically enable this option when building the reverse DFA
     /// internally.
     /// 2. When you want to use a DFA with multiple patterns to both search
@@ -3234,7 +3234,7 @@ impl Config {
     ///
     /// When enabling this option, callers _must_ be prepared to
     /// handle a [`MatchError`] error during search. When using a
-    /// [`Regex`](blog_text_pattern_search::automata::hybrid::regex::Regex), this corresponds to using the
+    /// [`Regex`](crate::automata::hybrid::regex::Regex), this corresponds to using the
     /// `try_` suite of methods. Alternatively, if callers can guarantee that
     /// their input is ASCII only, then a [`MatchError::quit`] error will never
     /// be returned while searching.
@@ -3325,7 +3325,7 @@ impl Config {
     ///
     /// When enabling this option, callers _must_ be prepared to
     /// handle a [`MatchError`] error during search. When using a
-    /// [`Regex`](blog_text_pattern_search::automata::hybrid::regex::Regex), this corresponds to using the
+    /// [`Regex`](crate::automata::hybrid::regex::Regex), this corresponds to using the
     /// `try_` suite of methods.
     ///
     /// By default, there are no quit bytes set.
@@ -3596,7 +3596,7 @@ impl Config {
     /// search to "give up" if the cache needed to be cleared, depending
     /// on its internal count and configured minimum. The cache clear
     /// count can only be reset to `0` via [`DFA::reset_cache`] (or
-    /// [`Regex::reset_cache`](blog_text_pattern_search::automata::hybrid::regex::Regex::reset_cache) if
+    /// [`Regex::reset_cache`](crate::automata::hybrid::regex::Regex::reset_cache) if
     /// you're using the `Regex` API).
     ///
     /// By default, no minimum is configured. Thus, a lazy DFA search will
@@ -3692,7 +3692,7 @@ impl Config {
     /// is 2, then it means the lazy DFA is creating a new DFA state after
     /// searching approximately 2 bytes in a haystack. Generally speaking, 2
     /// is quite bad and it's likely that even a slower regex engine like the
-    /// [`PikeVM`](blog_text_pattern_search::automata::nfa::thompson::pikevm::PikeVM) would be faster.
+    /// [`PikeVM`](crate::automata::nfa::thompson::pikevm::PikeVM) would be faster.
     ///
     /// This has no effect if [`Config::minimum_cache_clear_count`] is not set.
     /// Namely, this option only kicks in when the cache has been cleared more
@@ -3947,8 +3947,8 @@ impl Config {
 /// can only be used to construct regexes that either detect the presence
 /// of a match or find the end location of a match. A single DFA cannot
 /// produce both the start and end of a match. For that information, use a
-/// [`Regex`](blog_text_pattern_search::automata::hybrid::regex::Regex), which can be similarly configured
-/// using [`blog_text_pattern_search::Builder`](blog_text_pattern_search::automata::hybrid::regex::Builder). The main reason
+/// [`Regex`](crate::automata::hybrid::regex::Regex), which can be similarly configured
+/// using [`crate::Builder`](crate::automata::hybrid::regex::Builder). The main reason
 /// to use a DFA directly is if the end location of a match is enough for your
 /// use case. Namely, a `Regex` will construct two lazy DFAs instead of one,
 /// since a second reverse DFA is needed to find the start of a match.
@@ -4136,7 +4136,7 @@ impl Builder {
     }
 
     /// Set the syntax configuration for this builder using
-    /// [`syntax::Config`](blog_text_pattern_search::automata::util::syntax::Config).
+    /// [`syntax::Config`](crate::automata::util::syntax::Config).
     ///
     /// This permits setting things like case insensitivity, Unicode and multi
     /// line mode.
@@ -4153,7 +4153,7 @@ impl Builder {
     }
 
     /// Set the Thompson NFA configuration for this builder using
-    /// [`nfa::thompson::Config`](blog_text_pattern_search::automata::nfa::thompson::Config).
+    /// [`nfa::thompson::Config`](crate::automata::nfa::thompson::Config).
     ///
     /// This permits setting things like whether the DFA should match the regex
     /// in reverse or if additional time should be spent shrinking the size of

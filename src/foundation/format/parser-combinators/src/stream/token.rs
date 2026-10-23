@@ -23,7 +23,7 @@ use core::slice::Iter;
 /// - [`ContainsToken`][crate::stream::ContainsToken] for `T` to for parsing with token sets
 /// - [`Location`] for `T` to extract spans from tokens
 ///
-/// See also [Lexing and Parsing][crate::_topic::lexing].
+/// Implement [`Location`] on the token type when source spans must survive lexing.
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct TokenSlice<'t, T> {
     initial: &'t [T],

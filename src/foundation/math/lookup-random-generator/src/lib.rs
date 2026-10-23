@@ -7,38 +7,24 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-//! Utilities for random number generation
+//! Random sampling utilities for deterministic lookup-table construction.
 //!
-//! Rand provides utilities to generate random numbers, to convert them to
-//! useful types and distributions, and some randomness-related algorithms.
+//! [`Rng`] extends an explicit [`RngCore`] source with distribution sampling,
+//! while [`distributions`] and [`seq`] provide numeric ranges and sequence
+//! operations. Supply and seed the generator explicitly; this package does not
+//! expose a thread-local generator or a global `random()` function.
 //!
-//! # Quick Start
-//!
-//! To get you started quickly, the easiest and highest-level way to get
-//! a random value is to use [`random()`]; alternatively you can use
-//! [`thread_rng()`]. The [`Rng`] trait provides a useful API on all RNGs, while
-//! the [`distributions`] and [`seq`] modules provide further
-//! functionality on top of RNGs.
+//! With `small_rng`, `rngs::SmallRng` supplies a fast non-cryptographic PRNG.
+//! It must not be used for passwords, keys or other security-sensitive input.
+//! The `alloc` feature enables allocation-backed sampling helpers.
 //!
 //! ```
-//! use rand::prelude::*;
+//! use blog_math_lookup_random_generator::{Rng, rngs::mock::StepRng};
 //!
-//! if rand::random() { // generates a boolean
-//!     // Try printing a random unicode code point (probably a bad idea)!
-//!     println!("char: {}", rand::random::<char>());
-//! }
-//!
-//! let mut rng = rand::thread_rng();
-//! let y: f64 = rng.gen(); // generates a float between 0 and 1
-//!
-//! let mut nums: Vec<i32> = (1..100).collect();
-//! nums.shuffle(&mut rng);
+//! // StepRng is deterministic test data, not a source of secure randomness.
+//! let mut rng = StepRng::new(2, 1);
+//! assert_eq!(rng.gen::<[u64; 3]>(), [2, 3, 4]);
 //! ```
-//!
-//! # The Book
-//!
-//! For the user guide and further documentation, please read
-//! [The Rust Rand Book](https://rust-random.github.io/book).
 
 #![doc(
     html_logo_url = "https://www.rust-lang.org/logos/rust-logo-128x128-blk.png",

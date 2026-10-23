@@ -1,194 +1,31 @@
-//! A `Subscriber` for formatting and logging `tracing` data.
+//! Format tracing spans and events as line-oriented logs.
 //!
-//! # Overview
-//!
-//! [`tracing`] is a framework for instrumenting Rust programs with context-aware,
-//! structured, event-based diagnostic information. This crate provides an
-//! implementation of the [`Subscriber`] trait that records `tracing`'s `Event`s
-//! and `Span`s by formatting them as text and logging them to stdout.
-//!
-//! # Usage
-//!
-//! First, add this to your `Cargo.toml` file:
-//!
-//! ```toml
-//! [dependencies]
-//! tracing-subscriber = "0.3"
-//! ```
-//!
-//! *Compiler support: [requires `rustc` 1.65+][msrv]*
-//!
-//! [msrv]: super#supported-rust-versions
-//!
-//! Add the following to your executable to initialize the default subscriber:
-//! ```rust
-//! use tracing_subscriber;
-//!
-//! tracing::collector::fmt::init();
-//! ```
-//!
-//! ## Filtering Events with Environment Variables
-//!
-//! The default subscriber installed by `init` enables you to filter events
-//! at runtime using environment variables (using the [`EnvFilter`]).
-//!
-//! The filter syntax is a superset of the [`env_logger`] syntax.
-//!
-//! For example:
-//! - Setting `RUST_LOG=debug` enables all `Span`s and `Event`s
-//!   set to the log level `DEBUG` or higher
-//! - Setting `RUST_LOG=my_crate=trace` enables `Span`s and `Event`s
-//!   in `my_crate` at all log levels
-//!
-//! **Note**: This should **not** be called by libraries. Libraries should use
-//! [`tracing`] to publish `tracing` `Event`s.
-//!
-//! # Configuration
-//!
-//! You can configure a subscriber instead of using the defaults with
-//! the following functions:
-//!
-//! ### Subscriber
-//!
-//! The [`FmtSubscriber`] formats and records `tracing` events as line-oriented logs.
-//! You can create one by calling:
+//! Initialize the formatter once, in the executable:
 //!
 //! ```rust
-//! let subscriber = tracing::collector::fmt()
-//!     // ... add configuration
-//!     .finish();
+//! tracing::collector::fmt().with_max_level(tracing::Level::INFO).init();
 //! ```
 //!
-//! You can find the configuration methods for [`FmtSubscriber`] in
-//! [`SubscriberBuilder`].
+//! Libraries emit spans and events without installing a subscriber. Use
+//! [`SubscriberBuilder`] to configure fields, output writers and timestamps.
+//! [`format::Full`] and [`format::Compact`] produce single-line output; the
+//! `ansi` feature adds the `Pretty` formatter, and `json` adds newline-delimited
+//! JSON output. Custom formatters implement [`FormatEvent`] and [`FormatFields`].
 //!
-//! ## Formatters
-//!
-//! The output format used by the layer and subscriber in this module is
-//! represented by implementing the [`FormatEvent`] trait, and can be
-//! customized. This module provides a number of formatter implementations:
-//!
-//! * [`format::Full`]: The default formatter. This emits human-readable,
-//!   single-line logs for each event that occurs, with the current span context
-//!   displayed before the formatted representation of the event. See
-//!   [here](format::Full#example-output) for sample output.
-//!
-//! * [`format::Compact`]: A variant of the default formatter, optimized for
-//!   short line lengths. Fields from the current span context are appended to
-//!   the fields of the formatted event. See
-//!   [here](format::Compact#example-output) for sample output.
-//!
-//! * [`format::Pretty`]: Emits excessively pretty, multi-line logs, optimized
-//!   for human readability. This is primarily intended to be used in local
-//!   development and debugging, or for command-line applications, where
-//!   automated analysis and compact storage of logs is less of a priority than
-//!   readability and visual appeal. See [here](format::Pretty#example-output)
-//!   for sample output.
-//!
-//! * [`format::Json`]: Outputs newline-delimited JSON logs. This is intended
-//!   for production use with systems where structured logs are consumed as JSON
-//!   by analysis and viewing tools. The JSON output is not optimized for human
-//!   readability. See [here](format::Json#example-output) for sample output.
-//!
-//! ### Customizing Formatters
-//!
-//! The formatting of log lines for spans and events is controlled by two
-//! traits, [`FormatEvent`] and [`FormatFields`]. The [`FormatEvent`] trait
-//! determines the overall formatting of the log line, such as what information
-//! from the event's metadata and span context is included and in what order.
-//! The [`FormatFields`] trait determines how fields &mdash; both the event's
-//! fields and fields on spans &mdash; are formatted.
-//!
-//! The [`fmt::format`] module provides several types which implement these traits,
-//! many of which expose additional configuration options to customize their
-//! output. The [`format::Format`] type implements common configuration used by
-//! all the formatters provided in this crate, and can be used as a builder to
-//! set specific formatting settings. For example:
-//!
-//! ```
-//! use tracing::collector::fmt;
-//!
-//! // Configure a custom event formatter
-//! let format = fmt::format()
-//!    .with_level(false) // don't include levels in formatted output
-//!    .with_target(false) // don't include targets
-//!    .with_thread_ids(true) // include the thread ID of the current thread
-//!    .with_thread_names(true) // include the name of the current thread
-//!    .compact(); // use the `Compact` formatting style.
-//!
-//! // Create a `fmt` subscriber that uses our custom event format, and set it
-//! // as the default.
-//! tracing::collector::fmt()
-//!     .event_format(format)
-//!     .init();
-//! ```
-//!
-//! However, if a specific output format is needed, other crates can
-//! also implement [`FormatEvent`] and [`FormatFields`]. See those traits'
-//! documentation for details on how to implement them.
-//!
-//! ## Filters
-//!
-//! If you want to filter the `tracing` `Events` based on environment
-//! variables, you can use the [`EnvFilter`] as follows:
+//! Target-specific filtering uses [`Targets`](super::filter::Targets). For example:
 //!
 //! ```rust
-//! use tracing::collector::EnvFilter;
-//!
-//! let filter = EnvFilter::from_default_env();
-//! ```
-//!
-//! As mentioned above, the [`EnvFilter`] allows `Span`s and `Event`s to
-//! be filtered at runtime by setting the `RUST_LOG` environment variable.
-//!
-//! You can find the other available [`filter`]s in the documentation.
-//!
-//! ### Using Your Subscriber
-//!
-//! Finally, once you have configured your `Subscriber`, you need to
-//! configure your executable to use it.
-//!
-//! A subscriber can be installed globally using:
-//! ```rust
-//! use tracing;
-//! use tracing::collector::FmtSubscriber;
-//!
-//! let subscriber = FmtSubscriber::new();
-//!
-//! tracing::subscriber::set_global_default(subscriber)
-//!     .map_err(|_err| eprintln!("Unable to set global default subscriber"));
-//! // Note this will only fail if you try to set the global default
-//! // subscriber multiple times
-//! ```
-//!
-//! ### Composing Layers
-//!
-//! Composing an [`EnvFilter`] `Layer` and a [format `Layer`][super::fmt::Layer]:
-//!
-//! ```rust
-//! use tracing::collector::{fmt, EnvFilter};
-//! use tracing::collector::prelude::*;
-//!
-//! let fmt_layer = fmt::layer()
-//!     .with_target(false);
-//! let filter_layer = EnvFilter::try_from_default_env()
-//!     .or_else(|_| EnvFilter::try_new("info"))
-//!     .unwrap();
+//! use tracing::collector::{filter::Targets, prelude::*};
+//! use tracing::Level;
 //!
 //! tracing::collector::registry()
-//!     .with(filter_layer)
-//!     .with(fmt_layer)
+//!     .with(tracing::collector::fmt::layer())
+//!     .with(Targets::new().with_default(Level::INFO).with_target("my_app", Level::DEBUG))
 //!     .init();
 //! ```
 //!
-//! [`EnvFilter`]: super::filter::EnvFilter
-//! [`env_logger`]: https://docs.rs/env_logger/
-//! [`filter`]: super::filter
-//! [`FmtSubscriber`]: Subscriber
-//! [`Subscriber`]:
-//!     https://docs.rs/tracing/latest/tracing/trait.Subscriber.html
-//! [`tracing`]: https://crates.io/crates/tracing
-//! [`fmt::format`]: mod@crate::collector::fmt::format
+//! [`try_init`] and [`init`] read `RUST_LOG` as comma-separated target/level
+//! directives. The target matcher has no span-field expression syntax.
 
 use alloc::boxed::Box;
 use core::any::TypeId;
@@ -493,7 +330,7 @@ where
     /// Install this Subscriber as the global default if one is
     /// not already set.
     ///
-    /// If the `tracing-log` feature is enabled, this will also install
+    /// If the `log-tracer` feature is enabled, this will also install
     /// the LogTracer to convert `Log` records into `tracing` `Event`s.
     ///
     /// # Errors
@@ -509,7 +346,7 @@ where
 
     /// Install this Subscriber as the global default.
     ///
-    /// If the `tracing-log` feature is enabled, this will also install
+    /// If the `log-tracer` feature is enabled, this will also install
     /// the LogTracer to convert `Log` records into `tracing` `Event`s.
     ///
     /// # Panics
@@ -542,16 +379,11 @@ where
     ///
     /// See the [`time` module] for the provided timer implementations.
     ///
-    /// Note that using the `"time`"" feature flag enables the
-    /// additional time formatters [`UtcTime`] and [`LocalTime`], which use the
-    /// [`time` crate] to provide more sophisticated timestamp formatting
-    /// options.
+    /// The provided timers report wall-clock time or elapsed time. Implement
+    /// the timer trait to supply a different timestamp format.
     ///
     /// [`timer`]: time::FormatTime
     /// [`time` module]: mod@time
-    /// [`UtcTime`]: time::UtcTime
-    /// [`LocalTime`]: time::LocalTime
-    /// [`time` crate]: https://docs.rs/time/0.3
     pub fn with_timer<T2>(self, timer: T2) -> SubscriberBuilder<N, format::Format<L, T2>, F, W> {
         SubscriberBuilder {
             filter: self.filter,
@@ -874,9 +706,8 @@ impl<N, E, F, W> SubscriberBuilder<N, E, F, W> {
     /// Sets the maximum [verbosity level] that will be enabled by the
     /// subscriber.
     ///
-    /// If the max level has already been set, or a [`EnvFilter`] was added by
-    /// [`with_env_filter`], this replaces that configuration with the new
-    /// maximum level.
+    /// This replaces the builder's existing filter with the given maximum
+    /// level.
     ///
     /// # Examples
     ///
@@ -898,8 +729,6 @@ impl<N, E, F, W> SubscriberBuilder<N, E, F, W> {
     ///     .finish();
     /// ```
     /// [verbosity level]: tracing::primitives::Level
-    /// [`EnvFilter`]: struct@crate::collector::filter::EnvFilter
-    /// [`with_env_filter`]: fn@Self::with_env_filter
     pub fn with_max_level(
         self,
         filter: impl Into<LevelFilter>,
@@ -1076,19 +905,14 @@ impl<N, E, F, W> SubscriberBuilder<N, E, F, W> {
 }
 
 /// Install a global tracing subscriber that listens for events and
-/// filters based on the value of the [`RUST_LOG` environment variable],
+/// filters using target/level directives from `RUST_LOG`,
 /// if one is not already set.
 ///
-/// If the `tracing-log` feature is enabled, this will also install
+/// If the `log-tracer` feature is enabled, this will also install
 /// the [`LogTracer`] to convert `log` records into `tracing` `Event`s.
 ///
-/// This is shorthand for
-///
-/// ```rust
-/// # fn doc() -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-/// tracing::collector::fmt().try_init()
-/// # }
-/// ```
+/// `RUST_LOG` is parsed by [`Targets`](super::filter::Targets). Without it,
+/// the default level is `INFO`; invalid directives are reported on stderr.
 ///
 ///
 /// # Errors
@@ -1099,7 +923,6 @@ impl<N, E, F, W> SubscriberBuilder<N, E, F, W> {
 ///
 /// [`LogTracer`]:
 ///     https://docs.rs/tracing-log/0.1.0/tracing_log/struct.LogTracer.html
-/// [`RUST_LOG` environment variable]: crate::collector::filter::EnvFilter::DEFAULT_ENV
 pub fn try_init() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     let builder = Subscriber::builder();
 
@@ -1137,28 +960,22 @@ pub fn try_init() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
 }
 
 /// Install a global tracing subscriber that listens for events and
-/// filters based on the value of the [`RUST_LOG` environment variable].
+/// filters using target/level directives from `RUST_LOG`.
 ///
 /// The configuration of the subscriber initialized by this function
 /// depends on what [feature flags](crate#feature-flags) are enabled.
 ///
-/// If the `tracing-log` feature is enabled, this will also install
+/// If the `log-tracer` feature is enabled, this will also install
 /// the LogTracer to convert `Log` records into `tracing` `Event`s.
 ///
-/// If the `env-filter` feature is enabled, this is shorthand for
-///
-/// ```rust
-/// # use tracing::collector::EnvFilter;
-/// tracing::collector::fmt()
-///     .with_env_filter(EnvFilter::from_default_env())
-///     .init();
-/// ```
+/// The variable is parsed as a comma-separated list of target prefixes and
+/// maximum levels, such as `my_app=debug,info`. Without it, the default level
+/// is `INFO`. Invalid directives are reported on stderr.
 ///
 /// # Panics
 /// Panics if the initialization was unsuccessful, likely because a
 /// global subscriber was already installed by another call to `try_init`.
 ///
-/// [`RUST_LOG` environment variable]: crate::collector::filter::EnvFilter::DEFAULT_ENV
 pub fn init() {
     try_init().expect("Unable to install global subscriber")
 }

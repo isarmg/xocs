@@ -7,7 +7,7 @@ This enables extracting things like the client's remote address.
 Extracting [`std::net::SocketAddr`] is supported out of the box:
 
 ```rust
-use axum::{
+use http_routing::{
     extract::ConnectInfo,
     routing::get,
     Router,
@@ -22,14 +22,14 @@ async fn handler(ConnectInfo(addr): ConnectInfo<SocketAddr>) -> String {
 
 # async {
 let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).await.unwrap();
+http_routing::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).await.unwrap();
 # };
 ```
 
 You can implement custom a [`Connected`] like so:
 
 ```rust
-use axum::{
+use http_routing::{
     extract::connect_info::{ConnectInfo, Connected},
     routing::get,
     serve::IncomingStream,
@@ -60,14 +60,14 @@ impl Connected<IncomingStream<'_, TcpListener>> for MyConnectInfo {
 
 # async {
 let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-axum::serve(listener, app.into_make_service_with_connect_info::<MyConnectInfo>()).await.unwrap();
+http_routing::serve(listener, app.into_make_service_with_connect_info::<MyConnectInfo>()).await.unwrap();
 # };
 ```
 
 See the [unix domain socket example][uds] for an example of how to use
 this to collect UDS connection info.
 
-[`MakeService`]: tower::make::MakeService
+[`MakeService`]: service_stack::make::MakeService
 [`Connected`]: crate::extract::connect_info::Connected
 [`ConnectInfo`]: crate::extract::connect_info::ConnectInfo
 [uds]: https://github.com/tokio-rs/axum/blob/main/examples/unix-domain-socket/src/main.rs

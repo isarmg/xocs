@@ -52,14 +52,12 @@
 //! The [`span` module][span]'s documentation provides further details on how to
 //! use spans.
 //!
-//! <div class="example-wrap" style="display:inline-block"><pre class="compile_fail" style="white-space:normal;font:inherit;">
 //!
 //!  **Warning**: In asynchronous code that uses async/await syntax,
 //!  `Span::enter` may produce incorrect traces if the returned drop
 //!  guard is held across an await point. See
 //!  [the method documentation][Span#in-asynchronous-code] for details.
 //!
-//! </pre></div>
 //!
 //! ## Events
 //!
@@ -581,11 +579,9 @@
 //! # }
 //! ```
 //!
-//! <pre class="compile_fail" style="white-space:normal;font:inherit;">
 //!     <strong>Warning</strong>: In general, libraries should <em>not</em> call
 //!     <code>set_global_default()</code>! Doing so will cause conflicts when
 //!     executables that depend on the library try to set the default later.
-//! </pre>
 //!
 //! This subscriber will be used as the default in all threads for the
 //! remainder of the duration of the program, similar to setting the logger
@@ -802,11 +798,9 @@
 //! [`clippy-tracing`]: https://crates.io/crates/clippy-tracing
 //! [`json-subscriber`]: https://crates.io/crates/json-subscriber
 //!
-//! <pre class="ignore" style="white-space:normal;font:inherit;">
 //!     <strong>Note</strong>: Some of these ecosystem crates are currently
 //!     unreleased and/or in earlier stages of development. They may be less stable
 //!     than <code>tracing</code> and <code>tracing-core</code>.
-//! </pre>
 //!
 //! ## Crate Feature Flags
 //!
@@ -834,10 +828,8 @@
 //!   tracing = { version = "0.1.38", default-features = false }
 //!   ```
 //!
-//! <pre class="ignore" style="white-space:normal;font:inherit;">
 //!     <strong>Note</strong>: <code>tracing</code>'s <code>no_std</code> support
 //!     requires <code>liballoc</code>.
-//! </pre>
 //!
 //! ## Supported Rust Versions
 //!

@@ -1,63 +1,39 @@
-The async SQL toolkit for Rust, built with ❤️ by [the LaunchBadge team].
+# SQLite access
 
-See our [README] to get started or [browse our example projects].
-Have a question? [Check our FAQ] or [open a discussion].
+`blog-storage-sqlite-access` provides asynchronous SQLite queries, pools,
+transactions, prepared statements, value conversion and record mapping.
+The supported native target is AMD64 Linux GNU/glibc. The SQLite implementation
+and C source are local dependencies in this repository.
 
-### Runtime Support
+## Runtime and connections
 
-SQLx supports both the [Tokio] and [async-std] runtimes.
+The connection pool uses the repository's Tokio runtime for timeouts and
+background work. SQLite calls run through the driver's worker connection.
+Configure `SqliteConnectOptions` and `SqlitePoolOptions` explicitly for the
+application's database path, pool limits and busy timeout.
 
-You choose which runtime SQLx uses by default by enabling one of the following features:
+Acquire a pool connection when several operations must share a connection.
+Use `Transaction` when they must commit atomically. Closing a pool and dropping
+in-flight work have separate effects; follow the API's cancellation and
+transaction rules rather than assuming that dropping a future rolls back an
+already committed operation.
 
-* `runtime-async-std`
-* `runtime-tokio`
+## Queries and values
 
-If more than one runtime feature is enabled, the Tokio runtime is used if a Tokio context exists on the current
-thread, i.e. [`tokio::runtime::Handle::try_current()`] returns `Ok`; `async-std` is used otherwise.
+- `query` executes parameterized SQL and returns SQLite rows.
+- `query_as` maps rows through `FromRow`; the `derive` feature exports its derive.
+- `query_scalar` returns a single selected column per row.
+- `QueryBuilder` assembles SQL with bound values.
+- `Row`, `Column`, `Type`, `Encode` and `Decode` describe the conversion boundary.
 
-Note that while SQLx no longer produces a compile error if zero or multiple runtime features are enabled,
-which is useful for libraries building on top of it,
-**the use of nearly any async function in the API will panic without at least one runtime feature enabled**.
+Bind untrusted values as parameters. SQL identifiers and fragments assembled by
+the caller require their own validation. Statements execute against SQLite;
+there are no network database or TLS backends in this package.
 
-The chief exception is the SQLite driver, which is runtime-agnostic, including its integration with the query macros.
-However, [`SqlitePool`] _does_ require runtime support for timeouts and spawning
-internal management tasks.
+A row can be transferred between threads. Its internal decode state is mutable
+and is not `Sync`; do not share the same row concurrently. Supported Rust/SQLite
+type mappings are documented in the local `sqlite::types` module.
 
-### TLS Support
-
-For securely communicating with SQL servers over an untrusted network connection such as the internet,
-you can enable Transport Layer Security (TLS) by enabling one of the following features:
-
-* `tls-native-tls`: Enables the [`native-tls`] backend which uses the OS-native TLS capabilities:
-  * SecureTransport on macOS.
-  * SChannel on Windows.
-  * OpenSSL on all other platforms.
-* `tls-rustls`: Enables the [rustls] backend, a cross-platform TLS library.
-  * Only supports TLS revisions 1.2 and 1.3.
-  * If you get `HandshakeFailure` errors when using this feature, it likely means your database server does not support
-    these newer revisions. This might be resolved by enabling or switching to the `tls-native-tls` feature.
-  * rustls supports several providers of cryptographic primitives. The default
-    (enabled when you use the `tls-rustls` feature or `tls-rustls-ring`) is the
-    `ring` provider, which has fewer build-time dependencies but also has fewer
-    features. Alternatively, you can use `tls-rustls-aws-lc-rs` to use the
-    `aws-lc-rs` provider, which enables additional cipher suite support at the cost
-    of more onerous build requirements (depending on platform support).
-
-If more than one TLS feature is enabled, the `tls-native-tls` feature takes precedent so that it is only necessary to enable
-it to see if it resolves the `HandshakeFailure` error without disabling `tls-rustls`.
-
-Consult the user manual for your database to find the TLS versions it supports.
-
-If your connection configuration requires a TLS upgrade but TLS support was not enabled, the connection attempt
-will return an error.
-
-[the LaunchBadge team]: https://www.launchbadge.com
-[README]: https://www.github.com/launchbadge/sqlx/tree/main/README.md
-[browse our example projects]: https://www.github.com/launchbadge/sqlx/tree/main/examples
-[Check our FAQ]: https://www.github.com/launchbadge/sqlx/tree/main/FAQ.md
-[open a discussion]: https://github.com/launchbadge/sqlx/discussions/new?category=q-a
-[Tokio]: https://www.tokio.rs
-[async-std]: https://www.async.rs
-[`tokio::runtime::Handle::try_current()`]: https://docs.rs/tokio/latest/tokio/runtime/struct.Handle.html#method.try_current
-[`native-tls`]: https://docs.rs/native-tls/latest/native_tls/
-[rustls]: https://docs.rs/rustls/latest/rustls/
+Schema identity, administrator data, snapshots and installation checks belong
+to the application's persistence layer. Opening a connection alone does not
+initialize or validate a product database.

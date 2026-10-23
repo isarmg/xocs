@@ -1,9 +1,10 @@
+extern crate blog_cli_arguments as clap;
 use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::path::PathBuf;
 
-use command_line::{Args, Parser, Subcommand, ValueEnum};
+use blog_cli_arguments::{Args, Parser, Subcommand, ValueEnum};
 
 /// A fictional versioning CLI
 #[derive(Debug, Parser)] // requires `derive` feature
@@ -106,12 +107,12 @@ fn aliases() -> HashMap<&'static str, Vec<&'static str>> {
     ])
 }
 
-fn parse_aliases() -> Result<Cli, command_line::Error> {
+fn parse_aliases() -> Result<Cli, blog_cli_arguments::Error> {
     let args = Cli::try_parse()?;
     expand_aliases(args, Vec::new())
 }
 
-fn expand_aliases(args: Cli, mut expanded: Vec<String>) -> Result<Cli, command_line::Error> {
+fn expand_aliases(args: Cli, mut expanded: Vec<String>) -> Result<Cli, blog_cli_arguments::Error> {
     let Commands::External(external_args) = &args.command else {
         return Ok(args);
     };
@@ -124,8 +125,8 @@ fn expand_aliases(args: Cli, mut expanded: Vec<String>) -> Result<Cli, command_l
         return Ok(args);
     };
     if expanded.iter().any(|expanded| expanded == name) {
-        return Err(command_line::Error::raw(
-            command_line::error::ErrorKind::InvalidSubcommand,
+        return Err(blog_cli_arguments::Error::raw(
+            blog_cli_arguments::error::ErrorKind::InvalidSubcommand,
             format!("recursive alias `{}`", expanded[0]),
         ));
     }

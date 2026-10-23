@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::process::exit;
 
-use command_line::{Arg, ArgAction, Command, value_parser};
+use blog_cli_arguments::{Arg, ArgAction, Command, value_parser};
 
 fn applet_commands() -> [Command; 2] {
     [

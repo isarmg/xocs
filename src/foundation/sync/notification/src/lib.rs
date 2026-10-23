@@ -250,37 +250,23 @@ impl<T> Event<T> {
 
     /// Returns a guard listening for a notification.
     ///
-    /// This method emits a `SeqCst` fence after registering a listener. For now, this method
-    /// is an alias for calling [`EventListener::new()`], pinning it to the heap, and then
-    /// inserting it into a list.
+    /// This method allocates and pins a listener on the heap, inserts it into
+    /// the event's listener list, and emits a `SeqCst` fence after registration.
+    /// The returned listener owns its registration and can be awaited.
     ///
     /// # Examples
     ///
     /// ```
-    /// use event_listener::Event;
+    /// use blog_sync_notification::Event;
     ///
     /// let event = Event::new();
     /// let listener = event.listen();
     /// ```
     ///
-    /// # Caveats
-    ///
-    /// The above example is equivalent to this code:
-    ///
-    /// ```no_compile
-    /// use event_listener::{Event, EventListener};
-    ///
-    /// let event = Event::new();
-    /// let mut listener = Box::pin(EventListener::new());
-    /// listener.listen(&event);
-    /// ```
-    ///
-    /// It creates a new listener, pins it to the heap, and inserts it into the linked list
-    /// of listeners. While this type of usage is simple, it may be desired to eliminate this
-    /// heap allocation. In this case, consider using the [`EventListener::new`] constructor
-    /// directly, which allows for greater control over where the [`EventListener`] is
-    /// allocated. However, users of this `new` method must be careful to ensure that the
-    /// [`EventListener`] is `listen`ing before waiting on it; panics may occur otherwise.
+    /// Use the [`listener!`] macro when a listener can remain in the current
+    /// stack frame and heap allocation is unnecessary. Both forms register
+    /// before waiting; check the protected condition again after registration
+    /// to avoid losing a notification between the first check and the wait.
     #[cold]
     pub fn listen(&self) -> EventListener<T> {
         let inner = ManuallyDrop::new(unsafe { Arc::from_raw(self.inner()) });

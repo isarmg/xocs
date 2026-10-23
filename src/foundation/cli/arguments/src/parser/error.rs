@@ -1,6 +1,6 @@
 use crate::util::AnyValueId;
 
-/// Violation of [`ArgMatches`][command_line::ArgMatches] assumptions
+/// Violation of [`ArgMatches`][crate::ArgMatches] assumptions
 #[derive(Clone, Debug)]
 #[allow(missing_copy_implementations)] // We might add non-Copy types in the future
 #[non_exhaustive]
@@ -8,12 +8,12 @@ pub enum MatchesError {
     /// Failed to downcast `AnyValue` to the specified type
     #[non_exhaustive]
     Downcast {
-        /// Type for value stored in [`ArgMatches`][command_line::ArgMatches]
+        /// Type for value stored in [`ArgMatches`][crate::ArgMatches]
         actual: AnyValueId,
         /// The target type to downcast to
         expected: AnyValueId,
     },
-    /// Argument not defined in [`Command`][command_line::Command]
+    /// Argument not defined in [`Command`][crate::Command]
     #[non_exhaustive]
     UnknownArgument {
         // Missing `id` but blocked on a public id type which will hopefully come with `unstable-v4`

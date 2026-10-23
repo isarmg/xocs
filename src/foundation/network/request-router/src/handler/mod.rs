@@ -169,22 +169,17 @@ pub trait Handler<T, S>: Clone + Send + Sync + Sized + 'static {
     ///
     /// # Example
     ///
-    /// Adding the [`service_stack::limit::ConcurrencyLimit`] middleware to a handler
-    /// can be done like so:
+    /// A request extension can be attached to one handler:
     ///
-    /// ```rust
-    /// use http_routing::{
-    ///     routing::get,
-    ///     handler::Handler,
-    ///     Router,
-    /// };
-    /// use service_stack::limit::{ConcurrencyLimitLayer, ConcurrencyLimit};
+    /// ```
+    /// use http_routing::{extract::Extension, handler::Handler, routing::get, Router};
     ///
-    /// async fn handler() { /* ... */ }
+    /// async fn handler(Extension(label): Extension<&'static str>) -> &'static str {
+    ///     label
+    /// }
     ///
-    /// let layered_handler = handler.layer(ConcurrencyLimitLayer::new(64));
-    /// let app = Router::new().route("/", get(layered_handler));
-    /// # let _: Router = app;
+    /// let layered_handler = handler.layer(Extension("Blog"));
+    /// let app: Router = Router::new().route("/", get(layered_handler));
     /// ```
     fn layer<L>(self, layer: L) -> Layered<L, Self, T, S>
     where

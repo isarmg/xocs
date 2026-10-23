@@ -10,7 +10,7 @@ use crate::util::Id;
 /// - check which argument in a group was specified on the command-line
 ///
 /// For visually grouping arguments in help, see instead
-/// [`Arg::help_heading`][command_line::Arg::help_heading].
+/// [`Arg::help_heading`][crate::Arg::help_heading].
 ///
 /// # Examples
 ///
@@ -18,8 +18,8 @@ use crate::util::Id;
 /// the arguments from the specified group is present at runtime.
 ///
 /// ```rust
-/// # use command_line;
-/// # use command_line::{Command, arg, ArgGroup, error::ErrorKind};
+/// # use blog_cli_arguments;
+/// # use blog_cli_arguments::{Command, arg, ArgGroup, error::ErrorKind};
 /// let result = Command::new("cmd")
 ///     .arg(arg!(--"set-ver" <ver> "set the version manually"))
 ///     .arg(arg!(--major           "auto increase major"))
@@ -37,8 +37,8 @@ use crate::util::Id;
 ///
 /// This next example shows a passing parse of the same scenario
 /// ```rust
-/// # use command_line;
-/// # use command_line::{Command, arg, ArgGroup, Id};
+/// # use blog_cli_arguments;
+/// # use blog_cli_arguments::{Command, arg, ArgGroup, Id};
 /// let result = Command::new("cmd")
 ///     .arg(arg!(--"set-ver" <ver> "set the version manually"))
 ///     .arg(arg!(--major           "auto increase major"))
@@ -61,9 +61,9 @@ use crate::util::Id;
 /// );
 /// // we could also alternatively check each arg individually (not shown here)
 /// ```
-/// [arguments]: command_line::Arg
-/// [conflicts]: command_line::Arg::conflicts_with()
-/// [requirements]: command_line::Arg::requires()
+/// [arguments]: crate::Arg
+/// [conflicts]: crate::Arg::conflicts_with()
+/// [requirements]: crate::Arg::requires()
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub struct ArgGroup {
     pub(crate) id: Id,
@@ -84,8 +84,8 @@ impl ArgGroup {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, ArgGroup};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, ArgGroup};
     /// ArgGroup::new("config")
     /// # ;
     /// ```
@@ -98,8 +98,8 @@ impl ArgGroup {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, ArgGroup};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, ArgGroup};
     /// ArgGroup::default().id("config")
     /// # ;
     /// ```
@@ -114,8 +114,8 @@ impl ArgGroup {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgGroup, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgGroup, ArgAction};
     /// let m = Command::new("myprog")
     ///     .arg(Arg::new("flag")
     ///         .short('f')
@@ -132,7 +132,7 @@ impl ArgGroup {
     /// // but we can also check individually if needed
     /// assert!(m.contains_id("flag"));
     /// ```
-    /// [argument]: command_line::Arg
+    /// [argument]: crate::Arg
     #[must_use]
     pub fn arg(mut self, arg_id: impl IntoResettable<Id>) -> Self {
         if let Some(arg_id) = arg_id.into_resettable().into_option() {
@@ -148,8 +148,8 @@ impl ArgGroup {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgGroup, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgGroup, ArgAction};
     /// let m = Command::new("myprog")
     ///     .arg(Arg::new("flag")
     ///         .short('f')
@@ -165,7 +165,7 @@ impl ArgGroup {
     /// // but we can also check individually if needed
     /// assert!(m.contains_id("flag"));
     /// ```
-    /// [arguments]: command_line::Arg
+    /// [arguments]: crate::Arg
     #[must_use]
     pub fn args(mut self, ns: impl IntoIterator<Item = impl Into<Id>>) -> Self {
         for n in ns {
@@ -179,8 +179,8 @@ impl ArgGroup {
     /// # Example
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{ArgGroup};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{ArgGroup};
     /// let args: Vec<&str> = vec!["a1".into(), "a4".into()];
     /// let grp = ArgGroup::new("program").args(&args);
     ///
@@ -200,8 +200,8 @@ impl ArgGroup {
     /// group
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgGroup, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgGroup, ArgAction};
     /// let m = Command::new("myprog")
     ///     .arg(Arg::new("flag")
     ///         .short('f')
@@ -220,8 +220,8 @@ impl ArgGroup {
     /// an error if more than one of the args in the group was used.
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgGroup, error::ErrorKind, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgGroup, error::ErrorKind, ArgAction};
     /// let result = Command::new("myprog")
     ///     .arg(Arg::new("flag")
     ///         .short('f')
@@ -238,7 +238,7 @@ impl ArgGroup {
     /// assert_eq!(err.kind(), ErrorKind::ArgumentConflict);
     /// ```
     ///
-    /// [`Arg`]: command_line::Arg
+    /// [`Arg`]: crate::Arg
     #[inline]
     #[must_use]
     pub fn multiple(mut self, yes: bool) -> Self {
@@ -252,8 +252,8 @@ impl ArgGroup {
     /// # Example
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{ArgGroup};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{ArgGroup};
     /// let mut group = ArgGroup::new("myprog")
     ///     .args(["f", "c"])
     ///     .multiple(true);
@@ -288,8 +288,8 @@ impl ArgGroup {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgGroup, error::ErrorKind, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgGroup, error::ErrorKind, ArgAction};
     /// let result = Command::new("myprog")
     ///     .arg(Arg::new("flag")
     ///         .short('f')
@@ -307,9 +307,9 @@ impl ArgGroup {
     /// assert_eq!(err.kind(), ErrorKind::MissingRequiredArgument);
     /// ```
     ///
-    /// [`Subcommand`]: command_line::Subcommand
+    /// [`Subcommand`]: crate::Subcommand
     /// [`ArgGroup::multiple`]: ArgGroup::multiple()
-    /// [`Command`]: command_line::Command
+    /// [`Command`]: crate::Command
     #[inline]
     #[must_use]
     pub fn required(mut self, yes: bool) -> Self {
@@ -332,8 +332,8 @@ impl ArgGroup {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgGroup, error::ErrorKind, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgGroup, error::ErrorKind, ArgAction};
     /// let result = Command::new("myprog")
     ///     .arg(Arg::new("flag")
     ///         .short('f')
@@ -355,7 +355,7 @@ impl ArgGroup {
     /// assert_eq!(err.kind(), ErrorKind::MissingRequiredArgument);
     /// ```
     /// [required group]: ArgGroup::required()
-    /// [argument requirement rules]: command_line::Arg::requires()
+    /// [argument requirement rules]: crate::Arg::requires()
     #[must_use]
     pub fn requires(mut self, id: impl IntoResettable<Id>) -> Self {
         if let Some(id) = id.into_resettable().into_option() {
@@ -381,8 +381,8 @@ impl ArgGroup {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgGroup, error::ErrorKind, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgGroup, error::ErrorKind, ArgAction};
     /// let result = Command::new("myprog")
     ///     .arg(Arg::new("flag")
     ///         .short('f')
@@ -407,7 +407,7 @@ impl ArgGroup {
     /// assert_eq!(err.kind(), ErrorKind::MissingRequiredArgument);
     /// ```
     /// [required group]: ArgGroup::required()
-    /// [argument requirement rules]: command_line::Arg::requires_ifs()
+    /// [argument requirement rules]: crate::Arg::requires_ifs()
     #[must_use]
     pub fn requires_all(mut self, ns: impl IntoIterator<Item = impl Into<Id>>) -> Self {
         for n in ns {
@@ -431,8 +431,8 @@ impl ArgGroup {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgGroup, error::ErrorKind, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgGroup, error::ErrorKind, ArgAction};
     /// let result = Command::new("myprog")
     ///     .arg(Arg::new("flag")
     ///         .short('f')
@@ -452,7 +452,7 @@ impl ArgGroup {
     /// let err = result.unwrap_err();
     /// assert_eq!(err.kind(), ErrorKind::ArgumentConflict);
     /// ```
-    /// [argument exclusion rules]: command_line::Arg::conflicts_with()
+    /// [argument exclusion rules]: crate::Arg::conflicts_with()
     #[must_use]
     pub fn conflicts_with(mut self, id: impl IntoResettable<Id>) -> Self {
         if let Some(id) = id.into_resettable().into_option() {
@@ -477,8 +477,8 @@ impl ArgGroup {
     /// # Examples
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::{Command, Arg, ArgGroup, error::ErrorKind, ArgAction};
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::{Command, Arg, ArgGroup, error::ErrorKind, ArgAction};
     /// let result = Command::new("myprog")
     ///     .arg(Arg::new("flag")
     ///         .short('f')
@@ -503,7 +503,7 @@ impl ArgGroup {
     /// assert_eq!(err.kind(), ErrorKind::ArgumentConflict);
     /// ```
     ///
-    /// [argument exclusion rules]: command_line::Arg::conflicts_with_all()
+    /// [argument exclusion rules]: crate::Arg::conflicts_with_all()
     #[must_use]
     pub fn conflicts_with_all(mut self, ns: impl IntoIterator<Item = impl Into<Id>>) -> Self {
         for n in ns {

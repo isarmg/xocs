@@ -55,7 +55,7 @@
 //!         verbosity: 0,
 //!     };
 //!
-//!     let raw = crate::lexer::RawArgs::new(raw);
+//!     let raw = blog_cli_arguments::lexer::RawArgs::new(raw);
 //!     let mut cursor = raw.cursor();
 //!     raw.next(&mut cursor);  // Skip the bin
 //!     while let Some(arg) = raw.next(&mut cursor) {
@@ -143,7 +143,7 @@ impl RawArgs {
     ///
     /// ```text
     /// # use std::path::PathBuf;
-    /// let raw = command_line::lexer::RawArgs::from_args();
+    /// let raw = blog_cli_arguments::lexer::RawArgs::from_args();
     /// let mut cursor = raw.cursor();
     /// let _bin = raw.next_os(&mut cursor);
     ///
@@ -162,7 +162,7 @@ impl RawArgs {
     ///
     /// ```text
     /// # use std::path::PathBuf;
-    /// let raw = command_line::lexer::RawArgs::new(["bin", "foo.txt"]);
+    /// let raw = blog_cli_arguments::lexer::RawArgs::new(["bin", "foo.txt"]);
     /// let mut cursor = raw.cursor();
     /// let _bin = raw.next_os(&mut cursor);
     ///
@@ -180,7 +180,7 @@ impl RawArgs {
     ///
     /// ```text
     /// # use std::path::PathBuf;
-    /// let raw = command_line::lexer::RawArgs::new(["bin", "foo.txt"]);
+    /// let raw = blog_cli_arguments::lexer::RawArgs::new(["bin", "foo.txt"]);
     /// let mut cursor = raw.cursor();
     /// let _bin = raw.next_os(&mut cursor);
     ///
@@ -219,7 +219,7 @@ impl RawArgs {
     ///
     /// ```text
     /// # use std::path::PathBuf;
-    /// let raw = command_line::lexer::RawArgs::new(["bin", "foo.txt"]);
+    /// let raw = blog_cli_arguments::lexer::RawArgs::new(["bin", "foo.txt"]);
     /// let mut cursor = raw.cursor();
     /// let _bin = raw.next_os(&mut cursor);
     ///
@@ -515,6 +515,6 @@ fn is_number(arg: &str) -> bool {
     }
 }
 
-#[doc = include_str!("../../../../../../docs/reference/zxs/command-line/docs/architecture/command-line-reference/lexer/README.md")]
+#[doc = include_str!("../../../../../../docs/dependencies/guides/cli/lexer/README.md")]
 #[cfg(doctest)]
 pub(crate) struct ReadmeDoctests;

@@ -56,7 +56,7 @@ pub type Result<T, E = Error> = StdResult<T, E>;
 ///
 /// See [`Command::error`] to create an error.
 ///
-/// [`Command::error`]: command_line::Command::error
+/// [`Command::error`]: crate::Command::error
 pub struct Error<F: ErrorFormatter = DefaultFormatter> {
     inner: Box<ErrorInner>,
     phantom: std::marker::PhantomData<F>,
@@ -84,7 +84,7 @@ impl<F: ErrorFormatter> Error<F> {
     ///
     /// Prefer [`Command::error`] for generating errors.
     ///
-    /// [`Command::error`]: command_line::Command::error
+    /// [`Command::error`]: crate::Command::error
     pub fn raw(kind: ErrorKind, message: impl Display) -> Self {
         Self::new(kind).set_message(message.to_string())
     }
@@ -110,14 +110,14 @@ impl<F: ErrorFormatter> Error<F> {
     ///
     /// ```rust
     /// # #[cfg(feature = "error-context")] {
-    /// # use command_line;
-    /// # use command_line::error::ErrorKind;
-    /// # use command_line::error::ContextKind;
-    /// # use command_line::error::ContextValue;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::error::ErrorKind;
+    /// # use blog_cli_arguments::error::ContextKind;
+    /// # use blog_cli_arguments::error::ContextValue;
     ///
-    /// let cmd = command_line::Command::new("prog");
+    /// let cmd = blog_cli_arguments::Command::new("prog");
     ///
-    /// let mut err = command_line::Error::new(ErrorKind::ValueValidation)
+    /// let mut err = blog_cli_arguments::Error::new(ErrorKind::ValueValidation)
     ///     .with_cmd(&cmd);
     /// err.insert(ContextKind::InvalidArg, ContextValue::String("--foo".to_owned()));
     /// err.insert(ContextKind::InvalidValue, ContextValue::String("bar".to_owned()));
@@ -158,10 +158,10 @@ impl<F: ErrorFormatter> Error<F> {
     /// # Example
     ///
     /// ```rust
-    /// # use command_line;
-    /// # use command_line::Command;
-    /// # use command_line::Arg;
-    /// # use command_line::error::KindFormatter;
+    /// # use blog_cli_arguments;
+    /// # use blog_cli_arguments::Command;
+    /// # use blog_cli_arguments::Arg;
+    /// # use blog_cli_arguments::error::KindFormatter;
     /// let cmd = Command::new("foo")
     ///     .arg(Arg::new("input").required(true));
     /// let matches = cmd
@@ -252,8 +252,8 @@ impl<F: ErrorFormatter> Error<F> {
     ///
     /// # Example
     /// ```no_run
-    /// # use command_line;
-    /// use command_line::Command;
+    /// # use blog_cli_arguments;
+    /// use blog_cli_arguments::Command;
     ///
     /// match Command::new("Command").try_get_matches() {
     ///     Ok(matches) => {
@@ -283,8 +283,8 @@ impl<F: ErrorFormatter> Error<F> {
     ///
     /// # Example
     /// ```no_run
-    /// # use command_line;
-    /// use command_line::Command;
+    /// # use blog_cli_arguments;
+    /// use blog_cli_arguments::Command;
     ///
     /// match Command::new("Command").try_get_matches() {
     ///     Ok(matches) => {

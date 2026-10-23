@@ -28,7 +28,7 @@ This also keeps a mapping from capturing group name to index, and capture
 group index to name. A `GroupInfo` is used by `Captures` internally to
 provide a convenient API. It is unlikely that you'll use a `GroupInfo`
 directly, but for example, if you've compiled an Thompson NFA, then you can use
-[`thompson::NFA::group_info`](blog_text_pattern_search::automata::nfa::thompson::NFA::group_info) to get its
+[`thompson::NFA::group_info`](crate::automata::nfa::thompson::NFA::group_info) to get its
 underlying `GroupInfo`.
 */
 
@@ -46,7 +46,7 @@ use crate::automata::util::{
 ///
 /// This type represents the output of regex engines that can report the
 /// offsets at which capturing groups matches or "submatches" occur. For
-/// example, the [`PikeVM`](blog_text_pattern_search::automata::nfa::thompson::pikevm::PikeVM). When a match
+/// example, the [`PikeVM`](crate::automata::nfa::thompson::pikevm::PikeVM). When a match
 /// occurs, it will at minimum contain the [`PatternID`] of the pattern that
 /// matched. Depending upon how it was constructed, it may also contain the
 /// start/end offsets of the entire match of the pattern and the start/end
@@ -72,7 +72,7 @@ use crate::automata::util::{
 ///
 /// If you aren't sure which to choose, then pick the first one. The first one
 /// is what convenience routines like,
-/// [`PikeVM::create_captures`](blog_text_pattern_search::automata::nfa::thompson::pikevm::PikeVM::create_captures),
+/// [`PikeVM::create_captures`](crate::automata::nfa::thompson::pikevm::PikeVM::create_captures),
 /// will use automatically.
 ///
 /// The main difference between these choices is performance. Namely, if you
@@ -421,8 +421,8 @@ impl Captures {
     /// capture group always corresponds to the entirety of the pattern's
     /// match. (It is similarly always unnamed because it is implicit.) This
     /// isn't necessarily true of all regex engines. For example, one can
-    /// hand-compile a [`thompson::NFA`](blog_text_pattern_search::automata::nfa::thompson::NFA) via a
-    /// [`thompson::Builder`](blog_text_pattern_search::automata::nfa::thompson::Builder), which isn't
+    /// hand-compile a [`thompson::NFA`](crate::automata::nfa::thompson::NFA) via a
+    /// [`thompson::Builder`](crate::automata::nfa::thompson::Builder), which isn't
     /// technically forced to make the 0th capturing group always correspond to
     /// the entire match.
     ///
@@ -1311,7 +1311,7 @@ impl<'a> core::iter::FusedIterator for CapturesPatternIter<'a> {}
 ///
 /// Slots exist primarily because this is a convenient mechanism by which
 /// regex engines report group offsets at search time. For example, the
-/// [`nfa::thompson::State::Capture`](blog_text_pattern_search::automata::nfa::thompson::State::Capture)
+/// [`nfa::thompson::State::Capture`](crate::automata::nfa::thompson::State::Capture)
 /// NFA state includes the slot index. When a regex engine transitions through
 /// this state, it will likely use the slot index to write the current haystack
 /// offset to some region of memory. When a match is found, those slots are

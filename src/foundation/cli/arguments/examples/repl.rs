@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use command_line::Command;
+use blog_cli_arguments::Command;
 
 fn main() -> Result<(), String> {
     loop {

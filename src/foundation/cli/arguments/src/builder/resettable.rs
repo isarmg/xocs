@@ -19,9 +19,9 @@ use crate::builder::ValueRange;
 /// # Example
 ///
 /// ```rust
-/// # use command_line;
-/// # use command_line::Command;
-/// # use command_line::Arg;
+/// # use blog_cli_arguments;
+/// # use blog_cli_arguments::Command;
+/// # use blog_cli_arguments::Arg;
 /// fn common() -> Command {
 ///     Command::new("cli")
 ///         .arg(Arg::new("input").short('i').long("input"))

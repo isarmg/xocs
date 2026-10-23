@@ -15,7 +15,7 @@ pub(crate) trait OsStrExt: private::Sealed {
     /// # Examples
     ///
     /// ```text
-    /// use command_line::lexer::OsStrExt as _;
+    /// use blog_cli_arguments::lexer::OsStrExt as _;
     /// let bananas = std::ffi::OsStr::new("bananas");
     ///
     /// assert!(bananas.contains("nana"));
@@ -30,7 +30,7 @@ pub(crate) trait OsStrExt: private::Sealed {
     /// # Examples
     ///
     /// ```text
-    /// use command_line::lexer::OsStrExt as _;
+    /// use blog_cli_arguments::lexer::OsStrExt as _;
     /// let s = std::ffi::OsStr::new("Löwe 老虎 Léopard Gepardi");
     ///
     /// assert_eq!(s.find("L"), Some(0));
@@ -41,7 +41,7 @@ pub(crate) trait OsStrExt: private::Sealed {
     /// Not finding the pattern:
     ///
     /// ```text
-    /// use command_line::lexer::OsStrExt as _;
+    /// use blog_cli_arguments::lexer::OsStrExt as _;
     /// let s = std::ffi::OsStr::new("Löwe 老虎 Léopard");
     ///
     /// assert_eq!(s.find("1"), None);
@@ -58,7 +58,7 @@ pub(crate) trait OsStrExt: private::Sealed {
     ///
     /// ```text
     /// use std::ffi::OsStr;
-    /// use command_line::lexer::OsStrExt as _;
+    /// use blog_cli_arguments::lexer::OsStrExt as _;
     /// assert_eq!(OsStr::new("foo:bar").strip_prefix("foo:"), Some(OsStr::new("bar")));
     /// assert_eq!(OsStr::new("foo:bar").strip_prefix("bar"), None);
     /// assert_eq!(OsStr::new("foofoo").strip_prefix("foo"), Some(OsStr::new("foo")));
@@ -72,7 +72,7 @@ pub(crate) trait OsStrExt: private::Sealed {
     /// # Examples
     ///
     /// ```text
-    /// use command_line::lexer::OsStrExt as _;
+    /// use blog_cli_arguments::lexer::OsStrExt as _;
     /// let bananas = std::ffi::OsStr::new("bananas");
     ///
     /// assert!(bananas.starts_with("bana"));
@@ -88,7 +88,7 @@ pub(crate) trait OsStrExt: private::Sealed {
     ///
     /// ```text
     /// use std::ffi::OsStr;
-    /// use command_line::lexer::OsStrExt as _;
+    /// use blog_cli_arguments::lexer::OsStrExt as _;
     /// let v: Vec<_> = OsStr::new("Mary had a little lamb").split(" ").collect();
     /// assert_eq!(v, [OsStr::new("Mary"), OsStr::new("had"), OsStr::new("a"), OsStr::new("little"), OsStr::new("lamb")]);
     ///
@@ -107,7 +107,7 @@ pub(crate) trait OsStrExt: private::Sealed {
     ///
     /// ```text
     /// use std::ffi::OsStr;
-    /// use command_line::lexer::OsStrExt as _;
+    /// use blog_cli_arguments::lexer::OsStrExt as _;
     /// let x = OsStr::new("||||a||b|c");
     /// let d: Vec<_> = x.split("|").collect();
     ///
@@ -118,7 +118,7 @@ pub(crate) trait OsStrExt: private::Sealed {
     ///
     /// ```text
     /// use std::ffi::OsStr;
-    /// use command_line::lexer::OsStrExt as _;
+    /// use blog_cli_arguments::lexer::OsStrExt as _;
     /// let x = OsStr::new("(///)");
     /// let d: Vec<_> = x.split("/").collect();
     ///
@@ -130,7 +130,7 @@ pub(crate) trait OsStrExt: private::Sealed {
     ///
     /// ```text
     /// use std::ffi::OsStr;
-    /// use command_line::lexer::OsStrExt as _;
+    /// use blog_cli_arguments::lexer::OsStrExt as _;
     /// let d: Vec<_> = OsStr::new("010").split("0").collect();
     /// assert_eq!(d, &[OsStr::new(""), OsStr::new("1"), OsStr::new("")]);
     /// ```
@@ -139,7 +139,7 @@ pub(crate) trait OsStrExt: private::Sealed {
     ///
     /// ```text
     /// use std::ffi::OsStr;
-    /// use command_line::lexer::OsStrExt as _;
+    /// use blog_cli_arguments::lexer::OsStrExt as _;
     /// let f: Vec<_> = OsStr::new("rust").split("").collect();
     /// assert_eq!(f, &[OsStr::new(""), OsStr::new("r"), OsStr::new("u"), OsStr::new("s"), OsStr::new("t"), OsStr::new("")]);
     /// ```
@@ -149,7 +149,7 @@ pub(crate) trait OsStrExt: private::Sealed {
     ///
     /// ```text
     /// use std::ffi::OsStr;
-    /// use command_line::lexer::OsStrExt as _;
+    /// use blog_cli_arguments::lexer::OsStrExt as _;
     /// let x = OsStr::new("    a  b c");
     /// let d: Vec<_> = x.split(" ").collect();
     ///
@@ -173,7 +173,7 @@ pub(crate) trait OsStrExt: private::Sealed {
     ///
     /// ```text
     /// use std::ffi::OsStr;
-    /// use command_line::lexer::OsStrExt as _;
+    /// use blog_cli_arguments::lexer::OsStrExt as _;
     /// assert_eq!(OsStr::new("cfg").split_once("="), None);
     /// assert_eq!(OsStr::new("cfg=").split_once("="), Some((OsStr::new("cfg"), OsStr::new(""))));
     /// assert_eq!(OsStr::new("cfg=foo").split_once("="), Some((OsStr::new("cfg"), OsStr::new("foo"))));

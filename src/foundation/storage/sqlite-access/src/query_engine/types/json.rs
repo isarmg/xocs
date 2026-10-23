@@ -10,76 +10,16 @@ use crate::query_engine::encode::{Encode, IsNull};
 use crate::query_engine::error::BoxDynError;
 use crate::query_engine::types::Type;
 
-/// Json for json and jsonb fields
+/// Serialize a Rust value to SQLite JSON text and deserialize it when reading.
 ///
-/// Will attempt to cast to type passed in as the generic.
+/// Available with the `json` feature. The contained type uses the repository's
+/// shared `Serialize` and `Deserialize` traits. Struct row mapping can use a
+/// `Json<T>` field; it does not require compile-time SQL macros or type overrides.
 ///
-/// ```toml
-/// [dependencies]
-/// serde_json = { version = "1.0", features = ["raw_value"] }
-///
-/// ```
-///
-/// # Example
-///
-/// ```
-/// # use serde::Deserialize;
-/// #[derive(Deserialize)]
-/// struct Book {
-///   name: String
-/// }
-///
-/// #[derive(sqlx::FromRow)]
-/// struct Author {
-///   name: String,
-///   books: sqlx::types::Json<Book>
-/// }
-/// ```
-///
-/// Can also be used to turn the json/jsonb into a hashmap
-/// ```
-/// use std::collections::HashMap;
-/// use serde::Deserialize;
-///
-/// #[derive(Deserialize)]
-/// struct Book {
-///   name: String
-/// }
-/// #[derive(sqlx::FromRow)]
-/// struct Library {
-///   id: String,
-///   dewey_decimal: sqlx::types::Json<HashMap<String, Book>>
-/// }
-/// ```
-///
-/// If the query macros are used, it is necessary to tell the macro to use
-/// the `Json` adapter by using the type override syntax
-/// ```rust,ignore
-/// # async fn example3() -> sqlx::Result<()> {
-/// # let mut conn: sqlx::PgConnection = unimplemented!();
-/// #[derive(sqlx::FromRow)]
-/// struct Book {
-///     title: String,
-/// }
-///
-/// #[derive(sqlx::FromRow)]
-/// struct Author {
-///     name: String,
-///     books: sqlx::types::Json<Book>,
-/// }
-/// // Note the type override in the query string
-/// let authors = sqlx::query_as!(
-///     Author,
-///     r#"
-/// SELECT name, books as "books: Json<Book>"
-/// FROM authors
-///     "#
-/// )
-/// .fetch_all(&mut conn)
-/// .await?;
-/// # Ok(())
-/// # }
-/// ```
+/// `JsonValue` provides an untyped JSON value, and `JsonRawValue` preserves raw
+/// JSON text. Choose the representation according to what the consumer actually
+/// needs to inspect. SQLite stores the encoded JSON as `TEXT`; this adapter does
+/// not select a network database or a separate JSONB backend.
 #[derive(
     Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
 )]

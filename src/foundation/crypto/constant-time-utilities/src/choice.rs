@@ -332,7 +332,7 @@ impl Choice {
 
     /// `const fn` helper: return `b` if `self` is [`Choice::TRUE`], otherwise return `a`.
     ///
-    /// Only use this instead of the [`CtSelect`] trait in the event you're in a `const fn` context
+    /// Only use this instead of the [`CtSelect`](crate::CtSelect) trait in the event you're in a `const fn` context
     /// and can't use the trait. The former will provide better constant-time assurances.
     #[inline]
     #[must_use]
@@ -343,7 +343,7 @@ impl Choice {
 
     /// `const fn` helper: return `b` if `self` is [`Choice::TRUE`], otherwise return `a`.
     ///
-    /// Only use this instead of the [`CtSelect`] trait in the event you're in a `const fn` context
+    /// Only use this instead of the [`CtSelect`](crate::CtSelect) trait in the event you're in a `const fn` context
     /// and can't use the trait. The former will provide better constant-time assurances.
     #[inline]
     #[must_use]
@@ -353,7 +353,7 @@ impl Choice {
 
     /// `const fn` helper: return `b` if `self` is [`Choice::TRUE`], otherwise return `a`.
     ///
-    /// Only use this instead of the [`CtSelect`] trait in the event you're in a `const fn` context
+    /// Only use this instead of the [`CtSelect`](crate::CtSelect) trait in the event you're in a `const fn` context
     /// and can't use the trait. The former will provide better constant-time assurances.
     #[inline]
     #[must_use]
@@ -363,7 +363,7 @@ impl Choice {
 
     /// `const fn` helper: return `b` if `self` is [`Choice::TRUE`], otherwise return `a`.
     ///
-    /// Only use this instead of the [`CtSelect`] trait in the event you're in a `const fn` context
+    /// Only use this instead of the [`CtSelect`](crate::CtSelect) trait in the event you're in a `const fn` context
     /// and can't use the trait. The former will provide better constant-time assurances.
     #[inline]
     #[must_use]
@@ -373,7 +373,7 @@ impl Choice {
 
     /// `const fn` helper: return `b` if `self` is [`Choice::TRUE`], otherwise return `a`.
     ///
-    /// Only use this instead of the [`CtSelect`] trait in the event you're in a `const fn` context
+    /// Only use this instead of the [`CtSelect`](crate::CtSelect) trait in the event you're in a `const fn` context
     /// and can't use the trait. The former will provide better constant-time assurances.
     #[inline]
     #[must_use]
@@ -383,7 +383,7 @@ impl Choice {
 
     /// `const fn` helper: return `b` if `self` is [`Choice::TRUE`], otherwise return `a`.
     ///
-    /// Only use this instead of the [`CtSelect`] trait in the event you're in a `const fn` context
+    /// Only use this instead of the [`CtSelect`](crate::CtSelect) trait in the event you're in a `const fn` context
     /// and can't use the trait. The former will provide better constant-time assurances.
     #[inline]
     #[must_use]

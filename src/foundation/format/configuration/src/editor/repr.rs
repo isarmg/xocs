@@ -3,7 +3,7 @@ use std::borrow::Cow;
 
 use crate::editor::RawString;
 
-/// A scalar TOML [`Value`][blog_format_configuration::editor::Value]'s logical value and its representation in a `&str`
+/// A scalar TOML [`crate::editor::Value`]'s logical value and its representation in a `&str`
 ///
 /// This includes the surrounding whitespace and comments.
 #[derive(Eq, PartialEq, Clone, Hash)]
@@ -65,7 +65,7 @@ where
 
     /// The location within the original document
     ///
-    /// This generally requires an [`ImDocument`][blog_format_configuration::editor::ImDocument].
+    /// This generally requires an [`crate::editor::ImDocument`].
     pub fn span(&self) -> Option<std::ops::Range<usize>> {
         self.repr.as_ref().and_then(|r| r.span())
     }
@@ -137,7 +137,7 @@ mod inner {
     impl ValueRepr for crate::datetime::Datetime {}
 }
 
-/// A TOML [`Value`][blog_format_configuration::editor::Value] encoded as a `&str`
+/// A TOML [`crate::editor::Value`] encoded as a `&str`
 #[derive(Eq, PartialEq, Clone, Hash)]
 pub struct Repr {
     raw_value: RawString,
@@ -158,7 +158,7 @@ impl Repr {
 
     /// The location within the original document
     ///
-    /// This generally requires an [`ImDocument`][blog_format_configuration::editor::ImDocument].
+    /// This generally requires an [`crate::editor::ImDocument`].
     pub fn span(&self) -> Option<std::ops::Range<usize>> {
         self.raw_value.span()
     }

@@ -2,7 +2,7 @@
 Defines a high-level intermediate (HIR) representation for regular expressions.
 
 The HIR is represented by the [`Hir`] type, and it principally constructed via
-[translation](translate) from an [`Ast`](blog_text_pattern_search::syntax::ast::Ast). Alternatively, users
+[translation](translate) from an [`Ast`](crate::syntax::ast::Ast). Alternatively, users
 may use the smart constructors defined on `Hir` to build their own by hand. The
 smart constructors simultaneously simplify and "optimize" the HIR, and are also
 the same routines used by translation.

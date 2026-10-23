@@ -78,7 +78,7 @@ use crate::automata::util::search::{HalfMatch, Input, Match, MatchError};
 /// that cannot be named, it is difficult to encapsulate them without both
 /// costs to speed and added complexity to the public API. For example, in
 /// defining an iterator type like
-/// [`dfa::regex::FindMatches`](blog_text_pattern_search::automata::dfa::regex::FindMatches),
+/// [`dfa::regex::FindMatches`](crate::automata::dfa::regex::FindMatches),
 /// if we use a closure internally, it's not possible to name this type in the
 /// return type of the iterator constructor. Thus, the only way around it is
 /// to erase the type by boxing it and turning it into a `Box<dyn FnMut ...>`.

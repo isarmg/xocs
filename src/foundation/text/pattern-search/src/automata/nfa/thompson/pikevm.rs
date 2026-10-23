@@ -192,7 +192,7 @@ impl Config {
 /// complexity, and the possibility of setting a configuration that might not
 /// make sense. For example, there are two different UTF-8 modes:
 ///
-/// * [`util::syntax::Config::utf8`](blog_text_pattern_search::automata::util::syntax::Config::utf8)
+/// * [`util::syntax::Config::utf8`](crate::automata::util::syntax::Config::utf8)
 /// controls whether the pattern itself can contain sub-expressions that match
 /// invalid UTF-8.
 /// * [`thompson::Config::utf8`] controls whether empty matches that split a
@@ -288,7 +288,7 @@ impl Builder {
     }
 
     /// Set the syntax configuration for this builder using
-    /// [`syntax::Config`](blog_text_pattern_search::automata::util::syntax::Config).
+    /// [`syntax::Config`](crate::automata::util::syntax::Config).
     ///
     /// This permits setting things like case insensitivity, Unicode and multi
     /// line mode.
@@ -305,7 +305,7 @@ impl Builder {
     }
 
     /// Set the Thompson NFA configuration for this builder using
-    /// [`nfa::thompson::Config`](blog_text_pattern_search::automata::nfa::thompson::Config).
+    /// [`nfa::thompson::Config`](crate::automata::nfa::thompson::Config).
     ///
     /// This permits setting things like if additional time should be spent
     /// shrinking the size of the NFA.
@@ -349,7 +349,7 @@ impl Builder {
 ///
 /// For example, a common strategy for dealing with capturing groups is to
 /// actually look for the overall match of the regex using a faster regex
-/// engine, like a [lazy DFA](blog_text_pattern_search::automata::hybrid::regex::Regex). Once the overall
+/// engine, like a [lazy DFA](crate::automata::hybrid::regex::Regex). Once the overall
 /// match is found, one can then run the `PikeVM` on just the match span to
 /// find the spans of the capturing groups. In this way, the faster regex
 /// engine does the majority of the work, while the `PikeVM` only lends its
@@ -360,8 +360,8 @@ impl Builder {
 /// includes (and is currently limited to) Unicode word boundaries. So if
 /// your pattern has Unicode word boundaries, you typically can't use a
 /// DFA-based regex engine at all (unless you [enable heuristic support for
-/// it](blog_text_pattern_search::automata::hybrid::dfa::Config::unicode_word_boundary)). (The [one-pass
-/// DFA](blog_text_pattern_search::automata::dfa::onepass::DFA) can handle Unicode word boundaries for
+/// it](crate::automata::hybrid::dfa::Config::unicode_word_boundary)). (The [one-pass
+/// DFA](crate::automata::dfa::onepass::DFA) can handle Unicode word boundaries for
 /// anchored searches only, but in a cruel sort of joke, many Unicode features
 /// tend to result in making the regex _not_ one-pass.)
 ///
@@ -902,7 +902,7 @@ impl PikeVM {
     /// This yields the same matches as [`PikeVM::find_iter`], but it includes
     /// the spans of all capturing groups that participate in each match.
     ///
-    /// **Tip:** See [`util::iter::Searcher`](blog_text_pattern_search::automata::util::iter::Searcher) for
+    /// **Tip:** See [`util::iter::Searcher`](crate::automata::util::iter::Searcher) for
     /// how to correctly iterate over all matches in a haystack while avoiding
     /// the creation of a new `Captures` value for every match. (Which you are
     /// forced to do with an `Iterator`.)
@@ -1045,11 +1045,11 @@ impl PikeVM {
     ///
     /// * An empty slice, if you only care about which pattern matched.
     /// * A slice with
-    /// [`pattern_len() * 2`](blog_text_pattern_search::automata::nfa::thompson::NFA::pattern_len)
+    /// [`pattern_len() * 2`](crate::automata::nfa::thompson::NFA::pattern_len)
     /// slots, if you only care about the overall match spans for each matching
     /// pattern.
     /// * A slice with
-    /// [`slot_len()`](blog_text_pattern_search::automata::util::captures::GroupInfo::slot_len) slots, which
+    /// [`slot_len()`](crate::automata::util::captures::GroupInfo::slot_len) slots, which
     /// permits recording match offsets for every capturing group in every
     /// pattern.
     ///

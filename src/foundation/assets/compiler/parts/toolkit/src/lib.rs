@@ -7,7 +7,7 @@ pub use compiler::{Compiler, CompilerInterface};
 pub mod allocator {
     //! Memory arena allocator used by all other submodules.
     //!
-    //! See the [`oxc_allocator` module-level documentation](oxc_allocator) for more information.
+    //! See the [syntax arena module documentation](crate::syntax_arena) for more information.
     #[doc(inline)]
     pub use crate::syntax_arena::*;
 }
@@ -26,7 +26,7 @@ pub mod ast_visit {
 pub mod diagnostics {
     //! Error data types and utilities for handling/reporting them.
     //!
-    //! See the [`oxc_diagnostics` module-level documentation](oxc_diagnostics) for more information.
+    //! See the [diagnostics module documentation](crate::compiler_errors) for more information.
     #[doc(inline)]
     pub use crate::compiler_errors::*;
 }
@@ -34,7 +34,7 @@ pub mod diagnostics {
 pub mod parser {
     //! JavaScript/TypeScript parser.
     //!
-    //! See the [`oxc_parser` module-level documentation](oxc_parser) for more information.
+    //! See the [parser module documentation](crate::parser) for more information.
     #[doc(inline)]
     pub use crate::parser::*;
 }
@@ -48,7 +48,7 @@ pub mod regular_expression {
 pub mod span {
     //! Source text Span.
     //!
-    //! See the [`oxc_span` module-level documentation](oxc_span) for more information.
+    //! See the [source location module documentation](crate::source_location) for more information.
     #[doc(inline)]
     pub use crate::source_location::*;
 }
@@ -56,7 +56,7 @@ pub mod span {
 pub mod str {
     //! String types.
     //!
-    //! See the [`oxc_str` module-level documentation](oxc_str) for more information.
+    //! See the [compiler strings module documentation](crate::compiler_strings) for more information.
     #[doc(inline)]
     pub use crate::compiler_strings::*;
 }
@@ -64,7 +64,7 @@ pub mod str {
 pub mod syntax {
     //! Common code for JavaScript Syntax
     //!
-    //! See the [`oxc_syntax` module-level documentation](oxc_syntax) for more information.
+    //! See the [syntax types module documentation](crate::syntax_types) for more information.
     #[doc(inline)]
     pub use crate::syntax_types::*;
 }
@@ -73,7 +73,7 @@ pub mod syntax {
 pub mod semantic {
     //! Semantic analysis of a JavaScript/TypeScript program.
     //!
-    //! See the [`oxc_semantic` module-level documentation](oxc_semantic) for more information.
+    //! See the [scope analysis module documentation](crate::scope_analysis) for more information.
     #[doc(inline)]
     pub use crate::scope_analysis::*;
 }
@@ -102,7 +102,7 @@ pub mod transformer_plugins {
 pub mod minifier {
     //! Source code minifier.
     //!
-    //! See the [`oxc_minifier` module-level documentation](oxc_minifier) for more information.
+    //! See the [optimizer module documentation](crate::optimizer) for more information.
     #[doc(inline)]
     pub use crate::optimizer::*;
 }
@@ -117,7 +117,7 @@ pub mod mangler {
 pub mod codegen {
     //! AST code printer
     //!
-    //! See the [`oxc_codegen` module-level documentation](oxc_codegen) for more information.
+    //! See the [code generator module documentation](crate::code_generator) for more information.
     #[doc(inline)]
     pub use crate::code_generator::*;
 }

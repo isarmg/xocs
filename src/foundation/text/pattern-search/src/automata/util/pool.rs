@@ -133,7 +133,7 @@ being quite expensive.
 ///
 /// This example shows how to share a single hybrid regex among multiple
 /// threads, while also safely getting exclusive access to a hybrid's
-/// [`Cache`](blog_text_pattern_search::automata::hybrid::regex::Cache) without preventing other searches
+/// [`Cache`](crate::automata::hybrid::regex::Cache) without preventing other searches
 /// from running while your thread uses the `Cache`.
 ///
 /// ```

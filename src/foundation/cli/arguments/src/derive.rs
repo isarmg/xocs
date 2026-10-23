@@ -9,7 +9,7 @@ use std::ffi::OsString;
 
 /// Parse command-line arguments into `Self`.
 ///
-/// The primary one-stop-shop trait used to create an instance of a `command_line`
+/// The primary one-stop-shop trait used to create an instance of a `blog_cli_arguments`
 /// [`Command`], conduct the parsing, and turn the resulting [`ArgMatches`] back
 /// into concrete instance of the user struct.
 ///
@@ -142,12 +142,12 @@ pub trait FromArgMatches: Sized {
     /// # }
     /// ```
     ///
-    /// We then need to convert the `ArgMatches` that `command_line` generated into our struct.
+    /// We then need to convert the `ArgMatches` that `blog_cli_arguments` generated into our struct.
     /// `from_arg_matches` serves as the equivalent of:
     ///
     /// ```rust
     /// # #[cfg(feature = "derive")] {
-    /// # use command_line::ArgMatches;
+    /// # use blog_cli_arguments::ArgMatches;
     /// # struct Context {
     /// #   name: String,
     /// #   debug: bool
@@ -178,12 +178,12 @@ pub trait FromArgMatches: Sized {
     /// # }
     /// ```
     ///
-    /// We then need to convert the `ArgMatches` that `command_line` generated into our struct.
+    /// We then need to convert the `ArgMatches` that `blog_cli_arguments` generated into our struct.
     /// `from_arg_matches_mut` serves as the equivalent of:
     ///
     /// ```rust
     /// # #[cfg(feature = "derive")] {
-    /// # use command_line::ArgMatches;
+    /// # use blog_cli_arguments::ArgMatches;
     /// # struct Context {
     /// #   name: String,
     /// #   debug: bool
@@ -225,7 +225,7 @@ pub trait FromArgMatches: Sized {
 ///
 /// </div>
 pub trait Args: FromArgMatches + Sized {
-    /// Report the [`ArgGroup::id`][command_line::ArgGroup::id] for this set of arguments
+    /// Report the [`ArgGroup::id`][crate::ArgGroup::id] for this set of arguments
     fn group_id() -> Option<crate::Id> {
         None
     }
@@ -282,7 +282,7 @@ pub trait Subcommand: FromArgMatches + Sized {
 ///
 /// When deriving [`Parser`], a field whose type implements `ValueEnum` can have the attribute
 /// `#[arg(value_enum)]` which will
-/// - Call [`EnumValueParser`][command_line::builder::EnumValueParser]
+/// - Call [`EnumValueParser`][crate::builder::EnumValueParser]
 /// - Allowing using the `#[arg(default_value_t)]` attribute without implementing `Display`.
 ///
 /// <div class="warning">

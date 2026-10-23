@@ -1,8 +1,8 @@
 //! CSS rules.
 //!
-//! The [CssRule](CssRule) enum includes all supported rules, and can be used to parse
+//! The [CssRule] enum includes all supported rules, and can be used to parse
 //! and serialize rules from CSS. Lists of rules (i.e. within a stylesheet, or inside
-//! another rule such as `@media`) are represented by [CssRuleList](CssRuleList).
+//! another rule such as `@media`) are represented by [CssRuleList].
 //!
 //! Each rule includes a source location, which indicates the line and column within
 //! the source file where it was parsed. This is used when generating source maps.
@@ -29,7 +29,7 @@
 //! );
 //! ```
 //!
-//! If you have a [crate::style_parser::Parser](crate::style_parser::Parser) already, you can also use the `parse` and `to_css`
+//! If you have a [crate::style_parser::Parser] already, you can also use the `parse` and `to_css`
 //! methods instead, rather than parsing from a string.
 //!
 //! See [StyleSheet](super::stylesheet::StyleSheet) to parse an entire file of multiple rules.

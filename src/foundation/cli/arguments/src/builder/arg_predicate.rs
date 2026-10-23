@@ -2,7 +2,7 @@ use crate::builder::OsStr;
 
 /// Operations to perform on argument values
 ///
-/// These do not apply to [`ValueSource::DefaultValue`][command_line::parser::ValueSource::DefaultValue]
+/// These do not apply to [`ValueSource::DefaultValue`][crate::parser::ValueSource::DefaultValue]
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum ArgPredicate {

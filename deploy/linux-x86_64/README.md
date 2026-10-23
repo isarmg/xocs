@@ -1,6 +1,6 @@
-# Blog 安装与维护
+# Blog 生产部署
 
-支持 Linux x86_64 GNU、systemd。服务、当前数据库初始化、安装、完整性检查和离线密码重置代码均由 Blog 仓库维护，不再下载 xcss 或 xssi。发行归档包含 `bin/blog`、`libexec/blog-setup`、`install.sh`、`maintenance.sh` 和构建元数据；`share/package.json` 与 `share/package.sha256` 记录完整不可变文件清单及 SHA-256、大小和权限。
+支持 AMD64 Linux GNU/glibc 和 systemd。服务、初始化、安装、完整性检查和离线密码重置工具均包含在发行包中。发行归档包含 `bin/blog`、`libexec/blog-setup`、`install.sh`、`maintenance.sh` 和构建元数据；`share/package.json` 与 `share/package.sha256` 记录完整不可变文件清单及 SHA-256、大小和权限。
 
 执行归档内程序前，先通过可信渠道核对 `SHA256SUMS`。候选包的 `share/package.json` 明确标记 `kind=candidate`，记录真实 Git HEAD、源码树哈希及工作树是否有修改；候选包不代表正式发布。正式发行需干净源码树和绑定当前提交的 annotated `vVERSION` tag。
 
@@ -40,4 +40,6 @@ systemd-ask-password 'New administrator password:' | \
 sudo systemctl start blog.service
 ```
 
-当前不提供自动版本升级、旧结构迁移或自动卸载。替换版本前停止服务并备份配置、数据库和媒体；由运维核实目标版本的数据兼容性。不要删除锁文件绕过正在运行的服务器。服务运行入口仍为 `bin/blog --root ROOT`，生产保持 Secure Cookie、Host/Origin 来源校验；`development=true` 仅允许回环 HTTP。
+替换程序前停止服务，备份配置、数据库和媒体，并核对目标程序要求的数据库结构。不要删除锁文件绕过正在运行的服务器。服务运行入口仍为 `bin/blog --root ROOT`，生产保持 Secure Cookie、Host/Origin 来源校验；`development=true` 仅允许回环 HTTP。
+
+配置字段见[配置参考](../../docs/configuration.md)，备份与常见问题见[运行与排障](../../docs/operations.md)，数据库要求见[数据与请求约定](../../docs/contracts.md)。

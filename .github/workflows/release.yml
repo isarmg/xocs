@@ -16,7 +16,7 @@ jobs:
     permissions:
       contents: write
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - name: Checkout source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -41,6 +41,9 @@ jobs:
 
       - name: Verify repository-owned implementation
         run: |
+          python3 -I -B tools/test-docs.py
+          python3 tools/check-docs.py
+          python3 tools/rust-sources/docs.py --check
           python3 tools/test-independence.py
           python3 -I -B tools/rust-sources/test_manage.py
           python3 -I -B tools/rust-sources/test_audit.py
@@ -49,6 +52,12 @@ jobs:
 
       - name: Build web from repository Rust sources
         run: cargo run --quiet --locked --offline -p blog-assets -- build --product-root . --offline
+      - name: Build native and browser API documentation
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: |
+          cargo doc --locked --offline -p blog -p blog-setup -p blog-assets
+          cargo doc --locked --offline -p blog-browser --target wasm32-unknown-unknown
       - name: Prepare browser test dependencies
         working-directory: web
         run: npm ci
@@ -125,5 +134,5 @@ jobs:
             dist/*.tar.gz \
             dist/SHA256SUMS \
             --verify-tag \
-            --notes-file "docs/releases/${GITHUB_REF_NAME#v}.md" \
+            --generate-notes \
             --title "Blog ${GITHUB_REF_NAME}"

@@ -1,12 +1,12 @@
-//! [`tokio`] runtime components integration for [`hyper`].
+//! [`tokio`] runtime components integration for [the HTTP transport](crate).
 //!
 //! [`crate::rt`] exposes a set of traits to allow hyper to be agnostic to
 //! its underlying asynchronous runtime. This submodule provides glue for
-//! [`tokio`] users to bridge those types to [`hyper`]'s interfaces.
+//! [`tokio`] users to bridge those types to [the HTTP transport](crate)'s interfaces.
 //!
 //! # IO
 //!
-//! [`hyper`] abstracts over asynchronous readers and writers using [`Read`]
+//! [the HTTP transport](crate) abstracts over asynchronous readers and writers using [`Read`]
 //! and [`Write`], while [`tokio`] abstracts over this using [`AsyncRead`]
 //! and [`AsyncWrite`]. This submodule provides a collection of IO adaptors
 //! to bridge these two IO ecosystems together: [`TokioIo<I>`],
@@ -29,7 +29,7 @@
 //! | [`WithTokioIo<H>`] | ✅ **true**      | ✅ **true**       | ✅ **true**  | ✅ **true**  |
 //!
 //! For most situations, [`TokioIo<I>`] is the proper choice. This should be
-//! constructed, wrapping some underlying [`hyper`] or [`tokio`] IO, at the
+//! constructed, wrapping some underlying [the HTTP transport](crate) or [`tokio`] IO, at the
 //! call-site of a function like [`crate::client::conn::http1::handshake`].
 //!
 //! [`TokioIo<I>`] switches across these ecosystems, but notably does not
@@ -70,18 +70,10 @@ mod with_tokio_io;
 
 /// Future executor that utilises `tokio` threads.
 ///
-/// Spawned futures do not inherit the current tracing span, even when the
-/// `tracing` feature is enabled. To propagate spans, wrap this executor in
-/// one of the components from [`rt::tracing`](crate::adapters::rt::tracing), such as
-/// [`CurrentSpanExecutor`](crate::adapters::rt::CurrentSpanExecutor) (available with
-/// the `tracing` feature).
-///
-/// See the module-level documentation of [`rt::tracing`](crate::adapters::rt::tracing)
-/// for more information about propagating [`tracing`] spans to spawned tasks.
-///
-/// The temporary `rt-tracing-exec-force` feature restores propagation of the
-/// current span for libraries that do not allow customizing their executor.
-/// It is excluded from `full` and may be removed in a future breaking release.
+/// Spawned futures do not inherit the current tracing span by default.
+/// With `adapter-tracing`, the optional `adapters::rt::tracing` module provides
+/// span-aware executor wrappers. With `rt-tracing-exec-force`, this executor
+/// instruments each spawned future with the current span.
 #[non_exhaustive]
 #[derive(Default, Debug, Clone)]
 pub struct TokioExecutor {}

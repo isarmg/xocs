@@ -1,8 +1,8 @@
 //! CSS bundling.
 //!
-//! A [Bundler](Bundler) can be used to combine a CSS file and all of its dependencies
-//! into a single merged style sheet. It works together with a [SourceProvider](SourceProvider)
-//! (e.g. [FileProvider](FileProvider)) to read files from the file system or another source,
+//! A [`Bundler`] can be used to combine a CSS file and all of its dependencies
+//! into a single merged style sheet. It works together with a [`SourceProvider`]
+//! (e.g. [`FileProvider`]) to read files from the file system or another source,
 //! and returns a [StyleSheet](super::stylesheet::StyleSheet) containing the rules from all
 //! of the dependencies of the entry file, recursively.
 //!
@@ -118,7 +118,7 @@ impl From<PathBuf> for ResolveResult {
 
 /// A trait to provide the contents of files to a Bundler.
 ///
-/// See [FileProvider](FileProvider) for an implementation that uses the
+/// See [`FileProvider`] for an implementation that uses the
 /// file system.
 pub trait SourceProvider: Send + Sync {
   /// A custom error.
@@ -132,7 +132,7 @@ pub trait SourceProvider: Send + Sync {
   fn resolve(&self, specifier: &str, originating_file: &Path) -> Result<ResolveResult, Self::Error>;
 }
 
-/// Provides an implementation of [SourceProvider](SourceProvider)
+/// Provides an implementation of [`SourceProvider`]
 /// that reads files from the file system.
 pub struct FileProvider {
   inputs: Mutex<Vec<*mut String>>,

@@ -19,7 +19,7 @@ use crate::word_splitters::split_words;
 /// `width_or_options`:
 ///
 /// ```
-/// use textwrap::wrap;
+/// use blog_text_line_layout::wrap;
 ///
 /// let lines = wrap("Memory safety without garbage collection.", 15);
 /// assert_eq!(lines, &[
@@ -33,7 +33,7 @@ use crate::word_splitters::split_words;
 /// instead of an `usize`:
 ///
 /// ```
-/// use textwrap::{wrap, Options};
+/// use blog_text_line_layout::{wrap, Options};
 ///
 /// let options = Options::new(15)
 ///     .initial_indent("- ")
@@ -61,7 +61,7 @@ use crate::word_splitters::split_words;
 /// narrow column with room for only 10 characters looks like this:
 ///
 /// ```
-/// # use textwrap::{WrapAlgorithm::FirstFit, Options, wrap};
+/// # use blog_text_line_layout::{WrapAlgorithm::FirstFit, Options, wrap};
 /// #
 /// # let lines = wrap("To be, or not to be: that is the question",
 /// #                  Options::new(10).wrap_algorithm(FirstFit));
@@ -85,7 +85,7 @@ use crate::word_splitters::split_words;
 ///
 /// ```
 /// # #[cfg(feature = "smawk")] {
-/// # use textwrap::{Options, WrapAlgorithm, wrap};
+/// # use blog_text_line_layout::{Options, WrapAlgorithm, wrap};
 /// #
 /// # let lines = wrap(
 /// #     "To be, or not to be: that is the question",
@@ -112,7 +112,7 @@ use crate::word_splitters::split_words;
 ///
 /// ```
 /// use std::borrow::Cow::{Borrowed, Owned};
-/// use textwrap::{wrap, Options};
+/// use blog_text_line_layout::{wrap, Options};
 ///
 /// let options = Options::new(15).subsequent_indent("....");
 /// let lines = wrap("Wrapping text all day long.", &options);
@@ -151,7 +151,7 @@ use crate::word_splitters::split_words;
 /// word falls at the end of a line:
 ///
 /// ```
-/// use textwrap::wrap;
+/// use blog_text_line_layout::wrap;
 ///
 /// assert_eq!(wrap("Foo   bar baz", 10), vec!["Foo   bar", "baz"]);
 /// assert_eq!(wrap("Foo   bar baz", 8), vec!["Foo", "bar baz"]);
@@ -173,7 +173,7 @@ use crate::word_splitters::split_words;
 /// on the first line, otherwise you end up with an empty line:
 ///
 /// ```
-/// use textwrap::wrap;
+/// use blog_text_line_layout::wrap;
 ///
 /// assert_eq!(wrap("  foo bar", 8), vec!["  foo", "bar"]);
 /// assert_eq!(wrap("  foo bar", 4), vec!["", "foo", "bar"]);

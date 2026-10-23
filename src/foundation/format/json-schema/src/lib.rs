@@ -9,7 +9,7 @@
     clippy::exhaustive_enums
 )]
 #![allow(clippy::wildcard_imports, clippy::missing_errors_doc)]
-#![doc = include_str!("../../../../../docs/upstream/schemars-1.2.3/README.md")]
+#![doc = include_str!("../../../../../docs/dependencies/origins/schemars-1.2.3/README.md")]
 #![no_std]
 
 extern crate alloc;

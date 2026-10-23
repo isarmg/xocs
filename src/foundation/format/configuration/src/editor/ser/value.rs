@@ -4,7 +4,7 @@ use super::SerializeStructVariant;
 use super::SerializeTupleVariant;
 use super::SerializeValueArray;
 
-/// Serialization for TOML [values][blog_format_configuration::editor::Value].
+/// Serialization for TOML [values][crate::editor::Value].
 ///
 /// This structure implements serialization support for TOML to serialize an
 /// arbitrary type to TOML. Note that the TOML format does not support all

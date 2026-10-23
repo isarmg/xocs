@@ -1,4 +1,4 @@
-use command_line::Command;
+use blog_cli_arguments::Command;
 
 fn main() {
     let cmd = Command::new(env!("CARGO_CRATE_NAME"))
