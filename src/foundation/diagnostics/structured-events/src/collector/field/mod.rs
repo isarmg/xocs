@@ -235,9 +235,3 @@ pub struct MakeExtMarker<T> {
 pub struct RecordFieldsMarker {
     _p: (),
 }
-
-#[cfg(test)]
-include!(core::concat!(
-    core::env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/tracing-family/collector/unit/src/field/mod/all_test_util_239.rs"
-));

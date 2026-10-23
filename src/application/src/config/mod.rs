@@ -6,6 +6,7 @@ mod managed;
 mod strict;
 pub use managed::read_managed_file;
 #[cfg(test)]
+#[path = "../../../../test/application/unit/config/tests.rs"]
 mod tests;
 
 use serde::{Serialize, de::DeserializeOwned};

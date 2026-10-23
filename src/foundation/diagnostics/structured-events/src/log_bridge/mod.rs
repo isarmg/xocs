@@ -477,9 +477,3 @@ impl<'a> Visit for LogVisitor<'a> {
 mod sealed {
     pub trait Sealed {}
 }
-
-#[cfg(test)]
-include!(core::concat!(
-    core::env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/tracing-family/log_bridge/unit/src/lib/test_547.rs"
-));

@@ -29,6 +29,3 @@ pub(crate) fn display_width(text: &str) -> usize {
 fn ch_width(_: char) -> usize {
     1
 }
-
-#[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../test/foundation/command-line/builder/unit/src/output/textwrap/core/tests_86.rs"));

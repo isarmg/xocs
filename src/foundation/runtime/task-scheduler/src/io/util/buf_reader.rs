@@ -300,12 +300,6 @@ impl<R: fmt::Debug> fmt::Debug for BufReader<R> {
     }
 }
 
+#[path = "../../../../../../../test/foundation/runtime/task-scheduler/unit/src/io/util/buf_reader/tests.rs"]
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn assert_unpin() {
-        crate::is_unpin::<BufReader<()>>();
-    }
-}
+mod tests;

@@ -30,8 +30,10 @@ pub(crate) mod fixed_size;
 #[cfg(any())]
 mod from_raw_parts;
 
+#[path = "../../../../../../../../test/foundation/assets/compiler/unit/parts/syntax_arena/src/arena/tests.rs"]
 #[cfg(test)]
 mod tests;
+#[path = "../../../../../../../../test/foundation/assets/compiler/unit/parts/syntax_arena/src/arena/tests_alloc.rs"]
 #[cfg(test)]
 mod tests_alloc;
 

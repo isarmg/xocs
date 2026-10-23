@@ -4,6 +4,7 @@
 
 pub mod bits;
 
+#[path = "../../../../../../test/foundation/format/parser-combinators/unit/src/binary/tests.rs"]
 #[cfg(test)]
 mod tests;
 

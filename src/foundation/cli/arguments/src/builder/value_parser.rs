@@ -2676,6 +2676,3 @@ mod private {
     {
     }
 }
-
-#[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../test/foundation/command-line/builder/unit/src/builder/value_parser/test_2680.rs"));

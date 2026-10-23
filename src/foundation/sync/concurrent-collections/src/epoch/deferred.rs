@@ -88,4 +88,4 @@ impl Deferred {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/concurrent-collections/epoch/unit/src/deferred/all_tests_90.rs"));
+include!("../../../../../../test/foundation/sync/concurrent-collections/unit/src/epoch/deferred/2800.rs");

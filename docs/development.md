@@ -9,8 +9,8 @@
 所有 Rust 源码通过本仓库路径解析，共用根 workspace 和唯一 Cargo.lock。Cargo 默认离线。Rust 工具链、目标标准库和系统构建材料需由环境提供；完整边界见[源码组织与校验](source-layout.md)。
 
 ```sh
-python3 tools/rust-sources/manage.py verify --metadata
-python3 tools/check-independence.py
+python3 src/tools/rust-sources/manage.py verify --metadata
+python3 src/tools/check-independence.py
 cargo +1.99.0 run --locked --offline -p blog-assets -- build --product-root . --offline
 cargo +1.99.0 build --locked --offline --bin blog
 cargo +1.99.0 build --locked --offline -p blog-setup
@@ -44,15 +44,15 @@ cargo +1.99.0 run --locked --offline -p blog-assets -- serve --product-root . --
 cargo +1.99.0 run --locked --offline -p blog-assets -- server --product-root . --config blog-assets.json --mode development --offline
 ```
 
-`serve` 提供开发资源和变更监控；需要后台 API 时启动本机服务，并用 `--proxy /api=http://127.0.0.1:18091` 配置转发。`preview` 只读提供已有资源。`server` 按根 `blog-assets.json` 协调前端与服务端构建，具体选项见[构建器说明](../tools/assets/README.md)。
+`serve` 提供开发资源和变更监控；需要后台 API 时启动本机服务，并用 `--proxy /api=http://127.0.0.1:18091` 配置转发。`preview` 只读提供已有资源。`server` 按根 `blog-assets.json` 协调前端与服务端构建，具体选项见[构建器说明](../src/tools/assets/README.md)。
 
 | 输入或输出 | 用途 |
 | --- | --- |
-| `web/rust-web.toml` | 前端入口、资源和预算配置 |
+| `src/web/rust-web.toml` | 前端入口、资源和预算配置 |
 | `blog-assets.json` | 前端与服务端构建入口 |
-| `web/pkg` | 生成的 WASM、浏览器绑定与元数据 |
-| `web/dist` | 可分发静态资源 |
-| `web/dist/assets/blog-assets.json` | 资源与源码摘要收据 |
+| `src/web/pkg` | 生成的 WASM、浏览器绑定与元数据 |
+| `src/web/dist` | 可分发静态资源 |
+| `src/web/dist/assets/blog-assets.json` | 资源与源码摘要收据 |
 | `CARGO_TARGET_DIR` | 原生 Cargo 构建输出 |
 | `BLOG_WASM_TARGET_DIR` | WASM Cargo 输出，默认 `target/blog-browser` |
 | `BLOG_WEB_DIST` 或 `--dist` | 指定静态资源输出 |
@@ -64,8 +64,8 @@ cargo +1.99.0 run --locked --offline -p blog-assets -- server --product-root . -
 先检查文档链接、Rust 文档输入和依赖资料索引：
 
 ```sh
-python3 tools/check-docs.py
-python3 tools/rust-sources/docs.py --check
+python3 src/tools/check-docs.py
+python3 src/tools/rust-sources/docs.py --check
 ```
 
 CI 还会生成原生与 WASM 的完整 API 文档，并将文档警告作为错误处理；本地生成命令和输出位置见[依赖参考](dependencies/README.md#api-文档)。
@@ -79,17 +79,17 @@ cargo +1.99.0 clippy --locked --offline -p blog-assets -p blog-browser-domain-te
 cargo +1.99.0 clippy --locked --offline -p blog-browser --target wasm32-unknown-unknown -- -D warnings
 cargo +1.99.0 test --locked --offline
 cargo +1.99.0 test --locked --offline -p blog-assets -p blog-browser-domain-tests
-bash scripts/test-maintained.sh
+bash test/run-maintained.sh
 cargo +1.99.0 run --locked --offline -p blog-assets -- test --product-root . --offline
-bash scripts/smoke.sh
+bash test/operations/smoke.sh
 ```
 
-`blog-assets` 的 Rust 测试会调用 PATH 中的 Node 26.7.0，检查实际生成的 JavaScript/WASM 初始化合同；这部分不需要 npm 包或浏览器。`scripts/test-maintained.sh` 运行已登记的基础库和消费者回归。`smoke.sh` 创建可丢弃实例，执行真实 HTTP、SQLite 写入和重启检查。
+`blog-assets` 的 Rust 测试会调用 PATH 中的 Node 26.7.0，检查实际生成的 JavaScript/WASM 初始化合同；这部分不需要 npm 包或浏览器。`test/run-maintained.sh` 运行已登记的基础库和消费者回归。`smoke.sh` 创建可丢弃实例，执行真实 HTTP、SQLite 写入和重启检查。
 
 浏览器验证还需安装锁定测试工具及 Chromium、Firefox：
 
 ```sh
-cd web
+cd src/web
 npm ci
 npx playwright install --with-deps chromium firefox
 npm run test:unit
@@ -103,13 +103,13 @@ npm run test:browser:blog-interface
 修改受管源码后，审查代码差异并接纳当前文件摘要，再执行相应验证：
 
 ```sh
-python3 tools/rust-sources/manage.py refresh
-python3 tools/rust-sources/manage.py verify --metadata
-python3 tools/check-independence.py
+python3 src/tools/rust-sources/manage.py refresh
+python3 src/tools/rust-sources/manage.py verify --metadata
+python3 src/tools/check-independence.py
 ```
 
 新增、合并或拆分包时同时更新用途映射和来源身份，字段见[源码组织与校验](source-layout.md)。
 
-`blog-assets server --mode candidate` 使用真实 HEAD 并记录未提交源码；`--mode release` 要求干净源码。正式打包脚本 `scripts/package-linux-x86_64.sh --output-dir ABSOLUTE` 还要求与 HEAD、产品版本一致的注解 tag `vVERSION`。包内服务、初始化工具、资源和源码摘要共同绑定发行身份。安装与验证见[Linux 部署说明](../deploy/linux-x86_64/README.md)。
+`blog-assets server --mode candidate` 使用真实 HEAD 并记录未提交源码；`--mode release` 要求干净源码。正式打包脚本 `src/operations/package-linux-x86_64.sh --output-dir ABSOLUTE` 还要求与 HEAD、产品版本一致的注解 tag `vVERSION`。包内服务、初始化工具、资源和源码摘要共同绑定发行身份。安装与验证见[Linux 部署说明](../deploy/linux-x86_64/README.md)。
 
 推送版本 tag 后，发布工作流执行验证并上传安装包及 `SHA256SUMS`，在 GitHub Releases 生成版本说明。仓库文档描述当前用法，版本变更记录由 [GitHub Releases](https://github.com/isarmg/xocs/releases) 提供。

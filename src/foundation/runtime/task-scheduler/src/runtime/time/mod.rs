@@ -491,5 +491,6 @@ impl fmt::Debug for Inner {
     }
 }
 
+#[path = "../../../../../../../test/foundation/runtime/task-scheduler/unit/src/runtime/time/tests/mod.rs"]
 #[cfg(test)]
 mod tests;

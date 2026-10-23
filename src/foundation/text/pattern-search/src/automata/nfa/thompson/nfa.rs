@@ -2039,4 +2039,4 @@ impl<'a> Iterator for PatternIter<'a> {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/automata/unit/src/nfa/thompson/nfa/all_tests_2041.rs"));
+include!("../../../../../../../../test/foundation/text/pattern-search/unit/src/automata/nfa/thompson/nfa/83044.rs");

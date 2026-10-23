@@ -128,7 +128,4 @@ pub(crate) fn line_trailing(input: &mut Input<'_>) -> ModalResult<std::ops::Rang
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/retained/test/foundation/toml/editor/unit/src/parser/trivia/test_130.rs"
-));
+include!("../../../../../../../test/foundation/format/configuration/unit/src/editor/parser/trivia/3875.rs");

@@ -110,6 +110,7 @@ pub extern crate alloc;
 #[cfg(any(test, feature = "write"))]
 extern crate std;
 
+#[path = "../../../../../test/foundation/collections/inline-vector/unit/src/tests.rs"]
 #[cfg(test)]
 mod tests;
 

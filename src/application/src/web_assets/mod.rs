@@ -463,4 +463,5 @@ fn error_response(status: StatusCode, method: &Method) -> Response<Bytes> {
 }
 
 #[cfg(test)]
+#[path = "../../../../test/application/unit/web_assets/tests.rs"]
 mod tests;

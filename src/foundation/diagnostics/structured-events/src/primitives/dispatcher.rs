@@ -899,9 +899,3 @@ impl Drop for DefaultGuard {
         drop(prev)
     }
 }
-
-#[cfg(test)]
-include!(core::concat!(
-    core::env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/tracing-family/primitives/unit/src/dispatcher/test_903.rs"
-));

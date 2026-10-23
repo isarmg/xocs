@@ -43,7 +43,4 @@ impl<W: AsyncWrite + ?Sized + Unpin> Future for WriteAllVectored<'_, W> {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/futures/util/unit/src/io/write_all_vectored/tests_45.rs"
-));
+include!("../../../../../../test/foundation/runtime/async-toolkit/unit/src/io/write_all_vectored/1381.rs");

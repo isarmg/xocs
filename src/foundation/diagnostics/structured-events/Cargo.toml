@@ -176,7 +176,7 @@ package = "blog-text-pattern-search"
 
 [[test]]
 name = "log-bridge"
-path = "../../../../test/tracing/log_bridge.rs"
+path = "../../../../test/foundation/diagnostics/structured-events/legacy/tracing/log_bridge.rs"
 required-features = [
     "registry",
     "log-tracer",

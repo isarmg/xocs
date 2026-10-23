@@ -34,4 +34,4 @@ pub type BoxError = Box<dyn std::error::Error + Send + Sync>;
 pub use self::ext_traits::{request::RequestExt, request_parts::RequestPartsExt};
 
 #[cfg(test)]
-use axum_macros::__private_axum_test as test;
+include!("../../../../../../test/foundation/network/request-router/unit/src/kernel/mod/1025.rs");

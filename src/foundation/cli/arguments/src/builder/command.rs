@@ -5279,6 +5279,3 @@ where
         _ => None,
     }
 }
-
-#[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../test/foundation/command-line/builder/functions/src/builder/command/check_auto_traits_5293.rs"));

@@ -83,60 +83,11 @@ unsafe fn match_header_value_char_16_sse(buf: &[u8]) -> usize {
     (!res).trailing_zeros() as usize
 }
 
-#[test]
-fn sse_code_matches_uri_chars_table() {
-    if !is_x86_feature_detected!("sse4.2") {
-        return;
-    }
-
-    #[allow(clippy::undocumented_unsafe_blocks)]
-    unsafe {
-        assert!(byte_is_allowed(b'_', match_uri_vectored));
-
-        for (b, allowed) in crate::URI_MAP.iter().cloned().enumerate() {
-            assert_eq!(
-                byte_is_allowed(b as u8, match_uri_vectored), allowed,
-                "byte_is_allowed({:?}) should be {:?}", b, allowed,
-            );
-        }
-    }
-}
-
-#[test]
-fn sse_code_matches_header_value_chars_table() {
-    if !is_x86_feature_detected!("sse4.2") {
-        return;
-    }
-
-    #[allow(clippy::undocumented_unsafe_blocks)]
-    unsafe {
-        assert!(byte_is_allowed(b'_', match_header_value_vectored));
-
-        for (b, allowed) in crate::HEADER_VALUE_MAP.iter().cloned().enumerate() {
-            assert_eq!(
-                byte_is_allowed(b as u8, match_header_value_vectored), allowed,
-                "byte_is_allowed({:?}) should be {:?}", b, allowed,
-            );
-        }
-    }
-}
-
-#[allow(clippy::missing_safety_doc)]
 #[cfg(test)]
-unsafe fn byte_is_allowed(byte: u8, f: unsafe fn(bytes: &mut Bytes<'_>)) -> bool {
-    let slice = [
-        b'_', b'_', b'_', b'_',
-        b'_', b'_', b'_', b'_',
-        b'_', b'_', byte, b'_',
-        b'_', b'_', b'_', b'_',
-    ];
-    let mut bytes = Bytes::new(&slice);
+include!("../../../../../../test/foundation/network/http-parser/unit/src/simd/sse42/2380.rs");
 
-    f(&mut bytes);
+#[cfg(test)]
+include!("../../../../../../test/foundation/network/http-parser/unit/src/simd/sse42/2889.rs");
 
-    match bytes.pos() {
-        16 => true,
-        10 => false,
-        _ => unreachable!(),
-    }
-}
+#[cfg(test)]
+include!("../../../../../../test/foundation/network/http-parser/unit/src/simd/sse42/3434.rs");

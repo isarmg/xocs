@@ -1111,4 +1111,4 @@ mod inner {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/automata/unit/src/util/pool/tests_1113.rs"));
+include!("../../../../../../../test/foundation/text/pattern-search/unit/src/automata/util/pool/51558.rs");

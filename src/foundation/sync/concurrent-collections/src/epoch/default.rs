@@ -62,4 +62,4 @@ where
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/concurrent-collections/epoch/unit/src/default/all_tests_64.rs"));
+include!("../../../../../../test/foundation/sync/concurrent-collections/unit/src/epoch/default/1803.rs");

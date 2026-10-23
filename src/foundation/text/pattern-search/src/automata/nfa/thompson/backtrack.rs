@@ -1887,4 +1887,4 @@ fn div_ceil(lhs: usize, rhs: usize) -> usize {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/automata/unit/src/nfa/thompson/backtrack/tests_1889.rs"));
+include!("../../../../../../../../test/foundation/text/pattern-search/unit/src/automata/nfa/thompson/backtrack/74575.rs");

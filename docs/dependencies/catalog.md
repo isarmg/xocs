@@ -1,6 +1,6 @@
 # 本地包与文档目录
 
-此页由 `python3 tools/rust-sources/docs.py` 按当前 Cargo 包和源码所有者生成。先阅读[依赖指南](README.md)了解支持范围；具体 API 以本地 Rust 文档为准。
+此页由 `python3 src/tools/rust-sources/docs.py` 按当前 Cargo 包和源码所有者生成。先阅读[依赖指南](README.md)了解支持范围；具体 API 以本地 Rust 文档为准。
 
 ## project
 
@@ -8,8 +8,8 @@
 | --- | --- | --- | --- | --- |
 | [blog-application](../../src/application/Cargo.toml) | 认证、SQLite 持久化、安装契约和资产响应 | [lib.rs](../../src/application/src/lib.rs) | Rust 文档注释 | 本项目实现 |
 | [blog](../../src/server/Cargo.toml) | 博客 HTTP 服务、内容业务与管理员 API | [lib.rs](../../src/server/src/lib.rs) | Rust 文档注释 | 本项目实现 |
-| [blog-setup](../../tools/setup/Cargo.toml) | 离线初始化、账户恢复与实例维护 | [main.rs](../../tools/setup/src/main.rs) | [README.md](../../tools/setup/README.md) | 本项目实现 |
-| [blog-assets](../../tools/assets/Cargo.toml) | 静态资源编译、源码收据和开发预览 | [lib.rs](../../tools/assets/src/lib.rs) | [README.md](../../tools/assets/README.md) | 本项目实现 |
+| [blog-setup](../../src/tools/setup/Cargo.toml) | 离线初始化、账户恢复与实例维护 | [main.rs](../../src/tools/setup/src/main.rs) | [README.md](../../src/tools/setup/README.md) | 本项目实现 |
+| [blog-assets](../../src/tools/assets/Cargo.toml) | 静态资源编译、源码收据和开发预览 | [lib.rs](../../src/tools/assets/src/lib.rs) | [README.md](../../src/tools/assets/README.md) | 本项目实现 |
 | [blog-browser](../../src/browser/Cargo.toml) | 浏览器 CSR 博客界面 | [lib.rs](../../src/browser/src/lib.rs) | Rust 文档注释 | 本项目实现 |
 | [blog-browser-domain-tests](../../test/browser-domain/Cargo.toml) | 浏览器数据契约与Markdown逻辑的宿主测试 | [lib.rs](../../test/browser-domain/lib.rs) | Rust 文档注释 | 本项目实现 |
 | [blog-interface](../../src/interface/Cargo.toml) | 博客组件、浏览器 API、主题和应用挂载 | [lib.rs](../../src/interface/src/lib.rs) | [README.md](../../src/interface/README.md) | 本项目实现 |
@@ -260,7 +260,7 @@
 | --- | --- | --- | --- | --- |
 | [blog-storage-fallible-rows](../../src/foundation/storage/fallible-rows/Cargo.toml) | fallible rows | [lib.rs](../../src/foundation/storage/fallible-rows/src/lib.rs) | Rust 文档注释 | [fallible-iterator@0.3.0](origins/fallible-iterator-0.3.0/README.md) |
 | [blog-storage-record-derive](../../src/foundation/storage/record-derive/Cargo.toml) | record derive | [lib.rs](../../src/foundation/storage/record-derive/src/lib.rs) | Rust 文档注释 | [sqlx-macros-core@0.9.0](origins/sqlx-macros-core-0.9.0/README.md)<br>[sqlx-macros@0.9.0](origins/sqlx-macros-0.9.0/README.md) |
-| [blog-storage-sqlite-access](../../src/foundation/storage/sqlite-access/Cargo.toml) | sqlite access | [lib.rs](../../src/foundation/storage/sqlite-access/src/lib.rs) | [src/lib.md](../../src/foundation/storage/sqlite-access/src/lib.md)<br>[tests/README.md](../../src/foundation/storage/sqlite-access/tests/README.md) | [sqlx-core@0.9.0](origins/sqlx-core-0.9.0/README.md)<br>[sqlx-sqlite@0.9.0](origins/sqlx-sqlite-0.9.0/README.md)<br>[sqlx@0.9.0](origins/sqlx-0.9.0/README.md) |
+| [blog-storage-sqlite-access](../../src/foundation/storage/sqlite-access/Cargo.toml) | sqlite access | [lib.rs](../../src/foundation/storage/sqlite-access/src/lib.rs) | [src/lib.md](../../src/foundation/storage/sqlite-access/src/lib.md) | [sqlx-core@0.9.0](origins/sqlx-core-0.9.0/README.md)<br>[sqlx-sqlite@0.9.0](origins/sqlx-sqlite-0.9.0/README.md)<br>[sqlx@0.9.0](origins/sqlx-0.9.0/README.md) |
 | [blog-storage-sqlite-native](../../src/foundation/storage/sqlite-native/Cargo.toml) | sqlite native | [lib.rs](../../src/foundation/storage/sqlite-native/src/lib.rs) | Rust 文档注释 | [libsqlite3-sys@0.37.0](origins/libsqlite3-sys-0.37.0/README.md) |
 
 ## sync

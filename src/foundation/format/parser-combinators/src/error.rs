@@ -49,7 +49,7 @@ pub type Result<O, E = ContextError> = core::result::Result<O, E>;
 pub type ModalResult<O, E = ContextError> = Result<O, ErrMode<E>>;
 
 #[cfg(test)]
-pub(crate) type TestResult<I, O> = ModalResult<O, InputError<I>>;
+include!("../../../../../test/foundation/format/parser-combinators/unit/src/error/1984.rs");
 
 /// Contains information on needed data if a parser returned `Incomplete`
 ///
@@ -1444,139 +1444,16 @@ fn translate_position(input: &[u8], index: usize) -> (usize, usize) {
     (line, column)
 }
 
+#[path = "../../../../../test/foundation/format/parser-combinators/unit/src/error/test_char_boundary.rs"]
 #[cfg(test)]
-mod test_char_boundary {
-    use super::*;
+mod test_char_boundary;
 
-    #[test]
-    fn ascii() {
-        let input = "hi";
-        let cases = [(0, 0..1), (1, 1..2), (2, 2..2)];
-        for (offset, expected) in cases {
-            assert_eq!(
-                char_boundary(input.as_bytes(), offset),
-                expected,
-                "input={input:?}, offset={offset:?}"
-            );
-        }
-    }
-
-    #[test]
-    fn utf8() {
-        let input = "βèƒôřè";
-        assert_eq!(input.len(), 12);
-        let cases = [
-            (0, 0..2),
-            (1, 0..2),
-            (2, 2..4),
-            (3, 2..4),
-            (4, 4..6),
-            (5, 4..6),
-            (6, 6..8),
-            (7, 6..8),
-            (8, 8..10),
-            (9, 8..10),
-            (10, 10..12),
-            (11, 10..12),
-            (12, 12..12),
-        ];
-        for (offset, expected) in cases {
-            assert_eq!(
-                char_boundary(input.as_bytes(), offset),
-                expected,
-                "input={input:?}, offset={offset:?}"
-            );
-        }
-    }
-}
-
+#[path = "../../../../../test/foundation/format/parser-combinators/unit/src/error/test_parse_error.rs"]
 #[cfg(test)]
 #[cfg(feature = "std")]
-mod test_parse_error {
-    use super::*;
+mod test_parse_error;
 
-    #[test]
-    fn single_line() {
-        let mut input = "0xZ123";
-        let start = input.checkpoint();
-        let _ = input.next_token().unwrap();
-        let _ = input.next_token().unwrap();
-        let inner = InputError::at(input);
-        let error = ParseError::new(input, start, inner);
-        let expected = "\
-0xZ123
-  ^
-failed to parse starting at: Z123";
-        assert_eq!(error.to_string(), expected);
-    }
-}
-
+#[path = "../../../../../test/foundation/format/parser-combinators/unit/src/error/test_translate_position.rs"]
 #[cfg(test)]
 #[cfg(feature = "std")]
-mod test_translate_position {
-    use super::*;
-
-    #[test]
-    fn empty() {
-        let input = b"";
-        let index = 0;
-        let position = translate_position(&input[..], index);
-        assert_eq!(position, (0, 0));
-    }
-
-    #[test]
-    fn start() {
-        let input = b"Hello";
-        let index = 0;
-        let position = translate_position(&input[..], index);
-        assert_eq!(position, (0, 0));
-    }
-
-    #[test]
-    fn end() {
-        let input = b"Hello";
-        let index = input.len() - 1;
-        let position = translate_position(&input[..], index);
-        assert_eq!(position, (0, input.len() - 1));
-    }
-
-    #[test]
-    fn after() {
-        let input = b"Hello";
-        let index = input.len();
-        let position = translate_position(&input[..], index);
-        assert_eq!(position, (0, input.len()));
-    }
-
-    #[test]
-    fn first_line() {
-        let input = b"Hello\nWorld\n";
-        let index = 2;
-        let position = translate_position(&input[..], index);
-        assert_eq!(position, (0, 2));
-    }
-
-    #[test]
-    fn end_of_line() {
-        let input = b"Hello\nWorld\n";
-        let index = 5;
-        let position = translate_position(&input[..], index);
-        assert_eq!(position, (0, 5));
-    }
-
-    #[test]
-    fn start_of_second_line() {
-        let input = b"Hello\nWorld\n";
-        let index = 6;
-        let position = translate_position(&input[..], index);
-        assert_eq!(position, (1, 0));
-    }
-
-    #[test]
-    fn second_line() {
-        let input = b"Hello\nWorld\n";
-        let index = 8;
-        let position = translate_position(&input[..], index);
-        assert_eq!(position, (1, 2));
-    }
-}
+mod test_translate_position;

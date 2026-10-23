@@ -170,7 +170,4 @@ fn offset_to(total: &[u8], subslice: &[u8]) -> usize {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/retained/test/foundation/terminal-style/anstream/unit/src/strip/test_172.rs"
-));
+include!("../../../../../../test/foundation/cli/terminal-style/unit/src/output/strip/4367.rs");

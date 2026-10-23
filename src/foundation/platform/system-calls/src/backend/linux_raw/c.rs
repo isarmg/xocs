@@ -23,19 +23,13 @@ pub(crate) use linux_raw_sys::general::{
 #[cfg(feature = "system")]
 pub(crate) use linux_raw_sys::system::sysinfo;
 
-#[cfg(feature = "fs")]
-#[cfg(target_arch = "x86")]
 #[cfg(test)]
-pub(crate) use linux_raw_sys::general::stat64;
-#[cfg(feature = "fs")]
+include!("../../../../../../../test/foundation/platform/system-calls/unit/src/backend/linux_raw/c/1122.rs");
 #[cfg(test)]
-pub(crate) use linux_raw_sys::general::{
-    __kernel_fsid_t as fsid_t, stat, statfs64, statx, statx_timestamp,
-};
+include!("../../../../../../../test/foundation/platform/system-calls/unit/src/backend/linux_raw/c/1233.rs");
 
-#[cfg(feature = "event")]
 #[cfg(test)]
-pub(crate) use linux_raw_sys::general::epoll_event;
+include!("../../../../../../../test/foundation/platform/system-calls/unit/src/backend/linux_raw/c/1385.rs");
 
 #[cfg(feature = "mm")]
 mod mm {

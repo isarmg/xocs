@@ -1,0 +1,7 @@
+
+    use super::*;
+
+    #[test]
+    fn assert_unpin() {
+        crate::is_unpin::<BufReader<()>>();
+    }

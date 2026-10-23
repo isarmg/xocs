@@ -2,4 +2,4 @@ pub(crate) mod request;
 pub(crate) mod request_parts;
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-routing/kernel/unit/src/ext_traits/mod/tests_4.rs"));
+include!("../../../../../../../test/foundation/network/request-router/unit/src/kernel/ext_traits/mod/55.rs");

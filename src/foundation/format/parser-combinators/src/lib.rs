@@ -133,7 +133,7 @@ pub mod prelude {
     pub use crate::RecoverableParser as _;
 
     #[cfg(test)]
-    pub(crate) use crate::TestResult;
+include!("../../../../../test/foundation/format/parser-combinators/unit/src/lib/prelude/3815.rs");
 }
 
 pub use error::ModalResult;
@@ -147,4 +147,4 @@ pub use stream::Stateful;
 pub use stream::Str;
 
 #[cfg(test)]
-pub(crate) use error::TestResult;
+include!("../../../../../test/foundation/format/parser-combinators/unit/src/lib/4088.rs");

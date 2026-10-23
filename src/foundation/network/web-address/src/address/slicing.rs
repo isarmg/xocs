@@ -50,7 +50,7 @@ fn count_digits(n: u16) -> usize {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/url-encoding/address/functions/src/slicing/test_count_digits_52.rs"));
+include!("../../../../../../test/foundation/network/web-address/unit/src/address/slicing/1398.rs");
 
 /// Indicates a position within a URL based on its components.
 ///

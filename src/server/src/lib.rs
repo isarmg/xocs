@@ -26,11 +26,11 @@ pub async fn run(root: &std::path::Path) -> anyhow::Result<()> {
 }
 
 #[cfg(test)]
+#[path = "../../../test/server/unit/tests.rs"]
 mod tests;
 
 #[cfg(any(test, feature = "maintenance"))]
-#[path = "../tests/support/administrator.rs"]
-mod test_support;
+mod administrator;
 
 #[cfg(feature = "maintenance")]
 pub mod maintenance;

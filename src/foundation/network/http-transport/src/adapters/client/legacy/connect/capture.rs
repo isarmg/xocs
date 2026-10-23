@@ -120,4 +120,4 @@ impl CaptureConnection {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-transport/adapters/unit/src/client/legacy/connect/capture/test_122.rs"));
+include!("../../../../../../../../../test/foundation/network/http-transport/unit/src/adapters/client/legacy/connect/capture/4315.rs");

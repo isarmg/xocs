@@ -519,6 +519,7 @@ cfg_not_sync! {
     pub(crate) mod watch;
 }
 
+#[path = "../../../../../../test/foundation/runtime/task-scheduler/unit/src/sync/tests/mod.rs"]
 /// Unit tests
 #[cfg(test)]
 mod tests;

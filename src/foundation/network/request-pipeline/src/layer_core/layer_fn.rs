@@ -94,4 +94,4 @@ impl<F> fmt::Debug for LayerFn<F> {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/service-stack/layer_core/unit/src/layer_fn/tests_96.rs"));
+include!("../../../../../../test/foundation/network/request-pipeline/unit/src/layer_core/layer_fn/2752.rs");

@@ -68,17 +68,6 @@ pub fn base54(n: u32) -> InlineString<7, u8> {
     str
 }
 
+#[path = "../../../../../../../test/foundation/assets/compiler/unit/parts/name_compaction/src/base54/test.rs"]
 #[cfg(test)]
-mod test {
-    use super::base54;
-
-    #[test]
-    fn test_base54() {
-        assert_eq!(&*base54(0), "e");
-        assert_eq!(&*base54(52), "Q");
-        assert_eq!(&*base54(53), "$");
-        assert_eq!(&*base54(54), "ee");
-        assert_eq!(&*base54(55), "te");
-        assert_eq!(&*base54(u32::MAX), "xKrTKr");
-    }
-}
+mod test;

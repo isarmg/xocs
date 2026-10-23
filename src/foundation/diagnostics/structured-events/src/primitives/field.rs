@@ -1065,9 +1065,3 @@ mod private {
 
     impl<'a, const N: usize> ValidLen<'a> for [(&'a Field, Option<&'a (dyn Value + 'a)>); N] {}
 }
-
-#[cfg(test)]
-include!(core::concat!(
-    core::env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/tracing-family/primitives/unit/src/field/test_1135.rs"
-));

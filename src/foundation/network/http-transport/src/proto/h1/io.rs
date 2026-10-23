@@ -650,7 +650,4 @@ enum WriteStrategy {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/http-transport/unit/src/proto/h1/io/tests_654.rs"
-));
+include!("../../../../../../../test/foundation/network/http-transport/unit/src/proto/h1/io/21085.rs");

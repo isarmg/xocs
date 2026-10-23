@@ -3073,4 +3073,4 @@ fn lift_common_prefix(hirs: Vec<Hir>) -> Result<Hir, Vec<Hir>> {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/syntax/unit/src/hir/mod/tests_3075.rs"));
+include!("../../../../../../../test/foundation/text/pattern-search/unit/src/syntax/hir/mod/119732.rs");

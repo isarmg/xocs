@@ -354,18 +354,7 @@ impl TryFrom<usize> for SmallIndex {
 }
 
 #[cfg(test)]
-impl quickcheck::Arbitrary for SmallIndex {
-    fn arbitrary(gen: &mut quickcheck::Gen) -> SmallIndex {
-        use core::cmp::max;
-
-        let id = max(i32::MIN + 1, i32::arbitrary(gen)).abs();
-        if id > SmallIndex::MAX.as_i32() {
-            SmallIndex::MAX
-        } else {
-            SmallIndex::new(usize::try_from(id).unwrap()).unwrap()
-        }
-    }
-}
+include!("../../../../../../../test/foundation/text/pattern-search/unit/src/automata/util/primitives/13212.rs");
 
 /// This error occurs when a small index could not be constructed.
 ///

@@ -1696,4 +1696,4 @@ mod is_word_char {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/automata/unit/src/util/look/tests_1698.rs"));
+include!("../../../../../../../test/foundation/text/pattern-search/unit/src/automata/util/look/65012.rs");

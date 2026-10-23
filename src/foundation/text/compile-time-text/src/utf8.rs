@@ -76,22 +76,8 @@ impl CharEncodeUtf8 {
     }
 }
 
-#[test]
-fn test_char_encode_utf8() {
-    macro_rules! test_char_encode_utf8 {
-        ($ch: expr) => {{
-            let e = CharEncodeUtf8::new($ch);
-            let output = e.as_str();
-            let mut ans = [0; 4];
-            let ans = $ch.encode_utf8(&mut ans);
-            assert_eq!(output, ans);
-        }};
-    }
-
-    test_char_encode_utf8!('\0');
-    test_char_encode_utf8!('我');
-    test_char_encode_utf8!('\u{10ffff}');
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/text/compile-time-text/unit/src/utf8/2137.rs");
 
 pub struct CharEscapeUnicode {
     buf: [u8; 10],
@@ -141,21 +127,8 @@ impl CharEscapeUnicode {
     }
 }
 
-#[test]
-fn test_char_escape_unicode() {
-    macro_rules! test_char_escape_unicode {
-        ($ch: expr) => {{
-            let e = CharEscapeUnicode::new($ch);
-            let output = e.as_str();
-            let ans = $ch.escape_unicode().to_string();
-            assert_eq!(output, ans);
-        }};
-    }
-
-    test_char_escape_unicode!('\0');
-    test_char_escape_unicode!('我');
-    test_char_escape_unicode!('\u{10ffff}');
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/text/compile-time-text/unit/src/utf8/3617.rs");
 
 pub struct CharEscapeDebug {
     buf: [u8; 10],
@@ -234,26 +207,8 @@ impl CharEscapeDebug {
     }
 }
 
-#[test]
-fn test_char_escape_debug() {
-    macro_rules! test_char_escape_debug {
-        ($ch: expr) => {{
-            let e = CharEscapeDebug::new($ch);
-            let output = e.as_str();
-            let ans = $ch.escape_debug().to_string();
-            assert_eq!(output, ans);
-        }};
-    }
-
-    // ignore '\0' because the std behavior has been changed
-    // fixed since v0.4
-    for ch in '\u{1}'..='\u{7f}' {
-        test_char_escape_debug!(ch);
-    }
-
-    // test_char_escape_debug!('我');
-    test_char_escape_debug!('\u{10ffff}');
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/text/compile-time-text/unit/src/utf8/6352.rs");
 
 /// Copied from [core::str::validations](https://github.com/rust-lang/rust/blob/e7958d35ca2c898a223efe402481e0ecb854310a/library/core/src/str/validations.rs#L7-L68)
 #[allow(clippy::many_single_char_names)]
@@ -336,12 +291,5 @@ pub const fn str_chars<const N: usize>(s: &str) -> [u32; N] {
     buf
 }
 
-#[test]
-fn test_str_chars() {
-    const X: &str = "唐可可";
-    const OUTPUT_LEN: usize = str_count_chars(X);
-    const OUTPUT_BUF: [char; OUTPUT_LEN] =
-        unsafe { core::mem::transmute(str_chars::<OUTPUT_LEN>(X)) };
-    let ans = X.chars().collect::<Vec<_>>();
-    assert_eq!(OUTPUT_BUF, ans.as_slice());
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/text/compile-time-text/unit/src/utf8/8985.rs");

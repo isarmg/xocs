@@ -23,9 +23,11 @@ pub mod general_purpose;
 ))]
 pub mod simd;
 
+#[path = "../../../../../../test/foundation/encoding/application-base-encoding/unit/src/engine/naive.rs"]
 #[cfg(test)]
 mod naive;
 
+#[path = "../../../../../../test/foundation/encoding/application-base-encoding/unit/src/engine/tests.rs"]
 #[cfg(test)]
 mod tests;
 

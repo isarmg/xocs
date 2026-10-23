@@ -79,5 +79,5 @@ check-cfg = ["cfg(docsrs_regex)"]
 
 [[test]]
 name = "retained-regressions"
-path = "retained/test/regex-family/retained_regressions.rs"
+path = "../../../../test/foundation/text/pattern-search/integration/retained/test/regex-family/retained_regressions.rs"
 required-features = ["matcher", "std", "unicode"]

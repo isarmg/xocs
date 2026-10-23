@@ -452,5 +452,6 @@ fn with_temp_stack(
         .drop();
 }
 
+#[path = "../../../../../../../test/foundation/wasm/browser-module/unit/src/transforms/threads/tests/mod.rs"]
 #[cfg(test)]
 mod tests;

@@ -51,7 +51,7 @@ impl DefaultMakeSpan {
     ///
     /// Defaults to [`Level::DEBUG`].
     ///
-    /// [tracing span]: https://docs.rs/tracing/latest/tracing/#spans
+    /// [tracing span]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/#spans
     pub fn level(mut self, level: Level) -> Self {
         self.level = level;
         self

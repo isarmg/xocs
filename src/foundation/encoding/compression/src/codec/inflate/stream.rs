@@ -379,4 +379,4 @@ fn push_dict_out(state: &mut InflateState, next_out: &mut &mut [u8]) -> usize {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/compression/codec/unit/src/inflate/stream/all_test_381.rs"));
+include!("../../../../../../../test/foundation/encoding/compression/unit/src/codec/inflate/stream/12581.rs");

@@ -256,4 +256,4 @@ impl<W: BufRead + Write> Write for DeflateDecoder<W> {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/compression/streams/unit/src/deflate/bufread/test_258.rs"));
+include!("../../../../../../../test/foundation/encoding/compression/unit/src/streams/deflate/bufread/8192.rs");

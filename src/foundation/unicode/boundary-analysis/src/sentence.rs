@@ -445,16 +445,8 @@ impl SentenceSegmenterBorrowed<'static> {
     }
 }
 
-#[test]
-fn empty_string() {
-    let segmenter = SentenceSegmenter::new(Default::default());
-    let breaks: Vec<usize> = segmenter.segment_str("").collect();
-    assert_eq!(breaks, [0]);
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/unicode/boundary-analysis/unit/src/sentence/16322.rs");
 
-#[test]
-fn empty_string_neo() {
-    let segmenter = SentenceSegmenter::new_neo(Default::default());
-    let breaks: Vec<usize> = segmenter.segment_str("").collect();
-    assert_eq!(breaks, [0]);
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/unicode/boundary-analysis/unit/src/sentence/16512.rs");

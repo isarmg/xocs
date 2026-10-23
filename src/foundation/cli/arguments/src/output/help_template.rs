@@ -1094,6 +1094,3 @@ fn should_show_arg(use_long: bool, arg: &Arg) -> bool {
 fn should_show_subcommand(subcommand: &Command) -> bool {
     !subcommand.is_hide_set()
 }
-
-#[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../test/foundation/command-line/builder/unit/src/output/help_template/test_1154.rs"));

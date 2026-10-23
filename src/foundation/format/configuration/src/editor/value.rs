@@ -373,13 +373,7 @@ pub(crate) const DEFAULT_TRAILING_VALUE_DECOR: (&str, &str) = (" ", " ");
 pub(crate) const DEFAULT_LEADING_VALUE_DECOR: (&str, &str) = ("", "");
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/retained/test/foundation/toml/editor/unit/src/value/tests_373.rs"
-));
+include!("../../../../../../test/foundation/format/configuration/unit/src/editor/value/10057.rs");
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/retained/test/foundation/toml/editor/functions/src/value/string_roundtrip_376.rs"
-));
+include!("../../../../../../test/foundation/format/configuration/unit/src/editor/value/10197.rs");

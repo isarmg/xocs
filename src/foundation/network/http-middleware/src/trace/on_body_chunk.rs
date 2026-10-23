@@ -16,8 +16,8 @@ pub trait OnBodyChunk<B> {
     /// passed to [`TraceLayer::make_span_with`]. It can be used to [record field values][record]
     /// that weren't known when the span was created.
     ///
-    /// [`Span`]: https://docs.rs/tracing/latest/tracing/span/index.html
-    /// [record]: https://docs.rs/tracing/latest/tracing/span/struct.Span.html#method.record
+    /// [`Span`]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/span/index.html
+    /// [record]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/span/struct.Span.html#method.record
     ///
     /// If you're using [hyper] as your server `B` will most likely be [`Bytes`].
     ///

@@ -104,8 +104,5 @@ impl JSONReportHandler {
     }
 }
 
-#[test]
-fn test_escape() {
-    assert_eq!(escape("a\nb").to_string(), r"a\nb");
-    assert_eq!(escape("C:\\Oxc").to_string(), r"C:\\Oxc");
-}
+#[cfg(test)]
+include!("../../../../../../../../test/foundation/assets/compiler/unit/parts/compiler_errors/src/handlers/json/3604.rs");

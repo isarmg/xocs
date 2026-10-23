@@ -1,5 +1,5 @@
 [package]
-build = "../../../../tools/assets/src/platform_contract.rs"
+build = "../../../../src/tools/assets/src/platform_contract.rs"
 name = "blog-assets-compiler"
 edition = "2024"
 rust-version = "1.99"
@@ -197,8 +197,8 @@ features = ["std"]
 
 [[test]]
 name = "native-calendar"
-path = "tests/native_calendar.rs"
+path = "../../../../test/foundation/assets/compiler/integration/native_calendar.rs"
 
 [[test]]
 name = "compiler-safety"
-path = "tests/compiler_safety.rs"
+path = "../../../../test/foundation/assets/compiler/integration/compiler_safety.rs"

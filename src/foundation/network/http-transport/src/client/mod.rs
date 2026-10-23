@@ -12,7 +12,7 @@
 //! [`client_json`]: https://github.com/hyperium/hyper/blob/master/examples/client_json.rs
 
 #[cfg(test)]
-#[path = "../../../../../../test/foundation/http-transport/modules/src/client/tests.rs"]
+#[path = "../../../../../../test/foundation/network/http-transport/legacy/modules/src/client/tests.rs"]
 mod tests;
 
 cfg_feature! {

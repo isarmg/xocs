@@ -217,42 +217,8 @@ fn plain_modpow(base: &BigUint, exp_data: &[BigDigit], modulus: &BigUint) -> Big
     acc
 }
 
-#[test]
-fn test_plain_modpow() {
-    let two = &BigUint::from(2u32);
-    let modulus = BigUint::from(0x1100u32);
+#[cfg(test)]
+include!("../../../../../../test/foundation/math/large-integer/unit/src/biguint/power/5220.rs");
 
-    let exp = vec![0, 0b1];
-    assert_eq!(
-        two.pow(0b1_00000000_u32) % &modulus,
-        plain_modpow(two, &exp, &modulus)
-    );
-    let exp = vec![0, 0b10];
-    assert_eq!(
-        two.pow(0b10_00000000_u32) % &modulus,
-        plain_modpow(two, &exp, &modulus)
-    );
-    let exp = vec![0, 0b110010];
-    assert_eq!(
-        two.pow(0b110010_00000000_u32) % &modulus,
-        plain_modpow(two, &exp, &modulus)
-    );
-    let exp = vec![0b1, 0b1];
-    assert_eq!(
-        two.pow(0b1_00000001_u32) % &modulus,
-        plain_modpow(two, &exp, &modulus)
-    );
-    let exp = vec![0b1100, 0, 0b1];
-    assert_eq!(
-        two.pow(0b1_00000000_00001100_u32) % &modulus,
-        plain_modpow(two, &exp, &modulus)
-    );
-}
-
-#[test]
-fn test_pow_biguint() {
-    let base = BigUint::from(5u8);
-    let exponent = BigUint::from(3u8);
-
-    assert_eq!(BigUint::from(125u8), base.pow(exponent));
-}
+#[cfg(test)]
+include!("../../../../../../test/foundation/math/large-integer/unit/src/biguint/power/6063.rs");

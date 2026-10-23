@@ -147,4 +147,4 @@ pub(crate) mod proj {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-body/utilities/unit/src/either/tests_149.rs"));
+include!("../../../../../../test/foundation/network/body-stream/unit/src/utilities/either/4232.rs");

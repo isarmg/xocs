@@ -1,5 +1,6 @@
 //! Parsers extracting tokens from the stream
 
+#[path = "../../../../../../test/foundation/format/parser-combinators/unit/src/token/tests.rs"]
 #[cfg(test)]
 mod tests;
 

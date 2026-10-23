@@ -533,6 +533,3 @@ impl From<&'_ Self> for ArgGroup {
         g.clone()
     }
 }
-
-#[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../test/foundation/command-line/builder/unit/src/builder/arg_group/test_537.rs"));

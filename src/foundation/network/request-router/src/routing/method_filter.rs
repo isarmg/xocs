@@ -92,7 +92,4 @@ impl TryFrom<Method> for MethodFilter {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/http-routing/unit/src/routing/method_filter/tests_107.rs"
-));
+include!("../../../../../../test/foundation/network/request-router/unit/src/routing/method_filter/2965.rs");

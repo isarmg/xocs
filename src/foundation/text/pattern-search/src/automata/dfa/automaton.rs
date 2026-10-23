@@ -2239,4 +2239,4 @@ pub(crate) fn fmt_state_indicator<A: Automaton>(
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/automata/unit/src/dfa/automaton/all_tests_2241.rs"));
+include!("../../../../../../../test/foundation/text/pattern-search/unit/src/automata/dfa/automaton/96621.rs");

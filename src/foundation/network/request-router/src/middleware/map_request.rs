@@ -386,4 +386,4 @@ impl<B> IntoMapRequestResult<B> for Request<B> {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-routing/unit/src/middleware/map_request/tests_388.rs"));
+include!("../../../../../../test/foundation/network/request-router/unit/src/middleware/map_request/10816.rs");

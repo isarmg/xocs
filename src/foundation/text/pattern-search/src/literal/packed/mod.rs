@@ -115,6 +115,7 @@ mod ext;
 mod pattern;
 mod rabinkarp;
 mod teddy;
+#[path = "../../../../../../../test/foundation/text/pattern-search/unit/src/literal/packed/mod/tests.rs"]
 #[cfg(all(feature = "std", test))]
-mod tests { include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/literal/modules/src/packed/tests.rs")); }
+mod tests;
 mod vector;

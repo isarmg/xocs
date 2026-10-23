@@ -80,4 +80,4 @@ where
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-body/utilities/unit/src/combinators/fuse/tests_82.rs"));
+include!("../../../../../../../test/foundation/network/body-stream/unit/src/utilities/combinators/fuse/2093.rs");

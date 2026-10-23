@@ -94,4 +94,4 @@ impl IntoResponse for Redirect {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-routing/unit/src/response/redirect/tests_96.rs"));
+include!("../../../../../../test/foundation/network/request-router/unit/src/response/redirect/3248.rs");

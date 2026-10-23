@@ -453,4 +453,4 @@ fn max_scalar_value(nbytes: usize) -> u32 {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/syntax/unit/src/utf8/tests_455.rs"));
+include!("../../../../../../test/foundation/text/pattern-search/unit/src/syntax/utf8/14863.rs");

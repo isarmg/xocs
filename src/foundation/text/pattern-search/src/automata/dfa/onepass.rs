@@ -3095,4 +3095,4 @@ impl core::fmt::Display for BuildError {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/automata/unit/src/dfa/onepass/all_tests_3097.rs"));
+include!("../../../../../../../test/foundation/text/pattern-search/unit/src/automata/dfa/onepass/130998.rs");

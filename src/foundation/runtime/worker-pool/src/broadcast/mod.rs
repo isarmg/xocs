@@ -5,6 +5,8 @@ use std::fmt;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
+#[cfg(test)]
+#[path = "../../../../../../test/foundation/runtime/worker-pool/unit/src/broadcast/test.rs"]
 mod test;
 
 /// Executes `op` within every thread in the current thread pool. If this is

@@ -83,6 +83,7 @@ mod encoding;
 mod errors;
 mod line_ending;
 
+#[path = "../../../../../test/foundation/encoding/constant-time-base-encoding/unit/src/test_vectors.rs"]
 #[cfg(test)]
 mod test_vectors;
 

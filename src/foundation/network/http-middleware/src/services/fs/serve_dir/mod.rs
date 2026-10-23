@@ -22,6 +22,7 @@ pub(crate) mod future;
 mod headers;
 mod open_file;
 
+#[path = "../../../../../../../../test/foundation/network/http-middleware/unit/src/services/fs/serve_dir/tests.rs"]
 #[cfg(test)]
 mod tests;
 

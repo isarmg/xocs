@@ -11,7 +11,7 @@ CSS 资料与实现相邻：
 - [编译接口](../../src/foundation/assets/style-compiler/parts/style_optimizer/website/pages/transforms.md)、[语法转换](../../src/foundation/assets/style-compiler/parts/style_optimizer/website/pages/transpilation.md)、[压缩](../../src/foundation/assets/style-compiler/parts/style_optimizer/website/pages/minification.md)。
 - [模块](../../src/foundation/assets/style-compiler/parts/style_optimizer/website/pages/css-modules.md)、[打包](../../src/foundation/assets/style-compiler/parts/style_optimizer/website/pages/bundling.md)。
 
-这些组件资料中的 Node 调用示例属于原始接口背景。本项目的生产入口使用 Rust `blog-assets`，命令、配置、输出目录和资源收据见[构建工具](../../tools/assets/README.md)。构建输入使用内容摘要，每次构建建立新快照；进程内复用解析结果仍必须对应同一源码快照。
+这些组件资料中的 Node 调用示例属于原始接口背景。本项目的生产入口使用 Rust `blog-assets`，命令、配置、输出目录和资源收据见[构建工具](../../src/tools/assets/README.md)。构建输入使用内容摘要，每次构建建立新快照；进程内复用解析结果仍必须对应同一源码快照。
 
 ## Markdown
 

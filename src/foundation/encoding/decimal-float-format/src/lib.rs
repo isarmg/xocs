@@ -72,6 +72,7 @@
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2", not(miri)))]
 mod stdarch_x86;
+#[path = "../../../../../test/foundation/encoding/decimal-float-format/unit/src/tests.rs"]
 #[cfg(test)]
 mod tests;
 mod traits;

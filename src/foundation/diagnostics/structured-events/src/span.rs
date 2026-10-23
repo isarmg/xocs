@@ -1602,9 +1602,3 @@ const PhantomNotSend: PhantomNotSend = PhantomNotSend { ghost: PhantomData };
 ///
 /// Trivially safe, as `PhantomNotSend` doesn't have any API.
 unsafe impl Sync for PhantomNotSend {}
-
-#[cfg(test)]
-include!(core::concat!(
-    core::env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/tracing-family/facade/unit/src/span/test_1606.rs"
-));

@@ -321,4 +321,4 @@ impl<R: Read + Write> Write for MultiGzDecoder<R> {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/compression/streams/unit/src/gz/read/tests_323.rs"));
+include!("../../../../../../../test/foundation/encoding/compression/unit/src/streams/gz/read/10610.rs");

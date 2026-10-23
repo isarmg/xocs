@@ -296,4 +296,4 @@ impl<'g, T: 'g, C: IsElement<T>> Iterator for Iter<'g, T, C> {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/concurrent-collections/epoch/unit/src/sync/list/all_tests_298.rs"));
+include!("../../../../../../../test/foundation/sync/concurrent-collections/unit/src/epoch/sync/list/10260.rs");

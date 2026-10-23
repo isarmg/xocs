@@ -169,6 +169,5 @@ fn strip_repetition_literal_suffix(
 
 // We only test when we have `unicode-perl` here since some regexes require
 // that.
-#[cfg(all(feature = "unicode-perl", not(miri),))]
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/automata/unit/src/meta/reverse_suffix/tests_173.rs"));
+include!("../../../../../../../test/foundation/text/pattern-search/unit/src/automata/meta/reverse_suffix/5413.rs");

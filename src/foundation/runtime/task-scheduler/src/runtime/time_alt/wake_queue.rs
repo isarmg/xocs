@@ -44,5 +44,6 @@ impl WakeQueue {
     }
 }
 
+#[path = "../../../../../../../test/foundation/runtime/task-scheduler/unit/src/runtime/time_alt/wake_queue/tests.rs"]
 #[cfg(test)]
 mod tests;

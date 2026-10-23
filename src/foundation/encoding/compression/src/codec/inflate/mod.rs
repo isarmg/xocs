@@ -326,4 +326,4 @@ pub fn decompress_slice_iter_to_slice<'out, 'inp>(
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/compression/codec/unit/src/inflate/mod/all_test_331.rs"));
+include!("../../../../../../../test/foundation/encoding/compression/unit/src/codec/inflate/mod/13982.rs");

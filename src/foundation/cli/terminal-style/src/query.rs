@@ -82,7 +82,4 @@ fn non_empty(var: Option<&std::ffi::OsStr>) -> bool {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/retained/test/foundation/terminal-style/anstyle-query/unit/src/lib/test_141.rs"
-));
+include!("../../../../../test/foundation/cli/terminal-style/unit/src/query/2598.rs");

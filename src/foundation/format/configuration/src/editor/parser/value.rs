@@ -118,7 +118,4 @@ fn apply_raw(mut val: Value, span: std::ops::Range<usize>) -> Value {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/retained/test/foundation/toml/editor/unit/src/parser/value/test_120.rs"
-));
+include!("../../../../../../../test/foundation/format/configuration/unit/src/editor/parser/value/4957.rs");

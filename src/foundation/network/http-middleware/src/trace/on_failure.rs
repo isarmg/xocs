@@ -18,8 +18,8 @@ pub trait OnFailure<FailureClass> {
     /// passed to [`TraceLayer::make_span_with`]. It can be used to [record field values][record]
     /// that weren't known when the span was created.
     ///
-    /// [`Span`]: https://docs.rs/tracing/latest/tracing/span/index.html
-    /// [record]: https://docs.rs/tracing/latest/tracing/span/struct.Span.html#method.record
+    /// [`Span`]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/span/index.html
+    /// [record]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/span/struct.Span.html#method.record
     /// [`TraceLayer::make_span_with`]: crate::trace::TraceLayer::make_span_with
     fn on_failure(&mut self, failure_classification: FailureClass, latency: Duration, span: &Span);
 }
@@ -66,7 +66,7 @@ impl DefaultOnFailure {
     ///
     /// Defaults to [`Level::ERROR`].
     ///
-    /// [tracing events]: https://docs.rs/tracing/latest/tracing/#events
+    /// [tracing events]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/#events
     pub fn level(mut self, level: Level) -> Self {
         self.level = level;
         self

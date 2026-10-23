@@ -635,4 +635,4 @@ where
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-routing/unit/src/response/sse/tests_637.rs"));
+include!("../../../../../../test/foundation/network/request-router/unit/src/response/sse/18227.rs");

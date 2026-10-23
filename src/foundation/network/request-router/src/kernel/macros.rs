@@ -316,4 +316,4 @@ macro_rules! __impl_deref {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-routing/kernel/unit/src/macros/composite_rejection_tests_318.rs"));
+include!("../../../../../../test/foundation/network/request-router/unit/src/kernel/macros/9113.rs");

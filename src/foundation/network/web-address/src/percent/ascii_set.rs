@@ -170,4 +170,4 @@ pub const NON_ALPHANUMERIC: &AsciiSet = &CONTROLS
     .add(b'~');
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/url-encoding/percent/unit/src/ascii_set/tests_172.rs"));
+include!("../../../../../../test/foundation/network/web-address/unit/src/percent/ascii_set/4463.rs");

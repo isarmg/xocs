@@ -212,4 +212,4 @@ impl<W: Write> Write for CrcWriter<W> {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/compression/streams/unit/src/crc/tests_214.rs"));
+include!("../../../../../../test/foundation/encoding/compression/unit/src/streams/crc/4889.rs");

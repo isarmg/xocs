@@ -254,4 +254,4 @@ pub mod future {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-routing/functions/src/error_handling/mod/traits_256.rs"));
+include!("../../../../../../test/foundation/network/request-router/unit/src/error_handling/mod/7186.rs");

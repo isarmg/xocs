@@ -233,4 +233,4 @@ impl Future for InfallibleRouteFuture {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-routing/unit/src/routing/route/tests_235.rs"));
+include!("../../../../../../test/foundation/network/request-router/unit/src/routing/route/6895.rs");

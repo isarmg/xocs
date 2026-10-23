@@ -272,111 +272,11 @@ fn is_identifier_name_impl<const PATCHED: bool>(name: &str) -> bool {
     }
 }
 
-#[test]
-fn is_identifier_name_true() {
-    let cases = [
-        // 1 char ASCII
-        "a",
-        "z",
-        "A",
-        "Z",
-        "_",
-        "$",
-        // 1 char Unicode
-        "µ", // 2 bytes
-        "ख", // 3 bytes
-        "𐀀", // 4 bytes
-        // Multiple chars ASCII
-        "az",
-        "AZ",
-        "_a",
-        "$Z",
-        "a0",
-        "A9",
-        "_0",
-        "$9",
-        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$",
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_$",
-        "_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$",
-        "$abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_",
-        // Multiple chars Unicode
-        "µख𐀀",
-        // ASCII + Unicode, starting with ASCII
-        "AµBखC𐀀D",
-        // ASCII + Unicode, starting with Unicode
-        "µAखB𐀀",
-    ];
+#[cfg(test)]
+include!("../../../../../../../test/foundation/assets/compiler/unit/parts/syntax_types/src/identifier/9617.rs");
 
-    for str in cases {
-        assert!(is_identifier_name(str));
-    }
-}
+#[cfg(test)]
+include!("../../../../../../../test/foundation/assets/compiler/unit/parts/syntax_types/src/identifier/10611.rs");
 
-#[test]
-fn is_identifier_name_false() {
-    let cases = [
-        // Empty string
-        "",
-        // 1 char ASCII
-        "0",
-        "9",
-        "-",
-        "~",
-        "+",
-        // 1 char Unicode
-        "£", // 2 bytes
-        "৸", // 3 bytes
-        "𐄬", // 4 bytes
-        // Multiple chars ASCII
-        "0a",
-        "9a",
-        "-a",
-        "+a",
-        "a-Z",
-        "A+z",
-        "a-",
-        "a+",
-        // Multiple chars Unicode
-        "£৸𐄬",
-        // ASCII + Unicode, starting with ASCII
-        "A£",
-        "A৸",
-        "A𐄬",
-        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$abc£",
-        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$abc৸",
-        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$abc𐄬",
-        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$abc£abcdefghijklmnopqrstuvwxyz",
-        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$abc৸abcdefghijklmnopqrstuvwxyz",
-        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$abc𐄬abcdefghijklmnopqrstuvwxyz",
-        // ASCII + Unicode, starting with Unicode
-        "£A",
-        "৸A",
-        "𐄬A",
-    ];
-
-    for str in cases {
-        assert!(!is_identifier_name(str));
-    }
-}
-
-#[test]
-fn is_identifier_name_patched_rejects_katakana_dots() {
-    // Katakana middle dots are valid identifier parts per Unicode 15+,
-    // but we reject them in the patched version for compat with Unicode 4.1-15.
-    // U+30FB KATAKANA MIDDLE DOT
-    assert!(is_identifier_name("x\u{30FB}"));
-    assert!(!is_identifier_name_patched("x\u{30FB}"));
-    // U+FF65 HALFWIDTH KATAKANA MIDDLE DOT
-    assert!(is_identifier_name("x\u{FF65}"));
-    assert!(!is_identifier_name_patched("x\u{FF65}"));
-    // As start character (neither is a valid start, so both should reject)
-    assert!(!is_identifier_name("\u{30FB}"));
-    assert!(!is_identifier_name_patched("\u{30FB}"));
-    // Normal identifiers still work
-    assert!(is_identifier_name_patched("foo"));
-    assert!(is_identifier_name_patched("_bar"));
-    assert!(is_identifier_name_patched("$baz"));
-    assert!(is_identifier_name_patched("µ"));
-    // Empty string rejected
-    assert!(!is_identifier_name_patched(""));
-}
+#[cfg(test)]
+include!("../../../../../../../test/foundation/assets/compiler/unit/parts/syntax_types/src/identifier/11946.rs");

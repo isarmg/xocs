@@ -14,31 +14,31 @@ fn unselect<T, E, A, B>(r: Result<Either<(T, B), (T, A)>, Either<(E, B), (E, A)>
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/all/result_smoke_16.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/all/455.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/all/test_empty_65.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/all/604.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/all/test_ok_85.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/all/751.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/all/flatten_91.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/all/895.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/all/smoke_oneshot_108.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/all/1039.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/all/select_cancels_144.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/all/1190.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/all/join_cancels_190.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/all/1342.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/all/join_incomplete_236.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/all/1492.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/all/select2_277.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/all/1645.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/all/option_396.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/all/1790.rs");

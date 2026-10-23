@@ -797,4 +797,4 @@ fn write_u32(dst: &mut Vec<u8>, n: u32) {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/automata/unit/src/util/determinize/state/tests_799.rs"));
+include!("../../../../../../../../test/foundation/text/pattern-search/unit/src/automata/util/determinize/state/31683.rs");

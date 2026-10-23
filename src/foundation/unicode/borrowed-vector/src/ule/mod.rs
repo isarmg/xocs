@@ -20,6 +20,7 @@ mod niche;
 mod option;
 mod plain;
 mod slices;
+#[path = "../../../../../../test/foundation/unicode/borrowed-vector/unit/src/ule/test_utils.rs"]
 #[cfg(test)]
 pub mod test_utils;
 

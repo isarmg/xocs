@@ -1894,6 +1894,3 @@ fn unwrap_downcast_ref<T: Any + Clone + Send + Sync + 'static>(value: &AnyValue)
 fn unwrap_downcast_into<T: Any + Clone + Send + Sync + 'static>(value: AnyValue) -> T {
     value.downcast_into().expect(INTERNAL_ERROR_MSG)
 }
-
-#[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../test/foundation/command-line/builder/unit/src/parser/matches/arg_matches/tests_1898.rs"));

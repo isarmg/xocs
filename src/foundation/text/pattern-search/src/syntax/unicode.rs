@@ -945,4 +945,4 @@ fn symbolic_name_normalize_bytes(slice: &mut [u8]) -> &mut [u8] {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/syntax/unit/src/unicode/tests_947.rs"));
+include!("../../../../../../test/foundation/text/pattern-search/unit/src/syntax/unicode/34035.rs");

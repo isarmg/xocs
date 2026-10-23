@@ -76,5 +76,6 @@ pub use crate::read::*;
 #[cfg(feature = "write")]
 pub mod write;
 
+#[path = "../../../../../test/foundation/wasm/debug-information/unit/src/test_util.rs"]
 #[cfg(test)]
 mod test_util;

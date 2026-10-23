@@ -66,7 +66,4 @@ fn array_value(input: &mut Input<'_>) -> ModalResult<Item> {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/retained/test/foundation/toml/editor/unit/src/parser/array/test_68.rs"
-));
+include!("../../../../../../../test/foundation/format/configuration/unit/src/editor/parser/array/2320.rs");

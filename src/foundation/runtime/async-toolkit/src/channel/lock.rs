@@ -88,7 +88,4 @@ impl<T> Drop for TryLock<'_, T> {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/futures/channel/unit/src/lock/tests_87.rs"
-));
+include!("../../../../../../test/foundation/runtime/async-toolkit/unit/src/channel/lock/2825.rs");

@@ -209,6 +209,7 @@ pub use crate::memchr::{
 #[macro_use]
 mod macros;
 
+#[path = "../../../../../test/foundation/encoding/byte-search/unit/src/tests/mod.rs"]
 #[cfg(test)]
 #[macro_use]
 mod tests;

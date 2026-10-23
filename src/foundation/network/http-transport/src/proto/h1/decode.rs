@@ -692,7 +692,4 @@ impl fmt::Display for IncompleteBody {
 impl StdError for IncompleteBody {}
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/http-transport/unit/src/proto/h1/decode/tests_694.rs"
-));
+include!("../../../../../../../test/foundation/network/http-transport/unit/src/proto/h1/decode/23114.rs");

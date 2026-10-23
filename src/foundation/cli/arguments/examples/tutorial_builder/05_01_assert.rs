@@ -18,6 +18,3 @@ fn cmd() -> blog_cli_arguments::Command {
                 .value_parser(value_parser!(usize)),
         )
 }
-
-#[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../test/foundation/command-line/functions/examples/tutorial_builder/05_01_assert/verify_cmd_22.rs"));

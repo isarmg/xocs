@@ -111,6 +111,3 @@ fn main() {
         _ => unreachable!(), // If all subcommands are defined above, anything else is unreachable
     }
 }
-
-#[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../test/foundation/command-line/unit/examples/pacman/all_tests_115.rs"));

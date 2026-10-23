@@ -105,6 +105,3 @@ impl<'a, A: ?Sized + 'static> From<&'a A> for AnyValueId {
         Self::of::<A>()
     }
 }
-
-#[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../test/foundation/command-line/builder/unit/src/util/any_value/test_109.rs"));

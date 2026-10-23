@@ -103,33 +103,11 @@ pub use trivia::{
 //  I have concluded that the first options is more performant and more ergonomic to use.
 //  The following test make sure all enum variants are boxed, resulting 16 bytes for each enum.
 //  Read `https://nnethercote.github.io/perf-book/type-sizes.html` for more details.
-#[cfg(target_pointer_width = "64")]
-#[test]
-fn size_asserts() {
-    use crate::syntax_tree::ast;
+#[cfg(test)]
+include!("../../../../../../../test/foundation/assets/compiler/unit/parts/syntax_tree/src/lib/3563.rs");
 
-    assert_eq!(size_of::<ast::Statement>(), 16);
-    assert_eq!(size_of::<ast::Expression>(), 16);
-    assert_eq!(size_of::<ast::Declaration>(), 16);
-    assert_eq!(size_of::<ast::BindingPattern>(), 16);
-    assert_eq!(size_of::<ast::ModuleDeclaration>(), 16);
-    assert_eq!(size_of::<ast::ClassElement>(), 16);
-    assert_eq!(size_of::<ast::ExportDefaultDeclarationKind>(), 16);
-    assert_eq!(size_of::<ast::AssignmentTargetPattern>(), 16);
-    assert_eq!(size_of::<ast::AssignmentTargetMaybeDefault>(), 16);
-    assert_eq!(size_of::<ast::AssignmentTargetProperty>(), 16);
-    assert_eq!(size_of::<ast::TSLiteral>(), 16);
-    assert_eq!(size_of::<ast::TSType>(), 16);
-}
-
-#[test]
-fn lifetime_variance() {
-    use crate::syntax_tree::ast;
-
-    fn _assert_program_variant_lifetime<'a: 'b, 'b>(program: ast::Program<'a>) -> ast::Program<'b> {
-        program
-    }
-}
+#[cfg(test)]
+include!("../../../../../../../test/foundation/assets/compiler/unit/parts/syntax_tree/src/lib/4335.rs");
 
 #[doc(hidden)]
 pub use crate::{match_assignment_target,match_assignment_target_pattern,match_declaration,match_expression,match_member_expression,match_module_declaration,match_simple_assignment_target,match_ts_type,match_ts_type_name};

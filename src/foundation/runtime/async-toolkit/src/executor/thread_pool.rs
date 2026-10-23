@@ -373,7 +373,4 @@ impl ArcWake for WakeHandle {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/futures/executor/unit/src/thread_pool/tests_354.rs"
-));
+include!("../../../../../../test/foundation/runtime/async-toolkit/unit/src/executor/thread_pool/11331.rs");

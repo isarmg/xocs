@@ -30,4 +30,4 @@ pub fn update(a: u16, b: u16, data: &[u8]) -> (u16, u16) {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/compression/accelerated_checksum/unit/src/imp/scalar/tests_32.rs"));
+include!("../../../../../../../test/foundation/encoding/compression/unit/src/accelerated_checksum/imp/scalar/538.rs");

@@ -38,17 +38,8 @@ impl<T> Pointer for *mut T {
     }
 }
 
-/// A trait for adding some helper routines to raw bytes.
 #[cfg(test)]
-pub(crate) trait Byte {
-    /// Converts this byte to a `char` if it's ASCII. Otherwise panics.
-    fn to_char(self) -> char;
-}
+include!("../../../../../test/foundation/encoding/byte-search/unit/src/ext/1268.rs");
 
 #[cfg(test)]
-impl Byte for u8 {
-    fn to_char(self) -> char {
-        assert!(self.is_ascii());
-        char::from(self)
-    }
-}
+include!("../../../../../test/foundation/encoding/byte-search/unit/src/ext/1468.rs");

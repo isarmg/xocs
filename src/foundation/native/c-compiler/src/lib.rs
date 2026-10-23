@@ -5079,28 +5079,6 @@ fn check_exe(exe: PathBuf) -> Option<PathBuf> {
     with_ext.exists().then_some(with_ext)
 }
 
+#[path = "../../../../../test/foundation/native/c-compiler/unit/src/lib/tests.rs"]
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_android_clang_compiler_uses_target_arg_internally() {
-        for version in 16..21 {
-            assert!(android_clang_compiler_uses_target_arg_internally(
-                &PathBuf::from(format!("armv7a-linux-androideabi{}-clang", version))
-            ));
-            assert!(android_clang_compiler_uses_target_arg_internally(
-                &PathBuf::from(format!("armv7a-linux-androideabi{}-clang++", version))
-            ));
-        }
-        assert!(!android_clang_compiler_uses_target_arg_internally(
-            &PathBuf::from("clang-i686-linux-android")
-        ));
-        assert!(!android_clang_compiler_uses_target_arg_internally(
-            &PathBuf::from("clang")
-        ));
-        assert!(!android_clang_compiler_uses_target_arg_internally(
-            &PathBuf::from("clang++")
-        ));
-    }
-}
+mod tests;

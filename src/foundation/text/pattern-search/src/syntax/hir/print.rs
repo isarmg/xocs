@@ -331,4 +331,4 @@ impl<W: fmt::Write> Writer<W> {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/syntax/unit/src/hir/print/tests_333.rs"));
+include!("../../../../../../../test/foundation/text/pattern-search/unit/src/syntax/hir/print/12446.rs");

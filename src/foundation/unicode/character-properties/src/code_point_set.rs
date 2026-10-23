@@ -249,6 +249,3 @@ pub trait BinaryProperty: crate::private::Sealed + Sized {
         CodePointSetData::new::<Self>().contains(ch)
     }
 }
-
-#[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../test/foundation/unicode-properties/unit/src/code_point_set/tests_253.rs"));

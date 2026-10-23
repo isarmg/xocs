@@ -1,5 +1,5 @@
 [package]
-build = "../../../../tools/assets/src/platform_contract.rs"
+build = "../../../../src/tools/assets/src/platform_contract.rs"
 name = "blog-assets-style-compiler"
 edition = "2024"
 rust-version = "1.99"

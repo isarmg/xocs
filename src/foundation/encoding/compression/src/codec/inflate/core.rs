@@ -2087,4 +2087,4 @@ pub fn decompress_with_limit(
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/compression/codec/unit/src/inflate/core/test_2094.rs"));
+include!("../../../../../../../test/foundation/encoding/compression/unit/src/codec/inflate/core/83856.rs");

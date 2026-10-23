@@ -35,6 +35,7 @@ use repr::Repr;
 mod traits;
 pub use traits::{CompactStringExt, ToCompactString};
 
+#[path = "../../../../../test/foundation/collections/inline-string/unit/src/tests.rs"]
 #[cfg(test)]
 mod tests;
 

@@ -217,4 +217,4 @@ pub fn adler32<R: BufRead>(mut reader: R) -> io::Result<u32> {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/compression/checksum/unit/src/lib/tests_222.rs"));
+include!("../../../../../../test/foundation/encoding/compression/unit/src/checksum/mod/5661.rs");

@@ -218,8 +218,5 @@ pub mod log {
     pub use crate::_internal_noop_log as trace;
 }
 
-#[test]
-fn test_logging() {
-    // This should compile on all combinations of features
-    crate::log::info!("Hello World");
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/unicode/data-provider/unit/src/lib/8298.rs");

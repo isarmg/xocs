@@ -208,6 +208,3 @@ impl std::fmt::Debug for ValueRange {
         write!(f, "{self}")
     }
 }
-
-#[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../test/foundation/command-line/builder/unit/src/builder/range/test_212.rs"));

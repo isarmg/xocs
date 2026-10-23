@@ -22,7 +22,4 @@ impl core::fmt::Display for Reset {
 pub(crate) const RESET: &str = "\x1B[0m";
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/retained/test/foundation/terminal-style/anstyle/unit/src/reset/test_24.rs"
-));
+include!("../../../../../test/foundation/cli/terminal-style/unit/src/reset/587.rs");

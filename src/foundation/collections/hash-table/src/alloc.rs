@@ -1,5 +1,5 @@
 #[cfg(test)]
-pub(crate) use self::inner::AllocError;
+include!("../../../../../test/foundation/collections/hash-table/unit/src/alloc/0.rs");
 pub(crate) use self::inner::{Allocator, Global, do_alloc};
 
 // Nightly-case.
@@ -10,7 +10,7 @@ pub(crate) use self::inner::{Allocator, Global, do_alloc};
 mod inner {
     use core::ptr::NonNull;
     #[cfg(test)]
-    pub(crate) use stdalloc::alloc::AllocError;
+include!("../../../../../test/foundation/collections/hash-table/unit/src/alloc/inner/357.rs");
     use stdalloc::alloc::Layout;
     pub(crate) use stdalloc::alloc::{Allocator, Global};
 
@@ -31,7 +31,7 @@ mod inner {
 #[cfg(all(not(feature = "nightly"), feature = "allocator-api2"))]
 mod inner {
     #[cfg(test)]
-    pub(crate) use allocator_api2::alloc::AllocError;
+include!("../../../../../test/foundation/collections/hash-table/unit/src/alloc/inner/1086.rs");
     pub(crate) use allocator_api2::alloc::{Allocator, Global};
     use core::ptr::NonNull;
     use stdalloc::alloc::Layout;

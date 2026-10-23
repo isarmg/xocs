@@ -35,6 +35,6 @@ path = "src/lib.rs"
 
 [[test]]
 name = "consumer-contracts"
-path = "tests/consumer_contracts.rs"
+path = "../../../../test/foundation/encoding/application-base-encoding/integration/consumer_contracts.rs"
 required-features = ["std"]
 

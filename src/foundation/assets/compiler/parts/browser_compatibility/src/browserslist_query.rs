@@ -58,13 +58,6 @@ impl BrowserslistQuery {
     }
 }
 
+#[path = "../../../../../../../test/foundation/assets/compiler/unit/parts/browser_compatibility/src/browserslist_query/tests.rs"]
 #[cfg(test)]
-mod tests {
-    use super::BrowserslistQuery;
-
-    #[test]
-    fn test_empty() {
-        let res = BrowserslistQuery::Single(String::new()).exec().unwrap();
-        assert!(!res.is_any_target(), "empty query should return non-empty result");
-    }
-}
+mod tests;

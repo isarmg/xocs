@@ -1219,8 +1219,3 @@ impl fmt::Debug for WriteAdaptor<'_> {
 // === blanket impls ===
 
 impl<'a, M> MakeWriterExt<'a> for M where M: MakeWriter<'a> {}
-#[cfg(test)]
-include!(core::concat!(
-    core::env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/tracing-family/collector/unit/src/fmt/writer/test_1222.rs"
-));

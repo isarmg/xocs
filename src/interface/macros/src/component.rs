@@ -935,82 +935,10 @@ fn value_to_string(value: &syn::Expr) -> Option<String> {
     }
 }
 
+#[path = "../../../../test/interface/macros/unit/component/maintained_doc_tests.rs"]
 #[cfg(test)]
-mod maintained_doc_tests {
-    use super::*;
+mod maintained_doc_tests;
 
-    #[test]
-    fn component_docs_preserve_markdown_and_rust_examples() {
-        let item: syn::ItemFn = syn::parse_quote! {
-            /// A component example.
-            /// ```rust
-            /// let value = "<literal>";
-            /// assert_eq!(value, "<literal>");
-            /// ```
-            fn example() {}
-        };
-        let docs = Docs::new(&item.attrs).unwrap();
-        let lines: Vec<_> = docs.0.iter().map(|(line, _)| line.as_str()).collect();
-        assert_eq!(
-            lines,
-            [
-                " A component example.",
-                " ```rust",
-                " let value = \"<literal>\";",
-                " assert_eq!(value, \"<literal>\");",
-                " ```"
-            ]
-        );
-        assert!(!docs.to_token_stream().to_string().contains("view !"));
-    }
-}
-
+#[path = "../../../../test/interface/macros/unit/component/prop_name_tests.rs"]
 #[cfg(test)]
-mod prop_name_tests {
-    use super::*;
-
-    #[test]
-    fn invalid_prop_names_return_errors_for_all_patterns() {
-        for name in [
-            "",
-            "bad name",
-            "a::b",
-            "1first",
-            "type",
-            " value ",
-            "value/*comment*/",
-            "value//comment",
-            "value\u{200e}",
-            "value\u{200f}",
-            "\u{feff}value",
-        ] {
-            for pattern in ["value", "(value,)"] {
-                let arg: FnArg =
-                    syn::parse_str(&format!("#[prop(name = {name:?})] {pattern}: String")).unwrap();
-                let error = Prop::new(arg)
-                    .err()
-                    .expect("invalid rename must be rejected");
-                assert!(
-                    error.to_string().contains("valid Rust identifier"),
-                    "{error}"
-                );
-                assert!(
-                    error
-                        .to_compile_error()
-                        .to_string()
-                        .contains("valid Rust identifier")
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn ordinary_unicode_and_raw_prop_names_remain_supported() {
-        for name in ["renamed", "donnée", "e\u{301}", "r#type"] {
-            let arg: FnArg =
-                syn::parse_str(&format!("#[prop(name = {name:?})] value: String")).unwrap();
-            let prop = Prop::new(arg).unwrap();
-            assert_eq!(prop.name.ident.to_string(), name);
-        }
-    }
-}
+mod prop_name_tests;

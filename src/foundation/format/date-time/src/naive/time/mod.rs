@@ -21,6 +21,7 @@ use crate::{FixedOffset, TimeDelta, Timelike};
 #[cfg(feature = "serde")]
 mod serde;
 
+#[path = "../../../../../../../test/foundation/format/date-time/unit/src/naive/time/tests.rs"]
 #[cfg(test)]
 mod tests;
 

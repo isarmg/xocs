@@ -20,6 +20,6 @@
 
 ## 样式与字体
 
-样式和设计变量位于 `web/styles`。字体以本地 WOFF2 文件随资源分发，CSS 字体族为 `Sarmg Maple`，使用 400 和 700 两个字重；页面不需要访问外部字体服务。字体声明见 [fonts.css](../../web/styles/web-fonts/fonts.css)，原始版本、文件摘要及字符覆盖见[字体来源](../../web/styles/web-fonts/provenance.json)。
+样式和设计变量位于 `src/web/styles`。字体以本地 WOFF2 文件随资源分发，CSS 字体族为 `Sarmg Maple`，使用 400 和 700 两个字重；页面不需要访问外部字体服务。字体声明见 [fonts.css](../../src/web/styles/web-fonts/fonts.css)，原始版本、文件摘要及字符覆盖见[字体来源](../../src/web/styles/web-fonts/provenance.json)。
 
-字体使用 SIL Open Font License，许可文本随源码和资源保留：[OFL](../../web/styles/web-fonts/OFL.txt)、[CJK 许可](../../web/styles/web-fonts/CJK-LICENSE.txt)、[Latin 许可](../../web/styles/web-fonts/NORMAL-LICENSE.txt)。样式来源与许可证分别见 [ORIGIN.json](../../web/styles/ORIGIN.json) 和 [LICENSE](../../web/styles/LICENSE)。构建器校验实际字体和样式输入，输出路径由生成资源清单决定。
+字体使用 SIL Open Font License，许可文本随源码和资源保留：[OFL](../../src/web/styles/web-fonts/OFL.txt)、[CJK 许可](../../src/web/styles/web-fonts/CJK-LICENSE.txt)、[Latin 许可](../../src/web/styles/web-fonts/NORMAL-LICENSE.txt)。样式来源与许可证分别见 [ORIGIN.json](../../src/web/styles/ORIGIN.json) 和 [LICENSE](../../src/web/styles/LICENSE)。构建器校验实际字体和样式输入，输出路径由生成资源清单决定。

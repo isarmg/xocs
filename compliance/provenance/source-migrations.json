@@ -11728,6 +11728,39 @@
         }
       ],
       "retired_origins": []
+    },
+    {
+      "id": "separate-production-and-test-trees",
+      "reason": "Keep production tools with application sources under src and collect test implementations and fixtures under test without changing package identities or upstream lineage.",
+      "from": [
+        {
+          "directory": "tools/setup",
+          "name": "blog-setup",
+          "version": "1.1.0",
+          "origins": []
+        },
+        {
+          "directory": "tools/assets",
+          "name": "blog-assets",
+          "version": "0.0.0",
+          "origins": []
+        }
+      ],
+      "to": [
+        {
+          "directory": "src/tools/setup",
+          "name": "blog-setup",
+          "version": "1.1.0",
+          "origins": []
+        },
+        {
+          "directory": "src/tools/assets",
+          "name": "blog-assets",
+          "version": "0.0.0",
+          "origins": []
+        }
+      ],
+      "retired_origins": []
     }
   ]
 }

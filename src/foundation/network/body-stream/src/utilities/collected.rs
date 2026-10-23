@@ -93,4 +93,4 @@ impl<B> Default for Collected<B> {
 impl<B> Unpin for Collected<B> {}
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-body/utilities/unit/src/collected/tests_95.rs"));
+include!("../../../../../../test/foundation/network/body-stream/unit/src/utilities/collected/2397.rs");

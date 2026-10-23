@@ -1,14 +1,16 @@
 # 源码组织与校验
 
-项目使用一个根 Cargo workspace 和一份根 Cargo.lock。项目包位于 `src/application`、`src/server`、`src/browser`、`src/interface`、`tools` 和 `test`，基础 Rust 实现按用途位于 `src/foundation/<layer>/<purpose>`。全部依赖声明使用本仓库的 `path`，或继承根 workspace 中的本地路径。
+项目使用一个根 Cargo workspace 和一份根 Cargo.lock。产品和工具包位于 `src/`，测试实现、测试数据和独立测试包位于 `test/`；基础 Rust 实现按用途位于 `src/foundation/<layer>/<purpose>`。全部依赖声明使用本仓库的 `path`，或继承根 workspace 中的本地路径。
 
 [架构说明](architecture.md)介绍各层职责，[依赖文档](dependencies/README.md)提供本地参考资料；精确的当前包与来源映射见[源码清单](THIRD_PARTY_RUST_SOURCES.md)和[用途关系](RUST_SOURCE_ARCHITECTURE.md)。
+
+Rust 单元测试使用条件模块路径保留原模块作用域，集成测试使用 manifest 显式入口；业务模块中只保留必要的测试接线。目录与命令见[测试说明](../test/README.md)。
 
 ## 输入与身份
 
 | 文件或目录 | 内容 |
 | --- | --- |
-| `tools/rust-sources/workspaces.json` | 当前包所有者、职责层、用途、来源映射、入口与平台策略 |
+| `src/tools/rust-sources/workspaces.json` | 当前包所有者、职责层、用途、来源映射、入口与平台策略 |
 | `compliance/rust-sources.json` | 当前源码、manifest、锁文件、来源材料和目标解析图的摘要收据 |
 | `compliance/provenance/origins.json` | 原始发布名称、版本、归档及逐文件 SHA-256 |
 | `compliance/provenance/` | 原始归档、整合快照与来源身份材料 |
@@ -25,11 +27,11 @@
 在根目录执行：
 
 ```sh
-python3 tools/rust-sources/manage.py verify --metadata
-python3 tools/check-independence.py
+python3 src/tools/rust-sources/manage.py verify --metadata
+python3 src/tools/check-independence.py
 ```
 
-来源管理器检查原始归档与逐文件摘要、许可证、当前完整源码、manifest、锁文件、依赖和特性声明。`--metadata` 为原生及 WASM 目标使用临时空 `CARGO_HOME` 运行 `cargo metadata --locked --offline`，验证解析结果全部来自仓库内路径，且 Cargo `source=null`。
+来源管理器检查原始归档与逐文件摘要、许可证、当前完整源码、manifest、锁文件、依赖和特性声明。每个 `src/<组件>` 包的收据分别记录包内源码 `files_sha256` 和对应 `test/<组件>` 下的测试 `tests_sha256`；嵌套包的测试由各自所有者记录。`test/browser-domain` 自身是测试包，不重复映射测试目录。构建器的产品源码身份另行覆盖完整 `test/` 树，因此操作验收与验证脚本也属于构建输入。`--metadata` 为原生及 WASM 目标使用临时空 `CARGO_HOME` 运行 `cargo metadata --locked --offline`，验证解析结果全部来自仓库内路径，且 Cargo `source=null`。
 
 独立性检查另行检查外部 Git/registry 声明、越界路径、符号链接、嵌套 workspace/lock/Git 目录和完整 metadata 图。入口没有选中的 optional 包也需要登记所有者。真实源码中的 `src/target` 等目录仍属于输入；只排除明确的构建输出目录。
 
@@ -42,9 +44,9 @@ python3 tools/check-independence.py
 修改受管源码后，审查实际差异，再更新收据并校验：
 
 ```sh
-python3 tools/rust-sources/manage.py refresh
-python3 tools/rust-sources/manage.py verify --metadata
-python3 tools/check-independence.py
+python3 src/tools/rust-sources/manage.py refresh
+python3 src/tools/rust-sources/manage.py verify --metadata
+python3 src/tools/check-independence.py
 ```
 
 `verify` 只检查已有收据；`refresh` 显式接纳当前文件内容，并重新生成源码清单与用途关系。生成文档不手工编辑。原始 origin、归档和许可材料保持原字节；新增来源可追加。
@@ -70,14 +72,14 @@ python3 tools/check-independence.py
 
 ## 平台与构建边界
 
-`workspaces.json` 的 `profiles` 指定原生运行、WASM、宿主工具和测试入口。`platform_guard` 指定共享构建检查 `tools/assets/src/platform_contract.rs` 及各项目包的接线；已有构建脚本先检查平台，再读取产品构建输入。该共享检查同时属于源码收据、构建器摘要和变更监控。
+`workspaces.json` 的 `profiles` 指定原生运行、WASM、宿主工具和测试入口。`platform_guard` 指定共享构建检查 `src/tools/assets/src/platform_contract.rs` 及各项目包的接线；已有构建脚本先检查平台，再读取产品构建输入。该共享检查同时属于源码收据、构建器摘要和变更监控。
 
 Rust 工具链、标准库、目标组件、C/C++ 编译器和系统构建材料由环境提供。浏览器绑定生成已整合进 `blog-assets`。Node/npm、Playwright、浏览器、字体等非 Rust 输入和审计工具有各自来源与准备步骤；它们不属于 Cargo 本地源码解析图。
 
 ## 安全审计
 
 ```sh
-python3 tools/rust-sources/audit.py
+python3 src/tools/rust-sources/audit.py
 ```
 
 审计从当前来源映射恢复活动原始 registry 包名和版本，生成临时锁文件，调用固定版本的 `cargo-audit` 并启用 `--deny yanked`。改名、合并和本地路径依赖都保留原始身份匹配。明确退役且当前无引用的来源保留档案，不作为活动依赖。

@@ -131,13 +131,6 @@ impl RngCore for ThreadRng {
 impl CryptoRng for ThreadRng {}
 
 
+#[path = "../../../../../../test/foundation/math/lookup-random-generator/unit/src/rngs/thread/test.rs"]
 #[cfg(test)]
-mod test {
-    #[test]
-    fn test_thread_rng() {
-        use crate::Rng;
-        let mut r = crate::thread_rng();
-        r.gen::<i32>();
-        assert_eq!(r.gen_range(0..1), 0);
-    }
-}
+mod test;

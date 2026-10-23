@@ -179,15 +179,6 @@ pub(crate) fn translate_fchown_args(
     (ow as c::uid_t, gr as c::gid_t)
 }
 
+#[path = "../../../../../test/foundation/platform/system-calls/unit/src/ugid/tests.rs"]
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_sizes() {
-        static_assertions::assert_eq_size!(RawUid, u32);
-        static_assertions::assert_eq_size!(RawGid, u32);
-        static_assertions::assert_eq_size!(RawUid, libc::uid_t);
-        static_assertions::assert_eq_size!(RawGid, libc::gid_t);
-    }
-}
+mod tests;

@@ -185,9 +185,3 @@ impl std::fmt::Display for StyledStr {
         Ok(())
     }
 }
-
-#[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../test/foundation/command-line/builder/unit/src/builder/styled_str/wrap_tests_223.rs"));
-
-#[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../test/foundation/command-line/builder/unit/src/builder/styled_str/tests_270.rs"));

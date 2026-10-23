@@ -316,5 +316,6 @@ pub use crate::decode::{decode_engine_slice, decoded_len_estimate, DecodeError, 
 
 pub mod prelude;
 
+#[path = "../../../../../test/foundation/encoding/application-base-encoding/unit/src/tests.rs"]
 #[cfg(test)]
 mod tests;

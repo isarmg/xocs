@@ -67,9 +67,3 @@ pub type ReentrantMutexGuard<'a, T> = crate::api::ReentrantMutexGuard<'a, RawMut
 /// thread.
 pub type MappedReentrantMutexGuard<'a, T> =
     crate::api::MappedReentrantMutexGuard<'a, RawMutex, RawThreadId, T>;
-
-#[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../test/foundation/synchronization/locks/unit/src/remutex/tests_71.rs"
-));

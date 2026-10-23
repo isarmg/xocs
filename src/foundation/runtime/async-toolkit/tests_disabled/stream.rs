@@ -47,10 +47,10 @@ fn err_list() -> Box<Stream<Item = i32, Error = u32> + Send> {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/map_49.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/1242.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/map_err_54.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/1385.rs");
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 struct FromErrTest(u32);
@@ -62,87 +62,87 @@ impl From<u32> for FromErrTest {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/from_err_68.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/1691.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/fold_73.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/1839.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/filter_79.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/1983.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/filter_map_84.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/2129.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/and_then_92.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/2279.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/then_98.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/2427.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/or_else_103.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/2571.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/flatten_108.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/2719.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/skip_113.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/2867.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/skip_passes_errors_through_118.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/3012.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/skip_while_128.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/3179.rs");
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/take_132.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/3329.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/take_while_137.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/3474.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/take_passes_errors_through_142.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/3625.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/peekable_155.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/3792.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/fuse_160.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/3941.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/buffered_171.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/4086.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/unordered_210.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/4235.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/zip_249.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/4385.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/peek_258.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/4529.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/wait_282.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/4674.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/chunks_287.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/4819.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/chunks_panic_on_cap_zero_299.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/4966.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/forward_305.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/5131.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/concat_320.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/5279.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/concat2_329.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/5426.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/stream_poll_fn_341.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/5574.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/inspect_356.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/5729.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/futures/functions/tests_disabled/stream/inspect_err_363.rs"));
+include!("../../../../../test/foundation/runtime/async-toolkit/unit/tests_disabled/stream/5877.rs");

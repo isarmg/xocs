@@ -325,4 +325,4 @@ fn is_valid_cap_letter(b: u8) -> bool {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/automata/unit/src/util/interpolate/tests_327.rs"));
+include!("../../../../../../../test/foundation/text/pattern-search/unit/src/automata/util/interpolate/10886.rs");

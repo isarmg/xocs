@@ -146,57 +146,10 @@ pub fn remove_ascii_whitespace_inplace(data: &mut [u8]) -> &mut [u8] {
     }
 }
 
+#[path = "../../../../../test/foundation/encoding/vector-base-encoding/unit/src/ascii/tests.rs"]
 #[cfg(test)]
-mod tests {
-    use super::*;
+mod tests;
 
-    #[cfg_attr(not(target_arch = "wasm32"), test)]
-    #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test::wasm_bindgen_test)]
-    fn test_remove_ascii_whitespace() {
-        let cases = [
-            "\0\0\0\0",
-            "abcd",
-            "ab\tcd",
-            "ab\ncd",
-            "ab\x0Ccd",
-            "ab\rcd",
-            "ab cd",
-            "ab\t\n\x0C\r cd",
-            "ab\t\n\x0C\r =\t\n\x0C\r =\t\n\x0C\r ",
-        ];
-
-        let check = |case: &str, repeat: usize| {
-            let mut buf = case.repeat(repeat).into_bytes();
-            let expected = {
-                let mut v = buf.clone();
-                v.retain(|c| !c.is_ascii_whitespace());
-                v
-            };
-            let ans = remove_ascii_whitespace_inplace(&mut buf);
-            assert_eq!(ans, &*expected, "case = {case:?}");
-        };
-
-        for case in cases {
-            check(case, 1);
-
-            if cfg!(not(miri)) {
-                check(case, 10);
-            }
-        }
-    }
-}
-
+#[path = "../../../../../test/foundation/encoding/vector-base-encoding/unit/src/ascii/algorithm.rs"]
 #[cfg(test)]
-mod algorithm {
-    #[test]
-    #[ignore]
-    fn is_ascii_whitespace() {
-        for x in 0..=255u8 {
-            let m1 = (x.wrapping_sub(0x89) as i8) < (-128 + 5);
-            let m2 = x == 0x0b;
-            let m3 = x == 0x20;
-            let ans = (m1 && !m2) || m3;
-            assert_eq!(ans, x.is_ascii_whitespace());
-        }
-    }
-}
+mod algorithm;

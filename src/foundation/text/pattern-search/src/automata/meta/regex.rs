@@ -3766,4 +3766,4 @@ impl Builder {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/automata/unit/src/meta/regex/tests_3768.rs"));
+include!("../../../../../../../test/foundation/text/pattern-search/unit/src/automata/meta/regex/148364.rs");

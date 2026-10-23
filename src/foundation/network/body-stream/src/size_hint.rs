@@ -98,7 +98,7 @@ impl core::ops::Add for SizeHint {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-body/functions/src/size_hint/size_hint_addition_proof_100.rs"));
+include!("../../../../../test/foundation/network/body-stream/unit/src/size_hint/2457.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-body/functions/src/size_hint/size_hint_addition_basic_175.rs"));
+include!("../../../../../test/foundation/network/body-stream/unit/src/size_hint/2616.rs");

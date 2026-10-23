@@ -1177,7 +1177,4 @@ impl State {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/http-transport/unit/src/proto/h1/conn/tests_1183.rs"
-));
+include!("../../../../../../../test/foundation/network/http-transport/unit/src/proto/h1/conn/40185.rs");

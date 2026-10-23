@@ -37,5 +37,6 @@ impl RegistrationQueue {
     }
 }
 
+#[path = "../../../../../../../test/foundation/runtime/task-scheduler/unit/src/runtime/time_alt/registration_queue/tests.rs"]
 #[cfg(test)]
 mod tests;

@@ -16,6 +16,7 @@ mod content_encoding;
 pub mod services;
 #[cfg(feature = "fs")]
 pub mod set_status;
+#[path = "../../../../../test/foundation/network/http-middleware/unit/src/test_helpers.rs"]
 #[cfg(test)]
 mod test_helpers;
 #[cfg(feature = "trace")]

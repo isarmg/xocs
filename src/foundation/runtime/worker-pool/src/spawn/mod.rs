@@ -159,5 +159,6 @@ where
     mem::forget(abort_guard);
 }
 
+#[path = "../../../../../../test/foundation/runtime/worker-pool/unit/src/spawn/test.rs"]
 #[cfg(test)]
 mod test;

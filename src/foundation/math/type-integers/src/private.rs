@@ -197,18 +197,8 @@ where
     }
 }
 
-#[test]
-fn test_inversion() {
-    type Test4 = <crate::consts::U4 as Invert>::Output;
-    type Test5 = <crate::consts::U5 as Invert>::Output;
-    type Test12 = <crate::consts::U12 as Invert>::Output;
-    type Test16 = <crate::consts::U16 as Invert>::Output;
-
-    assert_eq!(1, <Test4 as InvertedUnsigned>::to_u64());
-    assert_eq!(5, <Test5 as InvertedUnsigned>::to_u64());
-    assert_eq!(3, <Test12 as InvertedUnsigned>::to_u64());
-    assert_eq!(1, <Test16 as InvertedUnsigned>::to_u64());
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/math/type-integers/unit/src/private/5277.rs");
 
 impl Invert for InvertedUTerm {
     type Output = UTerm;
@@ -258,18 +248,8 @@ where
     }
 }
 
-#[test]
-fn test_double_inversion() {
-    type Test4 = <<crate::consts::U4 as Invert>::Output as Invert>::Output;
-    type Test5 = <<crate::consts::U5 as Invert>::Output as Invert>::Output;
-    type Test12 = <<crate::consts::U12 as Invert>::Output as Invert>::Output;
-    type Test16 = <<crate::consts::U16 as Invert>::Output as Invert>::Output;
-
-    assert_eq!(4, <Test4 as Unsigned>::to_u64());
-    assert_eq!(5, <Test5 as Unsigned>::to_u64());
-    assert_eq!(12, <Test12 as Unsigned>::to_u64());
-    assert_eq!(16, <Test16 as Unsigned>::to_u64());
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/math/type-integers/unit/src/private/6783.rs");
 
 impl TrimTrailingZeros for InvertedUTerm {
     type Output = InvertedUTerm;

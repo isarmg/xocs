@@ -1,0 +1,23 @@
+#[cfg(test)]
+static SPLIT_TEST_ITEMS: &[(&str, Option<&[&str]>)] = &[
+    ("foo$baz", Some(&["foo$baz"])),
+    ("foo baz", Some(&["foo", "baz"])),
+    ("foo\"bar\"baz", Some(&["foobarbaz"])),
+    ("foo \"bar\"baz", Some(&["foo", "barbaz"])),
+    ("   foo \nbar", Some(&["foo", "bar"])),
+    ("foo\\\nbar", Some(&["foobar"])),
+    ("\"foo\\\nbar\"", Some(&["foobar"])),
+    ("'baz\\$b'", Some(&["baz\\$b"])),
+    ("'baz\\\''", None),
+    ("\\", None),
+    ("\"\\", None),
+    ("'\\", None),
+    ("\"", None),
+    ("'", None),
+    ("foo #bar\nbaz", Some(&["foo", "baz"])),
+    ("foo #bar", Some(&["foo"])),
+    ("foo#bar", Some(&["foo#bar"])),
+    ("foo\"#bar", None),
+    ("'\\n'", Some(&["\\n"])),
+    ("'\\\\n'", Some(&["\\\\n"])),
+];

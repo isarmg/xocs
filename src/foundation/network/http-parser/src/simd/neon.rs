@@ -188,71 +188,14 @@ unsafe fn offsetnz(x: uint8x16_t) -> u32 {
     }
 }
 
-#[test]
-fn neon_code_matches_uri_chars_table() {
-    #[allow(clippy::undocumented_unsafe_blocks)]
-    unsafe {
-        assert!(byte_is_allowed(b'_', match_uri_vectored));
-
-        for (b, allowed) in crate::URI_MAP.iter().cloned().enumerate() {
-            assert_eq!(
-                byte_is_allowed(b as u8, match_uri_vectored),
-                allowed,
-                "byte_is_allowed({:?}) should be {:?}",
-                b,
-                allowed,
-            );
-        }
-    }
-}
-
-#[test]
-fn neon_code_matches_header_value_chars_table() {
-    #[allow(clippy::undocumented_unsafe_blocks)]
-    unsafe {
-        assert!(byte_is_allowed(b'_', match_header_value_vectored));
-
-        for (b, allowed) in crate::HEADER_VALUE_MAP.iter().cloned().enumerate() {
-            assert_eq!(
-                byte_is_allowed(b as u8, match_header_value_vectored),
-                allowed,
-                "byte_is_allowed({:?}) should be {:?}",
-                b,
-                allowed,
-            );
-        }
-    }
-}
-
-#[test]
-fn neon_code_matches_header_name_chars_table() {
-    #[allow(clippy::undocumented_unsafe_blocks)]
-    unsafe {
-        assert!(byte_is_allowed(b'_', match_header_name_vectored));
-
-        for (b, allowed) in crate::TOKEN_MAP.iter().cloned().enumerate() {
-            assert_eq!(
-                byte_is_allowed(b as u8, match_header_name_vectored),
-                allowed,
-                "byte_is_allowed({:?}) should be {:?}",
-                b,
-                allowed,
-            );
-        }
-    }
-}
+#[cfg(test)]
+include!("../../../../../../test/foundation/network/http-parser/unit/src/simd/neon/5602.rs");
 
 #[cfg(test)]
-unsafe fn byte_is_allowed(byte: u8, f: unsafe fn(bytes: &mut Bytes<'_>)) -> bool {
-    let mut slice = [b'_'; 16];
-    slice[10] = byte;
-    let mut bytes = Bytes::new(&slice);
+include!("../../../../../../test/foundation/network/http-parser/unit/src/simd/neon/6092.rs");
 
-    f(&mut bytes);
+#[cfg(test)]
+include!("../../../../../../test/foundation/network/http-parser/unit/src/simd/neon/6618.rs");
 
-    match bytes.pos() {
-        16 => true,
-        10 => false,
-        x => panic!("unexpected pos: {}", x),
-    }
-}
+#[cfg(test)]
+include!("../../../../../../test/foundation/network/http-parser/unit/src/simd/neon/7134.rs");

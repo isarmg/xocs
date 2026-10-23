@@ -6,6 +6,7 @@ use std::any::Any;
 
 use crate::FnContext;
 
+#[path = "../../../../../../test/foundation/runtime/worker-pool/unit/src/join/test.rs"]
 #[cfg(test)]
 mod test;
 

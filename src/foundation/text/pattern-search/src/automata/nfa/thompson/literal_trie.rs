@@ -480,4 +480,4 @@ impl core::fmt::Debug for Transition {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/automata/unit/src/nfa/thompson/literal_trie/tests_482.rs"));
+include!("../../../../../../../../test/foundation/text/pattern-search/unit/src/automata/nfa/thompson/literal_trie/20739.rs");

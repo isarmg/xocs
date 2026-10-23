@@ -135,4 +135,4 @@ impl RequestPartsExt for Parts {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-routing/kernel/unit/src/ext_traits/request_parts/tests_137.rs"));
+include!("../../../../../../../test/foundation/network/request-router/unit/src/kernel/ext_traits/request_parts/4138.rs");

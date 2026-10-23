@@ -792,6 +792,3 @@ pub(crate) fn generic_to_concrete<'a>(
     // Then, replace specified lifetimes with 'static for ABI compatibility
     Ok(staticize_lifetimes(ty, lifetimes_to_staticize))
 }
-
-#[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../test/foundation/wasm-binding-macros/unit/src/generics/tests_796.rs"));

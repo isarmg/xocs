@@ -335,5 +335,6 @@ fn xform_one(
     Ok(wrapper)
 }
 
+#[path = "../../../../../../../test/foundation/wasm/browser-module/unit/src/transforms/multi_value/tests/mod.rs"]
 #[cfg(test)]
 mod tests;

@@ -5,9 +5,9 @@
 /target/
 blog/*.sqlite*
 blog/media/
-/web/node_modules/
-/web/dist/
-/web/*.tsbuildinfo
+/src/web/node_modules/
+/src/web/dist/
+/src/web/*.tsbuildinfo
 .local-run/
 /dist/
 
@@ -18,13 +18,13 @@ blog/media/
 __pycache__/
 
 # Generated Blog browser assets
-/web/pkg/
+/src/web/pkg/
 /src/browser/target/
 
-/tools/assets/target/
+/src/tools/assets/target/
 
 # Legacy package-local Cargo output.
 /test/browser-domain/target/
 
 # Atomic frontend staging directories.
-/web/.rust-web-stage-*/
+/src/web/.rust-web-stage-*/

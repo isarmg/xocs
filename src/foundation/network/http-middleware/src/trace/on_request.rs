@@ -16,8 +16,8 @@ pub trait OnRequest<B> {
     /// passed to [`TraceLayer::make_span_with`]. It can be used to [record field values][record]
     /// that weren't known when the span was created.
     ///
-    /// [`Span`]: https://docs.rs/tracing/latest/tracing/span/index.html
-    /// [record]: https://docs.rs/tracing/latest/tracing/span/struct.Span.html#method.record
+    /// [`Span`]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/span/index.html
+    /// [record]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/span/struct.Span.html#method.record
     /// [`TraceLayer::make_span_with`]: crate::trace::TraceLayer::make_span_with
     fn on_request(&mut self, request: &Request<B>, span: &Span);
 }
@@ -67,7 +67,7 @@ impl DefaultOnRequest {
     ///
     /// Defaults to [`Level::DEBUG`].
     ///
-    /// [tracing events]: https://docs.rs/tracing/latest/tracing/#events
+    /// [tracing events]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/#events
     /// [`DefaultMakeSpan::level`]: crate::trace::DefaultMakeSpan::level
     pub fn level(mut self, level: Level) -> Self {
         self.level = level;

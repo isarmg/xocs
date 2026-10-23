@@ -690,5 +690,6 @@ impl Frame<'_> {
     }
 }
 
+#[path = "../../../../../../test/foundation/wasm/browser-module/unit/src/interpreter/smoke_tests.rs"]
 #[cfg(test)]
 mod smoke_tests;

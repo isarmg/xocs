@@ -107,9 +107,3 @@ pub type MutexGuard<'a, T> = crate::api::MutexGuard<'a, RawMutex, T>;
 /// could introduce soundness issues if the locked object is modified by another
 /// thread.
 pub type MappedMutexGuard<'a, T> = crate::api::MappedMutexGuard<'a, RawMutex, T>;
-
-#[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../test/foundation/synchronization/locks/unit/src/mutex/tests_111.rs"
-));

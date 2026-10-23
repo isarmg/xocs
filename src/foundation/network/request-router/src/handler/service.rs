@@ -109,7 +109,7 @@ impl<H, T, S> HandlerService<H, T, S> {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-routing/functions/src/handler/service/traits_111.rs"));
+include!("../../../../../../test/foundation/network/request-router/unit/src/handler/service/3279.rs");
 
 impl<H, T, S> HandlerService<H, T, S> {
     pub(super) fn new(handler: H, state: S) -> Self {

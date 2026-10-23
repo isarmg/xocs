@@ -587,9 +587,3 @@ impl<'a> Iterator for Iter<'a> {
         self.0.size_hint()
     }
 }
-
-#[cfg(test)]
-include!(core::concat!(
-    core::env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/tracing-family/collector/unit/src/filter/targets/tests_595.rs"
-));

@@ -238,7 +238,4 @@ impl fmt::Debug for Sender {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/http-transport/unit/src/body/chan/tests_240.rs"
-));
+include!("../../../../../../test/foundation/network/http-transport/unit/src/body/chan/6693.rs");

@@ -60,5 +60,6 @@ digest::buffer_fixed!(
     impl: FixedHashTraits;
 );
 
+#[path = "../../../../../test/foundation/crypto/secure-hash/unit/src/standard_vectors.rs"]
 #[cfg(test)]
 mod standard_vectors;

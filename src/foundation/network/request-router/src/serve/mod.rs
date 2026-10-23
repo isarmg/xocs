@@ -469,7 +469,4 @@ mod private {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/http-routing/unit/src/serve/mod/tests_473.rs"
-));
+include!("../../../../../../test/foundation/network/request-router/unit/src/serve/mod/13867.rs");

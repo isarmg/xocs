@@ -270,4 +270,4 @@ fn repeat_char(c: char, count: usize) -> String {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/syntax/unit/src/error/tests_272.rs"));
+include!("../../../../../../test/foundation/text/pattern-search/unit/src/syntax/error/9472.rs");

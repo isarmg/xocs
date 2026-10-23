@@ -412,4 +412,4 @@ mod lazy {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/automata/unit/src/util/lazy/tests_414.rs"));
+include!("../../../../../../../test/foundation/text/pattern-search/unit/src/automata/util/lazy/17237.rs");

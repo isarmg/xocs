@@ -135,12 +135,6 @@ where
     }
 }
 
+#[path = "../../../../../../../test/foundation/runtime/task-scheduler/unit/src/io/util/chain/tests.rs"]
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn assert_unpin() {
-        crate::is_unpin::<Chain<(), ()>>();
-    }
-}
+mod tests;

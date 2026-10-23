@@ -1096,7 +1096,8 @@ impl<C: cfg::Config> Pack<C> for () {
 }
 
 #[cfg(test)]
-pub(crate) use self::tests::util as test_util;
+include!("../../../../../test/foundation/collections/concurrent-slab/unit/src/lib/36286.rs");
 
+#[path = "../../../../../test/foundation/collections/concurrent-slab/unit/src/tests/mod.rs"]
 #[cfg(test)]
 mod tests;

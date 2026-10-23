@@ -264,4 +264,4 @@ impl<R: BufRead + Write> Write for ZlibDecoder<R> {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/compression/streams/unit/src/zlib/bufread/test_266.rs"));
+include!("../../../../../../../test/foundation/encoding/compression/unit/src/streams/zlib/bufread/8359.rs");

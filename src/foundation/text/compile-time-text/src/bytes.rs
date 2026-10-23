@@ -57,16 +57,8 @@ pub const fn subslice<T>(mut s: &[T], range: Range<usize>) -> &[T] {
     s
 }
 
-#[test]
-fn test_subslice() {
-    let buf = b"abcdefgh";
-    assert_eq!(subslice(buf, 0..0), &[]);
-    assert_eq!(subslice(buf, 0..1), b"a");
-    assert_eq!(subslice(buf, 1..3), b"bc");
-    assert_eq!(subslice(buf, 7..8), b"h");
-
-    assert_eq!(subslice::<u8>(&[], 0..0), &[]);
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/text/compile-time-text/unit/src/bytes/1157.rs");
 
 pub const fn merge<const N: usize>(mut buf: [u8; N], bytes: &[u8]) -> [u8; N] {
     constfn_assert!(N <= bytes.len());
@@ -90,14 +82,8 @@ pub const fn reversed<const N: usize>(mut arr: [u8; N]) -> [u8; N] {
     arr
 }
 
-#[test]
-fn test_reversed() {
-    let arr = [0, 1];
-    assert_eq!(reversed(arr), [1, 0]);
-
-    let arr = [0, 1, 2];
-    assert_eq!(reversed(arr), [2, 1, 0]);
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/text/compile-time-text/unit/src/bytes/1910.rs");
 
 pub const fn advance(mut s: &[u8], count: usize) -> &[u8] {
     constfn_assert!(count <= s.len());

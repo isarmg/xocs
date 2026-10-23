@@ -2602,4 +2602,4 @@ fn binary_search_ranges(ranges: &[u8], needle: u8) -> Option<usize> {
 */
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/automata/unit/src/dfa/sparse/all_tests_2604.rs"));
+include!("../../../../../../../test/foundation/text/pattern-search/unit/src/automata/dfa/sparse/101268.rs");

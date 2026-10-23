@@ -316,7 +316,7 @@ pub(crate) struct Local {
 // Make sure `Local` is less than or equal to 2048 bytes.
 // https://github.com/crossbeam-rs/crossbeam/issues/551
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/concurrent-collections/epoch/functions/src/internal/local_size_318.rs"));
+include!("../../../../../../test/foundation/sync/concurrent-collections/unit/src/epoch/internal/11469.rs");
 
 impl Local {
     /// Number of pinnings after which a participant will execute some deferred functions from the
@@ -566,4 +566,4 @@ impl IsElement<Self> for Local {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/concurrent-collections/epoch/unit/src/internal/all_tests_575.rs"));
+include!("../../../../../../test/foundation/sync/concurrent-collections/unit/src/epoch/internal/21061.rs");

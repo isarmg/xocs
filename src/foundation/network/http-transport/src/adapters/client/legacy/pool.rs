@@ -805,9 +805,6 @@ impl<T> WeakOpt<T> {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/http-transport/adapters/unit/src/client/legacy/pool/tests_840.rs"
-));
+include!("../../../../../../../../test/foundation/network/http-transport/unit/src/adapters/client/legacy/pool/26272.rs");
 
 use std::future::Future;

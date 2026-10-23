@@ -77,4 +77,4 @@ macro_rules! impl_from_request {
 all_the_tuples!(impl_from_request);
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-routing/kernel/unit/src/extract/tuple/tests_79.rs"));
+include!("../../../../../../../test/foundation/network/request-router/unit/src/kernel/extract/tuple/2600.rs");

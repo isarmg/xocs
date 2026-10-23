@@ -633,10 +633,7 @@ mod spawn_location {
     }
 
     #[cfg(test)]
-    #[test]
-    fn spawn_location_is_zero_sized() {
-        assert_eq!(std::mem::size_of::<SpawnLocation>(), 0);
-    }
+include!("../../../../../../../test/foundation/runtime/task-scheduler/unit/src/runtime/task/mod/spawn_location/20809.rs");
 }
 
 impl SpawnLocation {

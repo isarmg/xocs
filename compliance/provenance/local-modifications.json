@@ -3361,6 +3361,996 @@
     {
       "directory": "tools/assets",
       "reason": "Publish frontend receipts with pkg/dist rollback when no-clobber receipt publication fails; reject receipt/output path overlap and share WASM coding acceptability and 406 semantics with the application responder."
+    },
+    {
+      "directory": "src/application",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/server",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/tools/setup",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/tools/assets",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/browser",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "test/browser-domain",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/interface",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/interface/dom",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/interface/macros",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/assets/compiler",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/assets/markdown-parser",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/assets/style-compiler",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/checksum/fast-crc",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/cli/arguments",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/cli/terminal-format",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/cli/terminal-style",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/collections/bit-set",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/collections/compiler-hash",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/collections/concurrent-slab",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/collections/database-hash-table",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/collections/hash-table",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/collections/inline-string",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/collections/inline-vector",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/collections/keyed-hash",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/collections/ordered-cache",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/collections/ordered-map",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/collections/slot-storage",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/collections/sorted-map",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/crypto/algorithm-identifiers",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/crypto/conditional-move",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/crypto/constant-time-comparison",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/crypto/constant-time-utilities",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/crypto/digest-traits",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/crypto/memory-hard-hash",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/crypto/message-authentication",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/crypto/password-derivation",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/crypto/password-digest-traits",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/crypto/password-format",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/crypto/password-hash-blocks",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/crypto/secure-hash",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/diagnostics/error-context",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/diagnostics/error-display",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/diagnostics/event-facade",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/diagnostics/event-instrumentation",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/diagnostics/object-clone",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/diagnostics/structured-events",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/diagnostics/symbol-decoder",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/diagnostics/typed-error",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/encoding/application-base-encoding",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/encoding/borrowed-unicode",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/encoding/byte-buffer",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/encoding/byte-search",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/encoding/compression",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/encoding/constant-time-base-encoding",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/encoding/decimal-float-format",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/encoding/framing",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/encoding/hex-codec",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/encoding/integer-format",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/encoding/roundtrip-float-format",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/encoding/script-float-format",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/encoding/signed-variable-integer",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/encoding/text-writer",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/encoding/unicode-decoder",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/encoding/unicode-iterator",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/encoding/variable-integer-writer",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/encoding/vector-base-encoding",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/encoding/vector-escaping",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/encoding/vector-primitives",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/filesystem/temporary-storage",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/format/binary-record",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/format/configuration",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/format/data-model",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/format/data-model-derive",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/format/data-model-syntax",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/format/date-time",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/format/json",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/format/json-schema",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/format/json-schema-derive",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/format/parser-combinators",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/format/release-identity",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/lookup/script-table-generator",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/lookup/script-table-hashing",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/lookup/style-table-generator",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/math/constant-array",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/math/fast-random",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/math/integer-traits",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/math/keyed-fingerprint",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/math/large-integer",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/math/lookup-random-generator",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/math/numeric-traits",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/math/password-random-traits",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/math/type-integers",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/math/typed-array",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/memory/arena",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/memory/byte-layout",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/memory/indexed-arena",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/memory/output-reference",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/memory/reference-cast",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/memory/type-specialization",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/native/c-compiler",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/native/compiler-capabilities",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/native/compiler-conditions",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/native/target-conditions",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/network/body-stream",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/network/byte-ranges",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/network/form-data",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/network/http-date",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/network/http-message",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/network/http-middleware",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/network/http-parser",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/network/http-transport",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/network/media-detection",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/network/media-type",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/network/request-pipeline",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/network/request-router",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/network/route-matcher",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/network/web-address",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/platform/error-code",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/platform/linux-abi",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/platform/local-time-zone",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/platform/password-processor-features",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/platform/processor-features",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/platform/socket-options",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/platform/system-abi",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/platform/system-calls",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/platform/system-entropy",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/runtime/async-toolkit",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/runtime/io-poller",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/runtime/parallel-iterator",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/runtime/readiness-signal",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/runtime/scheduled-io",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/runtime/signal-registry",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/runtime/task-scheduler",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/runtime/task-waker",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/runtime/worker-pool",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/storage/fallible-rows",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/storage/record-derive",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/storage/sqlite-access",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/storage/sqlite-native",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/sync/atomic-lock",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/sync/concurrent-collections",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/sync/initialization",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/sync/lazy-global",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/sync/message-channel",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/sync/mutex",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/sync/notification",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/sync/pinned-projection",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/sync/scope-cleanup",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/sync/spin-lock",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/sync/thread-storage",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/sync/thread-wait",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/syntax/alternative",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/syntax/async-trait",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/syntax/compiler-iterators",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/syntax/derive-structure",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/syntax/index-expansion",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/syntax/record-derive-parser",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/syntax/rust-parser",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/syntax/style-derive-parser",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/syntax/style-iterators",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/syntax/token-stream",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/syntax/token-templates",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/text/case-insensitive-text",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/text/compile-time-text",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/text/compile-time-text-macros",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/text/constant-pattern",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/text/inline-ascii",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/text/line-layout",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/text/macro-identifier-case",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/text/monotone-minima",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/text/pattern-search",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/text/rust-identifiers",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/text/shell-words",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/text/style-identifier-case",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/text/terminal-width",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/text/text-boundaries",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/text/text-similarity",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/unicode/borrow-conversion-derive",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/unicode/borrowed-data",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/unicode/borrowed-data-derive",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/unicode/borrowed-vector",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/unicode/borrowed-vector-derive",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/unicode/boundary-analysis",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/unicode/character-properties",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/unicode/compact-trie",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/unicode/data-collections",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/unicode/data-provider",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/unicode/locale-identifiers",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/unicode/locale-selection",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/unicode/text-normalizer",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/wasm/browser-bridge",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/wasm/browser-bridge-entry",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/wasm/browser-bridge-schema",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/wasm/browser-module",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/wasm/debug-information",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/wasm/module-decoder",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/wasm/module-encoder",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/wasm/module-transform",
+      "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
+      "production_behavior_change": false
     }
   ]
 }

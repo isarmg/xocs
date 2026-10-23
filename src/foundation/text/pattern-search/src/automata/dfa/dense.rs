@@ -5193,4 +5193,4 @@ impl core::fmt::Display for BuildError {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/automata/unit/src/dfa/dense/all_tests_5195.rs"));
+include!("../../../../../../../test/foundation/text/pattern-search/unit/src/automata/dfa/dense/218174.rs");

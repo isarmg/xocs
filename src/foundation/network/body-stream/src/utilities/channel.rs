@@ -202,4 +202,4 @@ impl Display for SendError {
 impl std::error::Error for SendError {}
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-body/utilities/unit/src/channel/tests_204.rs"));
+include!("../../../../../../test/foundation/network/body-stream/unit/src/utilities/channel/6379.rs");

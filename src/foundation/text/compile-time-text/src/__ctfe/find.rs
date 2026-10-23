@@ -41,36 +41,11 @@ const fn bytes_contains(haystack: &[u8], needle: &[u8]) -> bool {
     false
 }
 
-#[test]
-fn test_bytes_contains() {
-    let buf = b"abcdefgh";
-    assert!(bytes_contains(buf, b""));
-    assert!(bytes_contains(buf, b"a"));
-    assert!(bytes_contains(buf, b"ef"));
-    assert!(!bytes_contains(buf, b"xyz"));
-}
+#[cfg(test)]
+include!("../../../../../../test/foundation/text/compile-time-text/unit/src/__ctfe/find/1026.rs");
 
-#[test]
-fn test_contains() {
-    macro_rules! test_contains {
-        (true, $haystack: expr, $needle: expr) => {
-            assert!(Contains($haystack, $needle).const_eval());
-        };
-        (false, $haystack: expr, $needle: expr) => {
-            assert!(!Contains($haystack, $needle).const_eval());
-        };
-    }
-
-    test_contains!(true, "asd", "");
-    test_contains!(true, "asd", "a");
-    test_contains!(true, "asdf", "sd");
-    test_contains!(false, "", "a");
-    test_contains!(false, "asd", "abcd");
-
-    test_contains!(true, "唐可可", '可');
-    test_contains!(true, "Liyuu", 'i');
-    test_contains!(false, "Liyuu", '我');
-}
+#[cfg(test)]
+include!("../../../../../../test/foundation/text/compile-time-text/unit/src/__ctfe/find/1254.rs");
 
 /// Returns [`true`] if the given pattern matches a sub-slice of this string slice.
 ///
@@ -136,14 +111,8 @@ const fn bytes_starts_with(haystack: &[u8], needle: &[u8]) -> bool {
     i == needle_len
 }
 
-#[test]
-fn test_bytes_starts_with() {
-    assert!(bytes_starts_with(b"", b""));
-    assert!(bytes_starts_with(b"a", b""));
-    assert!(bytes_starts_with(b"a", b"a"));
-    assert!(!bytes_starts_with(b"", b"a"));
-    assert!(!bytes_starts_with(b"ba", b"a"));
-}
+#[cfg(test)]
+include!("../../../../../../test/foundation/text/compile-time-text/unit/src/__ctfe/find/3462.rs");
 
 /// Returns [`true`] if the given pattern matches a prefix of this string slice.
 ///
@@ -209,14 +178,8 @@ const fn bytes_ends_with(haystack: &[u8], needle: &[u8]) -> bool {
     i == needle_len
 }
 
-#[test]
-fn test_bytes_ends_with() {
-    assert!(bytes_ends_with(b"", b""));
-    assert!(bytes_ends_with(b"a", b""));
-    assert!(bytes_ends_with(b"a", b"a"));
-    assert!(!bytes_ends_with(b"", b"a"));
-    assert!(!bytes_ends_with(b"ab", b"a"));
-}
+#[cfg(test)]
+include!("../../../../../../test/foundation/text/compile-time-text/unit/src/__ctfe/find/5303.rs");
 
 /// Returns [`true`] if the given pattern matches a suffix of this string slice.
 ///

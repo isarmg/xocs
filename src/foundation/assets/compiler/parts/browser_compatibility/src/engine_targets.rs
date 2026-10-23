@@ -173,62 +173,8 @@ impl EngineTargets {
     }
 }
 
-#[test]
-fn test_displayed_value_is_parsable() {
-    let target = EngineTargets::new(FxHashMap::from_iter([
-        (Engine::Chrome, Version(139, 0, 0)),
-        (Engine::Deno, Version(2, 5, 1)),
-        (Engine::Es, Version(2024, 0, 0)),
-    ]));
-    let s = target.to_string();
-    let parsed = EngineTargets::from_target(&s).unwrap();
-    assert_eq!(target.0, parsed.0);
-}
+#[cfg(test)]
+include!("../../../../../../../test/foundation/assets/compiler/unit/parts/browser_compatibility/src/engine_targets/5551.rs");
 
-#[test]
-fn test_supports_es_feature() {
-    use crate::browser_compatibility::ESFeature::{
-        ES2015ArrowFunctions, ES2015RegExpConstructorCanAlterFlags, ES2020OptionalChaining,
-    };
-
-    assert!(!EngineTargets::default().supports_es_feature(ES2015ArrowFunctions));
-
-    assert!(
-        EngineTargets::from_target("es2015").unwrap().supports_es_feature(ES2015ArrowFunctions)
-    );
-    assert!(
-        EngineTargets::from_target("esnext").unwrap().supports_es_feature(ES2020OptionalChaining)
-    );
-    assert!(
-        !EngineTargets::from_target("es2019").unwrap().supports_es_feature(ES2020OptionalChaining)
-    );
-    assert!(
-        EngineTargets::from_target("es2020").unwrap().supports_es_feature(ES2020OptionalChaining)
-    );
-
-    // Browser targets also contain an implicit `esnext`. All configured engines must support the
-    // feature, regardless of compatibility-table iteration order.
-    assert!(
-        !EngineTargets::from_target("chrome90")
-            .unwrap()
-            .supports_es_feature(ES2020OptionalChaining)
-    );
-    assert!(
-        EngineTargets::from_target("chrome91").unwrap().supports_es_feature(ES2020OptionalChaining)
-    );
-
-    assert!(
-        !EngineTargets::from_target("chrome48")
-            .unwrap()
-            .supports_es_feature(ES2015RegExpConstructorCanAlterFlags)
-    );
-    assert!(
-        EngineTargets::from_target("chrome49")
-            .unwrap()
-            .supports_es_feature(ES2015RegExpConstructorCanAlterFlags)
-    );
-
-    // Missing compatibility data is not proof of support.
-    let rhino = EngineTargets::new(FxHashMap::from_iter([(Engine::Rhino, Version(1, 7, 15))]));
-    assert!(!rhino.supports_es_feature(ES2020OptionalChaining));
-}
+#[cfg(test)]
+include!("../../../../../../../test/foundation/assets/compiler/unit/parts/browser_compatibility/src/engine_targets/5927.rs");

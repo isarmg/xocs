@@ -111,10 +111,8 @@ pub struct CoreTypeId {
     index: u32,
 }
 
-#[test]
-fn assert_core_type_id_small() {
-    assert!(core::mem::size_of::<CoreTypeId>() <= 4);
-}
+#[cfg(test)]
+include!("../../../../../../test/foundation/wasm/module-decoder/unit/src/validator/types/3652.rs");
 
 impl TypeIdentifier for CoreTypeId {
     type Data = SubType;

@@ -16,6 +16,7 @@ use std::ptr;
 use std::sync::atomic::{AtomicPtr, Ordering};
 use std::sync::Arc;
 
+#[path = "../../../../../../test/foundation/runtime/worker-pool/unit/src/scope/test.rs"]
 #[cfg(test)]
 mod test;
 

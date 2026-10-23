@@ -305,9 +305,5 @@ impl<'a, K, V> From<OccupiedEntry<'a, K, V>> for IndexedEntry<'a, K, V> {
     }
 }
 
-#[test]
-fn assert_send_sync() {
-    fn assert_send_sync<T: Send + Sync>() {}
-    assert_send_sync::<Entry<'_, i32, i32>>();
-    assert_send_sync::<IndexedEntry<'_, i32, i32>>();
-}
+#[cfg(test)]
+include!("../../../../../../test/foundation/collections/ordered-map/unit/src/map/entry/10454.rs");

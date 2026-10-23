@@ -13,6 +13,9 @@ use super::{ArraySize, AssocArraySize};
 #[cfg(feature = "extra-sizes")]
 pub use extra_sizes::*;
 
+#[cfg(test)]
+include!("../../../../../test/foundation/math/constant-array/unit/src/sizes/array_size_tests.rs");
+
 /// Implement the `ArraySize` and `AssocArraySize` traits for a given list of `N => UN, ...`
 /// mappings.
 ///
@@ -32,13 +35,8 @@ macro_rules! impl_array_sizes {
             }
         )+
 
-        #[test]
-        fn $testname() {
-            use typenum::Unsigned;
-            $(
-                assert_eq!($len, $ty::USIZE);
-            )+
-        }
+        #[cfg(test)]
+        array_size_tests!($testname, $($len => $ty),+);
      };
 }
 

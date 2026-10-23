@@ -938,6 +938,3 @@ impl Display for Backtrace {
         Ok(())
     }
 }
-
-#[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../test/foundation/command-line/builder/functions/src/error/mod/check_auto_traits_943.rs"));

@@ -2,6 +2,9 @@
 // called LICENSE at the top level of the ICU4X source tree
 // (online at: https://github.com/unicode-org/icu4x/blob/main/LICENSE ).
 
+#[cfg(test)]
+include!("../../../../../test/foundation/unicode/locale-identifiers/unit/src/helpers/tinystr_subtag_tests.rs");
+
 macro_rules! impl_tinystr_subtag {
     (
         $(#[$doc:meta])*
@@ -197,32 +200,8 @@ macro_rules! impl_tinystr_subtag {
             }
         }
 
-        #[test]
-        fn test_construction() {
-            let maybe = $name::try_from_utf8($good_example.as_bytes());
-            assert!(maybe.is_ok());
-            assert_eq!(maybe, $name::try_from_raw(maybe.unwrap().into_raw()));
-            assert_eq!(maybe.unwrap().as_str(), $good_example);
-            $(
-                let maybe = $name::try_from_utf8($more_good_examples.as_bytes());
-                assert!(maybe.is_ok());
-                assert_eq!(maybe, $name::try_from_raw(maybe.unwrap().into_raw()));
-                assert_eq!(maybe.unwrap().as_str(), $more_good_examples);
-            )*
-            assert!($name::try_from_utf8($bad_example.as_bytes()).is_err());
-            $(
-                assert!($name::try_from_utf8($more_bad_examples.as_bytes()).is_err());
-            )*
-        }
-
-        #[test]
-        fn test_writeable() {
-            writeable::assert_writeable_eq!(&$good_example.parse::<$name>().unwrap(), $good_example);
-            $(
-                writeable::assert_writeable_eq!($more_good_examples.parse::<$name>().unwrap(), $more_good_examples);
-            )*
-        }
-
+        #[cfg(test)]
+        tinystr_subtag_tests!($name, [$good_example $(,$more_good_examples)*], [$bad_example $(,$more_bad_examples)*]);
         #[cfg(feature = "serde")]
         impl serde::Serialize for $name {
             fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -369,46 +348,28 @@ macro_rules! impl_writeable_for_each_subtag_str_no_test {
     };
 }
 
+#[cfg(test)]
+include!("../../../../../test/foundation/unicode/locale-identifiers/unit/src/helpers/subtag_list_tests.rs");
+
 macro_rules! impl_writeable_for_subtag_list {
     ($type:tt, $sample1:literal, $sample2:literal) => {
         impl_writeable_for_each_subtag_str_no_test!($type, selff, selff.0.len() == 1 => #[allow(clippy::unwrap_used)] { Some(selff.0.get(0).unwrap().as_str()) } );
 
-        #[test]
-        fn test_writeable() {
-            writeable::assert_writeable_eq!(&$type::default(), "");
-            writeable::assert_writeable_eq!(
-                &$type::from_vec_unchecked(alloc::vec![$sample1.parse().unwrap()]),
-                $sample1,
-            );
-            writeable::assert_writeable_eq!(
-                &$type::from_vec_unchecked(vec![
-                    $sample1.parse().unwrap(),
-                    $sample2.parse().unwrap()
-                ]),
-                core::concat!($sample1, "-", $sample2),
-            );
-        }
+        #[cfg(test)]
+        subtag_list_tests!($type, $sample1, $sample2);
     };
 }
+
+#[cfg(test)]
+include!(
+    "../../../../../test/foundation/unicode/locale-identifiers/unit/src/helpers/key_value_tests.rs"
+);
 
 macro_rules! impl_writeable_for_key_value {
     ($type:tt, $key1:literal, $value1:literal, $key2:literal, $expected2:literal) => {
         impl_writeable_for_each_subtag_str_no_test!($type);
 
-        #[test]
-        fn test_writeable() {
-            writeable::assert_writeable_eq!(&$type::default(), "");
-            writeable::assert_writeable_eq!(
-                &$type::from_tuple_vec(vec![($key1.parse().unwrap(), $value1.parse().unwrap())]),
-                core::concat!($key1, "-", $value1),
-            );
-            writeable::assert_writeable_eq!(
-                &$type::from_tuple_vec(vec![
-                    ($key1.parse().unwrap(), $value1.parse().unwrap()),
-                    ($key2.parse().unwrap(), "true".parse().unwrap())
-                ]),
-                core::concat!($key1, "-", $value1, "-", $expected2),
-            );
-        }
+        #[cfg(test)]
+        key_value_tests!($type, $key1, $value1, $key2, $expected2);
     };
 }

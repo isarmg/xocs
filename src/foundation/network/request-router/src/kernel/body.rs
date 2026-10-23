@@ -220,4 +220,4 @@ where
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-routing/kernel/functions/src/body/test_try_downcast_222.rs"));
+include!("../../../../../../test/foundation/network/request-router/unit/src/kernel/body/5536.rs");

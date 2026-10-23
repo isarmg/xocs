@@ -1,11 +1,12 @@
 [package]
+autotests = false
 name = "blog-interface"
 edition = "2024"
 rust-version = "1.99"
 license = "Apache-2.0"
 description = "博客组件、浏览器 API、主题和应用挂载"
 publish = false
-build = "../../tools/assets/src/platform_contract.rs"
+build = "../tools/assets/src/platform_contract.rs"
 
 [dependencies]
 blog-dom = {  default-features = false, features = ["csr"], path = "dom"}
@@ -59,3 +60,15 @@ features = [
     "utilities",
 ]
 
+
+[[test]]
+name = "csr_components"
+path = "../../test/interface/integration/csr_components.rs"
+
+[[test]]
+name = "executor_overrides"
+path = "../../test/interface/integration/executor_overrides.rs"
+
+[[test]]
+name = "kernel_state"
+path = "../../test/interface/integration/kernel_state.rs"

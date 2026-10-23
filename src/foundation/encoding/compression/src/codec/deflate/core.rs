@@ -352,11 +352,7 @@ pub(crate) const MAX_MATCH_LEN: usize = 258;
 pub(crate) const DEFAULT_FLAGS: u32 = NUM_PROBES[4] as u32 | TDEFL_WRITE_ZLIB_HEADER;
 
 #[cfg(test)]
-#[inline]
-fn write_u16_le(val: u16, slice: &mut [u8], pos: usize) {
-    slice[pos] = val as u8;
-    slice[pos + 1] = (val >> 8) as u8;
-}
+include!("../../../../../../../test/foundation/encoding/compression/unit/src/codec/deflate/core/15835.rs");
 
 // Read the two bytes starting at pos and interpret them as an u16.
 #[inline(always)]
@@ -2596,4 +2592,4 @@ const fn window_bits_from_flags(flags: u32) -> u8 {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/compression/codec/unit/src/deflate/core/test_2598.rs"));
+include!("../../../../../../../test/foundation/encoding/compression/unit/src/codec/deflate/core/95906.rs");

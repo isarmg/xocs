@@ -98,7 +98,4 @@ const UNQUOTED_CHAR: (
 const DOT_SEP: u8 = b'.';
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/retained/test/foundation/toml/editor/unit/src/parser/key/test_100.rs"
-));
+include!("../../../../../../../test/foundation/format/configuration/unit/src/editor/parser/key/3245.rs");

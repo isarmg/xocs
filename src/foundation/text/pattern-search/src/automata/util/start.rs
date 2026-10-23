@@ -406,4 +406,4 @@ impl Start {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/automata/unit/src/util/start/tests_408.rs"));
+include!("../../../../../../../test/foundation/text/pattern-search/unit/src/automata/util/start/15724.rs");

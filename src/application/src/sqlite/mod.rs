@@ -516,4 +516,5 @@ pub enum Error {
 }
 
 #[cfg(test)]
+#[path = "../../../../test/application/unit/sqlite/tests.rs"]
 mod tests;

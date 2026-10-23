@@ -105,8 +105,8 @@
 #[doc(hidden)]
 pub use http;
 
-#[cfg(all(test, feature = "nightly"))]
-extern crate test;
+#[cfg(test)]
+include!("../../../../../test/foundation/network/http-transport/unit/src/lib/4372.rs");
 
 #[doc(no_inline)]
 pub use http::{header, HeaderMap, Method, Request, Response, StatusCode, Uri, Version};
@@ -124,7 +124,7 @@ mod common;
 mod error;
 pub mod ext;
 #[cfg(test)]
-#[path = "../../../../../test/foundation/http-transport/modules/src/mock.rs"]
+#[path = "../../../../../test/foundation/network/http-transport/legacy/modules/src/mock.rs"]
 mod mock;
 pub mod rt;
 pub mod service;

@@ -1949,11 +1949,5 @@ fn copy_match_to_slots(m: Match, slots: &mut [Option<NonMaxUsize>]) {
 // We also don't test this on miri since it takes forever.
 //
 // We also require `unicode-perl` since some regexes use `\w`, `\d` and `\s`.
-#[cfg(all(
-    feature = "perf-literal-substring",
-    feature = "perf-literal-multisubstring",
-    feature = "unicode-perl",
-    not(miri),
-))]
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/automata/unit/src/meta/strategy/tests_1958.rs"));
+include!("../../../../../../../test/foundation/text/pattern-search/unit/src/automata/meta/strategy/77053.rs");

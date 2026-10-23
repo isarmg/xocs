@@ -1,4 +1,5 @@
 [package]
+autotests = false
 name = "blog"
 version = "1.1.0"
 edition = "2024"
@@ -74,3 +75,35 @@ path = "../foundation/network/request-pipeline"
 package = "blog-network-request-pipeline"
 default-features = true
 
+
+[[test]]
+name = "date_time_contracts"
+path = "../../test/server/integration/date_time_contracts.rs"
+
+[[test]]
+name = "deployment_contract"
+path = "../../test/server/integration/deployment_contract.rs"
+
+[[test]]
+name = "maintenance"
+path = "../../test/server/integration/maintenance.rs"
+
+[[test]]
+name = "media_paths"
+path = "../../test/server/integration/media_paths.rs"
+
+[[test]]
+name = "media_ranges"
+path = "../../test/server/integration/media_ranges.rs"
+
+[[test]]
+name = "record_derives"
+path = "../../test/server/integration/record_derives.rs"
+
+[[test]]
+name = "sqlite_bindings"
+path = "../../test/server/integration/sqlite_bindings.rs"
+
+[[example]]
+name = "smoke-fixture"
+path = "../../test/server/fixtures/smoke-fixture.rs"

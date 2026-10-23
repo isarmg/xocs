@@ -502,4 +502,5 @@ fn resolve(spec: &PathSpec, value: &Value, root: &Path, depth: usize) -> Result<
 }
 
 #[cfg(test)]
+#[path = "../../../../test/application/unit/configuration_contract/rules/tests.rs"]
 mod tests;

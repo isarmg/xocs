@@ -444,7 +444,4 @@ pub fn array() -> Item {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/retained/test/foundation/toml/editor/functions/src/item/string_roundtrip_445.rs"
-));
+include!("../../../../../../test/foundation/format/configuration/unit/src/editor/item/13026.rs");

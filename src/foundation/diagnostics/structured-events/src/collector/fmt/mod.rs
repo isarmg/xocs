@@ -438,7 +438,7 @@ where
     /// this formatter; they will not be recorded by other `Subscriber`s or by
     /// `Layer`s added to this subscriber.
     ///
-    /// [lifecycle]: https://docs.rs/tracing/latest/tracing/span/index.html#the-span-lifecycle
+    /// [lifecycle]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/span/index.html#the-span-lifecycle
     /// [time]: SubscriberBuilder::without_time()
     pub fn with_span_events(self, kind: format::FmtSpan) -> Self {
         SubscriberBuilder {
@@ -979,9 +979,3 @@ pub fn try_init() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
 pub fn init() {
     try_init().expect("Unable to install global subscriber")
 }
-
-#[cfg(test)]
-include!(core::concat!(
-    core::env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/tracing-family/collector/unit/src/fmt/mod/test_1266.rs"
-));

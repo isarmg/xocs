@@ -329,9 +329,6 @@ impl TokioSleep {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/http-transport/adapters/unit/src/rt/tokio/tests_339.rs"
-));
+include!("../../../../../../../test/foundation/network/http-transport/unit/src/adapters/rt/tokio/10411.rs");
 
 use std::future::Future;

@@ -35,6 +35,7 @@ use crate::{Datelike, Months, TimeDelta, Timelike, Weekday};
 #[cfg(feature = "serde")]
 pub(super) mod serde;
 
+#[path = "../../../../../../test/foundation/format/date-time/unit/src/datetime/tests.rs"]
 #[cfg(test)]
 mod tests;
 

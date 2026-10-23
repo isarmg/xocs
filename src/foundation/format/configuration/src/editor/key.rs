@@ -426,7 +426,4 @@ impl std::fmt::Display for KeyMut<'_> {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/retained/test/foundation/toml/editor/functions/src/key/string_roundtrip_425.rs"
-));
+include!("../../../../../../test/foundation/format/configuration/unit/src/editor/key/10692.rs");

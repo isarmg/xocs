@@ -168,6 +168,7 @@ mod expression;
 mod multi;
 mod sequence;
 
+#[path = "../../../../../../test/foundation/format/parser-combinators/unit/src/combinator/tests.rs"]
 #[cfg(test)]
 mod tests;
 

@@ -5680,9 +5680,3 @@ fn fn_trait_bound_sig(
     }
     None
 }
-
-#[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../test/foundation/wasm-binding-macros/unit/src/codegen/tests_5747.rs"
-));

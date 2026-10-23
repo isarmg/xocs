@@ -9,13 +9,6 @@ pub(crate) fn get_timezone_inner() -> Result<String, crate::GetTimezoneError> {
         .ok_or(crate::GetTimezoneError::OsError)
 }
 
+#[path = "../../../../../test/foundation/platform/local-time-zone/unit/src/tz_wasm32_unknown/tests.rs"]
 #[cfg(test)]
-mod tests {
-    use wasm_bindgen_test::*;
-
-    #[wasm_bindgen_test]
-    fn pass() {
-        let tz = super::get_timezone_inner().unwrap();
-        console_log!("tz={:?}", tz);
-    }
-}
+mod tests;

@@ -7,6 +7,7 @@ use core::ops::Index;
 
 mod detail;
 
+#[path = "../../../../../../test/foundation/wasm/module-decoder/unit/src/collections/index_map/tests.rs"]
 #[cfg(test)]
 mod tests;
 

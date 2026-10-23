@@ -692,10 +692,10 @@ mod aarch64_neon {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/literal/unit/src/packed/vector/all_tests_x86_64_ssse3_692.rs"));
+include!("../../../../../../../test/foundation/text/pattern-search/unit/src/literal/packed/vector/25290.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/literal/unit/src/packed/vector/all_tests_x86_64_avx2_941.rs"));
+include!("../../../../../../../test/foundation/text/pattern-search/unit/src/literal/packed/vector/25447.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/literal/unit/src/packed/vector/all_tests_aarch64_neon_1474.rs"));
+include!("../../../../../../../test/foundation/text/pattern-search/unit/src/literal/packed/vector/25603.rs");

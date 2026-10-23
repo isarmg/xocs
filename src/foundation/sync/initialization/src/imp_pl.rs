@@ -168,9 +168,5 @@ fn initialize_inner(state: &AtomicU8, init: &mut dyn FnMut() -> bool) {
     }
 }
 
-#[test]
-fn test_size() {
-    use std::mem::size_of;
-
-    assert_eq!(size_of::<OnceCell<bool>>(), 1 * size_of::<bool>() + size_of::<u8>());
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/sync/initialization/unit/src/imp_pl/5799.rs");

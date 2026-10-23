@@ -2,6 +2,7 @@ use super::*;
 use std::cell::Cell;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+#[path = "../../../../../../../test/foundation/runtime/parallel-iterator/unit/src/iter/find_first_last/test.rs"]
 #[cfg(test)]
 mod test;
 

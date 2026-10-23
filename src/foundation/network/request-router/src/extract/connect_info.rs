@@ -31,7 +31,7 @@ pub struct IntoMakeServiceWithConnectInfo<S, C> {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-routing/functions/src/extract/connect_info/traits_33.rs"));
+include!("../../../../../../test/foundation/network/request-router/unit/src/extract/connect_info/962.rs");
 
 impl<S, C> IntoMakeServiceWithConnectInfo<S, C> {
     pub(crate) fn new(svc: S) -> Self {
@@ -229,4 +229,4 @@ where
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-routing/unit/src/extract/connect_info/tests_234.rs"));
+include!("../../../../../../test/foundation/network/request-router/unit/src/extract/connect_info/6943.rs");

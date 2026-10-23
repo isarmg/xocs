@@ -464,4 +464,4 @@ fn value_to_digit(value: u32) -> char {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/url-encoding/domain/functions/src/punycode/huge_encode_466.rs"));
+include!("../../../../../../test/foundation/network/web-address/unit/src/domain/punycode/14466.rs");

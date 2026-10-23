@@ -598,4 +598,4 @@ impl IntoResponse for InvalidUtf8InPathParam {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-routing/unit/src/extract/path/mod/tests_600.rs"));
+include!("../../../../../../../test/foundation/network/request-router/unit/src/extract/path/mod/18195.rs");

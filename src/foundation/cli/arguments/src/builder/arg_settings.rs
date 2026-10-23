@@ -68,6 +68,3 @@ impl ArgSettings {
         1 << (self as u8)
     }
 }
-
-#[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../test/foundation/command-line/builder/unit/src/builder/arg_settings/test_72.rs"));

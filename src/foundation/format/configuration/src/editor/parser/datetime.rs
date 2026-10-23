@@ -250,7 +250,4 @@ fn unsigned_digits<'i, const MIN: usize, const MAX: usize>(
 const DIGIT: RangeInclusive<u8> = b'0'..=b'9';
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/retained/test/foundation/toml/editor/unit/src/parser/datetime/test_252.rs"
-));
+include!("../../../../../../../test/foundation/format/configuration/unit/src/editor/parser/datetime/8067.rs");

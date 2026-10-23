@@ -1083,9 +1083,3 @@ pub unsafe fn unpark_filter(
 
     result
 }
-
-#[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../test/foundation/synchronization/parking/unit/src/parking_lot/tests_1429.rs"
-));

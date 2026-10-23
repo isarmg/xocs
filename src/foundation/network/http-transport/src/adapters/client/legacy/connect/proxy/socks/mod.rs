@@ -159,6 +159,6 @@ where
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-transport/adapters/unit/src/client/legacy/connect/proxy/socks/mod/all_test_161.rs"));
+include!("../../../../../../../../../../../test/foundation/network/http-transport/unit/src/adapters/client/legacy/connect/proxy/socks/mod/4246.rs");
 
 use std::future::Future;

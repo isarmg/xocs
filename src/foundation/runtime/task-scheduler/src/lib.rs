@@ -272,9 +272,8 @@ cfg_macros! {
 }
 
 // TODO: rm
-#[cfg(feature = "io-util")]
 #[cfg(test)]
-fn is_unpin<T: Unpin>() {}
+include!("../../../../../test/foundation/runtime/task-scheduler/unit/src/lib/8458.rs");
 
 /// fuzz test (`fuzz_linked_list`)
 #[cfg(fuzzing)]

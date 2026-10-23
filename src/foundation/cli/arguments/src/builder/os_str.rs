@@ -340,6 +340,3 @@ impl std::hash::Hash for Inner {
         self.as_os_str().hash(state);
     }
 }
-
-#[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../test/foundation/command-line/builder/unit/src/builder/os_str/tests_344.rs"));

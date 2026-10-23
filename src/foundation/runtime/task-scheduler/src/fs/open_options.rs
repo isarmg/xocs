@@ -3,10 +3,11 @@ use crate::fs::{asyncify, File};
 use std::io;
 use std::path::Path;
 
+#[path = "../../../../../../test/foundation/runtime/task-scheduler/unit/src/fs/open_options/mock_open_options.rs"]
 #[cfg(test)]
 mod mock_open_options;
 #[cfg(test)]
-use mock_open_options::MockOpenOptions as StdOpenOptions;
+include!("../../../../../../test/foundation/runtime/task-scheduler/unit/src/fs/open_options/105.rs");
 #[cfg(not(test))]
 use std::fs::OpenOptions as StdOpenOptions;
 

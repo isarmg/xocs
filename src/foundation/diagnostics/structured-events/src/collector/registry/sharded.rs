@@ -81,9 +81,9 @@ use tracing::primitives::{
 /// [`Layer`]: crate::collector::Layer
 /// [added]: crate::collector::layer::Layer#composing-layers
 /// [extensions]: super::Extensions
-/// [closed]: https://docs.rs/tracing/latest/tracing/span/index.html#closing-spans
+/// [closed]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/span/index.html#closing-spans
 /// [considered closed]: tracing::primitives::subscriber::Subscriber::try_close()
-/// [`Span`]: https://docs.rs/tracing/latest/tracing/span/struct.Span.html
+/// [`Span`]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/span/struct.Span.html
 /// [ot]: https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/api.md#spancontext
 /// [fields]: tracing::primitives::field
 /// [stored span data]: crate::collector::registry::SpanData::extensions_mut
@@ -525,9 +525,3 @@ impl Clear for DataInner {
         self.filter_map = FilterMap::new();
     }
 }
-
-#[cfg(test)]
-include!(core::concat!(
-    core::env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/tracing-family/collector/unit/src/registry/sharded/tests_528.rs"
-));

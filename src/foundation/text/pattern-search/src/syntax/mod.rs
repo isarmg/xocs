@@ -247,4 +247,4 @@ pub fn is_word_byte(c: u8) -> bool {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/syntax/unit/src/lib/tests_385.rs"));
+include!("../../../../../../test/foundation/text/pattern-search/unit/src/syntax/mod/9381.rs");

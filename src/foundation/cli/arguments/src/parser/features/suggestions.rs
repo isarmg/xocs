@@ -84,6 +84,3 @@ where
             .map(|(_, suggestion)| suggestion),
     }
 }
-
-#[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../test/foundation/command-line/builder/unit/src/parser/features/suggestions/all_test_88.rs"));

@@ -171,6 +171,3 @@ impl PartialEq<Id> for String {
         PartialEq::eq(other, self)
     }
 }
-
-#[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../test/foundation/command-line/builder/unit/src/util/id/tests_175.rs"));

@@ -3,7 +3,7 @@ name = "blog-browser-domain-tests"
 edition = "2024"
 publish = false
 description = "浏览器数据契约与Markdown逻辑的宿主测试"
-build = "../../tools/assets/src/platform_contract.rs"
+build = "../../src/tools/assets/src/platform_contract.rs"
 
 [lib]
 path = "lib.rs"

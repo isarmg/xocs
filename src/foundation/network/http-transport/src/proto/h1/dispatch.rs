@@ -768,7 +768,4 @@ cfg_client! {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/http-transport/unit/src/proto/h1/dispatch/tests_770.rs"
-));
+include!("../../../../../../../test/foundation/network/http-transport/unit/src/proto/h1/dispatch/29165.rs");

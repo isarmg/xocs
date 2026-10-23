@@ -5,6 +5,9 @@
 use crate::*;
 use core::fmt;
 
+#[cfg(test)]
+include!("../../../../../test/foundation/encoding/text-writer/unit/src/impls/write_num_tests.rs");
+
 macro_rules! impl_write_num {
     // random_call exists since usize doesn't have a rand impl. Should always be `random` or empty
     ($u:ty, $i:ty, $test:ident $(,$random_call:ident)?) => {
@@ -49,42 +52,8 @@ macro_rules! impl_write_num {
             }
         }
 
-        #[test]
-        #[allow(trivial_numeric_casts)]
-        fn $test() {
-            use $crate::assert_writeable_eq;
-            assert_writeable_eq!(&(0 as $u), "0");
-            assert_writeable_eq!(&(0 as $i), "0");
-            assert_writeable_eq!(&(-0 as $i), "0");
-            assert_writeable_eq!(&(1 as $u), "1");
-            assert_writeable_eq!(&(1 as $i), "1");
-            assert_writeable_eq!(&(-1 as $i), "-1");
-            assert_writeable_eq!(&(9 as $u), "9");
-            assert_writeable_eq!(&(9 as $i), "9");
-            assert_writeable_eq!(&(-9 as $i), "-9");
-            assert_writeable_eq!(&(10 as $u), "10");
-            assert_writeable_eq!(&(10 as $i), "10");
-            assert_writeable_eq!(&(-10 as $i), "-10");
-            assert_writeable_eq!(&(99 as $u), "99");
-            assert_writeable_eq!(&(99 as $i), "99");
-            assert_writeable_eq!(&(-99 as $i), "-99");
-            assert_writeable_eq!(&(100 as $u), "100");
-            assert_writeable_eq!(&(-100 as $i), "-100");
-            assert_writeable_eq!(&<$u>::MAX, <$u>::MAX.to_string());
-            assert_writeable_eq!(&<$i>::MAX, <$i>::MAX.to_string());
-            assert_writeable_eq!(&<$i>::MIN, <$i>::MIN.to_string());
-
-            $(
-
-                use rand::{rngs::SmallRng, Rng, SeedableRng};
-                let mut rng = SmallRng::seed_from_u64(4); // chosen by fair dice roll.
-                                                          // guaranteed to be random.
-                for _ in 0..1000 {
-                    let rand = rng.$random_call::<$u>();
-                    assert_writeable_eq!(rand, rand.to_string());
-                }
-            )?
-        }
+        #[cfg(test)]
+        write_num_tests!($u, $i, $test $(,$random_call)?);
     };
 }
 
@@ -179,56 +148,5 @@ impl_write_smart_pointer!(alloc::rc::Rc<T>);
 #[cfg(feature = "alloc")]
 impl_write_smart_pointer!(alloc::sync::Arc<T>);
 
-#[test]
-fn test_string_impls() {
-    fn check_writeable_slice<W: Writeable + core::fmt::Display>(writeables: &[W]) {
-        assert_writeable_eq!(&writeables[0], "");
-        assert_writeable_eq!(&writeables[1], "abc");
-        assert!(matches!(writeables[0].write_to_string(), Cow::Borrowed(_)));
-        assert!(matches!(writeables[1].write_to_string(), Cow::Borrowed(_)));
-    }
-
-    // test str impl
-    let arr: &[&str] = &["", "abc"];
-    check_writeable_slice(arr);
-
-    // test String impl
-    let arr: &[String] = &[String::new(), "abc".to_owned()];
-    check_writeable_slice(arr);
-
-    // test char impl
-    let chars = ['a', 'β', '你', '😀'];
-    for i in 0..chars.len() {
-        let s = String::from(chars[i]);
-        assert_writeable_eq!(&chars[i], s);
-        for j in 0..chars.len() {
-            assert_eq!(
-                cmp_str(&chars[j], &s),
-                chars[j].cmp(&chars[i]),
-                "{:?} vs {:?}",
-                chars[j],
-                chars[i]
-            );
-        }
-    }
-
-    // test Cow impl
-    let arr: &[Cow<str>] = &[Cow::Borrowed(""), Cow::Owned("abc".to_string())];
-    check_writeable_slice(arr);
-
-    // test Box impl
-    let arr: &[Box<str>] = &["".into(), "abc".into()];
-    check_writeable_slice(arr);
-
-    // test Rc impl
-    let arr: &[alloc::rc::Rc<str>] = &["".into(), "abc".into()];
-    check_writeable_slice(arr);
-
-    // test Arc impl
-    let arr: &[alloc::sync::Arc<str>] = &["".into(), "abc".into()];
-    check_writeable_slice(arr);
-
-    // test &T impl
-    let arr: &[&String] = &[&String::new(), &"abc".to_owned()];
-    check_writeable_slice(arr);
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/encoding/text-writer/unit/src/impls/6670.rs");

@@ -127,9 +127,7 @@ struct SpanRange {
 }
 
 #[cfg(test)]
-struct _Test
-where
-    Error: Send + Sync;
+include!("../../../../../test/foundation/syntax/rust-parser/unit/src/error/3886.rs");
 
 impl Error {
     /// Usually the [`ParseStream::error`] method will be used instead, which

@@ -84,19 +84,8 @@ pub(crate) struct RuleBreakIterator<
     pub(crate) complex: Option<C::ComplexPayloads<'data>>,
 }
 
-#[test]
-fn test_lookahead_positions_stays_on_stack() {
-    use crate::provider::Baked;
-
-    for &SegmenterStateMachine { num_lookaheads, .. } in [
-        Baked::SINGLETON_SEGMENTER_BREAK_LINE_V2,
-        Baked::SINGLETON_SEGMENTER_BREAK_GRAPHEME_CLUSTER_V2,
-        Baked::SINGLETON_SEGMENTER_BREAK_SENTENCE_V2,
-        Baked::SINGLETON_SEGMENTER_BREAK_WORD_V2,
-    ] {
-        assert!(num_lookaheads <= 1, "{num_lookaheads}");
-    }
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/unicode/boundary-analysis/unit/src/rule_segmenter_v2/2973.rs");
 
 impl<'data, 's, Y: RuleBreakType, C: ComplexHandler<Y>> RuleBreakIterator<'data, 's, Y, C> {
     pub(crate) fn new(

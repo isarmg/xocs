@@ -315,4 +315,4 @@ impl Adapter {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/url-encoding/unicode_backend/unit/src/lib/all_tests_320.rs"));
+include!("../../../../../../test/foundation/network/web-address/unit/src/unicode_backend/mod/13585.rs");

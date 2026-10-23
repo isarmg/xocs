@@ -1899,4 +1899,4 @@ impl Utf8Node {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/automata/unit/src/nfa/thompson/compiler/tests_1901.rs"));
+include!("../../../../../../../../test/foundation/text/pattern-search/unit/src/automata/nfa/thompson/compiler/74157.rs");

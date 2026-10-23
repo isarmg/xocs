@@ -8,9 +8,11 @@ mod common;
 pub mod sip;
 pub mod sip128;
 
+#[path = "../../../../../test/foundation/math/keyed-fingerprint/unit/src/tests.rs"]
 #[cfg(test)]
 mod tests;
 
+#[path = "../../../../../test/foundation/math/keyed-fingerprint/unit/src/tests128.rs"]
 #[cfg(test)]
 mod tests128;
 

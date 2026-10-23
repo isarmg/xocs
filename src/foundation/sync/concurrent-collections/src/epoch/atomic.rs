@@ -1667,4 +1667,4 @@ impl<T: ?Sized + Pointable> Default for Shared<'_, T> {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/concurrent-collections/epoch/unit/src/atomic/all_tests_1669.rs"));
+include!("../../../../../../test/foundation/sync/concurrent-collections/unit/src/epoch/atomic/54724.rs");

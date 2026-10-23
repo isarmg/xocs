@@ -1937,4 +1937,4 @@ impl core::fmt::Display for MatchError {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/automata/unit/src/util/search/tests_1939.rs"));
+include!("../../../../../../../test/foundation/text/pattern-search/unit/src/automata/util/search/73047.rs");

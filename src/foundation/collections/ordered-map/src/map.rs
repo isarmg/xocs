@@ -13,6 +13,7 @@ pub mod raw_entry_v1;
 #[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 pub mod serde_seq;
 
+#[path = "../../../../../test/foundation/collections/ordered-map/unit/src/map/tests.rs"]
 #[cfg(test)]
 mod tests;
 

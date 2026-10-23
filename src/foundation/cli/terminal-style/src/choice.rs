@@ -79,7 +79,4 @@ impl Default for AtomicChoice {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/retained/test/foundation/terminal-style/colorchoice/unit/src/lib/test_87.rs"
-));
+include!("../../../../../test/foundation/cli/terminal-style/unit/src/choice/2107.rs");

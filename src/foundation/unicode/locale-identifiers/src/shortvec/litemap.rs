@@ -189,12 +189,8 @@ impl<K, V> StoreIntoIterator<K, V> for ShortBoxSlice<(K, V)> {
     // leave lm_extend_start as default
 }
 
-#[test]
-fn test_short_slice_impl() {
-    litemap::testing::check_store::<ShortBoxSlice<(u32, u64)>>();
-}
+#[cfg(test)]
+include!("../../../../../../test/foundation/unicode/locale-identifiers/unit/src/shortvec/litemap/5972.rs");
 
-#[test]
-fn test_short_slice_impl_full() {
-    litemap::testing::check_store_full::<ShortBoxSlice<(u32, u64)>>();
-}
+#[cfg(test)]
+include!("../../../../../../test/foundation/unicode/locale-identifiers/unit/src/shortvec/litemap/6078.rs");

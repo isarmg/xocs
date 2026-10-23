@@ -491,7 +491,7 @@ where
     /// this formatter; they will not be recorded by other `Subscriber`s or by
     /// `Layer`s added to this subscriber.
     ///
-    /// [lifecycle]: https://docs.rs/tracing/latest/tracing/span/index.html#the-span-lifecycle
+    /// [lifecycle]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/span/index.html#the-span-lifecycle
     /// [time]: Layer::without_time()
     pub fn with_span_events(self, kind: FmtSpan) -> Self {
         Layer {
@@ -1286,9 +1286,3 @@ impl Timings {
         }
     }
 }
-
-#[cfg(test)]
-include!(core::concat!(
-    core::env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/tracing-family/collector/unit/src/fmt/fmt_layer/test_1295.rs"
-));

@@ -172,7 +172,7 @@ pub(crate) async fn initialize(
         .execute(pool)
         .await?;
     let service = AdministratorService::new(SqliteAdministratorStore::new(pool.clone()));
-    crate::test_support::seed_administrator(&service, username, password, now_micros()?).await?;
+    crate::administrator::seed_administrator(&service, username, password, now_micros()?).await?;
     validate_database(pool).await
 }
 

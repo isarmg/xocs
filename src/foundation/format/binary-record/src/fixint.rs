@@ -151,41 +151,6 @@ macro_rules! impl_fixint {
 
 impl_fixint![i16, i32, i64, i128, u16, u32, u64, u128];
 
+#[path = "../../../../../test/foundation/format/binary-record/unit/src/fixint/tests.rs"]
 #[cfg(test)]
-mod tests {
-    use serde::{Deserialize, Serialize};
-
-    #[test]
-    fn test_little_endian() {
-        #[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
-        pub struct DefinitelyLE {
-            #[serde(with = "crate::fixint::le")]
-            x: u16,
-        }
-
-        let input = DefinitelyLE { x: 0xABCD };
-        let mut buf = [0; 32];
-        let serialized = crate::to_slice(&input, &mut buf).unwrap();
-        assert_eq!(serialized, &[0xCD, 0xAB]);
-
-        let deserialized: DefinitelyLE = crate::from_bytes(serialized).unwrap();
-        assert_eq!(deserialized, input);
-    }
-
-    #[test]
-    fn test_big_endian() {
-        #[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
-        pub struct DefinitelyBE {
-            #[serde(with = "crate::fixint::be")]
-            x: u16,
-        }
-
-        let input = DefinitelyBE { x: 0xABCD };
-        let mut buf = [0; 32];
-        let serialized = crate::to_slice(&input, &mut buf).unwrap();
-        assert_eq!(serialized, &[0xAB, 0xCD]);
-
-        let deserialized: DefinitelyBE = crate::from_bytes(serialized).unwrap();
-        assert_eq!(deserialized, input);
-    }
-}
+mod tests;

@@ -80,6 +80,7 @@ use rustc::Rustc;
 mod version;
 use version::Version;
 
+#[path = "../../../../../test/foundation/native/compiler-capabilities/unit/src/tests.rs"]
 #[cfg(test)]
 mod tests;
 

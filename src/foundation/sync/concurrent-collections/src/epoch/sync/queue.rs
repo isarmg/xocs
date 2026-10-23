@@ -215,4 +215,4 @@ impl<T> Drop for Queue<T> {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/concurrent-collections/epoch/unit/src/sync/queue/all_test_217.rs"));
+include!("../../../../../../../test/foundation/sync/concurrent-collections/unit/src/epoch/sync/queue/7899.rs");

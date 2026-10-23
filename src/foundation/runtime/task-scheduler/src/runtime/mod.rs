@@ -405,6 +405,7 @@
 //! [`prewarm-fd-table`]: https://github.com/tokio-rs/tokio/blob/master/examples/prewarm-fd-table.rs
 
 // At the top due to macros
+#[path = "../../../../../../test/foundation/runtime/task-scheduler/unit/src/runtime/tests/mod.rs"]
 #[cfg(test)]
 #[cfg(not(target_family = "wasm"))]
 #[macro_use]

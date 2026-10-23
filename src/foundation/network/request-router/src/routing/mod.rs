@@ -35,7 +35,7 @@ mod strip_prefix;
 pub(crate) mod url_params;
 
 #[cfg(test)]
-#[path = "../../../../../../test/foundation/http-routing/modules/src/routing/tests/mod.rs"]
+#[path = "../../../../../../test/foundation/network/request-router/legacy/modules/src/routing/tests/mod.rs"]
 mod tests;
 
 pub use self::{into_make_service::IntoMakeService, method_filter::MethodFilter, route::Route};
@@ -797,4 +797,4 @@ impl<S> fmt::Debug for Endpoint<S> {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-routing/functions/src/routing/mod/traits_799.rs"));
+include!("../../../../../../test/foundation/network/request-router/unit/src/routing/mod/25842.rs");

@@ -579,7 +579,4 @@ impl fmt::Display for TimedOut {
 impl StdError for TimedOut {}
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/http-transport/unit/src/error/tests_701.rs"
-));
+include!("../../../../../test/foundation/network/http-transport/unit/src/error/21841.rs");

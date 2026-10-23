@@ -20,9 +20,6 @@ mod value_parser;
 #[cfg(debug_assertions)]
 mod debug_asserts;
 
-#[cfg(test)]
-#[path = "../../../../../test/foundation/command-line/builder/modules/src/builder/tests.rs"]
-mod tests;
 
 pub mod styling;
 

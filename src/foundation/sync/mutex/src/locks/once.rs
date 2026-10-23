@@ -323,9 +323,3 @@ impl fmt::Debug for Once {
             .finish()
     }
 }
-
-#[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../test/foundation/synchronization/locks/unit/src/once/tests_327.rs"
-));

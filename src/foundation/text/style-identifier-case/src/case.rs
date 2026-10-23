@@ -1,5 +1,5 @@
 #[cfg(test)]
-use strum_macros::EnumIter;
+include!("../../../../../test/foundation/text/style-identifier-case/unit/src/case/0.rs");
 
 use crate::pattern::Pattern;
 use crate::Boundary;
@@ -381,17 +381,6 @@ impl Case {
     }
 }
 
+#[path = "../../../../../test/foundation/text/style-identifier-case/unit/src/case/test.rs"]
 #[cfg(test)]
-mod test {
-
-    use super::*;
-    use strum::IntoEnumIterator;
-
-    #[test]
-    fn all_cases_in_iter() {
-        let all = Case::all_cases();
-        for case in Case::iter() {
-            assert!(all.contains(&case));
-        }
-    }
-}
+mod test;

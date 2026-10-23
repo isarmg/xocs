@@ -1,6 +1,6 @@
 # 测试与审计工具
 
-浏览器测试使用 Node 26.7.0。npm 包只用于测试驱动、断言和无障碍检查；生产资源由 Rust 构建。依赖及完整性摘要由 [package.json](../../web/package.json) 和 [package-lock.json](../../web/package-lock.json) 固定。
+浏览器测试使用 Node 26.7.0。npm 包只用于测试驱动、断言和无障碍检查；生产资源由 Rust 构建。依赖及完整性摘要由 [package.json](../../src/web/package.json) 和 [package-lock.json](../../src/web/package-lock.json) 固定。
 
 ## 锁定的 npm 包
 
@@ -19,7 +19,7 @@
 准备 Rust 工具链与 WASM 目标后，在仓库根目录执行：
 
 ```sh
-cd web
+cd src/web
 npm ci
 npx playwright install --with-deps chromium firefox
 npm run test:unit
@@ -40,19 +40,19 @@ npm run test:public
 - `expect(page).toHaveURL()`：检查页面路由；`expect.poll()`：等待异步计算结果。
 - `page.getByRole()`、`getByLabel()`：按可访问角色和表单名称定位；`page.locator()`：按 CSS 定位。
 
-示例见[管理布局测试](../../web/tests/admin-layout.mjs)和[界面运行测试](../../web/tests/blog-interface-runtime.mjs)。交互前等待应用运行标记或实际可见状态，使用新的 browser context 隔离测试会话。
+示例见[管理布局测试](../../test/browser/admin-layout.mjs)和[界面运行测试](../../test/browser/blog-interface-runtime.mjs)。交互前等待应用运行标记或实际可见状态，使用新的 browser context 隔离测试会话。
 
 ## playwright
 
 `playwright` 提供浏览器自动化 API，并导出给测试包使用。典型生命周期为 `engine.launch()` → `browser.newContext()` → `context.newPage()`；在 `finally` 中关闭 context 和 browser，释放进程与页面资源。
 
-项目同时执行 Chromium 与 Firefox，按场景设置 `locale`、`viewport` 和 `colorScheme`。`page.route()` 拦截 API 并返回 fixture，`page.on('pageerror', ...)` 收集页面错误；监听响应可检查实际 WASM 的 MIME、内容和缓存行为。可复用的 fixture 入口见 [browser-fixtures.mjs](../../web/tests/browser-fixtures.mjs)。
+项目同时执行 Chromium 与 Firefox，按场景设置 `locale`、`viewport` 和 `colorScheme`。`page.route()` 拦截 API 并返回 fixture，`page.on('pageerror', ...)` 收集页面错误；监听响应可检查实际 WASM 的 MIME、内容和缓存行为。可复用的 fixture 入口见 [browser-fixtures.mjs](../../test/browser/browser-fixtures.mjs)。
 
 ## playwright-core
 
 `playwright-core` 保存浏览器协议实现、类型声明、CLI 和所需浏览器修订信息。浏览器执行文件由安装命令单独准备；包版本与执行文件共同决定测试环境。项目通过上层包使用它，不需要新增直接依赖。
 
-预览适配器 [test-preview.mjs](../../tools/assets/test-preview.mjs) 启动 Rust `blog-assets preview`，读取监听地址并在结束时清理子进程。添加场景时沿用此入口，保持浏览器驱动与资源服务的生命周期一致。
+预览适配器 [test-preview.mjs](../../test/tools/assets/test-preview.mjs) 启动 Rust `blog-assets preview`，读取监听地址并在结束时清理子进程。添加场景时沿用此入口，保持浏览器驱动与资源服务的生命周期一致。
 
 ## @axe-core/playwright
 
@@ -71,7 +71,7 @@ async function checkAccessibility(page) {
 }
 ```
 
-`.include(selector)` 限定检查区域，`.exclude(selector)` 排除区域，`.withTags(tags)` 选择规则标签，`.analyze()` 返回检查结果。区域和排除规则会改变覆盖范围，应在具体测试中保持明确。实际调用见[管理布局测试](../../web/tests/admin-layout.mjs)。
+`.include(selector)` 限定检查区域，`.exclude(selector)` 排除区域，`.withTags(tags)` 选择规则标签，`.analyze()` 返回检查结果。区域和排除规则会改变覆盖范围，应在具体测试中保持明确。实际调用见[管理布局测试](../../test/browser/admin-layout.mjs)。
 
 ## axe-core
 
@@ -83,13 +83,13 @@ async function checkAccessibility(page) {
 
 | 工具 | 固定版本 | 用途与入口 |
 | --- | --- | --- |
-| `cargo-audit` | 0.22.2 | [audit.py](../../tools/rust-sources/audit.py) 从当前来源映射恢复原始 registry 身份，调用审计并启用 `--deny yanked` |
+| `cargo-audit` | 0.22.2 | [audit.py](../../src/tools/rust-sources/audit.py) 从当前来源映射恢复原始 registry 身份，调用审计并启用 `--deny yanked` |
 
 CI 中的工具安装命令为：
 
 ```sh
 CARGO_NET_OFFLINE=false cargo install cargo-audit --version 0.22.2 --locked
-python3 tools/rust-sources/audit.py
+python3 src/tools/rust-sources/audit.py
 ```
 
 工具安装、advisory 数据和 yank 信息更新使用网络。产品的离线 Cargo 源码解析、浏览器工具安装、浏览器执行文件及系统依赖分别准备。来源与审计身份说明见[源码布局与校验](../source-layout.md)。

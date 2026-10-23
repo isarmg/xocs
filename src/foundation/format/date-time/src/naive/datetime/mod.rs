@@ -26,6 +26,7 @@ use crate::{
 #[cfg(feature = "serde")]
 pub(crate) mod serde;
 
+#[path = "../../../../../../../test/foundation/format/date-time/unit/src/naive/datetime/tests.rs"]
 #[cfg(test)]
 mod tests;
 

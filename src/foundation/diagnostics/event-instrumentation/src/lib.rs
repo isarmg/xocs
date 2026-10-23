@@ -35,7 +35,7 @@
 //! ```
 //!
 //! [`tracing`]: https://crates.io/crates/tracing
-//! [span]: https://docs.rs/tracing/latest/tracing/span/index.html
+//! [span]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/span/index.html
 //! [instrument]: macro@self::instrument
 //!
 //! ## Supported Rust Versions
@@ -98,8 +98,8 @@ mod expand;
 /// [`Value` trait] will be recorded as fields of that type. Types which do
 /// not implement `Value` will be recorded using [`fmt::Debug`].
 ///
-/// [primitive types]: https://docs.rs/tracing/latest/tracing/field/trait.Value.html#foreign-impls
-/// [`Value` trait]: https://docs.rs/tracing/latest/tracing/field/trait.Value.html
+/// [primitive types]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/field/trait.Value.html#foreign-impls
+/// [`Value` trait]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/field/trait.Value.html
 ///
 /// # Overriding Span Attributes
 ///
@@ -557,20 +557,20 @@ mod expand;
 /// const fn my_const_function() {}
 /// ```
 ///
-/// [span]: https://docs.rs/tracing/latest/tracing/span/index.html
-/// [name]: https://docs.rs/tracing/latest/tracing/struct.Metadata.html#method.name
-/// [target]: https://docs.rs/tracing/latest/tracing/struct.Metadata.html#method.target
-/// [level]: https://docs.rs/tracing/latest/tracing/struct.Level.html
-/// [module path]: https://docs.rs/tracing/latest/tracing/struct.Metadata.html#method.module_path
-/// [`INFO`]: https://docs.rs/tracing/latest/tracing/struct.Level.html#associatedconstant.INFO
-/// [empty field]: https://docs.rs/tracing/latest/tracing/field/struct.Empty.html
-/// [field syntax]: https://docs.rs/tracing/latest/tracing/#recording-fields
-/// [`follows_from`]: https://docs.rs/tracing/latest/tracing/struct.Span.html#method.follows_from
+/// [span]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/span/index.html
+/// [name]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/struct.Metadata.html#method.name
+/// [target]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/struct.Metadata.html#method.target
+/// [level]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/struct.Level.html
+/// [module path]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/struct.Metadata.html#method.module_path
+/// [`INFO`]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/struct.Level.html#associatedconstant.INFO
+/// [empty field]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/field/struct.Empty.html
+/// [field syntax]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/#recording-fields
+/// [`follows_from`]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/struct.Span.html#method.follows_from
 /// [`tracing`]: https://github.com/tokio-rs/tracing
 /// [`fmt::Debug`]: std::fmt::Debug
-/// [`Level`]: https://docs.rs/tracing/latest/tracing/struct.Level.html
-/// [`Level::TRACE`]: https://docs.rs/tracing/latest/tracing/struct.Level.html#associatedconstant.TRACE
-/// [`Level::ERROR`]: https://docs.rs/tracing/latest/tracing/struct.Level.html#associatedconstant.ERROR
+/// [`Level`]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/struct.Level.html
+/// [`Level::TRACE`]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/struct.Level.html#associatedconstant.TRACE
+/// [`Level::ERROR`]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/struct.Level.html#associatedconstant.ERROR
 #[proc_macro_attribute]
 pub fn instrument(
     args: proc_macro::TokenStream,

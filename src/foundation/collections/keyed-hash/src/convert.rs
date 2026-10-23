@@ -43,7 +43,7 @@ convert!(u128, [u64; 2]);
 convert_primitive_bytes!(u128, [u8; 16]);
 convert!([u64; 2], [u32; 4]);
 #[cfg(test)]
-convert!([u64; 2], [u8; 16]);
+include!("../../../../../test/foundation/collections/keyed-hash/unit/src/convert/1046.rs");
 convert_primitive_bytes!(u64, [u8; 8]);
 convert_primitive_bytes!(u32, [u8; 4]);
 convert_primitive_bytes!(u16, [u8; 2]);

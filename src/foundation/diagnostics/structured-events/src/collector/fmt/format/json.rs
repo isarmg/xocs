@@ -604,14 +604,6 @@ impl field::Visit for JsonVisitor<'_> {
         };
     }
 }
-#[cfg(test)]
-include!(core::concat!(
-    core::env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/tracing-family/collector/unit/src/fmt/format/json/test_533.rs"
-));
 
 #[cfg(test)]
-include!(core::concat!(
-    core::env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/tracing/stream_map.rs"
-));
+include!("../../../../../../../../test/foundation/diagnostics/structured-events/unit/src/collector/fmt/format/json/25507.rs");

@@ -45,6 +45,7 @@ mod builder;
 mod path;
 mod port;
 mod scheme;
+#[path = "../../../../../../test/foundation/network/http-message/unit/src/uri/tests.rs"]
 #[cfg(test)]
 mod tests;
 

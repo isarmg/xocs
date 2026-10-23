@@ -165,6 +165,7 @@ pub(crate) mod utils;
 #[cfg_attr(feature = "std", path = "maybe_polyfill/std/mod.rs")]
 #[cfg_attr(not(feature = "std"), path = "maybe_polyfill/no_std/mod.rs")]
 pub(crate) mod maybe_polyfill;
+#[path = "../../../../../test/foundation/platform/system-calls/unit/src/check_types.rs"]
 #[cfg(test)]
 #[macro_use]
 pub(crate) mod check_types;

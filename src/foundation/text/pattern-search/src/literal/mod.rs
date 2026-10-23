@@ -58,8 +58,9 @@ pub mod automaton;
 pub mod dfa;
 pub mod nfa;
 pub mod packed;
+#[path = "../../../../../../test/foundation/text/pattern-search/unit/src/literal/mod/tests.rs"]
 #[cfg(test)]
-mod tests { include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/literal/modules/src/tests.rs")); }
+mod tests;
 // I wrote out the module for implementing fst::Automaton only to later realize
 // that this would make fst a public dependency and fst is not at 1.0 yet. I
 // decided to just keep the code in tree, but build it only during tests.
@@ -72,4 +73,4 @@ mod tests { include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundat
 pub(crate) mod util;
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/literal/unit/src/lib/testoibits_274.rs"));
+include!("../../../../../../test/foundation/text/pattern-search/unit/src/literal/mod/2622.rs");

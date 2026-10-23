@@ -259,6 +259,6 @@ impl std::error::Error for TunnelError {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-transport/adapters/unit/src/client/legacy/connect/proxy/tunnel/all_tests_261.rs"));
+include!("../../../../../../../../../../test/foundation/network/http-transport/unit/src/adapters/client/legacy/connect/proxy/tunnel/7943.rs");
 
 use std::future::Future;

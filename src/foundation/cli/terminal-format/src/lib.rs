@@ -240,7 +240,7 @@
 // #![warn(unused_extern_crates, unused_qualifications)]
 
 #[cfg(test)]
-doc_comment::doctest!("../README.md");
+include!("../../../../../test/foundation/cli/terminal-format/unit/src/lib/9821.rs");
 
 extern crate alloc;
 

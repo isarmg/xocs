@@ -351,7 +351,4 @@ fn mll_quotes<'i>(
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/retained/test/foundation/toml/editor/unit/src/parser/strings/test_351.rs"
-));
+include!("../../../../../../../test/foundation/format/configuration/unit/src/editor/parser/strings/12092.rs");

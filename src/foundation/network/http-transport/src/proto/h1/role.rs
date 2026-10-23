@@ -1659,7 +1659,4 @@ fn extend(dst: &mut Vec<u8>, data: &[u8]) {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/http-transport/unit/src/proto/h1/role/tests_1697.rs"
-));
+include!("../../../../../../../test/foundation/network/http-transport/unit/src/proto/h1/role/63495.rs");

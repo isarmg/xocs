@@ -363,4 +363,4 @@ impl<W: Read + Write> Read for ZlibDecoder<W> {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/compression/streams/unit/src/zlib/write/tests_365.rs"));
+include!("../../../../../../../test/foundation/encoding/compression/unit/src/streams/zlib/write/13242.rs");

@@ -20,11 +20,6 @@ pub(crate) mod sync {
     }
 }
 
+#[path = "../../../../../test/foundation/encoding/byte-buffer/unit/src/loom/sync.rs"]
 #[cfg(all(test, loom))]
-pub(crate) mod sync {
-    pub(crate) mod atomic {
-        pub(crate) use loom::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
-
-        pub(crate) trait AtomicMut<T> {}
-    }
-}
+pub(crate) mod sync;

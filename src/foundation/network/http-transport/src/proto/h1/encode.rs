@@ -433,7 +433,4 @@ impl fmt::Display for NotEof {
 impl std::error::Error for NotEof {}
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/http-transport/unit/src/proto/h1/encode/tests_435.rs"
-));
+include!("../../../../../../../test/foundation/network/http-transport/unit/src/proto/h1/encode/12789.rs");

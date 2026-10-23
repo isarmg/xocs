@@ -364,4 +364,4 @@ fn decode_utf8_lossy(input: Cow<'_, [u8]>) -> Cow<'_, str> {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/url-encoding/percent/unit/src/lib/tests_367.rs"));
+include!("../../../../../../test/foundation/network/web-address/unit/src/percent/mod/12876.rs");

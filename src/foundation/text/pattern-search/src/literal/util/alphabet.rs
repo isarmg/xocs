@@ -297,4 +297,4 @@ impl core::fmt::Debug for BitSet {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/literal/unit/src/util/alphabet/tests_299.rs"));
+include!("../../../../../../../test/foundation/text/pattern-search/unit/src/literal/util/alphabet/10030.rs");

@@ -2690,4 +2690,4 @@ fn no_expansion<T: AsRef<[u8]>>(replacement: &T) -> Option<Cow<'_, [u8]>> {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/unit/src/regex/bytes/tests_2692.rs"));
+include!("../../../../../../test/foundation/text/pattern-search/unit/src/regex/bytes/100506.rs");

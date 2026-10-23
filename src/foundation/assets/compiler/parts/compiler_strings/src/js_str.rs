@@ -476,6 +476,6 @@ impl Iterator for EncodeUtf16<'_> {
 
 impl FusedIterator for EncodeUtf16<'_> {}
 
+#[path = "../../../../../../../test/foundation/assets/compiler/unit/parts/compiler_strings/src/js_str/tests.rs"]
 #[cfg(test)]
-#[path = "js_str/tests.rs"]
 mod tests;

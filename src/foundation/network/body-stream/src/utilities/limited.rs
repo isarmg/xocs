@@ -101,4 +101,4 @@ impl fmt::Display for LengthLimitError {
 impl Error for LengthLimitError {}
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-body/utilities/unit/src/limited/tests_103.rs"));
+include!("../../../../../../test/foundation/network/body-stream/unit/src/utilities/limited/2753.rs");

@@ -1235,5 +1235,6 @@ mod external;
 #[cfg(feature = "example_generated")]
 pub mod example_generated;
 
+#[path = "../../../../../test/foundation/collections/bit-set/unit/src/tests.rs"]
 #[cfg(test)]
 mod tests;

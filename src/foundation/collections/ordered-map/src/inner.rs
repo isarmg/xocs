@@ -697,8 +697,5 @@ impl<K, V> Core<K, V> {
     }
 }
 
-#[test]
-fn assert_send_sync() {
-    fn assert_send_sync<T: Send + Sync>() {}
-    assert_send_sync::<Core<i32, i32>>();
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/collections/ordered-map/unit/src/inner/24931.rs");

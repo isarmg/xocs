@@ -1342,4 +1342,4 @@ const _: () = {
 };
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-routing/unit/src/routing/method_routing/tests_1344.rs"));
+include!("../../../../../../test/foundation/network/request-router/unit/src/routing/method_routing/41106.rs");

@@ -88,21 +88,6 @@ pub const STANDARD_ALSW_DECODE_X2: AlswLut<V256> = StandardAlsw::decode_lut().x2
 pub const URL_SAFE_ALSW_CHECK_X2: AlswLut<V256> = UrlSafeAlsw::check_lut().x2();
 pub const URL_SAFE_ALSW_DECODE_X2: AlswLut<V256> = UrlSafeAlsw::decode_lut().x2();
 
+#[path = "../../../../../test/foundation/encoding/vector-base-encoding/unit/src/alsw/algorithm.rs"]
 #[cfg(test)]
-mod algorithm {
-    use super::*;
-
-    #[test]
-    #[ignore]
-    fn standard_alsw() {
-        StandardAlsw::test_check();
-        StandardAlsw::test_decode();
-    }
-
-    #[test]
-    #[ignore]
-    fn url_safe_alsw() {
-        UrlSafeAlsw::test_check();
-        UrlSafeAlsw::test_decode();
-    }
-}
+mod algorithm;

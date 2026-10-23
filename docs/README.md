@@ -19,6 +19,7 @@
 | --- | --- |
 | [架构](architecture.md) | 入口职责、Rust 业务层与支持范围 |
 | [开发说明](development.md) | 工具链、离线构建、开发服务、测试和打包 |
+| [测试目录](../test/README.md) | 测试分层、私有单元测试接线和验证命令 |
 | [浏览器测试](browser-testing.md) | Node/Playwright 环境、测试入口与覆盖范围 |
 | [源码布局与校验](source-layout.md) | 本地依赖解析、源码摘要、来源和许可材料 |
 | [依赖文档](dependencies/README.md) | 按职责组织的说明、当前包目录、本地来源资料与 API 文档 |

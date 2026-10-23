@@ -78,6 +78,7 @@ extern crate alloc;
 #[cfg(feature = "alloc")]
 use alloc::boxed::Box;
 
+#[path = "../../../../../test/foundation/storage/fallible-rows/unit/src/test.rs"]
 #[cfg(all(test, feature = "alloc"))]
 mod test;
 

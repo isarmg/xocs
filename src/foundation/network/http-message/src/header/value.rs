@@ -398,6 +398,9 @@ impl From<HeaderName> for HeaderValue {
     }
 }
 
+#[cfg(test)]
+include!("../../../../../../test/foundation/network/http-message/unit/src/header/value/integer_header_tests.rs");
+
 macro_rules! from_integers {
     ($($name:ident: $t:ident => $max_len:expr),*) => {$(
         impl From<$t> for HeaderValue {
@@ -411,16 +414,8 @@ macro_rules! from_integers {
             }
         }
 
-        #[test]
-        fn $name() {
-            let n: $t = 55;
-            let val = HeaderValue::from(n);
-            assert_eq!(val, &n.to_string());
-
-            let n = ::std::$t::MAX;
-            let val = HeaderValue::from(n);
-            assert_eq!(val, &n.to_string());
-        }
+        #[cfg(test)]
+        integer_header_tests!($name, $t);
     )*};
 }
 
@@ -454,32 +449,9 @@ from_integers! {
     from_isize: isize => 20
 }
 
+#[path = "../../../../../../test/foundation/network/http-message/unit/src/header/value/from_header_name_tests.rs"]
 #[cfg(test)]
-mod from_header_name_tests {
-    use super::*;
-    use crate::header::map::HeaderMap;
-    use crate::header::name;
-
-    #[test]
-    fn it_can_insert_header_name_as_header_value() {
-        let mut map = HeaderMap::new();
-        map.insert(name::UPGRADE, name::SEC_WEBSOCKET_PROTOCOL.into());
-        map.insert(
-            name::ACCEPT,
-            name::HeaderName::from_bytes(b"hello-world").unwrap().into(),
-        );
-
-        assert_eq!(
-            map.get(name::UPGRADE).unwrap(),
-            HeaderValue::from_bytes(b"sec-websocket-protocol").unwrap()
-        );
-
-        assert_eq!(
-            map.get(name::ACCEPT).unwrap(),
-            HeaderValue::from_bytes(b"hello-world").unwrap()
-        );
-    }
-}
+mod from_header_name_tests;
 
 impl FromStr for HeaderValue {
     type Err = InvalidHeaderValue;
@@ -541,19 +513,9 @@ impl TryFrom<Vec<u8>> for HeaderValue {
     }
 }
 
+#[path = "../../../../../../test/foundation/network/http-message/unit/src/header/value/try_from_header_name_tests.rs"]
 #[cfg(test)]
-mod try_from_header_name_tests {
-    use super::*;
-    use crate::header::name;
-
-    #[test]
-    fn it_converts_using_try_from() {
-        assert_eq!(
-            HeaderValue::try_from(name::UPGRADE).unwrap(),
-            HeaderValue::from_bytes(b"upgrade").unwrap()
-        );
-    }
-}
+mod try_from_header_name_tests;
 
 const fn is_visible_ascii(b: u8) -> bool {
     b >= 32 && b < 127 || b == b'\t'
@@ -751,26 +713,8 @@ impl PartialOrd<HeaderValue> for &str {
     }
 }
 
-#[test]
-fn test_try_from() {
-    HeaderValue::try_from(vec![127]).unwrap_err();
-}
+#[cfg(test)]
+include!("../../../../../../test/foundation/network/http-message/unit/src/header/value/19982.rs");
 
-#[test]
-fn test_debug() {
-    let cases = &[
-        ("hello", "\"hello\""),
-        ("hello \"world\"", "\"hello \\\"world\\\"\""),
-        ("\u{7FFF}hello", "\"\\xe7\\xbf\\xbfhello\""),
-    ];
-
-    for &(value, expected) in cases {
-        let val = HeaderValue::from_bytes(value.as_bytes()).unwrap();
-        let actual = format!("{:?}", val);
-        assert_eq!(expected, actual);
-    }
-
-    let mut sensitive = HeaderValue::from_static("password");
-    sensitive.set_sensitive(true);
-    assert_eq!("Sensitive", format!("{:?}", sensitive));
-}
+#[cfg(test)]
+include!("../../../../../../test/foundation/network/http-message/unit/src/header/value/20065.rs");

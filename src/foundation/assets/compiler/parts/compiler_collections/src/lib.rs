@@ -47,4 +47,4 @@ pub mod types;
 #[doc(hidden)]
 pub use crate::{assert_unchecked, fieldless_enum};
 #[cfg(test)]
-pub use crate::implements;
+include!("../../../../../../../test/foundation/assets/compiler/unit/parts/compiler_collections/src/lib/849.rs");

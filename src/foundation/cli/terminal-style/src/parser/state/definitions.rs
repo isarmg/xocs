@@ -123,11 +123,8 @@ pub(crate) const fn unpack(delta: u8) -> (State, Action) {
     }
 }
 
-#[inline(always)]
 #[cfg(test)]
-pub(crate) const fn pack(state: State, action: Action) -> u8 {
-    ((action as u8) << 4) | state as u8
-}
+include!("../../../../../../../test/foundation/cli/terminal-style/unit/src/parser/state/definitions/2655.rs");
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/terminal-style/anstyle-parse/unit/src/state/definitions/tests_132.rs"));
+include!("../../../../../../../test/foundation/cli/terminal-style/unit/src/parser/state/definitions/2792.rs");

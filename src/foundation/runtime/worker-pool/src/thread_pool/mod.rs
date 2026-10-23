@@ -13,6 +13,8 @@ use std::error::Error;
 use std::fmt;
 use std::sync::Arc;
 
+#[cfg(test)]
+#[path = "../../../../../../test/foundation/runtime/worker-pool/unit/src/thread_pool/test.rs"]
 mod test;
 
 /// Represents a user-created [thread pool].

@@ -1,11 +1,12 @@
 [package]
+autotests = false
 name = "blog-application"
 edition = "2024"
 rust-version = "1.99"
 license = "Apache-2.0"
 publish = false
 description = "认证、SQLite 持久化、安装契约和资产响应"
-build = "../../tools/assets/src/platform_contract.rs"
+build = "../tools/assets/src/platform_contract.rs"
 
 [features]
 default = ["tracing"]
@@ -109,3 +110,15 @@ features = [
     "std",
 ]
 
+
+[[test]]
+name = "body_collection"
+path = "../../test/application/integration/body_collection.rs"
+
+[[test]]
+name = "crypto_vectors"
+path = "../../test/application/integration/crypto_vectors.rs"
+
+[[test]]
+name = "session_cleanup"
+path = "../../test/application/integration/session_cleanup.rs"

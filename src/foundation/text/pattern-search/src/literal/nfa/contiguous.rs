@@ -1086,4 +1086,4 @@ fn u32_len(ntrans: usize) -> usize {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/literal/unit/src/nfa/contiguous/tests_1088.rs"));
+include!("../../../../../../../test/foundation/text/pattern-search/unit/src/literal/nfa/contiguous/43573.rs");

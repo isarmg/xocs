@@ -10,7 +10,7 @@ pub const HEADER_BYTES: usize = MAGIC.len() + size_of::<u16>();
 pub const TAG_BYTES: usize = 16;
 pub const MASTER_KEY_BYTES: usize = 32;
 pub const CURRENT_ENVELOPE_VALIDATION_VECTORS_JSON: &str =
-    include_str!("fixtures/current-envelope-v1.json");
+    include_str!("data/current-envelope-v1.json");
 
 /// Build-time current-format data for a product's maintenance material.
 /// Product domain/revision and stable object-binding rules are supplied by the
@@ -18,7 +18,7 @@ pub const CURRENT_ENVELOPE_VALIDATION_VECTORS_JSON: &str =
 pub fn envelope_contract() -> serde_json::Value {
     serde_json::json!({
         "format": "secret-envelope-policy-v1",
-        "sources": ["src/secret_envelope/mod.rs", "src/secret_envelope/fixtures/current-envelope-v1.json"],
+        "sources": ["src/secret_envelope/mod.rs", "src/secret_envelope/data/current-envelope-v1.json"],
         "magic_hex": MAGIC.iter().map(|byte| format!("{byte:02x}")).collect::<String>(),
         "header": ["magic", "u16be(expected-domain-revision)", "nonce", "ciphertext-with-tag"],
         "header_bytes": HEADER_BYTES, "nonce_bytes": NONCE_BYTES, "tag_bytes": TAG_BYTES,

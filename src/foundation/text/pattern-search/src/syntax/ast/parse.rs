@@ -2434,4 +2434,4 @@ fn specialize_err<T>(
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/syntax/unit/src/ast/parse/tests_2436.rs"));
+include!("../../../../../../../test/foundation/text/pattern-search/unit/src/syntax/ast/parse/90991.rs");

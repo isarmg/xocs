@@ -367,7 +367,4 @@ fn is_printable_bytes(action: Action, byte: u8) -> bool {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/retained/test/foundation/terminal-style/anstream/unit/src/adapter/strip/test_369.rs"
-));
+include!("../../../../../../../test/foundation/cli/terminal-style/unit/src/output/adapter/strip/9639.rs");

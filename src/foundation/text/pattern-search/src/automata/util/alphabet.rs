@@ -916,4 +916,4 @@ impl<'a> Iterator for ByteSetRangeIter<'a> {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/automata/unit/src/util/alphabet/all_tests_918.rs"));
+include!("../../../../../../../test/foundation/text/pattern-search/unit/src/automata/util/alphabet/33367.rs");

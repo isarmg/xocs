@@ -8,11 +8,11 @@
 
 | 入口 | 目标 | 职责 | 测试根 dev 依赖 | 根包 |
 | --- | --- | --- | --- | --- |
-| native | x86_64-unknown-linux-gnu | 服务端、本地基础实现与离线维护工具 | 不包含 | src/server/Cargo.toml, src/application/Cargo.toml, tools/setup/Cargo.toml |
+| native | x86_64-unknown-linux-gnu | 服务端、本地基础实现与离线维护工具 | 不包含 | src/server/Cargo.toml, src/application/Cargo.toml, src/tools/setup/Cargo.toml |
 | web-release | wasm32-unknown-unknown | 浏览器 CSR 正式界面 | 不包含 | src/browser/Cargo.toml |
-| host-tools | x86_64-unknown-linux-gnu | Web 构建及本地 WASM 绑定生成 | 不包含 | tools/assets/Cargo.toml |
+| host-tools | x86_64-unknown-linux-gnu | Web 构建及本地 WASM 绑定生成 | 不包含 | src/tools/assets/Cargo.toml |
 | domain-tests | x86_64-unknown-linux-gnu | Web 域逻辑的宿主测试 | 包含 | test/browser-domain/Cargo.toml |
-| workspace-tests | x86_64-unknown-linux-gnu | 项目原生测试及所选测试根的开发依赖 | 包含 | src/application/Cargo.toml, src/server/Cargo.toml, tools/setup/Cargo.toml, tools/assets/Cargo.toml, src/browser/Cargo.toml, test/browser-domain/Cargo.toml, src/interface/Cargo.toml, src/interface/dom/Cargo.toml, src/interface/macros/Cargo.toml |
+| workspace-tests | x86_64-unknown-linux-gnu | 项目原生测试及所选测试根的开发依赖 | 包含 | src/application/Cargo.toml, src/server/Cargo.toml, src/tools/setup/Cargo.toml, src/tools/assets/Cargo.toml, src/browser/Cargo.toml, test/browser-domain/Cargo.toml, src/interface/Cargo.toml, src/interface/dom/Cargo.toml, src/interface/macros/Cargo.toml |
 
 ## 职责层及实际声明关系
 
@@ -58,9 +58,9 @@
 
 | 当前包与路径 | 具体职责 | 构建入口 | 直接消费者 | 原始来源 |
 | --- | --- | --- | --- | --- |
-| blog-assets-compiler (`src/foundation/assets/compiler`) | 宿主 JavaScript AST、语义分析、代码生成与压缩 | host-tools, workspace-tests | tools/assets | bytecount@0.6.9, cow-utils@0.1.3, json-escape-simd@3.1.2, nonmax@0.5.5, oxc-browserslist@5.0.1, oxc@0.153.0, oxc_allocator@0.153.0, oxc_ast@0.153.0, oxc_ast_visit@0.153.0, oxc_codegen@0.153.0, oxc_compat@0.153.0, oxc_data_structures@0.153.0, oxc_diagnostics@0.153.0, oxc_ecmascript@0.153.0, oxc_estree@0.153.0, oxc_index@5.0.0, oxc_mangler@0.153.0, oxc_minifier@0.153.0, oxc_parser@0.153.0, oxc_regular_expression@0.153.0, oxc_semantic@0.153.0, oxc_sourcemap@9.0.0, oxc_span@0.153.0, oxc_str@0.153.0, oxc_syntax@0.153.0, oxc_traverse@0.153.0, unicode-id-start@1.5.0 |
+| blog-assets-compiler (`src/foundation/assets/compiler`) | 宿主 JavaScript AST、语义分析、代码生成与压缩 | host-tools, workspace-tests | src/tools/assets | bytecount@0.6.9, cow-utils@0.1.3, json-escape-simd@3.1.2, nonmax@0.5.5, oxc-browserslist@5.0.1, oxc@0.153.0, oxc_allocator@0.153.0, oxc_ast@0.153.0, oxc_ast_visit@0.153.0, oxc_codegen@0.153.0, oxc_compat@0.153.0, oxc_data_structures@0.153.0, oxc_diagnostics@0.153.0, oxc_ecmascript@0.153.0, oxc_estree@0.153.0, oxc_index@5.0.0, oxc_mangler@0.153.0, oxc_minifier@0.153.0, oxc_parser@0.153.0, oxc_regular_expression@0.153.0, oxc_semantic@0.153.0, oxc_sourcemap@9.0.0, oxc_span@0.153.0, oxc_str@0.153.0, oxc_syntax@0.153.0, oxc_traverse@0.153.0, unicode-id-start@1.5.0 |
 | blog-assets-markdown-parser (`src/foundation/assets/markdown-parser`) | markdown parser | native, web-release, domain-tests, workspace-tests | src/browser, src/foundation/cli/argument-derive, src/server, test/browser-domain | linkify@0.11.0, pulldown-cmark-escape@0.11.0, pulldown-cmark@0.13.4 |
-| blog-assets-style-compiler (`src/foundation/assets/style-compiler`) | 宿主 CSS 解析、选择器、浏览器兼容转换与压缩 | host-tools, workspace-tests | tools/assets | cssparser-color@0.1.0, cssparser@0.33.0, dtoa-short@0.3.5, dtoa@1.0.11, lightningcss@1.0.0-alpha.71, parcel_selectors@0.28.2, pathdiff@0.2.3, precomputed-hash@0.1.1 |
+| blog-assets-style-compiler (`src/foundation/assets/style-compiler`) | 宿主 CSS 解析、选择器、浏览器兼容转换与压缩 | host-tools, workspace-tests | src/tools/assets | cssparser-color@0.1.0, cssparser@0.33.0, dtoa-short@0.3.5, dtoa@1.0.11, lightningcss@1.0.0-alpha.71, parcel_selectors@0.28.2, pathdiff@0.2.3, precomputed-hash@0.1.1 |
 | blog-assets-style-token-macros (`src/foundation/assets/style-token-macros`) | style token macros | host-tools, workspace-tests | src/foundation/assets/style-compiler | cssparser-macros@0.6.1 |
 | blog-assets-style-value-derive (`src/foundation/assets/style-value-derive`) | style value derive | host-tools, workspace-tests | src/foundation/assets/style-compiler | lightningcss-derive@1.0.0-alpha.43 |
 
@@ -68,7 +68,7 @@
 
 | 当前包与路径 | 具体职责 | 构建入口 | 直接消费者 | 原始来源 |
 | --- | --- | --- | --- | --- |
-| blog-assets (`tools/assets`) | 静态资源编译、源码收据和开发预览 | host-tools, workspace-tests | 入口或保留实现 | 项目/独立来源 |
+| blog-assets (`src/tools/assets`) | 静态资源编译、源码收据和开发预览 | host-tools, workspace-tests | 入口或保留实现 | 项目/独立来源 |
 
 ## checksum
 
@@ -81,7 +81,7 @@
 | 当前包与路径 | 具体职责 | 构建入口 | 直接消费者 | 原始来源 |
 | --- | --- | --- | --- | --- |
 | blog-cli-argument-derive (`src/foundation/cli/argument-derive`) | argument derive | native, workspace-tests | src/foundation/cli/arguments | clap_derive@4.6.7 |
-| blog-cli-arguments (`src/foundation/cli/arguments`) | arguments | native, workspace-tests | src/server, tools/setup | clap@4.6.7, clap_builder@4.6.7, clap_lex@1.1.1 |
+| blog-cli-arguments (`src/foundation/cli/arguments`) | arguments | native, workspace-tests | src/server, src/tools/setup | clap@4.6.7, clap_builder@4.6.7, clap_lex@1.1.1 |
 | blog-cli-terminal-format (`src/foundation/cli/terminal-format`) | terminal format | native, host-tools, workspace-tests | src/foundation/diagnostics/structured-events | nu-ansi-term@0.50.3 |
 | blog-cli-terminal-style (`src/foundation/cli/terminal-style`) | 终端样式、颜色策略、ANSI解析与流输出 | native, workspace-tests | src/foundation/cli/argument-derive, src/foundation/cli/arguments | anstream@1.0.0, anstyle-parse@1.0.0, anstyle-query@1.1.5, anstyle@1.0.14, colorchoice@1.0.5 |
 
@@ -120,13 +120,13 @@
 | blog-crypto-password-digest-traits (`src/foundation/crypto/password-digest-traits`) | password digest traits | native, workspace-tests | src/foundation/crypto/memory-hard-hash | digest@0.10.7 |
 | blog-crypto-password-format (`src/foundation/crypto/password-format`) | password format | native, workspace-tests | src/foundation/crypto/password-derivation | password-hash@0.5.0 |
 | blog-crypto-password-hash-blocks (`src/foundation/crypto/password-hash-blocks`) | password hash blocks | native, workspace-tests | src/foundation/crypto/password-digest-traits | block-buffer@0.10.4 |
-| blog-crypto-secure-hash (`src/foundation/crypto/secure-hash`) | secure hash | native, host-tools, workspace-tests | src/application, src/server, tools/assets | sha2@0.11.0 |
+| blog-crypto-secure-hash (`src/foundation/crypto/secure-hash`) | secure hash | native, host-tools, workspace-tests | src/application, src/server, src/tools/assets | sha2@0.11.0 |
 
 ## diagnostics
 
 | 当前包与路径 | 具体职责 | 构建入口 | 直接消费者 | 原始来源 |
 | --- | --- | --- | --- | --- |
-| blog-diagnostics-error-context (`src/foundation/diagnostics/error-context`) | error context | native, host-tools, workspace-tests | src/application, src/foundation/wasm/browser-module, src/foundation/wasm/module-transform, src/server, tools/assets, tools/setup | anyhow@1.0.104 |
+| blog-diagnostics-error-context (`src/foundation/diagnostics/error-context`) | error context | native, host-tools, workspace-tests | src/application, src/foundation/wasm/browser-module, src/foundation/wasm/module-transform, src/server, src/tools/assets, src/tools/setup | anyhow@1.0.104 |
 | blog-diagnostics-error-display (`src/foundation/diagnostics/error-display`) | error display | native, host-tools, domain-tests, workspace-tests | src/foundation/text/inline-ascii, src/foundation/unicode/character-properties, src/foundation/unicode/compact-trie, src/foundation/unicode/data-collections, src/foundation/unicode/data-provider, src/foundation/unicode/locale-identifiers | displaydoc@0.2.7 |
 | blog-diagnostics-event-facade (`src/foundation/diagnostics/event-facade`) | event facade | native, host-tools, workspace-tests | src/foundation/assets/compiler, src/foundation/assets/style-compiler, src/foundation/diagnostics/structured-events, src/foundation/encoding/byte-search, src/foundation/runtime/io-poller, src/foundation/storage/sqlite-access, src/foundation/text/pattern-search, src/foundation/unicode/character-properties, src/foundation/unicode/data-provider, src/foundation/wasm/browser-module, src/foundation/wasm/module-transform | log@0.4.34 |
 | blog-diagnostics-event-instrumentation (`src/foundation/diagnostics/event-instrumentation`) | event instrumentation | native, host-tools, workspace-tests | src/foundation/diagnostics/structured-events | tracing-attributes@0.1.31 |
@@ -143,8 +143,8 @@
 | blog-encoding-application-base-encoding (`src/foundation/encoding/application-base-encoding`) | application base encoding | native, host-tools, workspace-tests | src/application, src/foundation/wasm/browser-module | base64@0.23.1 |
 | blog-encoding-borrowed-unicode (`src/foundation/encoding/borrowed-unicode`) | borrowed unicode | native, host-tools, domain-tests, workspace-tests | src/foundation/unicode/boundary-analysis, src/foundation/unicode/data-collections, src/foundation/unicode/locale-selection | potential_utf@0.1.6 |
 | blog-encoding-byte-buffer (`src/foundation/encoding/byte-buffer`) | byte buffer | native, host-tools, workspace-tests | src/application, src/foundation/collections/inline-string, src/foundation/format/json-schema, src/foundation/network/body-stream, src/foundation/network/http-message, src/foundation/network/http-middleware, src/foundation/network/http-transport, src/foundation/network/request-router, src/foundation/runtime/scheduled-io, src/foundation/runtime/task-scheduler, src/foundation/storage/sqlite-access | bytes@1.12.1 |
-| blog-encoding-byte-search (`src/foundation/encoding/byte-search`) | byte search | native, web-release, host-tools, domain-tests, workspace-tests | src/foundation/assets/compiler, src/foundation/assets/markdown-parser, src/foundation/format/json, src/foundation/format/parser-combinators, src/foundation/network/request-router, src/foundation/runtime/async-toolkit, src/foundation/text/pattern-search, tools/assets | memchr@2.8.3 |
-| blog-encoding-compression (`src/foundation/encoding/compression`) | DEFLATE、gzip与zlib流和Adler校验 | host-tools, workspace-tests | src/foundation/assets/compiler, tools/assets | adler2@2.0.1, flate2@1.1.10, miniz_oxide@0.9.1, simd-adler32@0.3.10 |
+| blog-encoding-byte-search (`src/foundation/encoding/byte-search`) | byte search | native, web-release, host-tools, domain-tests, workspace-tests | src/foundation/assets/compiler, src/foundation/assets/markdown-parser, src/foundation/format/json, src/foundation/format/parser-combinators, src/foundation/network/request-router, src/foundation/runtime/async-toolkit, src/foundation/text/pattern-search, src/tools/assets | memchr@2.8.3 |
+| blog-encoding-compression (`src/foundation/encoding/compression`) | DEFLATE、gzip与zlib流和Adler校验 | host-tools, workspace-tests | src/foundation/assets/compiler, src/tools/assets | adler2@2.0.1, flate2@1.1.10, miniz_oxide@0.9.1, simd-adler32@0.3.10 |
 | blog-encoding-constant-time-base-encoding (`src/foundation/encoding/constant-time-base-encoding`) | constant time base encoding | native, workspace-tests | src/foundation/crypto/password-derivation, src/foundation/crypto/password-format | base64ct@1.8.3 |
 | blog-encoding-decimal-float-format (`src/foundation/encoding/decimal-float-format`) | decimal float format | native, web-release, host-tools, domain-tests, workspace-tests | src/foundation/collections/inline-string, src/foundation/format/json | zmij@1.0.23 |
 | blog-encoding-framing (`src/foundation/encoding/framing`) | framing | host-tools, workspace-tests | src/foundation/format/binary-record | cobs@0.3.0 |
@@ -166,19 +166,19 @@
 
 | 当前包与路径 | 具体职责 | 构建入口 | 直接消费者 | 原始来源 |
 | --- | --- | --- | --- | --- |
-| blog-filesystem-temporary-storage (`src/foundation/filesystem/temporary-storage`) | temporary storage | native, host-tools, workspace-tests | src/application, src/server, tools/assets | tempfile@3.27.0 |
+| blog-filesystem-temporary-storage (`src/foundation/filesystem/temporary-storage`) | temporary storage | native, host-tools, workspace-tests | src/application, src/server, src/tools/assets | tempfile@3.27.0 |
 
 ## format
 
 | 当前包与路径 | 具体职责 | 构建入口 | 直接消费者 | 原始来源 |
 | --- | --- | --- | --- | --- |
 | blog-format-binary-record (`src/foundation/format/binary-record`) | binary record | host-tools, workspace-tests | src/foundation/assets/compiler, src/foundation/unicode/data-provider | postcard@1.1.3 |
-| blog-format-configuration (`src/foundation/format/configuration`) | TOML配置解析、保留格式编辑、字节跨度与日期类型 | host-tools, workspace-tests | tools/assets | serde_spanned@0.6.9, toml@0.8.23, toml_datetime@0.6.11, toml_edit@0.22.27, toml_write@0.1.2 |
-| blog-format-data-model (`src/foundation/format/data-model`) | data model | native, web-release, host-tools, domain-tests, workspace-tests | src/application, src/browser, src/foundation/assets/compiler, src/foundation/assets/markdown-parser, src/foundation/assets/style-compiler, src/foundation/cli/terminal-format, src/foundation/collections/bit-set, src/foundation/collections/database-hash-table, src/foundation/collections/hash-table, src/foundation/collections/inline-string, src/foundation/collections/inline-vector, src/foundation/collections/keyed-hash, src/foundation/collections/ordered-cache, src/foundation/collections/ordered-map, src/foundation/collections/slot-storage, src/foundation/collections/sorted-map, src/foundation/diagnostics/event-facade, src/foundation/diagnostics/structured-events, src/foundation/encoding/borrowed-unicode, src/foundation/encoding/byte-buffer, src/foundation/encoding/compression, src/foundation/encoding/framing, src/foundation/encoding/hex-codec, src/foundation/format/binary-record, src/foundation/format/configuration, src/foundation/format/date-time, src/foundation/format/json, src/foundation/format/json-schema, src/foundation/format/release-identity, src/foundation/lookup/script-table, src/foundation/lookup/style-table, src/foundation/math/constant-array, src/foundation/math/keyed-fingerprint, src/foundation/math/large-integer, src/foundation/math/lookup-random-generator, src/foundation/math/password-random-traits, src/foundation/math/typed-array, src/foundation/memory/allocator, src/foundation/memory/arena, src/foundation/network/form-data, src/foundation/network/request-router, src/foundation/network/web-address, src/foundation/storage/sqlite-access, src/foundation/sync/mutex, src/foundation/syntax/alternative, src/foundation/text/inline-ascii, src/foundation/unicode/borrowed-vector, src/foundation/unicode/boundary-analysis, src/foundation/unicode/character-properties, src/foundation/unicode/compact-trie, src/foundation/unicode/data-collections, src/foundation/unicode/data-provider, src/foundation/unicode/locale-identifiers, src/foundation/unicode/locale-selection, src/foundation/unicode/text-normalizer, src/foundation/wasm/browser-bridge, src/foundation/wasm/browser-module, src/foundation/wasm/module-decoder, src/interface, src/interface/dom, src/server, test/browser-domain, tools/assets | serde@1.0.229, serde_core@1.0.229, serde_path_to_error@0.1.20 |
+| blog-format-configuration (`src/foundation/format/configuration`) | TOML配置解析、保留格式编辑、字节跨度与日期类型 | host-tools, workspace-tests | src/tools/assets | serde_spanned@0.6.9, toml@0.8.23, toml_datetime@0.6.11, toml_edit@0.22.27, toml_write@0.1.2 |
+| blog-format-data-model (`src/foundation/format/data-model`) | data model | native, web-release, host-tools, domain-tests, workspace-tests | src/application, src/browser, src/foundation/assets/compiler, src/foundation/assets/markdown-parser, src/foundation/assets/style-compiler, src/foundation/cli/terminal-format, src/foundation/collections/bit-set, src/foundation/collections/database-hash-table, src/foundation/collections/hash-table, src/foundation/collections/inline-string, src/foundation/collections/inline-vector, src/foundation/collections/keyed-hash, src/foundation/collections/ordered-cache, src/foundation/collections/ordered-map, src/foundation/collections/slot-storage, src/foundation/collections/sorted-map, src/foundation/diagnostics/event-facade, src/foundation/diagnostics/structured-events, src/foundation/encoding/borrowed-unicode, src/foundation/encoding/byte-buffer, src/foundation/encoding/compression, src/foundation/encoding/framing, src/foundation/encoding/hex-codec, src/foundation/format/binary-record, src/foundation/format/configuration, src/foundation/format/date-time, src/foundation/format/json, src/foundation/format/json-schema, src/foundation/format/release-identity, src/foundation/lookup/script-table, src/foundation/lookup/style-table, src/foundation/math/constant-array, src/foundation/math/keyed-fingerprint, src/foundation/math/large-integer, src/foundation/math/lookup-random-generator, src/foundation/math/password-random-traits, src/foundation/math/typed-array, src/foundation/memory/allocator, src/foundation/memory/arena, src/foundation/network/form-data, src/foundation/network/request-router, src/foundation/network/web-address, src/foundation/storage/sqlite-access, src/foundation/sync/mutex, src/foundation/syntax/alternative, src/foundation/text/inline-ascii, src/foundation/unicode/borrowed-vector, src/foundation/unicode/boundary-analysis, src/foundation/unicode/character-properties, src/foundation/unicode/compact-trie, src/foundation/unicode/data-collections, src/foundation/unicode/data-provider, src/foundation/unicode/locale-identifiers, src/foundation/unicode/locale-selection, src/foundation/unicode/text-normalizer, src/foundation/wasm/browser-bridge, src/foundation/wasm/browser-module, src/foundation/wasm/module-decoder, src/interface, src/interface/dom, src/server, src/tools/assets, test/browser-domain | serde@1.0.229, serde_core@1.0.229, serde_path_to_error@0.1.20 |
 | blog-format-data-model-derive (`src/foundation/format/data-model-derive`) | data model derive | native, web-release, host-tools, domain-tests, workspace-tests | src/foundation/format/data-model | serde_derive@1.0.229 |
 | blog-format-data-model-syntax (`src/foundation/format/data-model-syntax`) | data model syntax | native, workspace-tests | src/foundation/format/json-schema-derive | serde_derive_internals@0.30.0 |
 | blog-format-date-time (`src/foundation/format/date-time`) | date time | native, web-release, workspace-tests | src/application, src/browser, src/foundation/format/json-schema, src/foundation/storage/sqlite-access, src/server | chrono@0.4.45 |
-| blog-format-json (`src/foundation/format/json`) | json | native, web-release, host-tools, domain-tests, workspace-tests | src/application, src/browser, src/foundation/assets/compiler, src/foundation/assets/style-compiler, src/foundation/diagnostics/structured-events, src/foundation/format/json-schema, src/foundation/math/keyed-fingerprint, src/foundation/network/request-router, src/foundation/storage/sqlite-access, src/foundation/unicode/data-provider, src/foundation/wasm/browser-bridge, src/foundation/wasm/browser-module, src/interface, src/server, test/browser-domain, tools/assets | serde_json@1.0.151, serde_json@1.0.154 |
+| blog-format-json (`src/foundation/format/json`) | json | native, web-release, host-tools, domain-tests, workspace-tests | src/application, src/browser, src/foundation/assets/compiler, src/foundation/assets/style-compiler, src/foundation/diagnostics/structured-events, src/foundation/format/json-schema, src/foundation/math/keyed-fingerprint, src/foundation/network/request-router, src/foundation/storage/sqlite-access, src/foundation/unicode/data-provider, src/foundation/wasm/browser-bridge, src/foundation/wasm/browser-module, src/interface, src/server, src/tools/assets, test/browser-domain | serde_json@1.0.151, serde_json@1.0.154 |
 | blog-format-json-schema (`src/foundation/format/json-schema`) | json schema | native, workspace-tests | src/application, src/foundation/collections/inline-string, src/foundation/unicode/borrowed-vector, src/server | schemars@1.2.3 |
 | blog-format-json-schema-derive (`src/foundation/format/json-schema-derive`) | json schema derive | native, workspace-tests | src/foundation/format/json-schema | schemars_derive@1.2.3 |
 | blog-format-parser-combinators (`src/foundation/format/parser-combinators`) | parser combinators | host-tools, workspace-tests | src/foundation/format/configuration | winnow@0.7.15 |
@@ -263,19 +263,19 @@
 | blog-network-http-message (`src/foundation/network/http-message`) | http message | native, host-tools, workspace-tests | src/application, src/foundation/network/body-stream, src/foundation/network/http-middleware, src/foundation/network/http-transport, src/foundation/network/request-router | http@1.5.0 |
 | blog-network-http-middleware (`src/foundation/network/http-middleware`) | http middleware | native, workspace-tests | src/server | tower-http@0.6.11 |
 | blog-network-http-parser (`src/foundation/network/http-parser`) | http parser | native, host-tools, workspace-tests | src/foundation/network/http-transport | httparse@1.10.1 |
-| blog-network-http-transport (`src/foundation/network/http-transport`) | http transport | native, host-tools, workspace-tests | src/application, src/foundation/network/request-router, tools/assets | hyper-util@0.1.21, hyper@1.12.0 |
-| blog-network-media-detection (`src/foundation/network/media-detection`) | media detection | native, host-tools, workspace-tests | src/foundation/network/http-middleware, tools/assets | mime_guess@2.0.5 |
+| blog-network-http-transport (`src/foundation/network/http-transport`) | http transport | native, host-tools, workspace-tests | src/application, src/foundation/network/request-router, src/tools/assets | hyper-util@0.1.21, hyper@1.12.0 |
+| blog-network-media-detection (`src/foundation/network/media-detection`) | media detection | native, host-tools, workspace-tests | src/foundation/network/http-middleware, src/tools/assets | mime_guess@2.0.5 |
 | blog-network-media-type (`src/foundation/network/media-type`) | media type | native, host-tools, workspace-tests | src/application, src/foundation/network/http-middleware, src/foundation/network/media-detection, src/foundation/network/request-router | mime@0.3.17 |
-| blog-network-request-pipeline (`src/foundation/network/request-pipeline`) | request pipeline | native, host-tools, workspace-tests | src/application, src/foundation/network/http-middleware, src/foundation/network/http-transport, src/foundation/network/request-router, src/server, tools/assets | tower-layer@0.3.3, tower-service@0.3.3, tower@0.5.3 |
-| blog-network-request-router (`src/foundation/network/request-router`) | request router | native, host-tools, workspace-tests | src/application, src/server, tools/assets | axum-core@0.5.6, axum@0.8.9 |
+| blog-network-request-pipeline (`src/foundation/network/request-pipeline`) | request pipeline | native, host-tools, workspace-tests | src/application, src/foundation/network/http-middleware, src/foundation/network/http-transport, src/foundation/network/request-router, src/server, src/tools/assets | tower-layer@0.3.3, tower-service@0.3.3, tower@0.5.3 |
+| blog-network-request-router (`src/foundation/network/request-router`) | request router | native, host-tools, workspace-tests | src/application, src/server, src/tools/assets | axum-core@0.5.6, axum@0.8.9 |
 | blog-network-route-matcher (`src/foundation/network/route-matcher`) | route matcher | native, host-tools, workspace-tests | src/foundation/network/request-router | matchit@0.8.4 |
-| blog-network-web-address (`src/foundation/network/web-address`) | web address | native, host-tools, domain-tests, workspace-tests | src/application, src/browser, src/foundation/assets/compiler, src/foundation/format/json-schema, src/foundation/network/form-data, src/foundation/network/http-middleware, src/foundation/network/request-router, src/foundation/storage/sqlite-access, src/server, test/browser-domain, tools/assets | form_urlencoded@1.2.2, idna@1.1.0, idna_adapter@1.2.2, percent-encoding@2.3.2, url@2.5.8 |
+| blog-network-web-address (`src/foundation/network/web-address`) | web address | native, host-tools, domain-tests, workspace-tests | src/application, src/browser, src/foundation/assets/compiler, src/foundation/format/json-schema, src/foundation/network/form-data, src/foundation/network/http-middleware, src/foundation/network/request-router, src/foundation/storage/sqlite-access, src/server, src/tools/assets, test/browser-domain | form_urlencoded@1.2.2, idna@1.1.0, idna_adapter@1.2.2, percent-encoding@2.3.2, url@2.5.8 |
 
 ## operations
 
 | 当前包与路径 | 具体职责 | 构建入口 | 直接消费者 | 原始来源 |
 | --- | --- | --- | --- | --- |
-| blog-setup (`tools/setup`) | 离线初始化、账户恢复与实例维护 | native, workspace-tests | 入口或保留实现 | 项目/独立来源 |
+| blog-setup (`src/tools/setup`) | 离线初始化、账户恢复与实例维护 | native, workspace-tests | 入口或保留实现 | 项目/独立来源 |
 
 ## platform
 
@@ -296,7 +296,7 @@
 | 当前包与路径 | 具体职责 | 构建入口 | 直接消费者 | 原始来源 |
 | --- | --- | --- | --- | --- |
 | blog-browser (`src/browser`) | 浏览器 CSR 博客界面 | web-release, workspace-tests | 入口或保留实现 | 项目/独立来源 |
-| blog (`src/server`) | 博客 HTTP 服务、内容业务与管理员 API | native, workspace-tests | tools/setup | 项目/独立来源 |
+| blog (`src/server`) | 博客 HTTP 服务、内容业务与管理员 API | native, workspace-tests | src/tools/setup | 项目/独立来源 |
 
 ## runtime
 
@@ -310,7 +310,7 @@
 | blog-runtime-scheduled-io (`src/foundation/runtime/scheduled-io`) | scheduled io | native, workspace-tests | src/application, src/foundation/network/http-middleware | tokio-util@0.7.19, tokio-util@0.7.20 |
 | blog-runtime-signal-registry (`src/foundation/runtime/signal-registry`) | signal registry | native, host-tools, workspace-tests | src/foundation/runtime/task-scheduler | signal-hook-registry@1.4.8 |
 | blog-runtime-task-entry (`src/foundation/runtime/task-entry`) | task entry | native, host-tools, workspace-tests | src/foundation/runtime/task-scheduler | tokio-macros@2.7.2 |
-| blog-runtime-task-scheduler (`src/foundation/runtime/task-scheduler`) | task scheduler | native, host-tools, workspace-tests | src/application, src/foundation/network/body-stream, src/foundation/network/http-middleware, src/foundation/network/http-transport, src/foundation/network/request-pipeline, src/foundation/network/request-router, src/foundation/runtime/scheduled-io, src/foundation/storage/sqlite-access, src/foundation/wasm/browser-futures, src/server, tools/assets, tools/setup | tokio@1.53.2 |
+| blog-runtime-task-scheduler (`src/foundation/runtime/task-scheduler`) | task scheduler | native, host-tools, workspace-tests | src/application, src/foundation/network/body-stream, src/foundation/network/http-middleware, src/foundation/network/http-transport, src/foundation/network/request-pipeline, src/foundation/network/request-router, src/foundation/runtime/scheduled-io, src/foundation/storage/sqlite-access, src/foundation/wasm/browser-futures, src/server, src/tools/assets, src/tools/setup | tokio@1.53.2 |
 | blog-runtime-task-waker (`src/foundation/runtime/task-waker`) | task waker | native, host-tools, workspace-tests | src/foundation/network/http-transport | atomic-waker@1.1.2 |
 | blog-runtime-worker-pool (`src/foundation/runtime/worker-pool`) | worker pool | host-tools, workspace-tests | src/foundation/runtime/parallel-iterator | rayon-core@1.13.0 |
 
@@ -372,7 +372,7 @@
 | blog-text-line-layout (`src/foundation/text/line-layout`) | line layout | host-tools, workspace-tests | src/foundation/assets/compiler | textwrap@0.16.4 |
 | blog-text-macro-identifier-case (`src/foundation/text/macro-identifier-case`) | macro identifier case | native, host-tools, workspace-tests | src/foundation/cli/argument-derive, src/foundation/storage/record-derive, src/foundation/wasm/module-transform-derive | heck@0.5.0 |
 | blog-text-monotone-minima (`src/foundation/text/monotone-minima`) | monotone minima | host-tools, workspace-tests | src/foundation/text/line-layout | smawk@0.3.3 |
-| blog-text-pattern-search (`src/foundation/text/pattern-search`) | 正则语法、自动机、文字多模式与Unicode匹配 | web-release, host-tools, workspace-tests | src/browser, src/foundation/diagnostics/structured-events, src/foundation/text/compile-time-text-macros, src/foundation/text/constant-pattern, src/foundation/text/constant-pattern-macros, tools/assets | aho-corasick@1.1.5, regex-automata@0.4.18, regex-syntax@0.8.11, regex@1.13.1 |
+| blog-text-pattern-search (`src/foundation/text/pattern-search`) | 正则语法、自动机、文字多模式与Unicode匹配 | web-release, host-tools, workspace-tests | src/browser, src/foundation/diagnostics/structured-events, src/foundation/text/compile-time-text-macros, src/foundation/text/constant-pattern, src/foundation/text/constant-pattern-macros, src/tools/assets | aho-corasick@1.1.5, regex-automata@0.4.18, regex-syntax@0.8.11, regex@1.13.1 |
 | blog-text-rust-identifiers (`src/foundation/text/rust-identifiers`) | rust identifiers | native, web-release, host-tools, domain-tests, workspace-tests | src/foundation/syntax/record-derive-parser, src/foundation/syntax/rust-parser, src/foundation/syntax/style-derive-parser, src/foundation/syntax/token-stream, src/foundation/wasm/browser-bridge-schema | unicode-ident@1.0.26, unicode-ident@1.0.27 |
 | blog-text-shell-words (`src/foundation/text/shell-words`) | shell words | native, workspace-tests | src/foundation/native/c-compiler | shlex@2.0.1 |
 | blog-text-style-identifier-case (`src/foundation/text/style-identifier-case`) | style identifier case | host-tools, workspace-tests | src/foundation/assets/style-value-derive | convert_case@0.6.0 |
@@ -415,7 +415,7 @@
 | blog-wasm-browser-bridge-entry (`src/foundation/wasm/browser-bridge-entry`) | browser bridge entry | web-release, workspace-tests | src/foundation/wasm/browser-bridge | wasm-bindgen-macro-support@0.2.129, wasm-bindgen-macro@0.2.129 |
 | blog-wasm-browser-bridge-schema (`src/foundation/wasm/browser-bridge-schema`) | browser bridge schema | web-release, host-tools, workspace-tests | src/foundation/wasm/browser-bridge, src/foundation/wasm/browser-bridge-entry, src/foundation/wasm/browser-module | wasm-bindgen-shared@0.2.129 |
 | blog-wasm-browser-futures (`src/foundation/wasm/browser-futures`) | browser futures | web-release, workspace-tests | src/browser, src/interface, src/interface/dom | wasm-bindgen-futures@0.4.79 |
-| blog-wasm-browser-module (`src/foundation/wasm/browser-module`) | browser module | host-tools, workspace-tests | tools/assets | wasm-bindgen-cli-support@0.2.129 |
+| blog-wasm-browser-module (`src/foundation/wasm/browser-module`) | browser module | host-tools, workspace-tests | src/tools/assets | wasm-bindgen-cli-support@0.2.129 |
 | blog-wasm-debug-information (`src/foundation/wasm/debug-information`) | debug information | host-tools, workspace-tests | src/foundation/wasm/module-transform | gimli@0.32.3 |
 | blog-wasm-module-decoder (`src/foundation/wasm/module-decoder`) | module decoder | host-tools, workspace-tests | src/foundation/wasm/browser-module, src/foundation/wasm/module-encoder, src/foundation/wasm/module-transform | wasmparser@0.245.1 |
 | blog-wasm-module-encoder (`src/foundation/wasm/module-encoder`) | module encoder | host-tools, workspace-tests | src/foundation/wasm/module-transform | wasm-encoder@0.245.1 |

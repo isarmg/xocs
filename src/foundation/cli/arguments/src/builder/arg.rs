@@ -4842,5 +4842,3 @@ impl fmt::Debug for Arg {
 pub trait ArgExt: Extension {}
 
 // Flags
-#[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../test/foundation/command-line/builder/unit/src/builder/arg/test_4845.rs"));

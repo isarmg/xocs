@@ -2,6 +2,7 @@
 //!
 //! Functions recognizing specific characters
 
+#[path = "../../../../../../test/foundation/format/parser-combinators/unit/src/ascii/tests.rs"]
 #[cfg(test)]
 mod tests;
 

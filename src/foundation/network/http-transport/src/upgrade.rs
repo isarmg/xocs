@@ -357,9 +357,5 @@ mod sealed {
     }
 }
 
-#[cfg(all(any(feature = "client", feature = "server"), feature = "http1"))]
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/http-transport/unit/src/upgrade/tests_376.rs"
-));
+include!("../../../../../test/foundation/network/http-transport/unit/src/upgrade/11159.rs");

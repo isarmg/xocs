@@ -98,9 +98,7 @@ struct ErrorMessage {
 }
 
 #[cfg(test)]
-struct _Test
-where
-    Error: Send + Sync;
+include!("../../../../../test/foundation/syntax/style-derive-parser/unit/src/error/3160.rs");
 
 impl Error {
     /// Usually the [`ParseStream::error`] method will be used instead, which

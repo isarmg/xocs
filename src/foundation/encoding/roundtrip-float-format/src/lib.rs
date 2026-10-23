@@ -123,6 +123,7 @@ mod digit_table;
 mod f2s;
 mod f2s_intrinsics;
 mod pretty;
+#[path = "../../../../../test/foundation/encoding/roundtrip-float-format/unit/src/tests.rs"]
 #[cfg(test)]
 mod tests;
 

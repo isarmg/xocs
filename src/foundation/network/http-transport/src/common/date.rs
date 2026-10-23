@@ -84,7 +84,4 @@ impl fmt::Write for CachedDate {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/http-transport/unit/src/common/date/tests_106.rs"
-));
+include!("../../../../../../test/foundation/network/http-transport/unit/src/common/date/1967.rs");

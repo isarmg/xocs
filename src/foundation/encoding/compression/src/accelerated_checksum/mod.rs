@@ -210,4 +210,4 @@ pub mod bufread {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/compression/accelerated_checksum/unit/src/lib/tests_306.rs"));
+include!("../../../../../../test/foundation/encoding/compression/unit/src/accelerated_checksum/mod/5292.rs");

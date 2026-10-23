@@ -50,6 +50,7 @@ mod range;
 #[cfg(feature = "std")]
 mod recoverable;
 mod stateful;
+#[path = "../../../../../../test/foundation/format/parser-combinators/unit/src/stream/tests.rs"]
 #[cfg(test)]
 mod tests;
 mod token;

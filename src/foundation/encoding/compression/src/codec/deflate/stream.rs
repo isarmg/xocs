@@ -97,4 +97,4 @@ pub fn deflate(
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/compression/codec/unit/src/deflate/stream/test_99.rs"));
+include!("../../../../../../../test/foundation/encoding/compression/unit/src/codec/deflate/stream/3228.rs");

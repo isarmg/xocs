@@ -51,9 +51,3 @@ impl SpanStack {
         self.iter().next()
     }
 }
-
-#[cfg(test)]
-include!(core::concat!(
-    core::env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/tracing-family/collector/unit/src/registry/stack/tests_55.rs"
-));

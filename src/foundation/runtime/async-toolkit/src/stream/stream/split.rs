@@ -171,7 +171,4 @@ impl<T, Item> fmt::Display for ReuniteError<T, Item> {
 impl<T: core::any::Any, Item> std::error::Error for ReuniteError<T, Item> {}
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/futures/util/unit/src/stream/stream/split/tests_160.rs"
-));
+include!("../../../../../../../test/foundation/runtime/async-toolkit/unit/src/stream/stream/split/5491.rs");

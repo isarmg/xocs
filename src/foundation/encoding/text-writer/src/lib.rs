@@ -28,7 +28,8 @@
 //!
 //! # Benchmarks
 //!
-//! The benchmarks to generate the following data can be found in the `benches` directory.
+//! The benchmarks that generated the following data are in
+//! `test/foundation/encoding/text-writer/benches` at the repository root.
 //!
 //! | Case | `Writeable` | `Display` |
 //! |---|---|---|

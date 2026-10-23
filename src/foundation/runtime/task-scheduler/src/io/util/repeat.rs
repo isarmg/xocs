@@ -63,12 +63,6 @@ impl AsyncRead for Repeat {
     }
 }
 
+#[path = "../../../../../../../test/foundation/runtime/task-scheduler/unit/src/io/util/repeat/tests.rs"]
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn assert_unpin() {
-        crate::is_unpin::<Repeat>();
-    }
-}
+mod tests;

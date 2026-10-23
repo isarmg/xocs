@@ -183,4 +183,4 @@ fn compress_to_vec_inner(mut input: &[u8], level: u8, window_bits: i32, strategy
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/compression/codec/unit/src/deflate/mod/test_185.rs"));
+include!("../../../../../../../test/foundation/encoding/compression/unit/src/codec/deflate/mod/5267.rs");

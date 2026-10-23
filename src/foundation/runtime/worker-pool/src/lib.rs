@@ -83,6 +83,8 @@ mod thread_pool;
 mod unwind;
 
 mod compile_fail;
+#[cfg(test)]
+#[path = "../../../../../test/foundation/runtime/worker-pool/unit/src/test.rs"]
 mod test;
 
 pub use self::broadcast::{broadcast, spawn_broadcast, BroadcastContext};

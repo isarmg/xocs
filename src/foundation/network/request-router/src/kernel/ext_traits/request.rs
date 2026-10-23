@@ -333,4 +333,4 @@ impl RequestExt for Request {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-routing/kernel/unit/src/ext_traits/request/tests_335.rs"));
+include!("../../../../../../../test/foundation/network/request-router/unit/src/kernel/ext_traits/request/10828.rs");

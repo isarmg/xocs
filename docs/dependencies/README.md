@@ -39,6 +39,6 @@ cargo +1.99.0 doc --locked --offline -p blog-browser --target wasm32-unknown-unk
 目录由当前所有者生成，增删或移动包后更新并检查：
 
 ```sh
-python3 tools/rust-sources/docs.py
-python3 tools/rust-sources/docs.py --check
+python3 src/tools/rust-sources/docs.py
+python3 src/tools/rust-sources/docs.py --check
 ```

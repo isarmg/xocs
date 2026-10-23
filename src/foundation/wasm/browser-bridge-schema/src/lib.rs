@@ -5,6 +5,7 @@ extern crate alloc;
 use alloc::string::{String, ToString};
 
 pub mod identifier;
+#[path = "../../../../../test/foundation/wasm/browser-bridge-schema/unit/src/schema_approval.rs"]
 #[cfg(test)]
 mod schema_approval;
 pub mod tys;

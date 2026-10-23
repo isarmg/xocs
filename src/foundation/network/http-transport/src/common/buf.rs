@@ -92,7 +92,4 @@ impl<T: Buf> Buf for BufList<T> {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/http-transport/unit/src/common/buf/tests_94.rs"
-));
+include!("../../../../../../test/foundation/network/http-transport/unit/src/common/buf/2431.rs");

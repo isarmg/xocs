@@ -1,6 +1,7 @@
 //! Bit level parsers
 //!
 
+#[path = "../../../../../../../test/foundation/format/parser-combinators/unit/src/binary/bits/tests.rs"]
 #[cfg(test)]
 mod tests;
 

@@ -642,7 +642,4 @@ impl core::fmt::Display for NullFormatter {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/retained/test/foundation/terminal-style/anstyle/unit/src/color/test_644.rs"
-));
+include!("../../../../../test/foundation/cli/terminal-style/unit/src/color/19085.rs");

@@ -11,6 +11,8 @@ mod rchunks;
 mod sort;
 mod windows;
 
+#[cfg(test)]
+#[path = "../../../../../../test/foundation/runtime/parallel-iterator/unit/src/slice/test.rs"]
 mod test;
 
 use self::sort::par_mergesort;

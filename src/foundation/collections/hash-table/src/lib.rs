@@ -35,8 +35,7 @@
 )]
 
 #[cfg(test)]
-#[macro_use]
-extern crate std;
+include!("../../../../../test/foundation/collections/hash-table/unit/src/lib/1231.rs");
 
 #[cfg_attr(test, macro_use)]
 #[cfg_attr(feature = "rustc-dep-of-std", allow(unused_extern_crates))]

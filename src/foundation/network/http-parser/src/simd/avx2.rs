@@ -144,63 +144,11 @@ unsafe fn match_header_value_char_32_avx(buf: &[u8]) -> usize {
     (!res).trailing_zeros() as usize
 }
 
-#[test]
-fn avx2_code_matches_uri_chars_table() {
-    if !is_x86_feature_detected!("avx2") {
-        return;
-    }
-
-    #[allow(clippy::undocumented_unsafe_blocks)]
-    unsafe {
-        assert!(byte_is_allowed(b'_', match_uri_vectored));
-
-        for (b, allowed) in crate::URI_MAP.iter().cloned().enumerate() {
-            assert_eq!(
-                byte_is_allowed(b as u8, match_uri_vectored), allowed,
-                "byte_is_allowed({:?}) should be {:?}", b, allowed,
-            );
-        }
-    }
-}
-
-#[test]
-fn avx2_code_matches_header_value_chars_table() {
-    if !is_x86_feature_detected!("avx2") {
-        return;
-    }
-
-    #[allow(clippy::undocumented_unsafe_blocks)]
-    unsafe {
-        assert!(byte_is_allowed(b'_', match_header_value_vectored));
-
-        for (b, allowed) in crate::HEADER_VALUE_MAP.iter().cloned().enumerate() {
-            assert_eq!(
-                byte_is_allowed(b as u8, match_header_value_vectored), allowed,
-                "byte_is_allowed({:?}) should be {:?}", b, allowed,
-            );
-        }
-    }
-}
+#[cfg(test)]
+include!("../../../../../../test/foundation/network/http-parser/unit/src/simd/avx2/5346.rs");
 
 #[cfg(test)]
-unsafe fn byte_is_allowed(byte: u8, f: unsafe fn(bytes: &mut Bytes<'_>)) -> bool {
-    let slice = [
-        b'_', b'_', b'_', b'_',
-        b'_', b'_', b'_', b'_',
-        b'_', b'_', b'_', b'_',
-        b'_', b'_', b'_', b'_',
-        b'_', b'_', b'_', b'_',
-        b'_', b'_', b'_', b'_',
-        b'_', b'_', byte, b'_',
-        b'_', b'_', b'_', b'_',
-    ];
-    let mut bytes = Bytes::new(&slice);
+include!("../../../../../../test/foundation/network/http-parser/unit/src/simd/avx2/5854.rs");
 
-    f(&mut bytes);
-
-    match bytes.pos() {
-        32 => true,
-        26 => false,
-        _ => unreachable!(),
-    }
-}
+#[cfg(test)]
+include!("../../../../../../test/foundation/network/http-parser/unit/src/simd/avx2/6398.rs");

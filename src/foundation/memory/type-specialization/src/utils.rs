@@ -92,17 +92,6 @@ pub(crate) unsafe fn transmute_unchecked<T, U>(value: T) -> U {
     dest
 }
 
+#[path = "../../../../../test/foundation/memory/type-specialization/unit/src/utils/tests.rs"]
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn non_static_type_comparisons() {
-        assert!(type_eq_non_static::<u8, u8>());
-        assert!(type_eq_non_static::<&'static u8, &'static u8>());
-        assert!(type_eq_non_static::<&u8, &'static u8>());
-
-        assert!(!type_eq_non_static::<u8, i8>());
-        assert!(!type_eq_non_static::<u8, &'static u8>());
-    }
-}
+mod tests;

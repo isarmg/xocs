@@ -260,7 +260,4 @@ impl<T> TrySendError<T> {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/http-transport/unit/src/client/dispatch/tests_394.rs"
-));
+include!("../../../../../../test/foundation/network/http-transport/unit/src/client/dispatch/8292.rs");

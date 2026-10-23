@@ -3413,9 +3413,3 @@ fn main(program: &ast::Program, mut f: ItemFn, tokens: &mut TokenStream) -> Resu
 
     Ok(())
 }
-
-#[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../test/foundation/wasm-binding-macros/unit/src/parser/tests_3446.rs"
-));

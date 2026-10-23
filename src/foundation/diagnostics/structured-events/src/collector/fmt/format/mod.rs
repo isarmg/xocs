@@ -1779,9 +1779,3 @@ impl Display for TimingDisplay {
         write!(f, "{:.0}s", t * 1000.0)
     }
 }
-
-#[cfg(test)]
-include!(core::concat!(
-    core::env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/tracing-family/collector/unit/src/fmt/format/mod/test_1794.rs"
-));

@@ -80,7 +80,4 @@ pub(super) fn has_content_type(headers: &HeaderMap, expected_content_type: &mime
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/http-routing/unit/src/extract/mod/tests_99.rs"
-));
+include!("../../../../../../test/foundation/network/request-router/unit/src/extract/mod/1747.rs");

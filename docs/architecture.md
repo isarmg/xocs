@@ -4,7 +4,7 @@ blog 的服务端、浏览器业务和构建工具使用 Rust。原生服务与�
 
 ## 源码职责
 
-全部 Rust 包共用根 Cargo workspace 和唯一的 Cargo.lock，依赖通过本仓库的路径解析。基础实现按用途位于 `src/foundation/<layer>/<purpose>`。
+产品、基础实现与工具源码集中在 `src/`，测试实现与专用输入集中在 `test/`。全部 Rust 包共用根 Cargo workspace 和唯一的 Cargo.lock，依赖通过本仓库的路径解析。基础实现按用途位于 `src/foundation/<layer>/<purpose>`。
 
 | 目录 | 职责 |
 | --- | --- |
@@ -15,10 +15,13 @@ blog 的服务端、浏览器业务和构建工具使用 Rust。原生服务与�
 | `src/interface/dom` | 响应式 DOM、类型化视图、属性与生命周期 |
 | `src/interface/macros` | 组件与属性的语法生成 |
 | `src/foundation` | 本地协议、存储、异步、编码、密码、系统接口与编译器 |
-| `tools/assets` | JS/CSS 编译、WASM 绑定、资源校验与开发预览 |
-| `tools/setup` | 离线初始化、实例检查与管理员凭据恢复 |
+| `src/tools/assets` | JS/CSS 编译、WASM 绑定、资源校验与开发预览 |
+| `src/tools/setup` | 离线初始化、实例检查与管理员凭据恢复 |
 | `test/browser-domain` | 浏览器数据合同及 Markdown 的宿主测试 |
-| `web` | 加载入口、样式、字体与浏览器测试 |
+| `src/web` | 加载入口、样式、字体与浏览器构建配置 |
+| `src/tools` | 资源、初始化、打包和来源校验工具 |
+| `src/operations` | 发行包构建与暂存入口 |
+| `test` | Rust 单元与集成测试、浏览器场景、验证工具和测试数据 |
 
 ```mermaid
 flowchart LR
@@ -31,6 +34,8 @@ flowchart LR
   wasm --> browser[浏览器应用]
   browser --> interface[组件与响应式 DOM]
 ```
+
+Rust 单元测试通过条件模块声明连接到 `test/<组件>/unit/`，保持对原模块私有实现的访问；集成测试由 manifest 显式指定 `test/<组件>/integration/` 中的入口。浏览器场景位于 `test/browser/`，不随生产资源发布。测试入口和运行方法见[测试目录](../test/README.md)。
 
 精确的包、入口与依赖关系见[依赖文档](dependencies/README.md)和[生成的用途关系](RUST_SOURCE_ARCHITECTURE.md)。
 
@@ -46,7 +51,7 @@ Linux 系统层使用固定 ABI、原始系统调用、epoll/eventfd 和系统�
 
 浏览器应用采用 CSR。Rust 负责路由、页面、业务状态、请求、日期、Markdown 和交互；DOM 层负责构建、更新、挂载与拆卸，提供响应式状态、动态列表、context、Portal 和错误边界。
 
-`web/src/main.js` 导入样式、加载绑定并启动 WASM；`web/runtime/startup.js` 提供 WASM 或字体准备失败时的错误面板及重载按钮。`web/pkg` 中的 JavaScript 由绑定工具生成，`.mjs` 脚本用于测试与工具检查。
+`src/web/src/main.js` 导入样式、加载绑定并启动 WASM；`src/web/runtime/startup.js` 提供 WASM 或字体准备失败时的错误面板及重载按钮。`src/web/pkg` 中的 JavaScript 由绑定工具生成，`.mjs` 脚本用于测试与工具检查。
 
 ## 资源构建
 

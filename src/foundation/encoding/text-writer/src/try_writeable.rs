@@ -625,25 +625,14 @@ macro_rules! assert_try_writeable_parts_eq {
     }};
 }
 
-#[test]
-fn test_result_try_writeable() {
-    let mut result: Result<&str, usize> = Ok("success");
-    assert_try_writeable_eq!(result, "success");
-    result = Err(44);
-    assert_try_writeable_eq!(result, "44", Err(44));
-    assert_try_writeable_parts_eq!(result, "44", Err(44), [(0, 2, Part::ERROR)])
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/encoding/text-writer/unit/src/try_writeable/21005.rs");
 
 #[cfg(test)]
-struct DelegatedTryMessage<'s>(Result<&'s str, usize>);
+include!("../../../../../test/foundation/encoding/text-writer/unit/src/try_writeable/21311.rs");
 
 #[cfg(test)]
-impl_try_writeable_delegate!(DelegatedTryMessage<'_>, |&self| &self.0, Error = usize);
+include!("../../../../../test/foundation/encoding/text-writer/unit/src/try_writeable/21381.rs");
 
-#[test]
-fn test_delegated_try_writeable() {
-    let mut message = DelegatedTryMessage(Ok("success"));
-    assert_try_writeable_eq!(message, "success");
-    message = DelegatedTryMessage(Err(44));
-    assert_try_writeable_eq!(message, "44", Err(44));
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/encoding/text-writer/unit/src/try_writeable/21482.rs");

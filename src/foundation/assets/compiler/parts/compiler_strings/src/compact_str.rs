@@ -246,24 +246,6 @@ macro_rules! format_compact_str {
     }
 }
 
+#[path = "../../../../../../../test/foundation/assets/compiler/unit/parts/compiler_strings/src/compact_str/test.rs"]
 #[cfg(test)]
-mod test {
-    use compact_str::CompactString;
-
-    use super::CompactStr;
-
-    #[test]
-    fn test_compactstr_eq() {
-        let foo = CompactStr::new("foo");
-        assert_eq!(foo, "foo");
-        assert_eq!(&foo, "foo");
-        assert_eq!("foo", foo);
-        assert_eq!("foo", &foo);
-        assert_eq!(foo.into_compact_string(), CompactString::new("foo"));
-    }
-
-    #[test]
-    fn test_format_compact_str() {
-        assert_eq!(format_compact_str!("foo{}bar", 123), "foo123bar");
-    }
-}
+mod test;

@@ -296,7 +296,4 @@ pub(crate) const HEXDIG: (RangeInclusive<u8>, RangeInclusive<u8>, RangeInclusive
     (DIGIT, b'A'..=b'F', b'a'..=b'f');
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/retained/test/foundation/toml/editor/unit/src/parser/numbers/test_298.rs"
-));
+include!("../../../../../../../test/foundation/format/configuration/unit/src/editor/parser/numbers/9251.rs");

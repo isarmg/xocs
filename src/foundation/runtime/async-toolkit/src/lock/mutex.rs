@@ -575,7 +575,4 @@ unsafe impl<T: ?Sized + Send, U: ?Sized + Send> Send for MappedMutexGuard<'_, T,
 unsafe impl<T: ?Sized + Sync, U: ?Sized + Sync> Sync for MappedMutexGuard<'_, T, U> {}
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/futures/util/unit/src/lock/mutex/tests_547.rs"
-));
+include!("../../../../../../test/foundation/runtime/async-toolkit/unit/src/lock/mutex/17891.rs");

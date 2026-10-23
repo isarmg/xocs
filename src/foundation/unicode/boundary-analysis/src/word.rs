@@ -1059,18 +1059,8 @@ impl<Y: RuleBreakType> crate::rule_segmenter_v2::ComplexHandler<Y> for ComplexWo
     }
 }
 
-#[test]
-fn empty_string() {
-    let segmenter =
-        WordSegmenter::new_for_non_complex_scripts(WordBreakInvariantOptions::default());
-    let breaks: Vec<usize> = segmenter.segment_str("").collect();
-    assert_eq!(breaks, [0]);
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/unicode/boundary-analysis/unit/src/word/38298.rs");
 
-#[test]
-fn empty_string_neo() {
-    let segmenter =
-        WordSegmenter::new_neo_for_non_complex_scripts(WordBreakInvariantOptions::default());
-    let breaks: Vec<usize> = segmenter.segment_str("").collect();
-    assert_eq!(breaks, [0]);
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/unicode/boundary-analysis/unit/src/word/38534.rs");

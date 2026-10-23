@@ -7,7 +7,7 @@ publish = false
 autotests = false
 autobenches = false
 description = "CSR component, typed props and identifier compilation"
-build = "../../../tools/assets/src/platform_contract.rs"
+build = "../../tools/assets/src/platform_contract.rs"
 
 [lib]
 name = "blog_component_macros"

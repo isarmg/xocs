@@ -105,13 +105,6 @@ where
     }
 }
 
+#[path = "../../../../../../../test/foundation/runtime/task-scheduler/unit/src/io/util/copy_buf/tests.rs"]
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn assert_unpin() {
-        use std::marker::PhantomPinned;
-        crate::is_unpin::<CopyBuf<'_, PhantomPinned, PhantomPinned>>();
-    }
-}
+mod tests;

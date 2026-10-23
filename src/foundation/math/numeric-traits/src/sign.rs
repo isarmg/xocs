@@ -203,14 +203,8 @@ empty_trait_impl!(Unsigned for usize u8 u16 u32 u64 u128);
 
 impl<T: Unsigned> Unsigned for Wrapping<T> where Wrapping<T>: Num {}
 
-#[test]
-fn unsigned_wrapping_is_unsigned() {
-    fn require_unsigned<T: Unsigned>(_: &T) {}
-    require_unsigned(&Wrapping(42_u32));
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/math/numeric-traits/unit/src/sign/5619.rs");
 
-#[test]
-fn signed_wrapping_is_signed() {
-    fn require_signed<T: Signed>(_: &T) {}
-    require_signed(&Wrapping(-42));
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/math/numeric-traits/unit/src/sign/5755.rs");

@@ -710,11 +710,6 @@ mod context;
 mod layered;
 pub use self::{context::*, layered::*};
 
-// The `tests` module is `pub(crate)` because it contains test utilities used by
-// other modules.
-#[cfg(test)]
-#[path = "../../../../../../../test/foundation/tracing-family/collector/modules/src/layer/tests.rs"]
-pub(crate) mod tests;
 
 /// A composable handler for `tracing` events.
 ///

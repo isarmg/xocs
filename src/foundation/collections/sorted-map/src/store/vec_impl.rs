@@ -300,7 +300,5 @@ impl<K, V> StoreIntoIterator<K, V> for Vec<(K, V)> {
 
 impl<K, V> StoreFromIterator<K, V> for Vec<(K, V)> {}
 
-#[test]
-fn test_vec_impl() {
-    crate::testing::check_store_full::<Vec<(u32, u64)>>();
-}
+#[cfg(test)]
+include!("../../../../../../test/foundation/collections/sorted-map/unit/src/store/vec_impl/9869.rs");

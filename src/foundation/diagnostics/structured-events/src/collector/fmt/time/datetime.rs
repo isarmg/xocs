@@ -328,9 +328,3 @@ impl From<std::time::SystemTime> for DateTime {
         }
     }
 }
-
-#[cfg(test)]
-include!(core::concat!(
-    core::env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/tracing-family/collector/unit/src/fmt/time/datetime/tests_332.rs"
-));

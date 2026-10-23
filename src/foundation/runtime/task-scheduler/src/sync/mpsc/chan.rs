@@ -117,14 +117,8 @@ pub(crate) fn channel<T, S: Semaphore>(semaphore: S) -> (Tx<T, S>, Rx<T, S>) {
     channel_from_list(tx, rx, semaphore)
 }
 
-#[cfg(all(test, not(loom)))]
-pub(crate) fn channel_from_index<T, S: Semaphore>(
-    start_index: usize,
-    semaphore: S,
-) -> (Tx<T, S>, Rx<T, S>) {
-    let (tx, rx) = list::channel_from_index(start_index);
-    channel_from_list(tx, rx, semaphore)
-}
+#[cfg(test)]
+include!("../../../../../../../test/foundation/runtime/task-scheduler/unit/src/sync/mpsc/chan/3317.rs");
 
 fn channel_from_list<T, S: Semaphore>(
     tx: list::Tx<T>,

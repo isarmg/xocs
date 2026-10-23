@@ -94,8 +94,8 @@
 //! [sometimes]: crate::primitives::subscriber::Interest::sometimes
 //! [never]: crate::primitives::subscriber::Interest::never
 //! [`Dispatch`]: crate::primitives::dispatcher::Dispatch
-//! [macros]: https://docs.rs/tracing/latest/tracing/#macros
-//! [instrument]: https://docs.rs/tracing/latest/tracing/attr.instrument.html
+//! [macros]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/#macros
+//! [instrument]: https://docs.rs/tracing/latest/foundation/diagnostics/structured-events/legacy/tracing/attr.instrument.html
 
 use alloc::vec::Vec;
 use core::{

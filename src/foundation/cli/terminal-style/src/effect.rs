@@ -379,7 +379,4 @@ impl Iterator for EffectIndexIter {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/retained/test/foundation/terminal-style/anstyle/unit/src/effect/test_381.rs"
-));
+include!("../../../../../test/foundation/cli/terminal-style/unit/src/effect/9747.rs");

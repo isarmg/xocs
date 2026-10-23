@@ -38,4 +38,4 @@ optional = true
 
 [[test]]
 name = "capabilities"
-path = "retained/test/ci/fixtures/terminal-style-capabilities.rs"
+path = "../../../../test/foundation/cli/terminal-style/integration/retained/test/ci/fixtures/terminal-style-capabilities.rs"

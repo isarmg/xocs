@@ -48,28 +48,8 @@ impl<const N: usize> BakeSize for UnvalidatedTinyAsciiStr<N> {
     }
 }
 
-#[test]
-fn test() {
-    test_bake!(
-        TinyAsciiStr<10>,
-        const,
-        crate::tinystr!(10usize, "foo"),
-        tinystr
-    );
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/text/inline-ascii/unit/src/databake/1344.rs");
 
-#[test]
-fn test_unvalidated() {
-    test_bake!(
-        UnvalidatedTinyAsciiStr<10>,
-        const,
-        crate::tinystr!(10usize, "foo").to_unvalidated(),
-        tinystr
-    );
-    test_bake!(
-        UnvalidatedTinyAsciiStr<3>,
-        const,
-        crate::UnvalidatedTinyAsciiStr::from_utf8_unchecked(*b"AB\xCD"),
-        tinystr
-    );
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/text/inline-ascii/unit/src/databake/1488.rs");

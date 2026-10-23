@@ -401,70 +401,11 @@ mod simd {
         Ok(())
     }
 
-    #[cfg(test)]
-    mod html_scan_tests {
-        #[test]
-        fn multichunk() {
-            let mut vec = Vec::new();
-            unsafe {
-                super::foreach_special_simd("&aXaaaa.a'aa9a<>aab&".as_bytes(), 0, |ix| {
-                    #[allow(clippy::unit_arg)]
-                    Ok::<_, std::fmt::Error>(vec.push(ix))
-                })
-                .unwrap();
-            }
-            assert_eq!(vec, vec![0, 9, 14, 15, 19]);
-        }
-
-        // only match these bytes, and when we match them, match them VECTOR_SIZE times
-        #[test]
-        fn only_right_bytes_matched() {
-            for b in 0..255u8 {
-                let right_byte = b == b'&' || b == b'<' || b == b'>' || b == b'"' || b == b'\'';
-                let vek = vec![b; super::VECTOR_SIZE];
-                let mut match_count = 0;
-                unsafe {
-                    super::foreach_special_simd(&vek, 0, |_| {
-                        match_count += 1;
-                        Ok::<_, std::fmt::Error>(())
-                    })
-                    .unwrap();
-                }
-                assert!((match_count > 0) == (match_count == super::VECTOR_SIZE));
-                assert_eq!(
-                    (match_count == super::VECTOR_SIZE),
-                    right_byte,
-                    "match_count: {}, byte: {:?}",
-                    match_count,
-                    b as char
-                );
-            }
-        }
-    }
-}
-
+    #[path = "../../../../../../../test/foundation/assets/markdown-parser/unit/src/escaping/simd/html_scan_tests.rs"]
 #[cfg(test)]
-mod test {
-    pub use super::{escape_href, escape_html, escape_html_body_text};
-
-    #[test]
-    fn check_href_escape() {
-        let mut s = String::new();
-        escape_href(&mut s, "&^_").unwrap();
-        assert_eq!(s.as_str(), "&amp;^_");
-    }
-
-    #[test]
-    fn check_attr_escape() {
-        let mut s = String::new();
-        escape_html(&mut s, r##"&^"'_"##).unwrap();
-        assert_eq!(s.as_str(), "&amp;^&quot;&#39;_");
-    }
-
-    #[test]
-    fn check_body_escape() {
-        let mut s = String::new();
-        escape_html_body_text(&mut s, r##"&^"'_"##).unwrap();
-        assert_eq!(s.as_str(), r##"&amp;^"'_"##);
-    }
+    mod html_scan_tests;
 }
+
+#[path = "../../../../../test/foundation/assets/markdown-parser/unit/src/escaping/test.rs"]
+#[cfg(test)]
+mod test;

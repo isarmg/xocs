@@ -1530,4 +1530,4 @@ impl Drop for ClassSet {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/syntax/unit/src/ast/mod/tests_1747.rs"));
+include!("../../../../../../../test/foundation/text/pattern-search/unit/src/syntax/ast/mod/50362.rs");

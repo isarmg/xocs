@@ -160,11 +160,10 @@
 compile_error!("`std` feature currently required, support for `no_std` may be added later");
 
 #[cfg(test)]
-#[macro_use]
-extern crate doc_comment;
+include!("../../../../../test/foundation/network/http-message/unit/src/lib/6456.rs");
 
 #[cfg(test)]
-doctest!("../README.md");
+include!("../../../../../test/foundation/network/http-message/unit/src/lib/6509.rs");
 
 #[macro_use]
 mod convert;
@@ -192,19 +191,6 @@ pub use crate::status::StatusCode;
 pub use crate::uri::Uri;
 pub use crate::version::Version;
 
+#[path = "../../../../../test/foundation/network/http-message/unit/src/lib/tests.rs"]
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn assert_send_sync<T: Send + Sync>() {}
-
-    #[test]
-    fn request_satisfies_send_sync() {
-        assert_send_sync::<Request<()>>();
-    }
-
-    #[test]
-    fn response_satisfies_send_sync() {
-        assert_send_sync::<Response<()>>();
-    }
-}
+mod tests;

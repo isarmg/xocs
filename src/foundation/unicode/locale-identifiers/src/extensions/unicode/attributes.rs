@@ -194,13 +194,6 @@ impl Deref for Attributes {
     }
 }
 
+#[path = "../../../../../../../test/foundation/unicode/locale-identifiers/unit/src/extensions/unicode/attributes/tests.rs"]
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_attributes_fromstr() {
-        let attrs: Attributes = "foo-bar".parse().expect("Failed to parse Attributes");
-        assert_eq!(attrs.to_string(), "bar-foo");
-    }
-}
+mod tests;

@@ -130,10 +130,8 @@ mod libc {
         pub(super) fn dlsym(handle: *mut c_void, symbol: *const c_char) -> *mut c_void;
     }
 
-    #[test]
-    fn test_abi() {
-        assert_eq!(self::RTLD_DEFAULT, ::libc::RTLD_DEFAULT);
-    }
+    #[cfg(test)]
+include!("../../../../../test/foundation/platform/system-calls/unit/src/weak/libc/5356.rs");
 }
 
 unsafe fn fetch(name: &str) -> *mut c_void {

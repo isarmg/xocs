@@ -4392,4 +4392,4 @@ fn minimum_cache_capacity(
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/automata/unit/src/hybrid/dfa/all_tests_4394.rs"));
+include!("../../../../../../../test/foundation/text/pattern-search/unit/src/automata/hybrid/dfa/189508.rs");

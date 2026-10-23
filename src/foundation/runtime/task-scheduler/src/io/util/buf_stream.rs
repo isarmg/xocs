@@ -196,12 +196,6 @@ impl<RW: AsyncRead + AsyncWrite> AsyncBufRead for BufStream<RW> {
     }
 }
 
+#[path = "../../../../../../../test/foundation/runtime/task-scheduler/unit/src/io/util/buf_stream/tests.rs"]
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn assert_unpin() {
-        crate::is_unpin::<BufStream<()>>();
-    }
-}
+mod tests;

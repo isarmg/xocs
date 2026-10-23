@@ -1,0 +1,29 @@
+{
+  "name": "blog-browser",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=26.7.0 <27"
+  },
+  "scripts": {
+    "dev": "cargo +1.99.0 run --quiet --locked --offline --manifest-path ../../Cargo.toml -p blog-assets -- serve --product-root ../.. --debug --bind 127.0.0.1:5173",
+    "build": "cargo +1.99.0 run --quiet --locked --offline --manifest-path ../../Cargo.toml -p blog-assets -- build --product-root ../.. --offline",
+    "preview": "cargo +1.99.0 run --quiet --locked --offline --manifest-path ../../Cargo.toml -p blog-assets -- preview --product-root ../.. --bind 127.0.0.1:4173",
+    "test:unit": "npm run check:toolchain && npm run test:blog-interface && node --test ../../test/browser/browser-fixtures.test.mjs",
+    "test:language": "npm run build && node ../../test/browser/language.mjs",
+    "test:admin": "npm run build && node ../../test/browser/admin-layout.mjs && node ../../test/browser/account-settings.mjs",
+    "test:public": "npm run build && node ../../test/browser/public-layout.mjs && node ../../test/browser/anonymous-comments.mjs",
+    "build:blog-interface": "cargo +1.99.0 run --quiet --locked --offline --manifest-path ../../Cargo.toml -p blog-assets -- build --product-root ../.. --offline",
+    "check:blog-interface": "cargo +1.99.0 run --quiet --locked --offline --manifest-path ../../Cargo.toml -p blog-assets -- check --product-root ../.. --offline",
+    "test:blog-interface": "cargo +1.99.0 run --quiet --locked --offline --manifest-path ../../Cargo.toml -p blog-assets -- test --product-root ../.. --offline && cargo +1.99.0 test --locked --offline --manifest-path ../../Cargo.toml -p blog-browser-domain-tests",
+    "test:browser:blog-interface": "npm run build && node ../../test/browser/blog-interface-runtime.mjs && node ../../test/browser/async-state.mjs && node ../../test/browser/transport-lifecycle.mjs && node ../../test/browser/browser-smoke.mjs && node ../../test/browser/rust-native-domain.mjs",
+    "test:domain:rust": "cargo +1.99.0 test --locked --offline --manifest-path ../../Cargo.toml -p blog-browser-domain-tests",
+    "test:startup": "node ../../test/browser/startup-failure.mjs",
+    "check:toolchain": "node scripts/check-toolchain.mjs && node --test ../../test/browser/toolchain-contract.test.mjs"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.12.1",
+    "@playwright/test": "1.63.0"
+  }
+}

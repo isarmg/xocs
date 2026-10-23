@@ -252,4 +252,5 @@ fn authority_sources() -> Vec<Value> {
 }
 
 #[cfg(test)]
+#[path = "../../../test/application/unit/installation_material/tests.rs"]
 mod tests;

@@ -161,7 +161,7 @@ pub struct FromExtractor<T, E, S> {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-routing/functions/src/middleware/from_extractor/traits_163.rs"));
+include!("../../../../../../test/foundation/network/request-router/unit/src/middleware/from_extractor/4270.rs");
 
 impl<T, E, S> Clone for FromExtractor<T, E, S>
 where
@@ -296,4 +296,4 @@ where
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-routing/unit/src/middleware/from_extractor/tests_302.rs"));
+include!("../../../../../../test/foundation/network/request-router/unit/src/middleware/from_extractor/8109.rs");

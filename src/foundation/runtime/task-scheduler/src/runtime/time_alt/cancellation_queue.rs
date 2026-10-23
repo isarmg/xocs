@@ -86,5 +86,6 @@ pub(crate) fn new() -> (Sender, Receiver) {
     )
 }
 
+#[path = "../../../../../../../test/foundation/runtime/task-scheduler/unit/src/runtime/time_alt/cancellation_queue/tests.rs"]
 #[cfg(test)]
 mod tests;

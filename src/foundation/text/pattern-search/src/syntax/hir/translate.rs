@@ -1352,4 +1352,4 @@ fn ascii_class_as_chars(
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/syntax/unit/src/hir/translate/tests_1354.rs"));
+include!("../../../../../../../test/foundation/text/pattern-search/unit/src/syntax/hir/translate/50164.rs");

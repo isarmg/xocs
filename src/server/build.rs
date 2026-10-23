@@ -3,7 +3,7 @@
 mod config_definition;
 #[path = "src/installation_definition.rs"]
 mod installation_definition;
-#[path = "../../tools/assets/src/platform_contract.rs"]
+#[path = "../tools/assets/src/platform_contract.rs"]
 mod platform_contract;
 #[path = "src/schema_definition.rs"]
 mod schema_definition;
@@ -23,7 +23,7 @@ fn main() {
     println!("cargo:rustc-env=BLOG_CORE_SOURCE_SHA256={source_digest}");
     let web = env::var_os("BLOG_WEB_DIST")
         .map(PathBuf::from)
-        .unwrap_or_else(|| root.join("web/dist"));
+        .unwrap_or_else(|| root.join("src/web/dist"));
     let target = env::var("TARGET").expect("Cargo build target");
     let revision = env::var("BLOG_SOURCE_REVISION").unwrap_or_else(|_| "unbound".into());
     assert!(

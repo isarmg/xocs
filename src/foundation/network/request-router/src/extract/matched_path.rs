@@ -120,4 +120,4 @@ fn append_nested_matched_path(matched_path: &Arc<str>, extensions: &http::Extens
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-routing/unit/src/extract/matched_path/tests_144.rs"));
+include!("../../../../../../test/foundation/network/request-router/unit/src/extract/matched_path/3545.rs");

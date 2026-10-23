@@ -704,6 +704,3 @@ impl ScriptWithExtensionsBorrowed<'static> {
         }
     }
 }
-
-#[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../test/foundation/unicode-properties/unit/src/script/tests_708.rs"));

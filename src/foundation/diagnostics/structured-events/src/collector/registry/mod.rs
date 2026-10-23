@@ -511,9 +511,3 @@ where
         Self { filter, ..self }
     }
 }
-
-#[cfg(test)]
-include!(core::concat!(
-    core::env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/tracing-family/collector/unit/src/registry/mod/all_tests_515.rs"
-));

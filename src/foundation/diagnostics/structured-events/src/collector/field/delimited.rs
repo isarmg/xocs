@@ -131,9 +131,3 @@ where
         self.inner.writer()
     }
 }
-
-#[cfg(test)]
-include!(core::concat!(
-    core::env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/tracing-family/collector/unit/src/field/delimited/test_135.rs"
-));

@@ -768,8 +768,6 @@ fn format_u8(mut n: u8, out: &mut [u8]) -> usize {
     }
 }
 
-#[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../test/foundation/data-serde/core/functions/src/ser/impls/test_format_u8_788.rs"));
 
 impl Serialize for net::Ipv4Addr {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -1005,10 +1003,4 @@ atomic_impl! {
 atomic_impl! {
     AtomicI64 "64"
     AtomicU64 "64"
-}
-
-#[cfg(test)]
-mod facade_origin_tests {
-    use super::*;
-    include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../test/foundation/data-serde/functions/src/core/ser/impls/test_format_u8_770.rs"));
 }

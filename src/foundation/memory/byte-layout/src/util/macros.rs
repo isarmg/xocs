@@ -915,14 +915,14 @@ macro_rules! codegen_example {
                 @index 1
                 @title "Format"
                 /// ```ignore
-                #[doc = include_str!(concat!("../benches/formats/", $format, ".rs"))]
+                #[doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/memory/byte-layout/benches/formats/", $format, ".rs"))]
                 /// ```
             ],
             [
                 @index 2
                 @title "Benchmark"
                 /// ```ignore
-                #[doc = include_str!(concat!("../benches/", $bench, ".rs"))]
+                #[doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/memory/byte-layout/benches/", $bench, ".rs"))]
                 /// ```
             ],
             [
@@ -930,14 +930,14 @@ macro_rules! codegen_example {
                 @index 3
                 @title "Assembly"
                 /// ```plain
-                #[doc = include_str!(concat!("../benches/", $bench, ".x86-64"))]
+                #[doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/memory/byte-layout/benches/", $bench, ".x86-64"))]
                 /// ```
             ],
             [
                 @index 4
                 @title "Machine Code Analysis"
                 /// ```plain
-                #[doc = include_str!(concat!("../benches/", $bench, ".x86-64.mca"))]
+                #[doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/memory/byte-layout/benches/", $bench, ".x86-64.mca"))]
                 /// ```
             ]
         )

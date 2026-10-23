@@ -914,4 +914,4 @@ fn intersects(r1: Utf8Range, r2: Utf8Range) -> bool {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/automata/unit/src/nfa/thompson/range_trie/tests_916.rs"));
+include!("../../../../../../../../test/foundation/text/pattern-search/unit/src/automata/nfa/thompson/range_trie/37844.rs");

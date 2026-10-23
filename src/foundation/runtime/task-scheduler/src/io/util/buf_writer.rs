@@ -299,12 +299,6 @@ impl<W: fmt::Debug> fmt::Debug for BufWriter<W> {
     }
 }
 
+#[path = "../../../../../../../test/foundation/runtime/task-scheduler/unit/src/io/util/buf_writer/tests.rs"]
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn assert_unpin() {
-        crate::is_unpin::<BufWriter<()>>();
-    }
-}
+mod tests;

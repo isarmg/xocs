@@ -89,42 +89,14 @@ pub fn set_errno(err: Errno) {
     sys::set_errno(err)
 }
 
-#[test]
-fn it_works() {
-    let x = errno();
-    set_errno(x);
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/platform/error-code/unit/src/lib/2255.rs");
 
-#[cfg(feature = "std")]
-#[test]
-fn it_works_with_to_string() {
-    let x = errno();
-    let _ = x.to_string();
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/platform/error-code/unit/src/lib/2321.rs");
 
-#[cfg(feature = "std")]
-#[test]
-fn check_description() {
-    let expect = "Operation not permitted";
-    let errno_code = libc::EPERM;
-    set_errno(Errno(errno_code));
+#[cfg(test)]
+include!("../../../../../test/foundation/platform/error-code/unit/src/lib/2435.rs");
 
-    assert_eq!(errno().to_string(), expect);
-    assert_eq!(
-        format!("{:?}", errno()),
-        format!(
-            "Errno {{ code: {}, description: Some({:?}) }}",
-            errno_code, expect
-        )
-    );
-}
-
-#[cfg(feature = "std")]
-#[test]
-fn check_error_into_errno() {
-    const ERROR_CODE: i32 = 1;
-
-    let error = io::Error::from_raw_os_error(ERROR_CODE);
-    let new_error: io::Error = Errno(ERROR_CODE).into();
-    assert_eq!(error.kind(), new_error.kind());
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/platform/error-code/unit/src/lib/2829.rs");

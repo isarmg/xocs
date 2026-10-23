@@ -123,9 +123,3 @@ pub type MappedRwLockWriteGuard<'a, T> = crate::api::MappedRwLockWriteGuard<'a, 
 /// RAII structure used to release the upgradable read access of a lock when
 /// dropped.
 pub type RwLockUpgradableReadGuard<'a, T> = crate::api::RwLockUpgradableReadGuard<'a, RawRwLock, T>;
-
-#[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../test/foundation/synchronization/locks/unit/src/rwlock/tests_127.rs"
-));

@@ -520,16 +520,6 @@ impl fmt::Debug for Condvar {
     }
 }
 
-#[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../test/foundation/synchronization/locks/unit/src/condvar/tests_525.rs"
-));
 
 // This module contains an integration test that is heavily inspired from WebKit's own integration
 // tests for its own Condvar.
-#[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../test/foundation/synchronization/locks/unit/src/condvar/webkit_queue_test_916.rs"
-));

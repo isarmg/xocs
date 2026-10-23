@@ -92,7 +92,4 @@ impl fmt::Display for DecodedLength {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/http-transport/unit/src/body/length/tests_110.rs"
-));
+include!("../../../../../../test/foundation/network/http-transport/unit/src/body/length/3135.rs");

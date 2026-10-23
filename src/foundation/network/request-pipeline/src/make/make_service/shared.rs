@@ -103,4 +103,4 @@ opaque_future! {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/service-stack/unit/src/make/make_service/shared/tests_105.rs"));
+include!("../../../../../../../test/foundation/network/request-pipeline/unit/src/make/make_service/shared/2682.rs");

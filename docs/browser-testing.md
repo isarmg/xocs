@@ -1,13 +1,13 @@
 # 浏览器验证
 
-浏览器测试使用 Node 26.7.0、Playwright 和 axe，执行 Chromium 与 Firefox。版本由 `web/package.json` 和 `web/package-lock.json` 锁定；浏览器二进制及系统库单独安装。生产资源由 Rust 构建，测试工具只用于驱动和检查页面。
+浏览器测试使用 Node 26.7.0、Playwright 和 axe，执行 Chromium 与 Firefox。版本由 `src/web/package.json` 和 `src/web/package-lock.json` 锁定；浏览器二进制及系统库单独安装。生产资源由 Rust 构建，测试工具只用于驱动和检查页面。
 
 ## 准备与执行
 
 先按[开发说明](development.md)准备 Rust、WASM 目标和 Linux 编译环境，再从根目录执行：
 
 ```sh
-cd web
+cd src/web
 npm ci
 npx playwright install --with-deps chromium firefox
 npm run test:unit
@@ -22,10 +22,10 @@ npm run test:browser:blog-interface
 | `npm run test:browser:blog-interface` | WASM 运行、异步状态、流取消、阅读交互和页面冒烟 | 脚本指定的 API fixture 或独立原生服务 |
 | `npm run test:admin` | 管理布局和账号设置 | API fixture |
 | `npm run test:public` | 公开布局和匿名评论行为 | API fixture |
-| `bash scripts/smoke.sh`（根目录） | 真实 HTTP、SQLite、登录、公开页面与重启持久化 | 独立可丢弃 ROOT |
+| `bash test/operations/smoke.sh`（根目录） | 真实 HTTP、SQLite、登录、公开页面与重启持久化 | 独立可丢弃 ROOT |
 | CI `installed_candidate` | 候选包完整性、安装、凭据、权限与实例隔离 | 独立安装和真实后端 |
 
-页面脚本会执行管理写入或创建可丢弃数据，应使用专用测试实例。`web/tests/rust-native-domain.mjs` 使用真实生成资源，API 和剪贴板使用 fixture；持久化与真实数据库行为由后端和安装测试覆盖。
+页面脚本会执行管理写入或创建可丢弃数据，应使用专用测试实例。`test/browser/rust-native-domain.mjs` 使用真实生成资源，API 和剪贴板使用 fixture；持久化与真实数据库行为由后端和安装测试覆盖。
 
 ## WASM 启动检查
 
@@ -35,4 +35,4 @@ npm run test:browser:blog-interface
 
 ## CI 分组
 
-`.github/workflows/ci.yml` 分别运行服务端、Chromium/Firefox 的管理与公开页面组，以及独立安装测试，聚合门禁要求各组成功。构建检查、fixture 页面测试、真实后端写入和安装测试各自验证对应边界；具体命令以工作流和 `web/package.json` 为准。
+`.github/workflows/ci.yml` 分别运行服务端、Chromium/Firefox 的管理与公开页面组，以及独立安装测试，聚合门禁要求各组成功。构建检查、fixture 页面测试、真实后端写入和安装测试各自验证对应边界；具体命令以工作流和 `src/web/package.json` 为准。

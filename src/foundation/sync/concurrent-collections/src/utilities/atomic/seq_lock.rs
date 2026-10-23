@@ -95,4 +95,4 @@ impl Drop for SeqLockWriteGuard {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/concurrent-collections/utilities/unit/src/atomic/seq_lock/tests_97.rs"));
+include!("../../../../../../../test/foundation/sync/concurrent-collections/unit/src/utilities/atomic/seq_lock/2605.rs");

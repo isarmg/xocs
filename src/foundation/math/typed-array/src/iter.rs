@@ -15,17 +15,9 @@ pub struct GenericArrayIter<T, N: ArrayLength<T>> {
     index_back: usize,
 }
 
+#[path = "../../../../../test/foundation/math/typed-array/unit/src/iter/test.rs"]
 #[cfg(test)]
-mod test {
-    use super::*;
-
-    fn send<I: Send>(_iter: I) {}
-
-    #[test]
-    fn test_send_iter() {
-        send(GenericArray::from([1, 2, 3, 4]).into_iter());
-    }
-}
+mod test;
 
 impl<T, N> GenericArrayIter<T, N>
 where

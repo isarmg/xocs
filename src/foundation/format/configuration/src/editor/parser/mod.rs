@@ -142,7 +142,4 @@ pub(crate) mod prelude {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/retained/test/foundation/toml/editor/unit/src/parser/mod/test_143.rs"
-));
+include!("../../../../../../../test/foundation/format/configuration/unit/src/editor/parser/mod/4116.rs");

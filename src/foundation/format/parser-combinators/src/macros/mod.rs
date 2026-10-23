@@ -3,12 +3,7 @@ mod seq;
 mod unordered_seq;
 
 #[cfg(test)]
-macro_rules! assert_parse(
-    ($left: expr, $right: expr) => {
-        let res: $crate::error::ModalResult<_, $crate::error::InputError<_>> = $left;
-        snapbox::assert_data_eq!(snapbox::data::ToDebug::to_debug(&res), $right);
-    };
-);
+include!("../../../../../../test/foundation/format/parser-combinators/unit/src/macros/mod/43.rs");
 
 macro_rules! impl_partial_eq {
     ($lhs:ty, $rhs:ty) => {
@@ -54,5 +49,6 @@ macro_rules! impl_partial_ord {
     };
 }
 
+#[path = "../../../../../../test/foundation/format/parser-combinators/unit/src/macros/tests.rs"]
 #[cfg(test)]
 mod tests;

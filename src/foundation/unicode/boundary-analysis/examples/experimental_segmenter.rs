@@ -5,10 +5,10 @@
 #![no_main] // https://github.com/unicode-org/icu4x/issues/395
 icu_benchmark_macros::instrument!();
 
-#[path = "../tests/adaboost/main.rs"]
+#[path = "../../../../../test/foundation/unicode/boundary-analysis/integration/adaboost/main.rs"]
 mod adaboost;
 
-#[path = "../tests/cnn/main.rs"]
+#[path = "../../../../../test/foundation/unicode/boundary-analysis/integration/cnn/main.rs"]
 mod cnn;
 
 use adaboost::Predictor;

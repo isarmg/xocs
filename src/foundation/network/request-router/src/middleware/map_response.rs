@@ -341,4 +341,4 @@ impl fmt::Debug for ResponseFuture {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-routing/unit/src/middleware/map_response/tests_343.rs"));
+include!("../../../../../../test/foundation/network/request-router/unit/src/middleware/map_response/9682.rs");

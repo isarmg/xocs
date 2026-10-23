@@ -54,7 +54,4 @@ pub fn noop_waker_ref() -> &'static Waker {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/futures/task/unit/src/noop_waker/tests_56.rs"
-));
+include!("../../../../../../test/foundation/runtime/async-toolkit/unit/src/task_support/noop_waker/1440.rs");

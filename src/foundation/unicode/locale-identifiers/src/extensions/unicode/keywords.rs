@@ -441,13 +441,6 @@ impl FromStr for Keywords {
 
 impl_writeable_for_key_value!(Keywords, "ca", "islamic-civil", "mm", "mm");
 
+#[path = "../../../../../../../test/foundation/unicode/locale-identifiers/unit/src/extensions/unicode/keywords/tests.rs"]
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_keywords_fromstr() {
-        let kw: Keywords = "hc-h12".parse().expect("Failed to parse Keywords");
-        assert_eq!(kw.to_string(), "hc-h12");
-    }
-}
+mod tests;

@@ -783,7 +783,7 @@ impl Http1Builder<'_> {
     }
 }
 
-#[cfg(all(feature = "tokio", test))]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-transport/adapters/unit/src/server/conn/auto/mod/guarded_tests_1135.rs"));
+#[cfg(test)]
+include!("../../../../../../../../../test/foundation/network/http-transport/unit/src/adapters/server/conn/auto/mod/25057.rs");
 
 use std::future::Future;

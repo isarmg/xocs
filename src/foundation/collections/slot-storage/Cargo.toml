@@ -37,4 +37,4 @@ serde = { features = ["alloc"], optional = true, default-features = false, path 
 
 [[test]]
 name = "consumer-contracts"
-path = "tests/consumer_contracts.rs"
+path = "../../../../test/foundation/collections/slot-storage/integration/consumer_contracts.rs"

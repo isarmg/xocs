@@ -70,16 +70,8 @@ impl RngCore for OsRng {
     }
 }
 
-#[test]
-fn test_os_rng() {
-    let x = OsRng.next_u64();
-    let y = OsRng.next_u64();
-    assert!(x != 0);
-    assert!(x != y);
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/math/password-random-traits/unit/src/os/2300.rs");
 
-#[test]
-fn test_construction() {
-    let mut rng = OsRng::default();
-    assert!(rng.next_u64() != 0);
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/math/password-random-traits/unit/src/os/2432.rs");

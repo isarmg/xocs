@@ -40,14 +40,16 @@ jobs:
 
       - name: Verify repository-owned implementation
         run: |
-          python3 -I -B tools/test-docs.py
-          python3 tools/check-docs.py
-          python3 tools/rust-sources/docs.py --check
-          python3 tools/test-independence.py
-          python3 -I -B tools/rust-sources/test_manage.py
-          python3 -I -B tools/rust-sources/test_audit.py
-          python3 tools/rust-sources/manage.py verify --metadata
-          python3 tools/check-independence.py
+          python3 test/check-layout.py
+          python3 -I -B test/tools/test-layout.py
+          python3 -I -B test/tools/test-docs.py
+          python3 src/tools/check-docs.py
+          python3 src/tools/rust-sources/docs.py --check
+          python3 test/tools/test-independence.py
+          python3 -I -B test/tools/rust-sources/test_manage.py
+          python3 -I -B test/tools/rust-sources/test_audit.py
+          python3 src/tools/rust-sources/manage.py verify --metadata
+          python3 src/tools/check-independence.py
 
       - name: Build web from repository Rust sources
         run: cargo run --quiet --locked --offline -p blog-assets -- build --product-root . --offline
@@ -58,7 +60,7 @@ jobs:
           cargo doc --locked --offline -p blog -p blog-setup -p blog-assets
           cargo doc --locked --offline -p blog-browser --target wasm32-unknown-unknown
       - name: Prepare browser test dependencies
-        working-directory: web
+        working-directory: src/web
         run: npm ci
       - name: Verify and build server
         run: |
@@ -68,7 +70,7 @@ jobs:
           cargo clippy --locked --offline -p blog-browser --target wasm32-unknown-unknown -- -D warnings
           cargo test --locked --offline
           cargo test --locked --offline -p blog-assets -p blog-browser-domain-tests
-          bash scripts/test-maintained.sh
+          bash test/run-maintained.sh
           cargo run --quiet --locked --offline -p blog-assets -- test --product-root . --offline
           export BLOG_SOURCE_REVISION="$(git rev-parse HEAD)"
           test "$BLOG_SOURCE_REVISION" = "${GITHUB_SHA}"
@@ -77,41 +79,41 @@ jobs:
             --rust-only --source-revision "$BLOG_SOURCE_REVISION" --offline
 
       - name: Install browsers
-        working-directory: web
+        working-directory: src/web
         run: npx playwright install --with-deps chromium firefox
 
       - name: Verify bilingual layouts and anonymous interactions
-        working-directory: web
+        working-directory: src/web
         run: |
           npm run test:unit
-          node tests/language.mjs
-          node tests/admin-layout.mjs
-          node tests/account-settings.mjs
-          node tests/admin-cleanup.mjs
-          node tests/management.mjs
-          node tests/contract-fixes.mjs
-          node tests/blog-interface-runtime.mjs
-          node tests/async-state.mjs
-          node tests/transport-lifecycle.mjs
-          node tests/startup-failure.mjs
-          node tests/rust-native-domain.mjs
-          node tests/public-footer.mjs
-          node tests/public-layout.mjs
-          node tests/anonymous-comments.mjs
+          node ../../test/browser/language.mjs
+          node ../../test/browser/admin-layout.mjs
+          node ../../test/browser/account-settings.mjs
+          node ../../test/browser/admin-cleanup.mjs
+          node ../../test/browser/management.mjs
+          node ../../test/browser/contract-fixes.mjs
+          node ../../test/browser/blog-interface-runtime.mjs
+          node ../../test/browser/async-state.mjs
+          node ../../test/browser/transport-lifecycle.mjs
+          node ../../test/browser/startup-failure.mjs
+          node ../../test/browser/rust-native-domain.mjs
+          node ../../test/browser/public-footer.mjs
+          node ../../test/browser/public-layout.mjs
+          node ../../test/browser/anonymous-comments.mjs
 
       - name: End-to-end smoke test
         env:
           BLOG_SMOKE_BINARY: ${{ github.workspace }}/target/x86_64-unknown-linux-gnu/release/blog
           BLOG_SMOKE_MANAGED_CONFIG: 1
-        run: bash scripts/smoke.sh
+        run: bash test/operations/smoke.sh
 
       - name: Audit original identities of maintained Rust sources
-        run: python3 tools/rust-sources/audit.py
+        run: python3 src/tools/rust-sources/audit.py
 
       - name: Package Linux x86_64 distribution
         run: |
           mkdir -p dist
-          bash scripts/package-linux-x86_64.sh --output-dir "$GITHUB_WORKSPACE/dist"
+          bash src/operations/package-linux-x86_64.sh --output-dir "$GITHUB_WORKSPACE/dist"
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

@@ -53,6 +53,3 @@ impl std::fmt::Display for MatchesError {
         }
     }
 }
-
-#[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../test/foundation/command-line/builder/functions/src/parser/error/check_auto_traits_57.rs"));

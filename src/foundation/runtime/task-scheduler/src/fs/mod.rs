@@ -277,6 +277,7 @@ pub use self::copy::copy;
 mod try_exists;
 pub use self::try_exists::try_exists;
 
+#[path = "../../../../../../test/foundation/runtime/task-scheduler/unit/src/fs/mocks.rs"]
 #[cfg(test)]
 mod mocks;
 
@@ -300,7 +301,7 @@ use std::io;
 #[cfg(not(test))]
 use crate::blocking::spawn_blocking;
 #[cfg(test)]
-use mocks::spawn_blocking;
+include!("../../../../../../test/foundation/runtime/task-scheduler/unit/src/fs/mod/8847.rs");
 
 pub(crate) async fn asyncify<F, T>(f: F) -> io::Result<T>
 where

@@ -18,7 +18,7 @@
 准备 Rust 1.99.0、`wasm32-unknown-unknown` target、Linux C 编译工具及 Python 3.11 或更新版本，然后在仓库根目录执行：
 
 ```sh
-python3 tools/rust-sources/manage.py verify --metadata
+python3 src/tools/rust-sources/manage.py verify --metadata
 cargo +1.99.0 run --locked --offline -p blog-assets -- build --product-root . --offline
 cargo +1.99.0 build --locked --offline --bin blog
 cargo +1.99.0 build --locked --offline -p blog-setup
@@ -26,6 +26,6 @@ cargo +1.99.0 build --locked --offline -p blog-setup
 
 全部 Rust 依赖和 SQLite 源码位于本仓库，共用根 Cargo workspace 与唯一的 `Cargo.lock`。`blog-assets` 完成 JS/CSS 编译、WASM 绑定生成和资源校验。Node 与浏览器仅用于测试。环境准备、本机启动和验证命令见[开发说明](docs/development.md)。
 
-服务端位于 `src/server`，应用基础位于 `src/application`，浏览器应用和组件位于 `src/browser`、`src/interface`，依赖实现按职责放在 `src/foundation`。参阅[架构](docs/architecture.md)、[依赖文档](docs/dependencies/README.md)和[完整文档目录](docs/README.md)。
+服务端位于 `src/server`，应用基础位于 `src/application`，浏览器应用和组件位于 `src/browser`、`src/interface`，依赖实现按职责放在 `src/foundation`。工具与浏览器资源位于 `src/tools`、`src/operations` 和 `src/web`，测试代码、fixture 与验证脚本集中在 [`test`](test/README.md)。参阅[架构](docs/architecture.md)、[依赖文档](docs/dependencies/README.md)和[完整文档目录](docs/README.md)。
 
 项目使用 [MIT 许可证](LICENSE)。依赖许可证与原始来源材料保存在 `compliance/`，对应关系见[第三方源码清单](docs/THIRD_PARTY_RUST_SOURCES.md)。

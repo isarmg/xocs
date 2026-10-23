@@ -31,6 +31,7 @@
 use alloc::boxed::Box;
 
 #[cfg(feature = "dev")]
+#[path = "../../../../../../test/foundation/crypto/digest-traits/helpers/dev.rs"]
 pub mod dev;
 
 #[cfg(feature = "block-api")]

@@ -172,7 +172,4 @@ pub(super) fn add_chunked(mut entry: http::header::OccupiedEntry<'_, HeaderValue
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/http-transport/unit/src/headers/all_tests_190.rs"
-));
+include!("../../../../../test/foundation/network/http-transport/unit/src/headers/5150.rs");

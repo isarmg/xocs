@@ -279,7 +279,4 @@ mod private {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/retained/test/foundation/terminal-style/anstream/unit/src/stream/tests_283.rs"
-));
+include!("../../../../../../test/foundation/cli/terminal-style/unit/src/output/stream/5936.rs");

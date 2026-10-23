@@ -381,4 +381,4 @@ pub(super) mod sealed {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-transport/adapters/unit/src/client/legacy/connect/mod/tests_382.rs"));
+include!("../../../../../../../../../test/foundation/network/http-transport/unit/src/adapters/client/legacy/connect/mod/10713.rs");

@@ -46,24 +46,24 @@ check-cfg = ["cfg(fuzzing)"]
 
 [[test]]
 name = "contracts"
-path = "retained/test/compression/contracts.rs"
+path = "../../../../test/foundation/encoding/compression/integration/retained/test/compression/contracts.rs"
 
 [[test]]
 name = "empty-read"
-path = "retained/test/foundation/compression/streams/tests/empty-read.rs"
+path = "../../../../test/foundation/encoding/compression/integration/retained/test/foundation/compression/streams/tests/empty-read.rs"
 required-features = ["streams"]
 
 [[test]]
 name = "early-flush"
-path = "retained/test/foundation/compression/streams/tests/early-flush.rs"
+path = "../../../../test/foundation/encoding/compression/integration/retained/test/foundation/compression/streams/tests/early-flush.rs"
 required-features = ["streams"]
 
 [[test]]
 name = "gunzip"
-path = "retained/test/foundation/compression/streams/tests/gunzip.rs"
+path = "../../../../test/foundation/encoding/compression/integration/retained/test/foundation/compression/streams/tests/gunzip.rs"
 required-features = ["streams"]
 
 [[test]]
 name = "zero-write"
-path = "retained/test/foundation/compression/streams/tests/zero-write.rs"
+path = "../../../../test/foundation/encoding/compression/integration/retained/test/foundation/compression/streams/tests/zero-write.rs"
 required-features = ["streams"]

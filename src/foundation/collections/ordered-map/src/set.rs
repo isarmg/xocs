@@ -4,6 +4,7 @@ mod iter;
 mod mutable;
 mod slice;
 
+#[path = "../../../../../test/foundation/collections/ordered-map/unit/src/set/tests.rs"]
 #[cfg(test)]
 mod tests;
 

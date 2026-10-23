@@ -46,6 +46,7 @@ use alloc::boxed::Box;
 
 #[cfg(feature = "dev")]
 #[cfg_attr(docsrs, doc(cfg(feature = "dev")))]
+#[path = "../../../../../test/foundation/crypto/password-digest-traits/helpers/dev.rs"]
 pub mod dev;
 
 #[cfg(feature = "core-api")]

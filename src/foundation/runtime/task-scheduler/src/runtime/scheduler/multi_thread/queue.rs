@@ -596,7 +596,5 @@ fn pack(steal: UnsignedShort, real: UnsignedShort) -> UnsignedLong {
     (real as UnsignedLong) | ((steal as UnsignedLong) << (mem::size_of::<UnsignedShort>() * 8))
 }
 
-#[test]
-fn test_local_queue_capacity() {
-    assert!(LOCAL_QUEUE_CAPACITY - 1 <= u8::MAX as usize);
-}
+#[cfg(test)]
+include!("../../../../../../../../test/foundation/runtime/task-scheduler/unit/src/runtime/scheduler/multi_thread/queue/21535.rs");

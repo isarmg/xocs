@@ -99,8 +99,10 @@ mod parser;
 mod serializer;
 mod unicode_range;
 
+#[path = "../../../../../../../test/foundation/assets/style-compiler/unit/parts/style_parser/src/size_of_tests.rs"]
 #[cfg(test)]
 mod size_of_tests;
+#[path = "../../../../../../../test/foundation/assets/style-compiler/unit/parts/style_parser/src/tests.rs"]
 #[cfg(test)]
 mod tests;
 

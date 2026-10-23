@@ -46,29 +46,8 @@ impl<T: AsULE> BakeSize for &ZeroSlice<T> {
     }
 }
 
-#[test]
-fn test_baked_vec() {
-    test_bake!(ZeroVec<u32>, const, crate::ZeroVec::new(), zerovec);
-    test_bake!(
-        ZeroVec<u32>,
-        const,
-        unsafe { crate::ZeroVec::from_bytes_unchecked(b"\x02\x01\0\x16\0M\x01\\") },
-        zerovec
-    );
-}
+#[cfg(test)]
+include!("../../../../../../test/foundation/unicode/borrowed-vector/unit/src/zerovec/databake/1563.rs");
 
-#[test]
-fn test_baked_slice() {
-    test_bake!(
-        &ZeroSlice<u32>,
-        const,
-        crate::ZeroSlice::new_empty(),
-        zerovec
-    );
-    test_bake!(
-        &ZeroSlice<u32>,
-        const,
-        unsafe { crate::ZeroSlice::from_bytes_unchecked(b"\x02\x01\0\x16\0M\x01\\") },
-        zerovec
-    );
-}
+#[cfg(test)]
+include!("../../../../../../test/foundation/unicode/borrowed-vector/unit/src/zerovec/databake/1826.rs");

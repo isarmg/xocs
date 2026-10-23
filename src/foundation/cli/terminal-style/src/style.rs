@@ -429,7 +429,4 @@ impl core::fmt::Display for StyleDisplay {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/retained/test/foundation/terminal-style/anstyle/functions/src/style/print_size_of_431.rs"
-));
+include!("../../../../../test/foundation/cli/terminal-style/unit/src/style/10048.rs");

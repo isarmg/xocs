@@ -343,16 +343,8 @@ fn append_slash_on_path(uri: Uri) -> Result<Uri, OpenFileOutput> {
     })
 }
 
-#[test]
-fn preferred_encoding_with_extension() {
-    let mut path = PathBuf::from("hello.txt");
-    preferred_encoding(&mut path, &[(Encoding::Gzip, QValue::one())]);
-    assert_eq!(path, PathBuf::from("hello.txt.gz"));
-}
+#[cfg(test)]
+include!("../../../../../../../../test/foundation/network/http-middleware/unit/src/services/fs/serve_dir/open_file/11590.rs");
 
-#[test]
-fn preferred_encoding_without_extension() {
-    let mut path = PathBuf::from("hello");
-    preferred_encoding(&mut path, &[(Encoding::Gzip, QValue::one())]);
-    assert_eq!(path, PathBuf::from("hello.gz"));
-}
+#[cfg(test)]
+include!("../../../../../../../../test/foundation/network/http-middleware/unit/src/services/fs/serve_dir/open_file/11813.rs");

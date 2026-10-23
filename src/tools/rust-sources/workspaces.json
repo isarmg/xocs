@@ -1,0 +1,1991 @@
+{
+  "schema": 1,
+  "foundation": "src/foundation",
+  "owned_sources": [
+    {
+      "directory": "src/application",
+      "layer": "application",
+      "purpose": "认证、SQLite 持久化、安装契约和资产响应"
+    },
+    {
+      "directory": "src/server",
+      "layer": "product",
+      "purpose": "博客 HTTP 服务、内容业务与管理员 API"
+    },
+    {
+      "directory": "src/tools/setup",
+      "layer": "operations",
+      "purpose": "离线初始化、账户恢复与实例维护"
+    },
+    {
+      "directory": "src/tools/assets",
+      "layer": "build",
+      "purpose": "静态资源编译、源码收据和开发预览"
+    },
+    {
+      "directory": "src/browser",
+      "layer": "product",
+      "purpose": "浏览器 CSR 博客界面"
+    },
+    {
+      "directory": "test/browser-domain",
+      "layer": "verification",
+      "purpose": "浏览器数据契约与Markdown逻辑的宿主测试"
+    },
+    {
+      "directory": "src/interface",
+      "layer": "interface",
+      "purpose": "博客组件、浏览器 API、主题和应用挂载"
+    },
+    {
+      "directory": "src/interface/dom",
+      "layer": "interface",
+      "purpose": "响应式 DOM 视图、组件属性和生命周期",
+      "origins": [
+        "any_spawner@0.3.0",
+        "console_error_panic_hook@0.1.7",
+        "drain_filter_polyfill@0.1.3",
+        "either_of@0.1.9",
+        "erased@0.1.2",
+        "gloo-events@0.2.0",
+        "gloo-timers@0.3.0",
+        "guardian@1.3.0",
+        "itertools@0.14.0",
+        "leptos_dom@0.8.8",
+        "next_tuple@0.1.0",
+        "oco_ref@0.2.1",
+        "or_poisoned@0.1.0",
+        "reactive_graph@0.2.16",
+        "send_wrapper@0.6.0",
+        "slotmap@1.1.1",
+        "tachys@0.2.19",
+        "throw_error@0.3.1",
+        "typed-builder@0.23.2"
+      ]
+    },
+    {
+      "directory": "src/interface/macros",
+      "layer": "interface",
+      "purpose": "CSR 组件和属性的纯语法编译宏",
+      "origins": [
+        "leptos_hot_reload@0.8.7",
+        "paste@1.0.15",
+        "typed-builder-macro@0.23.2"
+      ]
+    }
+  ],
+  "profiles": [
+    {
+      "id": "native",
+      "manifests": [
+        "src/server/Cargo.toml",
+        "src/application/Cargo.toml",
+        "src/tools/setup/Cargo.toml"
+      ],
+      "target": "x86_64-unknown-linux-gnu",
+      "role": "runtime",
+      "purpose": "服务端、本地基础实现与离线维护工具"
+    },
+    {
+      "id": "web-release",
+      "manifests": [
+        "src/browser/Cargo.toml"
+      ],
+      "target": "wasm32-unknown-unknown",
+      "role": "runtime",
+      "purpose": "浏览器 CSR 正式界面"
+    },
+    {
+      "id": "host-tools",
+      "manifests": [
+        "src/tools/assets/Cargo.toml"
+      ],
+      "target": "x86_64-unknown-linux-gnu",
+      "role": "compile",
+      "purpose": "Web 构建及本地 WASM 绑定生成"
+    },
+    {
+      "id": "domain-tests",
+      "manifests": [
+        "test/browser-domain/Cargo.toml"
+      ],
+      "target": "x86_64-unknown-linux-gnu",
+      "role": "compile",
+      "purpose": "Web 域逻辑的宿主测试",
+      "include_dev": true
+    },
+    {
+      "id": "workspace-tests",
+      "manifests": [
+        "src/application/Cargo.toml",
+        "src/server/Cargo.toml",
+        "src/tools/setup/Cargo.toml",
+        "src/tools/assets/Cargo.toml",
+        "src/browser/Cargo.toml",
+        "test/browser-domain/Cargo.toml",
+        "src/interface/Cargo.toml",
+        "src/interface/dom/Cargo.toml",
+        "src/interface/macros/Cargo.toml"
+      ],
+      "target": "x86_64-unknown-linux-gnu",
+      "role": "compile",
+      "include_dev": true,
+      "purpose": "项目原生测试及所选测试根的开发依赖"
+    }
+  ],
+  "maintained_sources": [
+    {
+      "directory": "src/foundation/assets/compiler",
+      "origins": [
+        "bytecount@0.6.9",
+        "cow-utils@0.1.3",
+        "json-escape-simd@3.1.2",
+        "nonmax@0.5.5",
+        "oxc-browserslist@5.0.1",
+        "oxc@0.153.0",
+        "oxc_allocator@0.153.0",
+        "oxc_ast@0.153.0",
+        "oxc_ast_visit@0.153.0",
+        "oxc_codegen@0.153.0",
+        "oxc_compat@0.153.0",
+        "oxc_data_structures@0.153.0",
+        "oxc_diagnostics@0.153.0",
+        "oxc_ecmascript@0.153.0",
+        "oxc_estree@0.153.0",
+        "oxc_index@5.0.0",
+        "oxc_mangler@0.153.0",
+        "oxc_minifier@0.153.0",
+        "oxc_parser@0.153.0",
+        "oxc_regular_expression@0.153.0",
+        "oxc_semantic@0.153.0",
+        "oxc_sourcemap@9.0.0",
+        "oxc_span@0.153.0",
+        "oxc_str@0.153.0",
+        "oxc_syntax@0.153.0",
+        "oxc_traverse@0.153.0",
+        "unicode-id-start@1.5.0"
+      ],
+      "layer": "assets",
+      "purpose": "宿主 JavaScript AST、语义分析、代码生成与压缩"
+    },
+    {
+      "directory": "src/foundation/assets/markdown-parser",
+      "origins": [
+        "linkify@0.11.0",
+        "pulldown-cmark-escape@0.11.0",
+        "pulldown-cmark@0.13.4"
+      ],
+      "layer": "assets",
+      "purpose": "markdown parser"
+    },
+    {
+      "directory": "src/foundation/assets/style-compiler",
+      "origins": [
+        "cssparser-color@0.1.0",
+        "cssparser@0.33.0",
+        "dtoa-short@0.3.5",
+        "dtoa@1.0.11",
+        "lightningcss@1.0.0-alpha.71",
+        "parcel_selectors@0.28.2",
+        "pathdiff@0.2.3",
+        "precomputed-hash@0.1.1"
+      ],
+      "layer": "assets",
+      "purpose": "宿主 CSS 解析、选择器、浏览器兼容转换与压缩"
+    },
+    {
+      "directory": "src/foundation/assets/style-token-macros",
+      "origins": [
+        "cssparser-macros@0.6.1"
+      ],
+      "layer": "assets",
+      "purpose": "style token macros"
+    },
+    {
+      "directory": "src/foundation/assets/style-value-derive",
+      "origins": [
+        "lightningcss-derive@1.0.0-alpha.43"
+      ],
+      "layer": "assets",
+      "purpose": "style value derive"
+    },
+    {
+      "directory": "src/foundation/checksum/fast-crc",
+      "origins": [
+        "crc32fast@1.5.2"
+      ],
+      "layer": "checksum",
+      "purpose": "fast crc"
+    },
+    {
+      "directory": "src/foundation/cli/argument-derive",
+      "origins": [
+        "clap_derive@4.6.7"
+      ],
+      "layer": "cli",
+      "purpose": "argument derive"
+    },
+    {
+      "directory": "src/foundation/cli/arguments",
+      "origins": [
+        "clap@4.6.7",
+        "clap_builder@4.6.7",
+        "clap_lex@1.1.1"
+      ],
+      "layer": "cli",
+      "purpose": "arguments"
+    },
+    {
+      "directory": "src/foundation/cli/terminal-format",
+      "origins": [
+        "nu-ansi-term@0.50.3"
+      ],
+      "layer": "cli",
+      "purpose": "terminal format"
+    },
+    {
+      "directory": "src/foundation/cli/terminal-style",
+      "origins": [
+        "anstream@1.0.0",
+        "anstyle-parse@1.0.0",
+        "anstyle-query@1.1.5",
+        "anstyle@1.0.14",
+        "colorchoice@1.0.5"
+      ],
+      "layer": "cli",
+      "purpose": "终端样式、颜色策略、ANSI解析与流输出"
+    },
+    {
+      "directory": "src/foundation/collections/bit-set",
+      "origins": [
+        "bitflags@2.13.2"
+      ],
+      "layer": "collections",
+      "purpose": "bit set"
+    },
+    {
+      "directory": "src/foundation/collections/compiler-hash",
+      "origins": [
+        "rustc-hash@2.1.3"
+      ],
+      "layer": "collections",
+      "purpose": "compiler hash"
+    },
+    {
+      "directory": "src/foundation/collections/concurrent-slab",
+      "origins": [
+        "sharded-slab@0.1.7"
+      ],
+      "layer": "collections",
+      "purpose": "concurrent slab"
+    },
+    {
+      "directory": "src/foundation/collections/database-hash-table",
+      "origins": [
+        "hashbrown@0.16.1"
+      ],
+      "layer": "collections",
+      "purpose": "database hash table"
+    },
+    {
+      "directory": "src/foundation/collections/fast-hash",
+      "origins": [
+        "foldhash@0.2.0"
+      ],
+      "layer": "collections",
+      "purpose": "fast hash"
+    },
+    {
+      "directory": "src/foundation/collections/hash-table",
+      "origins": [
+        "hashbrown@0.17.1"
+      ],
+      "layer": "collections",
+      "purpose": "hash table"
+    },
+    {
+      "directory": "src/foundation/collections/inline-string",
+      "origins": [
+        "compact_str@0.10.0"
+      ],
+      "layer": "collections",
+      "purpose": "inline string"
+    },
+    {
+      "directory": "src/foundation/collections/inline-vector",
+      "origins": [
+        "smallvec@1.16.2",
+        "smallvec@1.16.3"
+      ],
+      "layer": "collections",
+      "purpose": "inline vector"
+    },
+    {
+      "directory": "src/foundation/collections/key-equivalence",
+      "origins": [
+        "equivalent@1.0.2",
+        "equivalent@1.0.3"
+      ],
+      "layer": "collections",
+      "purpose": "key equivalence"
+    },
+    {
+      "directory": "src/foundation/collections/keyed-hash",
+      "origins": [
+        "ahash@0.8.12"
+      ],
+      "layer": "collections",
+      "purpose": "keyed hash"
+    },
+    {
+      "directory": "src/foundation/collections/ordered-cache",
+      "origins": [
+        "hashlink@0.11.1"
+      ],
+      "layer": "collections",
+      "purpose": "ordered cache"
+    },
+    {
+      "directory": "src/foundation/collections/ordered-map",
+      "origins": [
+        "indexmap@2.14.2"
+      ],
+      "layer": "collections",
+      "purpose": "ordered map"
+    },
+    {
+      "directory": "src/foundation/collections/slot-storage",
+      "origins": [
+        "slab@0.4.12"
+      ],
+      "layer": "collections",
+      "purpose": "slot storage"
+    },
+    {
+      "directory": "src/foundation/collections/sorted-map",
+      "origins": [
+        "litemap@0.8.3"
+      ],
+      "layer": "collections",
+      "purpose": "sorted map"
+    },
+    {
+      "directory": "src/foundation/crypto/algorithm-identifiers",
+      "origins": [
+        "const-oid@0.10.2"
+      ],
+      "layer": "crypto",
+      "purpose": "algorithm identifiers"
+    },
+    {
+      "directory": "src/foundation/crypto/conditional-move",
+      "origins": [
+        "cmov@0.5.4"
+      ],
+      "layer": "crypto",
+      "purpose": "conditional move"
+    },
+    {
+      "directory": "src/foundation/crypto/constant-time-comparison",
+      "origins": [
+        "subtle@2.6.1"
+      ],
+      "layer": "crypto",
+      "purpose": "constant time comparison"
+    },
+    {
+      "directory": "src/foundation/crypto/constant-time-utilities",
+      "origins": [
+        "ctutils@0.4.4"
+      ],
+      "layer": "crypto",
+      "purpose": "constant time utilities"
+    },
+    {
+      "directory": "src/foundation/crypto/digest-traits",
+      "origins": [
+        "block-buffer@0.12.1",
+        "crypto-common@0.2.2",
+        "digest@0.11.3"
+      ],
+      "layer": "crypto",
+      "purpose": "digest traits"
+    },
+    {
+      "directory": "src/foundation/crypto/memory-hard-hash",
+      "origins": [
+        "blake2@0.10.6"
+      ],
+      "layer": "crypto",
+      "purpose": "memory hard hash"
+    },
+    {
+      "directory": "src/foundation/crypto/message-authentication",
+      "origins": [
+        "hmac@0.13.0"
+      ],
+      "layer": "crypto",
+      "purpose": "message authentication"
+    },
+    {
+      "directory": "src/foundation/crypto/password-algorithm-traits",
+      "origins": [
+        "crypto-common@0.1.7"
+      ],
+      "layer": "crypto",
+      "purpose": "password algorithm traits"
+    },
+    {
+      "directory": "src/foundation/crypto/password-derivation",
+      "origins": [
+        "argon2@0.5.3"
+      ],
+      "layer": "crypto",
+      "purpose": "password derivation"
+    },
+    {
+      "directory": "src/foundation/crypto/password-digest-traits",
+      "origins": [
+        "digest@0.10.7"
+      ],
+      "layer": "crypto",
+      "purpose": "password digest traits"
+    },
+    {
+      "directory": "src/foundation/crypto/password-format",
+      "origins": [
+        "password-hash@0.5.0"
+      ],
+      "layer": "crypto",
+      "purpose": "password format"
+    },
+    {
+      "directory": "src/foundation/crypto/password-hash-blocks",
+      "origins": [
+        "block-buffer@0.10.4"
+      ],
+      "layer": "crypto",
+      "purpose": "password hash blocks"
+    },
+    {
+      "directory": "src/foundation/crypto/secure-hash",
+      "origins": [
+        "sha2@0.11.0"
+      ],
+      "layer": "crypto",
+      "purpose": "secure hash"
+    },
+    {
+      "directory": "src/foundation/diagnostics/error-context",
+      "origins": [
+        "anyhow@1.0.104"
+      ],
+      "layer": "diagnostics",
+      "purpose": "error context"
+    },
+    {
+      "directory": "src/foundation/diagnostics/error-display",
+      "origins": [
+        "displaydoc@0.2.7"
+      ],
+      "layer": "diagnostics",
+      "purpose": "error display"
+    },
+    {
+      "directory": "src/foundation/diagnostics/event-facade",
+      "origins": [
+        "log@0.4.34"
+      ],
+      "layer": "diagnostics",
+      "purpose": "event facade"
+    },
+    {
+      "directory": "src/foundation/diagnostics/event-instrumentation",
+      "origins": [
+        "tracing-attributes@0.1.31"
+      ],
+      "layer": "diagnostics",
+      "purpose": "event instrumentation"
+    },
+    {
+      "directory": "src/foundation/diagnostics/object-clone",
+      "origins": [
+        "dyn-clone@1.0.20"
+      ],
+      "layer": "diagnostics",
+      "purpose": "object clone"
+    },
+    {
+      "directory": "src/foundation/diagnostics/structured-events",
+      "origins": [
+        "tracing-core@0.1.36",
+        "tracing-log@0.2.0",
+        "tracing-subscriber@0.3.23",
+        "tracing@0.1.44"
+      ],
+      "layer": "diagnostics",
+      "purpose": "structured events"
+    },
+    {
+      "directory": "src/foundation/diagnostics/symbol-decoder",
+      "origins": [
+        "rustc-demangle@0.1.28"
+      ],
+      "layer": "diagnostics",
+      "purpose": "symbol decoder"
+    },
+    {
+      "directory": "src/foundation/diagnostics/typed-error",
+      "origins": [
+        "thiserror@2.0.21"
+      ],
+      "layer": "diagnostics",
+      "purpose": "typed error"
+    },
+    {
+      "directory": "src/foundation/diagnostics/typed-error-derive",
+      "origins": [
+        "thiserror-impl@2.0.21"
+      ],
+      "layer": "diagnostics",
+      "purpose": "typed error derive"
+    },
+    {
+      "directory": "src/foundation/encoding/application-base-encoding",
+      "origins": [
+        "base64@0.23.1"
+      ],
+      "layer": "encoding",
+      "purpose": "application base encoding"
+    },
+    {
+      "directory": "src/foundation/encoding/borrowed-unicode",
+      "origins": [
+        "potential_utf@0.1.6"
+      ],
+      "layer": "encoding",
+      "purpose": "borrowed unicode"
+    },
+    {
+      "directory": "src/foundation/encoding/byte-buffer",
+      "origins": [
+        "bytes@1.12.1"
+      ],
+      "layer": "encoding",
+      "purpose": "byte buffer"
+    },
+    {
+      "directory": "src/foundation/encoding/byte-search",
+      "origins": [
+        "memchr@2.8.3"
+      ],
+      "layer": "encoding",
+      "purpose": "byte search"
+    },
+    {
+      "directory": "src/foundation/encoding/compression",
+      "origins": [
+        "adler2@2.0.1",
+        "flate2@1.1.10",
+        "miniz_oxide@0.9.1",
+        "simd-adler32@0.3.10"
+      ],
+      "layer": "encoding",
+      "purpose": "DEFLATE、gzip与zlib流和Adler校验"
+    },
+    {
+      "directory": "src/foundation/encoding/constant-time-base-encoding",
+      "origins": [
+        "base64ct@1.8.3"
+      ],
+      "layer": "encoding",
+      "purpose": "constant time base encoding"
+    },
+    {
+      "directory": "src/foundation/encoding/decimal-float-format",
+      "origins": [
+        "zmij@1.0.23"
+      ],
+      "layer": "encoding",
+      "purpose": "decimal float format"
+    },
+    {
+      "directory": "src/foundation/encoding/framing",
+      "origins": [
+        "cobs@0.3.0"
+      ],
+      "layer": "encoding",
+      "purpose": "framing"
+    },
+    {
+      "directory": "src/foundation/encoding/hex-codec",
+      "origins": [
+        "hex@0.4.3"
+      ],
+      "layer": "encoding",
+      "purpose": "hex codec"
+    },
+    {
+      "directory": "src/foundation/encoding/integer-format",
+      "origins": [
+        "itoa@1.0.18"
+      ],
+      "layer": "encoding",
+      "purpose": "integer format"
+    },
+    {
+      "directory": "src/foundation/encoding/radix-codecs",
+      "origins": [
+        "data-encoding@2.11.1"
+      ],
+      "layer": "encoding",
+      "purpose": "radix codecs"
+    },
+    {
+      "directory": "src/foundation/encoding/roundtrip-float-format",
+      "origins": [
+        "ryu@1.0.23"
+      ],
+      "layer": "encoding",
+      "purpose": "roundtrip float format"
+    },
+    {
+      "directory": "src/foundation/encoding/script-float-format",
+      "origins": [
+        "dragonbox_ecma@0.1.12"
+      ],
+      "layer": "encoding",
+      "purpose": "script float format"
+    },
+    {
+      "directory": "src/foundation/encoding/signed-variable-integer",
+      "origins": [
+        "leb128@0.2.7"
+      ],
+      "layer": "encoding",
+      "purpose": "signed variable integer"
+    },
+    {
+      "directory": "src/foundation/encoding/text-writer",
+      "origins": [
+        "writeable@0.6.4"
+      ],
+      "layer": "encoding",
+      "purpose": "text writer"
+    },
+    {
+      "directory": "src/foundation/encoding/unicode-decoder",
+      "origins": [
+        "utf8parse@0.2.2"
+      ],
+      "layer": "encoding",
+      "purpose": "unicode decoder"
+    },
+    {
+      "directory": "src/foundation/encoding/unicode-iterator",
+      "origins": [
+        "utf8_iter@1.0.4"
+      ],
+      "layer": "encoding",
+      "purpose": "unicode iterator"
+    },
+    {
+      "directory": "src/foundation/encoding/variable-integer-writer",
+      "origins": [
+        "leb128fmt@0.1.0"
+      ],
+      "layer": "encoding",
+      "purpose": "variable integer writer"
+    },
+    {
+      "directory": "src/foundation/encoding/vector-base-encoding",
+      "origins": [
+        "base64-simd@0.8.0"
+      ],
+      "layer": "encoding",
+      "purpose": "vector base encoding"
+    },
+    {
+      "directory": "src/foundation/encoding/vector-escaping",
+      "origins": [
+        "escape-simd@0.1.0"
+      ],
+      "layer": "encoding",
+      "purpose": "vector escaping"
+    },
+    {
+      "directory": "src/foundation/encoding/vector-primitives",
+      "origins": [
+        "vsimd@0.8.0"
+      ],
+      "layer": "encoding",
+      "purpose": "vector primitives"
+    },
+    {
+      "directory": "src/foundation/filesystem/temporary-storage",
+      "origins": [
+        "tempfile@3.27.0"
+      ],
+      "layer": "filesystem",
+      "purpose": "temporary storage"
+    },
+    {
+      "directory": "src/foundation/format/binary-record",
+      "origins": [
+        "postcard@1.1.3"
+      ],
+      "layer": "format",
+      "purpose": "binary record"
+    },
+    {
+      "directory": "src/foundation/format/configuration",
+      "origins": [
+        "serde_spanned@0.6.9",
+        "toml@0.8.23",
+        "toml_datetime@0.6.11",
+        "toml_edit@0.22.27",
+        "toml_write@0.1.2"
+      ],
+      "layer": "format",
+      "purpose": "TOML配置解析、保留格式编辑、字节跨度与日期类型"
+    },
+    {
+      "directory": "src/foundation/format/data-model",
+      "origins": [
+        "serde@1.0.229",
+        "serde_core@1.0.229",
+        "serde_path_to_error@0.1.20"
+      ],
+      "layer": "format",
+      "purpose": "data model"
+    },
+    {
+      "directory": "src/foundation/format/data-model-derive",
+      "origins": [
+        "serde_derive@1.0.229"
+      ],
+      "layer": "format",
+      "purpose": "data model derive"
+    },
+    {
+      "directory": "src/foundation/format/data-model-syntax",
+      "origins": [
+        "serde_derive_internals@0.30.0"
+      ],
+      "layer": "format",
+      "purpose": "data model syntax"
+    },
+    {
+      "directory": "src/foundation/format/date-time",
+      "origins": [
+        "chrono@0.4.45"
+      ],
+      "layer": "format",
+      "purpose": "date time"
+    },
+    {
+      "directory": "src/foundation/format/json",
+      "origins": [
+        "serde_json@1.0.151",
+        "serde_json@1.0.154"
+      ],
+      "layer": "format",
+      "purpose": "json"
+    },
+    {
+      "directory": "src/foundation/format/json-schema",
+      "origins": [
+        "schemars@1.2.3"
+      ],
+      "layer": "format",
+      "purpose": "json schema"
+    },
+    {
+      "directory": "src/foundation/format/json-schema-derive",
+      "origins": [
+        "schemars_derive@1.2.3"
+      ],
+      "layer": "format",
+      "purpose": "json schema derive"
+    },
+    {
+      "directory": "src/foundation/format/parser-combinators",
+      "origins": [
+        "winnow@0.7.15"
+      ],
+      "layer": "format",
+      "purpose": "parser combinators"
+    },
+    {
+      "directory": "src/foundation/format/release-identity",
+      "origins": [
+        "semver@1.0.28"
+      ],
+      "layer": "format",
+      "purpose": "release identity"
+    },
+    {
+      "directory": "src/foundation/interface/browser-api",
+      "origins": [
+        "web-sys@0.3.106"
+      ],
+      "layer": "interface",
+      "purpose": "browser api"
+    },
+    {
+      "directory": "src/foundation/interface/javascript-api",
+      "origins": [
+        "js-sys@0.3.106"
+      ],
+      "layer": "interface",
+      "purpose": "javascript api"
+    },
+    {
+      "directory": "src/foundation/javascript/syntax-derive",
+      "origins": [
+        "oxc_ast_macros@0.153.0"
+      ],
+      "layer": "javascript",
+      "purpose": "syntax derive"
+    },
+    {
+      "directory": "src/foundation/lookup/script-table",
+      "origins": [
+        "phf@0.14.0"
+      ],
+      "layer": "lookup",
+      "purpose": "script table"
+    },
+    {
+      "directory": "src/foundation/lookup/script-table-generator",
+      "origins": [
+        "phf_generator@0.14.0"
+      ],
+      "layer": "lookup",
+      "purpose": "script table generator"
+    },
+    {
+      "directory": "src/foundation/lookup/script-table-hashing",
+      "origins": [
+        "phf_shared@0.14.0"
+      ],
+      "layer": "lookup",
+      "purpose": "script table hashing"
+    },
+    {
+      "directory": "src/foundation/lookup/script-table-macros",
+      "origins": [
+        "phf_macros@0.14.0"
+      ],
+      "layer": "lookup",
+      "purpose": "script table macros"
+    },
+    {
+      "directory": "src/foundation/lookup/style-table",
+      "origins": [
+        "phf@0.11.3"
+      ],
+      "layer": "lookup",
+      "purpose": "style table"
+    },
+    {
+      "directory": "src/foundation/lookup/style-table-generator",
+      "origins": [
+        "phf_generator@0.11.3"
+      ],
+      "layer": "lookup",
+      "purpose": "style table generator"
+    },
+    {
+      "directory": "src/foundation/lookup/style-table-hashing",
+      "origins": [
+        "phf_shared@0.11.3"
+      ],
+      "layer": "lookup",
+      "purpose": "style table hashing"
+    },
+    {
+      "directory": "src/foundation/lookup/style-table-macros",
+      "origins": [
+        "phf_macros@0.11.3"
+      ],
+      "layer": "lookup",
+      "purpose": "style table macros"
+    },
+    {
+      "directory": "src/foundation/math/constant-array",
+      "origins": [
+        "hybrid-array@0.4.15"
+      ],
+      "layer": "math",
+      "purpose": "constant array"
+    },
+    {
+      "directory": "src/foundation/math/fast-random",
+      "origins": [
+        "fastrand@2.5.0"
+      ],
+      "layer": "math",
+      "purpose": "fast random"
+    },
+    {
+      "directory": "src/foundation/math/integer-traits",
+      "origins": [
+        "num-integer@0.1.47"
+      ],
+      "layer": "math",
+      "purpose": "integer traits"
+    },
+    {
+      "directory": "src/foundation/math/keyed-fingerprint",
+      "origins": [
+        "siphasher@1.0.4"
+      ],
+      "layer": "math",
+      "purpose": "keyed fingerprint"
+    },
+    {
+      "directory": "src/foundation/math/large-integer",
+      "origins": [
+        "num-bigint@0.5.1"
+      ],
+      "layer": "math",
+      "purpose": "large integer"
+    },
+    {
+      "directory": "src/foundation/math/lookup-random-generator",
+      "origins": [
+        "rand@0.8.8"
+      ],
+      "layer": "math",
+      "purpose": "lookup random generator"
+    },
+    {
+      "directory": "src/foundation/math/numeric-traits",
+      "origins": [
+        "num-traits@0.2.19"
+      ],
+      "layer": "math",
+      "purpose": "numeric traits"
+    },
+    {
+      "directory": "src/foundation/math/password-random-traits",
+      "origins": [
+        "rand_core@0.6.4"
+      ],
+      "layer": "math",
+      "purpose": "password random traits"
+    },
+    {
+      "directory": "src/foundation/math/type-integers",
+      "origins": [
+        "typenum@1.20.1"
+      ],
+      "layer": "math",
+      "purpose": "type integers"
+    },
+    {
+      "directory": "src/foundation/math/typed-array",
+      "origins": [
+        "generic-array@0.14.7"
+      ],
+      "layer": "math",
+      "purpose": "typed array"
+    },
+    {
+      "directory": "src/foundation/memory/allocator",
+      "origins": [
+        "allocator-api2@0.2.21"
+      ],
+      "layer": "memory",
+      "purpose": "allocator"
+    },
+    {
+      "directory": "src/foundation/memory/arena",
+      "origins": [
+        "bumpalo@3.20.3"
+      ],
+      "layer": "memory",
+      "purpose": "arena"
+    },
+    {
+      "directory": "src/foundation/memory/byte-layout",
+      "origins": [
+        "zerocopy@0.8.63"
+      ],
+      "layer": "memory",
+      "purpose": "byte layout"
+    },
+    {
+      "directory": "src/foundation/memory/indexed-arena",
+      "origins": [
+        "id-arena@2.3.0"
+      ],
+      "layer": "memory",
+      "purpose": "indexed arena"
+    },
+    {
+      "directory": "src/foundation/memory/output-reference",
+      "origins": [
+        "outref@0.5.2"
+      ],
+      "layer": "memory",
+      "purpose": "output reference"
+    },
+    {
+      "directory": "src/foundation/memory/owned-borrow",
+      "origins": [
+        "self_cell@1.3.0"
+      ],
+      "layer": "memory",
+      "purpose": "owned borrow"
+    },
+    {
+      "directory": "src/foundation/memory/reference-cast",
+      "origins": [
+        "ref-cast@1.0.27"
+      ],
+      "layer": "memory",
+      "purpose": "reference cast"
+    },
+    {
+      "directory": "src/foundation/memory/reference-cast-derive",
+      "origins": [
+        "ref-cast-impl@1.0.27"
+      ],
+      "layer": "memory",
+      "purpose": "reference cast derive"
+    },
+    {
+      "directory": "src/foundation/memory/stable-address",
+      "origins": [
+        "stable_deref_trait@1.2.1"
+      ],
+      "layer": "memory",
+      "purpose": "stable address"
+    },
+    {
+      "directory": "src/foundation/memory/type-specialization",
+      "origins": [
+        "castaway@0.2.4"
+      ],
+      "layer": "memory",
+      "purpose": "type specialization"
+    },
+    {
+      "directory": "src/foundation/native/c-compiler",
+      "origins": [
+        "cc@1.6.0"
+      ],
+      "layer": "native",
+      "purpose": "c compiler"
+    },
+    {
+      "directory": "src/foundation/native/compiler-capabilities",
+      "origins": [
+        "autocfg@1.5.1"
+      ],
+      "layer": "native",
+      "purpose": "compiler capabilities"
+    },
+    {
+      "directory": "src/foundation/native/compiler-conditions",
+      "origins": [
+        "rustversion@1.0.23"
+      ],
+      "layer": "native",
+      "purpose": "compiler conditions"
+    },
+    {
+      "directory": "src/foundation/native/target-conditions",
+      "origins": [
+        "cfg-if@1.0.5"
+      ],
+      "layer": "native",
+      "purpose": "target conditions"
+    },
+    {
+      "directory": "src/foundation/network/body-stream",
+      "origins": [
+        "http-body-util@0.1.5",
+        "http-body@1.1.0"
+      ],
+      "layer": "network",
+      "purpose": "body stream"
+    },
+    {
+      "directory": "src/foundation/network/byte-ranges",
+      "origins": [
+        "http-range-header@0.4.2"
+      ],
+      "layer": "network",
+      "purpose": "byte ranges"
+    },
+    {
+      "directory": "src/foundation/network/form-data",
+      "origins": [
+        "serde_urlencoded@0.7.1"
+      ],
+      "layer": "network",
+      "purpose": "form data"
+    },
+    {
+      "directory": "src/foundation/network/http-date",
+      "origins": [
+        "httpdate@1.0.3"
+      ],
+      "layer": "network",
+      "purpose": "http date"
+    },
+    {
+      "directory": "src/foundation/network/http-message",
+      "origins": [
+        "http@1.5.0"
+      ],
+      "layer": "network",
+      "purpose": "http message"
+    },
+    {
+      "directory": "src/foundation/network/http-middleware",
+      "origins": [
+        "tower-http@0.6.11"
+      ],
+      "layer": "network",
+      "purpose": "http middleware"
+    },
+    {
+      "directory": "src/foundation/network/http-parser",
+      "origins": [
+        "httparse@1.10.1"
+      ],
+      "layer": "network",
+      "purpose": "http parser"
+    },
+    {
+      "directory": "src/foundation/network/http-transport",
+      "origins": [
+        "hyper-util@0.1.21",
+        "hyper@1.12.0"
+      ],
+      "layer": "network",
+      "purpose": "http transport"
+    },
+    {
+      "directory": "src/foundation/network/media-detection",
+      "origins": [
+        "mime_guess@2.0.5"
+      ],
+      "layer": "network",
+      "purpose": "media detection"
+    },
+    {
+      "directory": "src/foundation/network/media-type",
+      "origins": [
+        "mime@0.3.17"
+      ],
+      "layer": "network",
+      "purpose": "media type"
+    },
+    {
+      "directory": "src/foundation/network/request-pipeline",
+      "origins": [
+        "tower-layer@0.3.3",
+        "tower-service@0.3.3",
+        "tower@0.5.3"
+      ],
+      "layer": "network",
+      "purpose": "request pipeline"
+    },
+    {
+      "directory": "src/foundation/network/request-router",
+      "origins": [
+        "axum-core@0.5.6",
+        "axum@0.8.9"
+      ],
+      "layer": "network",
+      "purpose": "request router"
+    },
+    {
+      "directory": "src/foundation/network/route-matcher",
+      "origins": [
+        "matchit@0.8.4"
+      ],
+      "layer": "network",
+      "purpose": "route matcher"
+    },
+    {
+      "directory": "src/foundation/network/web-address",
+      "origins": [
+        "form_urlencoded@1.2.2",
+        "idna@1.1.0",
+        "idna_adapter@1.2.2",
+        "percent-encoding@2.3.2",
+        "url@2.5.8"
+      ],
+      "layer": "network",
+      "purpose": "web address"
+    },
+    {
+      "directory": "src/foundation/platform/error-code",
+      "origins": [
+        "errno@0.3.14"
+      ],
+      "layer": "platform",
+      "purpose": "error code"
+    },
+    {
+      "directory": "src/foundation/platform/linux-abi",
+      "origins": [
+        "linux-raw-sys@0.12.1"
+      ],
+      "layer": "platform",
+      "purpose": "linux abi"
+    },
+    {
+      "directory": "src/foundation/platform/local-time-zone",
+      "origins": [
+        "iana-time-zone@0.1.65"
+      ],
+      "layer": "platform",
+      "purpose": "local time zone"
+    },
+    {
+      "directory": "src/foundation/platform/password-processor-features",
+      "origins": [
+        "cpufeatures@0.2.17"
+      ],
+      "layer": "platform",
+      "purpose": "password processor features"
+    },
+    {
+      "directory": "src/foundation/platform/processor-features",
+      "origins": [
+        "cpufeatures@0.3.1"
+      ],
+      "layer": "platform",
+      "purpose": "processor features"
+    },
+    {
+      "directory": "src/foundation/platform/socket-options",
+      "origins": [
+        "socket2@0.6.5"
+      ],
+      "layer": "platform",
+      "purpose": "socket options"
+    },
+    {
+      "directory": "src/foundation/platform/system-abi",
+      "origins": [
+        "libc@0.2.190",
+        "libc@0.2.191"
+      ],
+      "layer": "platform",
+      "purpose": "system abi"
+    },
+    {
+      "directory": "src/foundation/platform/system-calls",
+      "origins": [
+        "rustix@1.1.5"
+      ],
+      "layer": "platform",
+      "purpose": "system calls"
+    },
+    {
+      "directory": "src/foundation/platform/system-entropy",
+      "origins": [
+        "getrandom@0.4.3"
+      ],
+      "layer": "platform",
+      "purpose": "system entropy"
+    },
+    {
+      "directory": "src/foundation/runtime/async-toolkit",
+      "origins": [
+        "futures-channel@0.3.34",
+        "futures-core@0.3.34",
+        "futures-executor@0.3.34",
+        "futures-io@0.3.34",
+        "futures-sink@0.3.34",
+        "futures-task@0.3.34",
+        "futures-util@0.3.34",
+        "futures@0.3.34"
+      ],
+      "layer": "runtime",
+      "purpose": "async toolkit"
+    },
+    {
+      "directory": "src/foundation/runtime/future-macros",
+      "origins": [
+        "futures-macro@0.3.34"
+      ],
+      "layer": "runtime",
+      "purpose": "future macros"
+    },
+    {
+      "directory": "src/foundation/runtime/io-poller",
+      "origins": [
+        "mio@1.2.4"
+      ],
+      "layer": "runtime",
+      "purpose": "io poller"
+    },
+    {
+      "directory": "src/foundation/runtime/parallel-iterator",
+      "origins": [
+        "rayon@1.12.0"
+      ],
+      "layer": "runtime",
+      "purpose": "parallel iterator"
+    },
+    {
+      "directory": "src/foundation/runtime/readiness-signal",
+      "origins": [
+        "want@0.3.2"
+      ],
+      "layer": "runtime",
+      "purpose": "readiness signal"
+    },
+    {
+      "directory": "src/foundation/runtime/scheduled-io",
+      "origins": [
+        "tokio-util@0.7.19",
+        "tokio-util@0.7.20"
+      ],
+      "layer": "runtime",
+      "purpose": "scheduled io"
+    },
+    {
+      "directory": "src/foundation/runtime/signal-registry",
+      "origins": [
+        "signal-hook-registry@1.4.8"
+      ],
+      "layer": "runtime",
+      "purpose": "signal registry"
+    },
+    {
+      "directory": "src/foundation/runtime/task-entry",
+      "origins": [
+        "tokio-macros@2.7.2"
+      ],
+      "layer": "runtime",
+      "purpose": "task entry"
+    },
+    {
+      "directory": "src/foundation/runtime/task-scheduler",
+      "origins": [
+        "tokio@1.53.2"
+      ],
+      "layer": "runtime",
+      "purpose": "task scheduler"
+    },
+    {
+      "directory": "src/foundation/runtime/task-waker",
+      "origins": [
+        "atomic-waker@1.1.2"
+      ],
+      "layer": "runtime",
+      "purpose": "task waker"
+    },
+    {
+      "directory": "src/foundation/runtime/worker-pool",
+      "origins": [
+        "rayon-core@1.13.0"
+      ],
+      "layer": "runtime",
+      "purpose": "worker pool"
+    },
+    {
+      "directory": "src/foundation/storage/fallible-rows",
+      "origins": [
+        "fallible-iterator@0.3.0"
+      ],
+      "layer": "storage",
+      "purpose": "fallible rows"
+    },
+    {
+      "directory": "src/foundation/storage/record-derive",
+      "origins": [
+        "sqlx-macros-core@0.9.0",
+        "sqlx-macros@0.9.0"
+      ],
+      "layer": "storage",
+      "purpose": "record derive"
+    },
+    {
+      "directory": "src/foundation/storage/sqlite-access",
+      "origins": [
+        "sqlx-core@0.9.0",
+        "sqlx-sqlite@0.9.0",
+        "sqlx@0.9.0"
+      ],
+      "layer": "storage",
+      "purpose": "sqlite access"
+    },
+    {
+      "directory": "src/foundation/storage/sqlite-native",
+      "origins": [
+        "libsqlite3-sys@0.37.0"
+      ],
+      "layer": "storage",
+      "purpose": "sqlite native"
+    },
+    {
+      "directory": "src/foundation/sync/atomic-lock",
+      "origins": [
+        "try-lock@0.2.5"
+      ],
+      "layer": "sync",
+      "purpose": "atomic lock"
+    },
+    {
+      "directory": "src/foundation/sync/concurrent-collections",
+      "origins": [
+        "crossbeam-deque@0.8.8",
+        "crossbeam-epoch@0.9.21",
+        "crossbeam-queue@0.3.14",
+        "crossbeam-utils@0.8.23"
+      ],
+      "layer": "sync",
+      "purpose": "并发工具、队列、epoch回收与工作窃取"
+    },
+    {
+      "directory": "src/foundation/sync/exclusive-value",
+      "origins": [
+        "sync_wrapper@1.0.2"
+      ],
+      "layer": "sync",
+      "purpose": "exclusive value"
+    },
+    {
+      "directory": "src/foundation/sync/initialization",
+      "origins": [
+        "once_cell@1.21.4"
+      ],
+      "layer": "sync",
+      "purpose": "initialization"
+    },
+    {
+      "directory": "src/foundation/sync/lazy-global",
+      "origins": [
+        "lazy_static@1.5.1"
+      ],
+      "layer": "sync",
+      "purpose": "lazy global"
+    },
+    {
+      "directory": "src/foundation/sync/message-channel",
+      "origins": [
+        "flume@0.12.0"
+      ],
+      "layer": "sync",
+      "purpose": "message channel"
+    },
+    {
+      "directory": "src/foundation/sync/mutex",
+      "origins": [
+        "lock_api@0.4.14",
+        "parking_lot@0.12.5",
+        "parking_lot_core@0.9.12"
+      ],
+      "layer": "sync",
+      "purpose": "mutex"
+    },
+    {
+      "directory": "src/foundation/sync/notification",
+      "origins": [
+        "event-listener@5.4.2"
+      ],
+      "layer": "sync",
+      "purpose": "notification"
+    },
+    {
+      "directory": "src/foundation/sync/pinned-projection",
+      "origins": [
+        "pin-project-lite@0.2.17"
+      ],
+      "layer": "sync",
+      "purpose": "pinned projection"
+    },
+    {
+      "directory": "src/foundation/sync/scope-cleanup",
+      "origins": [
+        "scopeguard@1.2.0"
+      ],
+      "layer": "sync",
+      "purpose": "scope cleanup"
+    },
+    {
+      "directory": "src/foundation/sync/spin-lock",
+      "origins": [
+        "spin@0.9.9"
+      ],
+      "layer": "sync",
+      "purpose": "spin lock"
+    },
+    {
+      "directory": "src/foundation/sync/thread-storage",
+      "origins": [
+        "thread_local@1.1.10"
+      ],
+      "layer": "sync",
+      "purpose": "thread storage"
+    },
+    {
+      "directory": "src/foundation/sync/thread-wait",
+      "origins": [
+        "parking@2.2.1"
+      ],
+      "layer": "sync",
+      "purpose": "thread wait"
+    },
+    {
+      "directory": "src/foundation/syntax/alternative",
+      "origins": [
+        "either@1.19.0"
+      ],
+      "layer": "syntax",
+      "purpose": "alternative"
+    },
+    {
+      "directory": "src/foundation/syntax/async-trait",
+      "origins": [
+        "async-trait@0.1.92"
+      ],
+      "layer": "syntax",
+      "purpose": "async trait"
+    },
+    {
+      "directory": "src/foundation/syntax/compile-assertions",
+      "origins": [
+        "static_assertions@1.1.0"
+      ],
+      "layer": "syntax",
+      "purpose": "compile assertions"
+    },
+    {
+      "directory": "src/foundation/syntax/compiler-iterators",
+      "origins": [
+        "itertools@0.15.0"
+      ],
+      "layer": "syntax",
+      "purpose": "compiler iterators"
+    },
+    {
+      "directory": "src/foundation/syntax/derive-structure",
+      "origins": [
+        "synstructure@0.14.0"
+      ],
+      "layer": "syntax",
+      "purpose": "derive structure"
+    },
+    {
+      "directory": "src/foundation/syntax/index-expansion",
+      "origins": [
+        "seq-macro@0.3.6"
+      ],
+      "layer": "syntax",
+      "purpose": "index expansion"
+    },
+    {
+      "directory": "src/foundation/syntax/record-derive-parser",
+      "origins": [
+        "syn@2.0.119"
+      ],
+      "layer": "syntax",
+      "purpose": "record derive parser"
+    },
+    {
+      "directory": "src/foundation/syntax/rust-parser",
+      "origins": [
+        "syn@3.0.6",
+        "syn@3.0.9"
+      ],
+      "layer": "syntax",
+      "purpose": "rust parser"
+    },
+    {
+      "directory": "src/foundation/syntax/style-derive-parser",
+      "origins": [
+        "syn@1.0.109"
+      ],
+      "layer": "syntax",
+      "purpose": "style derive parser"
+    },
+    {
+      "directory": "src/foundation/syntax/style-iterators",
+      "origins": [
+        "itertools@0.10.5"
+      ],
+      "layer": "syntax",
+      "purpose": "style iterators"
+    },
+    {
+      "directory": "src/foundation/syntax/token-concat",
+      "origins": [
+        "pastey@0.1.1"
+      ],
+      "layer": "syntax",
+      "purpose": "token concat"
+    },
+    {
+      "directory": "src/foundation/syntax/token-stream",
+      "origins": [
+        "proc-macro2@1.0.107"
+      ],
+      "layer": "syntax",
+      "purpose": "token stream"
+    },
+    {
+      "directory": "src/foundation/syntax/token-templates",
+      "origins": [
+        "quote@1.0.47"
+      ],
+      "layer": "syntax",
+      "purpose": "token templates"
+    },
+    {
+      "directory": "src/foundation/text/case-insensitive-text",
+      "origins": [
+        "unicase@2.10.0"
+      ],
+      "layer": "text",
+      "purpose": "case insensitive text"
+    },
+    {
+      "directory": "src/foundation/text/compile-time-text",
+      "origins": [
+        "const-str@0.3.2"
+      ],
+      "layer": "text",
+      "purpose": "compile time text"
+    },
+    {
+      "directory": "src/foundation/text/compile-time-text-macros",
+      "origins": [
+        "const-str-proc-macro@0.3.2"
+      ],
+      "layer": "text",
+      "purpose": "compile time text macros"
+    },
+    {
+      "directory": "src/foundation/text/constant-pattern",
+      "origins": [
+        "lazy-regex@3.6.2"
+      ],
+      "layer": "text",
+      "purpose": "constant pattern"
+    },
+    {
+      "directory": "src/foundation/text/constant-pattern-macros",
+      "origins": [
+        "lazy-regex-proc_macros@3.6.2"
+      ],
+      "layer": "text",
+      "purpose": "constant pattern macros"
+    },
+    {
+      "directory": "src/foundation/text/inline-ascii",
+      "origins": [
+        "tinystr@0.8.4"
+      ],
+      "layer": "text",
+      "purpose": "inline ascii"
+    },
+    {
+      "directory": "src/foundation/text/line-layout",
+      "origins": [
+        "textwrap@0.16.4"
+      ],
+      "layer": "text",
+      "purpose": "line layout"
+    },
+    {
+      "directory": "src/foundation/text/macro-identifier-case",
+      "origins": [
+        "heck@0.5.0"
+      ],
+      "layer": "text",
+      "purpose": "macro identifier case"
+    },
+    {
+      "directory": "src/foundation/text/monotone-minima",
+      "origins": [
+        "smawk@0.3.3"
+      ],
+      "layer": "text",
+      "purpose": "monotone minima"
+    },
+    {
+      "directory": "src/foundation/text/pattern-search",
+      "origins": [
+        "aho-corasick@1.1.5",
+        "regex-automata@0.4.18",
+        "regex-syntax@0.8.11",
+        "regex@1.13.1"
+      ],
+      "layer": "text",
+      "purpose": "正则语法、自动机、文字多模式与Unicode匹配"
+    },
+    {
+      "directory": "src/foundation/text/rust-identifiers",
+      "origins": [
+        "unicode-ident@1.0.26",
+        "unicode-ident@1.0.27"
+      ],
+      "layer": "text",
+      "purpose": "rust identifiers"
+    },
+    {
+      "directory": "src/foundation/text/shell-words",
+      "origins": [
+        "shlex@2.0.1"
+      ],
+      "layer": "text",
+      "purpose": "shell words"
+    },
+    {
+      "directory": "src/foundation/text/style-identifier-case",
+      "origins": [
+        "convert_case@0.6.0"
+      ],
+      "layer": "text",
+      "purpose": "style identifier case"
+    },
+    {
+      "directory": "src/foundation/text/terminal-width",
+      "origins": [
+        "unicode-width@0.2.2"
+      ],
+      "layer": "text",
+      "purpose": "terminal width"
+    },
+    {
+      "directory": "src/foundation/text/text-boundaries",
+      "origins": [
+        "unicode-segmentation@1.13.3"
+      ],
+      "layer": "text",
+      "purpose": "text boundaries"
+    },
+    {
+      "directory": "src/foundation/text/text-similarity",
+      "origins": [
+        "strsim@0.11.1"
+      ],
+      "layer": "text",
+      "purpose": "text similarity"
+    },
+    {
+      "directory": "src/foundation/unicode/borrow-conversion",
+      "origins": [
+        "zerofrom@0.1.8"
+      ],
+      "layer": "unicode",
+      "purpose": "borrow conversion"
+    },
+    {
+      "directory": "src/foundation/unicode/borrow-conversion-derive",
+      "origins": [
+        "zerofrom-derive@0.1.8"
+      ],
+      "layer": "unicode",
+      "purpose": "borrow conversion derive"
+    },
+    {
+      "directory": "src/foundation/unicode/borrowed-data",
+      "origins": [
+        "yoke@0.8.3"
+      ],
+      "layer": "unicode",
+      "purpose": "borrowed data"
+    },
+    {
+      "directory": "src/foundation/unicode/borrowed-data-derive",
+      "origins": [
+        "yoke-derive@0.8.4"
+      ],
+      "layer": "unicode",
+      "purpose": "borrowed data derive"
+    },
+    {
+      "directory": "src/foundation/unicode/borrowed-vector",
+      "origins": [
+        "zerovec@0.11.8"
+      ],
+      "layer": "unicode",
+      "purpose": "borrowed vector"
+    },
+    {
+      "directory": "src/foundation/unicode/borrowed-vector-derive",
+      "origins": [
+        "zerovec-derive@0.11.6"
+      ],
+      "layer": "unicode",
+      "purpose": "borrowed vector derive"
+    },
+    {
+      "directory": "src/foundation/unicode/boundary-analysis",
+      "origins": [
+        "icu_segmenter@2.3.0"
+      ],
+      "layer": "unicode",
+      "purpose": "boundary analysis"
+    },
+    {
+      "directory": "src/foundation/unicode/boundary-data",
+      "origins": [
+        "icu_segmenter_data@2.3.0"
+      ],
+      "layer": "unicode",
+      "purpose": "boundary data"
+    },
+    {
+      "directory": "src/foundation/unicode/character-properties",
+      "origins": [
+        "icu_properties@2.3.0",
+        "icu_properties_data@2.3.0"
+      ],
+      "layer": "unicode",
+      "purpose": "character properties"
+    },
+    {
+      "directory": "src/foundation/unicode/compact-trie",
+      "origins": [
+        "zerotrie@0.2.5"
+      ],
+      "layer": "unicode",
+      "purpose": "compact trie"
+    },
+    {
+      "directory": "src/foundation/unicode/data-collections",
+      "origins": [
+        "icu_collections@2.3.0"
+      ],
+      "layer": "unicode",
+      "purpose": "data collections"
+    },
+    {
+      "directory": "src/foundation/unicode/data-provider",
+      "origins": [
+        "icu_provider@2.3.1"
+      ],
+      "layer": "unicode",
+      "purpose": "data provider"
+    },
+    {
+      "directory": "src/foundation/unicode/locale-identifiers",
+      "origins": [
+        "icu_locale_core@2.3.0"
+      ],
+      "layer": "unicode",
+      "purpose": "locale identifiers"
+    },
+    {
+      "directory": "src/foundation/unicode/locale-selection",
+      "origins": [
+        "icu_locale_fallback@2.3.0"
+      ],
+      "layer": "unicode",
+      "purpose": "locale selection"
+    },
+    {
+      "directory": "src/foundation/unicode/locale-selection-data",
+      "origins": [
+        "icu_locale_fallback_data@2.3.0"
+      ],
+      "layer": "unicode",
+      "purpose": "locale selection data"
+    },
+    {
+      "directory": "src/foundation/unicode/text-normalizer",
+      "origins": [
+        "icu_normalizer@2.3.0",
+        "icu_normalizer_data@2.3.0"
+      ],
+      "layer": "unicode",
+      "purpose": "text normalizer"
+    },
+    {
+      "directory": "src/foundation/wasm/browser-bridge",
+      "origins": [
+        "wasm-bindgen@0.2.129"
+      ],
+      "layer": "wasm",
+      "purpose": "browser bridge"
+    },
+    {
+      "directory": "src/foundation/wasm/browser-bridge-entry",
+      "origins": [
+        "wasm-bindgen-macro-support@0.2.129",
+        "wasm-bindgen-macro@0.2.129"
+      ],
+      "layer": "wasm",
+      "purpose": "browser bridge entry"
+    },
+    {
+      "directory": "src/foundation/wasm/browser-bridge-schema",
+      "origins": [
+        "wasm-bindgen-shared@0.2.129"
+      ],
+      "layer": "wasm",
+      "purpose": "browser bridge schema"
+    },
+    {
+      "directory": "src/foundation/wasm/browser-futures",
+      "origins": [
+        "wasm-bindgen-futures@0.4.79"
+      ],
+      "layer": "wasm",
+      "purpose": "browser futures"
+    },
+    {
+      "directory": "src/foundation/wasm/browser-module",
+      "origins": [
+        "wasm-bindgen-cli-support@0.2.129"
+      ],
+      "layer": "wasm",
+      "purpose": "browser module"
+    },
+    {
+      "directory": "src/foundation/wasm/debug-information",
+      "origins": [
+        "gimli@0.32.3"
+      ],
+      "layer": "wasm",
+      "purpose": "debug information"
+    },
+    {
+      "directory": "src/foundation/wasm/module-decoder",
+      "origins": [
+        "wasmparser@0.245.1"
+      ],
+      "layer": "wasm",
+      "purpose": "module decoder"
+    },
+    {
+      "directory": "src/foundation/wasm/module-encoder",
+      "origins": [
+        "wasm-encoder@0.245.1"
+      ],
+      "layer": "wasm",
+      "purpose": "module encoder"
+    },
+    {
+      "directory": "src/foundation/wasm/module-transform",
+      "origins": [
+        "walrus@0.27.2"
+      ],
+      "layer": "wasm",
+      "purpose": "module transform"
+    },
+    {
+      "directory": "src/foundation/wasm/module-transform-derive",
+      "origins": [
+        "walrus-macro@0.26.0"
+      ],
+      "layer": "wasm",
+      "purpose": "module transform derive"
+    }
+  ],
+  "platform_guard": "src/tools/assets/src/platform_contract.rs"
+}

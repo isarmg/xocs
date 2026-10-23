@@ -42,9 +42,9 @@ use alloc::vec::Vec;
 use alloc::borrow::Cow;
 use alloc::string::String;
 #[cfg(test)]
-use alloc::vec;
+include!("../../../../../test/foundation/text/shell-words/unit/src/lib/1945.rs");
 #[cfg(test)]
-use alloc::borrow::ToOwned;
+include!("../../../../../test/foundation/text/shell-words/unit/src/lib/1974.rs");
 
 pub mod bytes;
 #[cfg(all(doc, not(doctest)))]
@@ -218,107 +218,16 @@ pub fn try_quote(in_str: &str) -> Result<Cow<'_, str>, QuoteError> {
 }
 
 #[cfg(test)]
-static SPLIT_TEST_ITEMS: &[(&str, Option<&[&str]>)] = &[
-    ("foo$baz", Some(&["foo$baz"])),
-    ("foo baz", Some(&["foo", "baz"])),
-    ("foo\"bar\"baz", Some(&["foobarbaz"])),
-    ("foo \"bar\"baz", Some(&["foo", "barbaz"])),
-    ("   foo \nbar", Some(&["foo", "bar"])),
-    ("foo\\\nbar", Some(&["foobar"])),
-    ("\"foo\\\nbar\"", Some(&["foobar"])),
-    ("'baz\\$b'", Some(&["baz\\$b"])),
-    ("'baz\\\''", None),
-    ("\\", None),
-    ("\"\\", None),
-    ("'\\", None),
-    ("\"", None),
-    ("'", None),
-    ("foo #bar\nbaz", Some(&["foo", "baz"])),
-    ("foo #bar", Some(&["foo"])),
-    ("foo#bar", Some(&["foo#bar"])),
-    ("foo\"#bar", None),
-    ("'\\n'", Some(&["\\n"])),
-    ("'\\\\n'", Some(&["\\\\n"])),
-];
+include!("../../../../../test/foundation/text/shell-words/unit/src/lib/8128.rs");
 
-#[test]
-fn test_split() {
-    for &(input, output) in SPLIT_TEST_ITEMS {
-        assert_eq!(split(input), output.map(|o| o.iter().map(|&x| x.to_owned()).collect()));
-    }
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/text/shell-words/unit/src/lib/8865.rs");
 
-#[test]
-fn test_lineno() {
-    let mut sh = Shlex::new("\nfoo\nbar");
-    while let Some(word) = sh.next() {
-        if word == "bar" {
-            assert_eq!(sh.line_no, 3);
-        }
-    }
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/text/shell-words/unit/src/lib/9040.rs");
 
-#[test]
-#[cfg_attr(not(feature = "std"), allow(unreachable_code, unused_mut))]
-fn test_quote() {
-    // This is a list of (unquoted, quoted) pairs.
-    // But it's using a single long (raw) string literal with an ad-hoc format, just because it's
-    // hard to read if we have to put the test strings through Rust escaping on top of the escaping
-    // being tested.  (Even raw string literals are noisy for short strings).
-    // Ad-hoc: "NL" is replaced with a literal newline; no other escape sequences.
-    let tests = r#"
-        <>                => <''>
-        <foobar>          => <foobar>
-        <foo bar>         => <'foo bar'>
-        <"foo bar'">      => <"\"foo bar'\"">
-        <'foo bar'>       => <"'foo bar'">
-        <">               => <'"'>
-        <"'>              => <"\"'">
-        <hello!world>     => <'hello!world'>
-        <'hello!world>    => <"'hello"'!world'>
-        <'hello!>         => <"'hello"'!'>
-        <hello ^ world>   => <'hello ''^ world'>
-        <hello^>          => <hello'^'>
-        <!world'>         => <'!world'"'">
-        <{a, b}>          => <'{a, b}'>
-        <NL>              => <'NL'>
-        <^>               => <'^'>
-        <foo^bar>         => <foo'^bar'>
-        <NLx^>            => <'NLx''^'>
-        <NL^x>            => <'NL''^x'>
-        <NL ^x>           => <'NL ''^x'>
-        <{a,b}>           => <'{a,b}'>
-        <a,b>             => <'a,b'>
-        <a..b             => <a..b>
-        <'$>              => <"'"'$'>
-        <"^>              => <'"''^'>
-    "#;
-    let mut ok = true;
-    for test in tests.trim().split('\n') {
-        let parts: Vec<String> = test
-            .replace("NL", "\n")
-            .split("=>")
-            .map(|part| part.trim().trim_start_matches('<').trim_end_matches('>').to_owned())
-            .collect();
-        assert!(parts.len() == 2);
-        let unquoted = &*parts[0];
-        let quoted_expected = &*parts[1];
-        let quoted_actual = try_quote(&parts[0]).unwrap();
-        if quoted_expected != quoted_actual {
-            #[cfg(not(feature = "std"))]
-            panic!("FAIL: for input <{}>, expected <{}>, got <{}>",
-                     unquoted, quoted_expected, quoted_actual);
-            #[cfg(feature = "std")]
-            println!("FAIL: for input <{}>, expected <{}>, got <{}>",
-                     unquoted, quoted_expected, quoted_actual);
-            ok = false;
-        }
-    }
-    assert!(ok);
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/text/shell-words/unit/src/lib/9234.rs");
 
-#[test]
-fn test_fallible() {
-    assert_eq!(try_join(vec!["\0"]), Err(QuoteError::Nul));
-    assert_eq!(try_quote("\0"), Err(QuoteError::Nul));
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/text/shell-words/unit/src/lib/11672.rs");

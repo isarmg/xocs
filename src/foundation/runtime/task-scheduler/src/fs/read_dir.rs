@@ -11,9 +11,9 @@ use std::sync::Arc;
 use std::task::{ready, Context, Poll};
 
 #[cfg(test)]
-use super::mocks::spawn_blocking;
+include!("../../../../../../test/foundation/runtime/task-scheduler/unit/src/fs/read_dir/266.rs");
 #[cfg(test)]
-use super::mocks::JoinHandle;
+include!("../../../../../../test/foundation/runtime/task-scheduler/unit/src/fs/read_dir/313.rs");
 #[cfg(not(test))]
 use crate::blocking::spawn_blocking;
 #[cfg(not(test))]

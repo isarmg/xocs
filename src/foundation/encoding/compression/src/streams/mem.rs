@@ -488,4 +488,4 @@ unsafe fn write_to_spare_capacity_of_vec<T>(
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/compression/streams/unit/src/mem/tests_647.rs"));
+include!("../../../../../../test/foundation/encoding/compression/unit/src/streams/mem/17510.rs");

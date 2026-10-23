@@ -29,5 +29,6 @@ pub mod server_target;
 pub mod sqlite;
 pub mod state_file;
 #[cfg(test)]
+#[path = "../../../test/application/support/mod.rs"]
 pub(crate) mod testkit;
 pub mod web_assets;

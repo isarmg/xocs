@@ -55,7 +55,7 @@
 #![no_std]
 
 #[cfg(test)]
-extern crate std;
+include!("../../../../../test/foundation/text/text-boundaries/unit/src/lib/1956.rs");
 
 pub use grapheme::{GraphemeCursor, GraphemeIncomplete};
 pub use grapheme::{GraphemeIndices, Graphemes};

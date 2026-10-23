@@ -195,9 +195,3 @@ impl fmt::Debug for ExtensionsInner {
             .finish()
     }
 }
-
-#[cfg(test)]
-include!(core::concat!(
-    core::env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/tracing-family/collector/unit/src/registry/extensions/tests_199.rs"
-));

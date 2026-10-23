@@ -58,12 +58,5 @@ pub fn parse<'s>(_input: &mut &'s str) -> ModalResult<&'s str, CustomError<&'s s
 fn main() {}
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let err = parse.parse_next(&mut "").unwrap_err();
-        assert!(matches!(err, ErrMode::Backtrack(CustomError::MyError)));
-    }
-}
+#[path = "../../../../../test/foundation/format/parser-combinators/unit/examples/custom_error/tests.rs"]
+mod tests;

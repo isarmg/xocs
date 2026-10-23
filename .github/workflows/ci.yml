@@ -30,25 +30,27 @@ jobs:
           check-latest: false
       - name: Validate parallel CI gates and release staging
         run: |
-          node --test scripts/check-ci-parallelism.test.mjs
-          python3 -I -B scripts/test-installed-candidate-workflow.py
-          python3 -I -B scripts/test-installed-lifecycle-adapter.py
-          python3 -I -B scripts/test-package-release.py
+          node --test test/operations/check-ci-parallelism.test.mjs
+          python3 -I -B test/operations/test-installed-candidate-workflow.py
+          python3 -I -B test/operations/test-installed-lifecycle-adapter.py
+          python3 -I -B test/operations/test-package-release.py
       - name: Check repository documentation
         run: |
-          python3 -I -B tools/test-docs.py
-          python3 tools/rust-sources/docs.py --check
-          python3 tools/check-docs.py
+          python3 test/check-layout.py
+          python3 -I -B test/tools/test-layout.py
+          python3 -I -B test/tools/test-docs.py
+          python3 src/tools/rust-sources/docs.py --check
+          python3 src/tools/check-docs.py
       - name: Install exact Rust toolchain
         run: |
           rustup toolchain install 1.99.0 --profile minimal --component rustfmt,clippy --target wasm32-unknown-unknown
       - name: Verify repository-owned implementation
         run: |
-          python3 tools/test-independence.py
-          python3 -I -B tools/rust-sources/test_manage.py
-          python3 -I -B tools/rust-sources/test_audit.py
-          python3 tools/rust-sources/manage.py verify --metadata
-          python3 tools/check-independence.py
+          python3 test/tools/test-independence.py
+          python3 -I -B test/tools/rust-sources/test_manage.py
+          python3 -I -B test/tools/rust-sources/test_audit.py
+          python3 src/tools/rust-sources/manage.py verify --metadata
+          python3 src/tools/check-independence.py
 
       - name: Build web from repository Rust sources
         run: cargo run --quiet --locked --offline -p blog-assets -- build --product-root . --offline
@@ -59,7 +61,7 @@ jobs:
           cargo doc --locked --offline -p blog -p blog-setup -p blog-assets
           cargo doc --locked --offline -p blog-browser --target wasm32-unknown-unknown
       - name: Prepare browser test dependencies
-        working-directory: web
+        working-directory: src/web
         run: npm ci
       - name: Check and build server
         run: |
@@ -69,14 +71,14 @@ jobs:
           cargo clippy --locked --offline -p blog-browser --target wasm32-unknown-unknown -- -D warnings
           cargo test --locked --offline
           cargo test --locked --offline -p blog-assets -p blog-browser-domain-tests
-          bash scripts/test-maintained.sh
+          bash test/run-maintained.sh
           cargo run --quiet --locked --offline -p blog-assets -- test --product-root . --offline
           cargo build --locked --offline
       - name: Install browsers
-        working-directory: web
+        working-directory: src/web
         run: npx playwright install --with-deps chromium firefox
       - name: End-to-end smoke test
-        run: bash scripts/smoke.sh
+        run: bash test/operations/smoke.sh
 
   browser:
     name: Browser (${{ matrix.group }})
@@ -102,13 +104,13 @@ jobs:
       - name: Build web from repository Rust sources
         run: cargo run --quiet --locked --offline -p blog-assets -- build --product-root . --offline
       - name: Prepare browser test dependencies
-        working-directory: web
+        working-directory: src/web
         run: npm ci
       - name: Install browsers
-        working-directory: web
+        working-directory: src/web
         run: npx playwright install --with-deps chromium firefox
       - name: Bilingual layouts and anonymous interactions
-        working-directory: web
+        working-directory: src/web
         env:
           TEST_GROUP: ${{ matrix.group }}
         run: |
@@ -116,22 +118,22 @@ jobs:
           case "$TEST_GROUP" in
             admin)
               npm run test:unit
-              node tests/language.mjs
-              node tests/admin-layout.mjs
-              node tests/account-settings.mjs
-              node tests/admin-cleanup.mjs
-              node tests/management.mjs
-              node tests/contract-fixes.mjs
-              node tests/blog-interface-runtime.mjs
-              node tests/async-state.mjs
-              node tests/transport-lifecycle.mjs
-              node tests/startup-failure.mjs
-              node tests/rust-native-domain.mjs
+              node ../../test/browser/language.mjs
+              node ../../test/browser/admin-layout.mjs
+              node ../../test/browser/account-settings.mjs
+              node ../../test/browser/admin-cleanup.mjs
+              node ../../test/browser/management.mjs
+              node ../../test/browser/contract-fixes.mjs
+              node ../../test/browser/blog-interface-runtime.mjs
+              node ../../test/browser/async-state.mjs
+              node ../../test/browser/transport-lifecycle.mjs
+              node ../../test/browser/startup-failure.mjs
+              node ../../test/browser/rust-native-domain.mjs
               ;;
             public)
-              node tests/public-footer.mjs
-              node tests/public-layout.mjs
-              node tests/anonymous-comments.mjs
+              node ../../test/browser/public-footer.mjs
+              node ../../test/browser/public-layout.mjs
+              node ../../test/browser/anonymous-comments.mjs
               ;;
             *) exit 1 ;;
           esac
@@ -176,11 +178,11 @@ jobs:
           CARGO_NET_OFFLINE=false cargo install cargo-audit --version 0.22.2 --locked
       - name: Verify local packaging boundaries
         run: |
-          python3 tools/rust-sources/manage.py verify --metadata
-          python3 tools/check-independence.py
-          python3 -I -B scripts/test-installed-candidate-workflow.py
-          python3 -I -B scripts/test-installed-lifecycle-adapter.py
-          python3 -I -B scripts/test-package-release.py
+          python3 src/tools/rust-sources/manage.py verify --metadata
+          python3 src/tools/check-independence.py
+          python3 -I -B test/operations/test-installed-candidate-workflow.py
+          python3 -I -B test/operations/test-installed-lifecycle-adapter.py
+          python3 -I -B test/operations/test-package-release.py
       - name: Build source-bound candidate from this checkout
         env:
           BLOG_BUILD_METADATA_DIR: ${{ runner.temp }}/blog-metadata
@@ -191,10 +193,10 @@ jobs:
           cargo run --quiet --locked --offline -p blog-assets -- server --product-root . --config blog-assets.json --mode candidate --source-revision "$GITHUB_SHA" --offline
           "$CARGO_TARGET_DIR/$SERVER_TARGET/release/blog" --version | grep -F 'blog '
       - name: Audit original identities of maintained Rust sources
-        run: python3 tools/rust-sources/audit.py
+        run: python3 src/tools/rust-sources/audit.py
       - name: Stage independently installable candidate
         run: |
-          bash scripts/package-installed-candidate.sh \
+          bash src/operations/package-installed-candidate.sh \
             "$CARGO_TARGET_DIR/$SERVER_TARGET/release/blog" \
             "$RUNNER_TEMP/blog-metadata" "$RUNNER_TEMP/blog-candidate"
       - name: Exercise local installation and maintenance
@@ -204,7 +206,7 @@ jobs:
           set -euo pipefail
           candidates=("$RUNNER_TEMP/blog-candidate"/blog-*-linux-x86_64.tar.gz)
           [[ ${#candidates[@]} == 1 && -f "${candidates[0]}" ]]
-          sudo --preserve-env=BLOG_INSTALL_DIAGNOSTICS bash scripts/check-installed-candidate.sh "${candidates[0]}"
+          sudo --preserve-env=BLOG_INSTALL_DIAGNOSTICS bash test/operations/check-installed-candidate.sh "${candidates[0]}"
       - name: Hand redacted diagnostics to the artifact runner
         if: ${{ always() }}
         env:

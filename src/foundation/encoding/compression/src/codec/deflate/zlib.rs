@@ -62,4 +62,4 @@ pub fn header_from_flags(flags: u32, window_bits: u8) -> [u8; 2] {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/compression/codec/unit/src/deflate/zlib/test_64.rs"));
+include!("../../../../../../../test/foundation/encoding/compression/unit/src/codec/deflate/zlib/2251.rs");

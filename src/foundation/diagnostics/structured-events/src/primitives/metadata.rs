@@ -1021,9 +1021,3 @@ impl PartialOrd<Level> for LevelFilter {
         (other.0 as usize) >= filter_as_usize(&self.0)
     }
 }
-
-#[cfg(test)]
-include!(core::concat!(
-    core::env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/tracing-family/primitives/unit/src/metadata/tests_1055.rs"
-));

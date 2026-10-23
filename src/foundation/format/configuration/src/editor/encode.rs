@@ -360,7 +360,4 @@ impl ValueRepr for Datetime {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/retained/test/foundation/toml/editor/unit/src/encode/test_362.rs"
-));
+include!("../../../../../../test/foundation/format/configuration/unit/src/editor/encode/10782.rs");

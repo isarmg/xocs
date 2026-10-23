@@ -19,5 +19,6 @@ pub(super) use wheel::Wheel;
 mod wake_queue;
 pub(crate) use wake_queue::WakeQueue;
 
+#[path = "../../../../../../../test/foundation/runtime/task-scheduler/unit/src/runtime/time_alt/tests.rs"]
 #[cfg(test)]
 mod tests;

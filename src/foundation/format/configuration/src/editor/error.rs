@@ -170,7 +170,4 @@ fn translate_position(input: &[u8], index: usize) -> (usize, usize) {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/retained/test/foundation/toml/editor/unit/src/error/test_translate_position_172.rs"
-));
+include!("../../../../../../test/foundation/format/configuration/unit/src/editor/error/4769.rs");

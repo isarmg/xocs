@@ -1945,6 +1945,3 @@ where
     let dummy = Default::default();
     parse_unstable_with_variables(source, &dummy, provider)
 }
-
-#[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../test/foundation/unicode-properties/unit/src/unicodeset_parse/parse/tests_1949.rs"));

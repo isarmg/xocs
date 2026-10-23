@@ -88,6 +88,7 @@ use std::ops::{Fn, RangeBounds};
 
 pub mod plumbing;
 
+#[path = "../../../../../../test/foundation/runtime/parallel-iterator/unit/src/iter/test.rs"]
 #[cfg(test)]
 mod test;
 

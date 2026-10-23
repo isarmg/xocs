@@ -12,7 +12,4 @@ fn strip_ipv6_brackets(host: &str) -> &str {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/http-transport/adapters/unit/src/client/mod/all_tests_20.rs"
-));
+include!("../../../../../../../test/foundation/network/http-transport/unit/src/adapters/client/mod/321.rs");

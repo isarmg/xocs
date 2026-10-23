@@ -1022,6 +1022,6 @@ fn set_port(addr: &mut SocketAddr, host_port: u16, explicit: bool) {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/http-transport/adapters/unit/src/client/legacy/connect/http/tests_1021.rs"));
+include!("../../../../../../../../../test/foundation/network/http-transport/unit/src/adapters/client/legacy/connect/http/33601.rs");
 
 use std::future::Future;

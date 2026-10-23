@@ -7,5 +7,6 @@ pub use self::{
     encoder_string_writer::{EncoderStringWriter, StrConsumer},
 };
 
+#[path = "../../../../../../test/foundation/encoding/application-base-encoding/unit/src/write/encoder_tests.rs"]
 #[cfg(test)]
 mod encoder_tests;

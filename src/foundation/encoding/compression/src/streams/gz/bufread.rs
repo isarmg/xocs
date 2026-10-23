@@ -463,4 +463,4 @@ impl<R: BufRead> Read for MultiGzDecoder<R> {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/compression/streams/unit/src/gz/bufread/test_465.rs"));
+include!("../../../../../../../test/foundation/encoding/compression/unit/src/streams/gz/bufread/15641.rs");

@@ -2321,4 +2321,4 @@ pub fn rank(byte: u8) -> u8 {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/retained/test/foundation/regex/syntax/unit/src/hir/literal/tests_2323.rs"));
+include!("../../../../../../../test/foundation/text/pattern-search/unit/src/syntax/hir/literal/89309.rs");

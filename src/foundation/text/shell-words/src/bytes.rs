@@ -27,7 +27,7 @@ extern crate alloc;
 use alloc::vec::Vec;
 use alloc::borrow::Cow;
 #[cfg(test)]
-use alloc::borrow::ToOwned;
+include!("../../../../../test/foundation/text/shell-words/unit/src/bytes/1050.rs");
 #[cfg(all(doc, not(doctest)))]
 use crate::{self as shlex, quoting_warning};
 
@@ -464,53 +464,16 @@ pub fn try_quote(in_bytes: &[u8]) -> Result<Cow<'_, [u8]>, QuoteError> {
 }
 
 #[cfg(test)]
-const INVALID_UTF8: &[u8] = b"\xa1";
-
-#[test]
-#[allow(invalid_from_utf8)]
-fn test_invalid_utf8() {
-    // Check that our test string is actually invalid UTF-8.
-    assert!(core::str::from_utf8(INVALID_UTF8).is_err());
-}
+include!("../../../../../test/foundation/text/shell-words/unit/src/bytes/17986.rs");
 
 #[cfg(test)]
-static SPLIT_TEST_ITEMS: &[(&[u8], Option<&[&[u8]]>)] = &[
-    (b"foo$baz", Some(&[b"foo$baz"])),
-    (b"foo baz", Some(&[b"foo", b"baz"])),
-    (b"foo\"bar\"baz", Some(&[b"foobarbaz"])),
-    (b"foo \"bar\"baz", Some(&[b"foo", b"barbaz"])),
-    (b"   foo \nbar", Some(&[b"foo", b"bar"])),
-    (b"foo\\\nbar", Some(&[b"foobar"])),
-    (b"\"foo\\\nbar\"", Some(&[b"foobar"])),
-    (b"'baz\\$b'", Some(&[b"baz\\$b"])),
-    (b"'baz\\\''", None),
-    (b"\\", None),
-    (b"\"\\", None),
-    (b"'\\", None),
-    (b"\"", None),
-    (b"'", None),
-    (b"foo #bar\nbaz", Some(&[b"foo", b"baz"])),
-    (b"foo #bar", Some(&[b"foo"])),
-    (b"foo#bar", Some(&[b"foo#bar"])),
-    (b"foo\"#bar", None),
-    (b"'\\n'", Some(&[b"\\n"])),
-    (b"'\\\\n'", Some(&[b"\\\\n"])),
-    (INVALID_UTF8, Some(&[INVALID_UTF8])),
-];
+include!("../../../../../test/foundation/text/shell-words/unit/src/bytes/18037.rs");
 
-#[test]
-fn test_split() {
-    for &(input, output) in SPLIT_TEST_ITEMS {
-        assert_eq!(split(input), output.map(|o| o.iter().map(|&x| x.to_owned()).collect()));
-    }
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/text/shell-words/unit/src/bytes/18220.rs");
 
-#[test]
-fn test_lineno() {
-    let mut sh = Shlex::new(b"\nfoo\nbar");
-    while let Some(word) = sh.next() {
-        if word == b"bar" {
-            assert_eq!(sh.line_no, 3);
-        }
-    }
-}
+#[cfg(test)]
+include!("../../../../../test/foundation/text/shell-words/unit/src/bytes/19039.rs");
+
+#[cfg(test)]
+include!("../../../../../test/foundation/text/shell-words/unit/src/bytes/19214.rs");

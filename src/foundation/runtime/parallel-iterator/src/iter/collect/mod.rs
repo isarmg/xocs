@@ -5,6 +5,8 @@ use self::consumer::CollectConsumer;
 use self::consumer::CollectResult;
 use super::unzip::unzip_indexed;
 
+#[cfg(test)]
+#[path = "../../../../../../../test/foundation/runtime/parallel-iterator/unit/src/iter/collect/test.rs"]
 mod test;
 
 /// Collects the results of the exact iterator into the specified vector.

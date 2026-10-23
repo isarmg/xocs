@@ -104,4 +104,4 @@ impl<T, U, E> fmt::Debug for BoxService<T, U, E> {
 }
 
 #[cfg(test)]
-include!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../../test/foundation/service-stack/functions/src/util/boxed/sync/is_sync_106.rs"));
+include!("../../../../../../../test/foundation/network/request-pipeline/unit/src/util/boxed/sync/3107.rs");

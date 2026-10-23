@@ -174,7 +174,4 @@ const fn find_invalid_byte(bytes: &[u8]) -> Option<u8> {
 }
 
 #[cfg(test)]
-include!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../../../../test/foundation/http-transport/unit/src/ext/h1_reason_phrase/tests_176.rs"
-));
+include!("../../../../../../test/foundation/network/http-transport/unit/src/ext/h1_reason_phrase/5453.rs");

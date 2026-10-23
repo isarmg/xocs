@@ -79,12 +79,6 @@ pub fn get_timezone() -> Result<String, GetTimezoneError> {
     platform::get_timezone_inner()
 }
 
+#[path = "../../../../../test/foundation/platform/local-time-zone/unit/src/lib/tests.rs"]
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn get_current() {
-        println!("current: {}", get_timezone().unwrap());
-    }
-}
+mod tests;

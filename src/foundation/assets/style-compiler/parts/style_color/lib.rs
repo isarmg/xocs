@@ -8,6 +8,7 @@
 //! Relative colors, color-mix, system colors, and other such things require better calc() support
 //! and integration.
 
+#[path = "../../../../../../test/foundation/assets/style-compiler/unit/parts/style_color/tests.rs"]
 #[cfg(test)]
 mod tests;
 
