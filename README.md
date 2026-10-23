@@ -13,7 +13,7 @@ cargo +1.99.0 build --locked --offline -p blog-setup
 
 `tools/assets` 的 `blog-assets` 同时负责前端构建和浏览器 WASM 绑定生成；绑定实现已整合为同一工具中的模块，无需另建或安装 wasm-bindgen CLI，也不依赖 npm 生产构建或 Rust 注册表源码缓存。Rust 工具链、目标标准库、系统 SDK 和非 Rust 原生库仍由构建环境提供。
 
-当前受管源码包含 243 个包：234 个用途基础包和 9 个项目包；根 Cargo.lock 完整图为 242 包。250 仅是优化规模的参考，不设包数硬上限；以正确性、实际资源开销、职责边界与维护复杂度决定合并或拆分。内部维护包不沿用上游版本约束；省略 manifest 版本时，Cargo 将其记为 0.0.0。主产品 `blog` 和维护工具 `blog-setup` 的发行版本单独管理，当前为 1.0.1。原始发布身份、归档与许可证保存在 `compliance/` 和来源文档中。目录、迁移规则与已做优化见[用途架构与定制](docs/maintained-design.md)，逐职责合并分析见[依赖分析与深度定制](docs/dependency-customization.md)。
+当前受管源码包含 240 个包：231 个用途基础包和 9 个项目包；根 Cargo.lock 完整图为 239 包。250 仅是优化规模的参考，不设包数硬上限；以正确性、实际资源开销、职责边界与维护复杂度决定合并或拆分。内部维护包不沿用上游版本约束；省略 manifest 版本时，Cargo 将其记为 0.0.0。主产品 `blog` 和维护工具 `blog-setup` 的发行版本单独管理，当前为 1.0.1。原始发布身份、归档与许可证保存在 `compliance/` 和来源文档中。目录、迁移规则与已做优化见[用途架构与定制](docs/maintained-design.md)，逐职责合并分析见[依赖分析与深度定制](docs/dependency-customization.md)。
 
 初始化使用仓库内的 `blog-setup`，密码从标准输入读取；服务运行命令为 `blog --root ROOT`。完整本地启动步骤见[开发说明](docs/development.md)，独立包安装见[部署说明](deploy/linux-x86_64/README.md)。生产保持 HTTPS、Secure Cookie 与同源检查，本地开发仅允许回环 HTTP。
 

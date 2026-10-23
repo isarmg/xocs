@@ -21,6 +21,8 @@ cargo +1.99.0 run --locked --offline -p blog-assets -- source-stamp --product-ro
 
 `source-stamp` 对 Git tracked 和非 ignored 的 untracked authored 文件生成按路径排序的 `{sha256,executable}` 映射，紧凑 JSON 编码后计算 SHA-256，包含删除和权限变化，排除 target/dist/pkg/node_modules/运行数据及临时生成目录。server 构建完成必须与开始时相同。最终 `<binary>.blog-assets.json` 绑定实际 binary、所有嵌入资源、身份和源码摘要；`verify --binary PATH --receipt PATH --dist DIR` 可独立核验，不运行候选程序。
 
+JS 资源引用使用语义作用域分析，局部同名 `URL` / `require` 保持普通函数语义。`?url` 导入和重导出通过独立的内容寻址 ESM 提供 URL 值，保留默认、别名及字符串导出名；生成的 URL 求值不受消费模块局部变量影响。CSS `@import` 按每次出现的位置展开并缓存编译结果，保留重复导入的层叠顺序；ESM 对同一 CSS 的副作用导入仅执行一次。CSS 展开在拼接时执行单文件预算，循环导入仍拒绝。
+
 默认预算保持：普通单文件512 KiB，WASM/其gzip4 MiB，字体16 MiB，bundle16 MiB。public媒体使用逐文件真实SHA清单，媒体单文件4 MiB/总8 MiB，未登记文件或变更失败。拒绝输入/输出符号链接、硬链接、特殊文件与越界路径；生成目录以完整来源标识后才可替换，失败恢复之前输出。
 
 `serve --debug` 提供loopback开发服务及API代理，`preview`只读提供已有输出。静态服务检查MIME、nosniff、ETag/HEAD/304和WASM gzip协商。Node/Playwright仅用于浏览器验收。

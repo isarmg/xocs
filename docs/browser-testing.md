@@ -7,7 +7,7 @@
 | 入口 | 主要范围 | API 边界 |
 | --- | --- | --- |
 | `npm run test:unit` | 来源/工具链合同、Rust domain 单测、浏览器 fixture 单测 | 不代替真实服务验收 |
-| `npm run test:browser:blog-interface` | 实际 WASM、运行时、异步状态、阅读交互及代表性页面冒烟 | 各脚本显式使用 fixture 或自己创建的原生服务 |
+| `npm run test:browser:blog-interface` | 实际 WASM、运行时、异步状态、HTTP 响应拒绝后的流取消、阅读交互及代表性页面冒烟 | 各脚本显式使用 fixture 或自己创建的原生服务 |
 | `npm run test:admin` / `npm run test:public` | 管理/公开布局、账号与匿名评论行为 | 主要使用明确的 API fixture |
 | `bash scripts/smoke.sh`（根目录） | 真实 Axum/SQLite、管理员与公开页面、重启持久化 | 创建独立测试 ROOT，执行真实写入 |
 | CI `installed_candidate` | 精确候选包、安装/维护、凭据与安全合同 | 独立安装与真实后端，不依赖页面 fixture |

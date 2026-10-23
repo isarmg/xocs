@@ -58,6 +58,7 @@ jobs:
           cargo clippy --locked --offline -p blog-browser --target wasm32-unknown-unknown -- -D warnings
           cargo test --locked --offline
           cargo test --locked --offline -p blog-assets -p blog-browser-domain-tests
+          bash scripts/test-maintained.sh
           cargo run --quiet --locked --offline -p blog-assets -- test --product-root . --offline
           cargo build --locked --offline
       - name: Install browsers
@@ -112,6 +113,7 @@ jobs:
               node tests/contract-fixes.mjs
               node tests/blog-interface-runtime.mjs
               node tests/async-state.mjs
+              node tests/transport-lifecycle.mjs
               node tests/startup-failure.mjs
               node tests/rust-native-domain.mjs
               ;;

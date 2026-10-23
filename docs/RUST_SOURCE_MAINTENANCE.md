@@ -8,7 +8,7 @@
 
 `verify` 只核对现有收据，不更新哈希。它重读原始归档并验证每个原始文件摘要，再核对当前完整基础包、产品包、manifest、唯一锁文件和静态依赖/特性边。所有声明的依赖，包括目标条件、dev、build 和 optional 依赖，都必须通过本仓库内 path 指向真实包。未启用或不支持平台的依赖不能悄悄保留外部地址；裁剪必须记录其原始发布身份和具体改动。
 
-`verify --metadata` 还为 Linux amd64 和 Web WASM 使用临时空 Cargo home 运行 `cargo metadata --locked --offline`，确认所有已解析包 `source=null` 且所有源码和目标路径都在仓库内。闭包按统一 workspace 特性图标注 normal 运行候选和 build/proc-macro 构建用途，是保守超集，不是精确单入口链接结果，也不能作为删除源码的唯一依据。
+`verify --metadata` 还为 Linux amd64 和 Web WASM 使用临时空 Cargo home 运行 `cargo metadata --locked --offline`，确认所有已解析包 `source=null` 且所有源码和目标路径都在仓库内。闭包按统一 workspace 特性图标注 normal 运行候选和 build/proc-macro 构建用途，是保守超集，不是精确单入口链接结果，也不能作为删除源码的唯一依据。测试入口以布尔字段 `include_dev: true` 明确纳入所选根包的 dev 依赖，再跟踪其 normal/build 依赖；不递归纳入依赖包自身的测试。`workspace-tests` 覆盖全部项目测试根，生产入口保持不选 dev 边。该清单证明测试构建输入的覆盖，不表示这些测试已执行。
 
 包数量是观察指标，250 是早期给出的约数，不设硬上限。snapshot 继续统计全部当前源码包，包括未选中的 optional 包；metadata 核验保留每个目标完整图及入口闭包，正常、build、proc-macro、测试和宿主工具都纳入清单。合理拆分导致包数增加不应让 refresh/verify 失败；来源、摘要、依赖边界与迁移历史的校验继续强制执行。合并和拆分需说明消费者、实现复杂度、编译粒度、支持面及实际验证；数量下降本身不构成优化收益。
 

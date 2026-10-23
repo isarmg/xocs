@@ -11252,6 +11252,51 @@
       "restored_origins": [
         "leptos_hot_reload@0.8.7"
       ]
+    },
+    {
+      "id": "review-base64-and-unused-sqlite-support",
+      "reason": "Remove verified duplicate ordinary Base64 and unused SQLite support implementations; retain all immutable archives, licenses and prior source history.",
+      "from": [
+        {
+          "directory": "src/foundation/encoding/http-base-encoding",
+          "name": "blog-encoding-http-base-encoding",
+          "version": "0.0.0",
+          "origins": [
+            "base64@0.22.1"
+          ]
+        },
+        {
+          "directory": "src/foundation/encoding/integer-parser",
+          "name": "blog-encoding-integer-parser",
+          "version": "0.0.0",
+          "origins": [
+            "atoi@2.0.0"
+          ]
+        },
+        {
+          "directory": "src/foundation/runtime/scheduled-stream",
+          "name": "blog-runtime-scheduled-stream",
+          "version": "0.0.0",
+          "origins": [
+            "tokio-stream@0.1.19"
+          ]
+        }
+      ],
+      "to": [],
+      "retired_origins": [
+        {
+          "id": "atoi@2.0.0",
+          "reason": "SQLite positional parameters now use strict standard-library positive-integer parsing; no other manifest consumes this prefix parser."
+        },
+        {
+          "id": "base64@0.22.1",
+          "reason": "Unify ordinary Base64 consumers on application-base-encoding after wire-format and malformed-input differential checks; no code from the older implementation remains active."
+        },
+        {
+          "id": "tokio-stream@0.1.19",
+          "reason": "Remove the unused SQLite stream-adapter dependency; no current manifest or source consumer remains."
+        }
+      ]
     }
   ]
 }

@@ -23,6 +23,29 @@ struct Reserved<__BlogRow0> {
     value: __BlogRow0,
 }
 
+#[derive(Debug, Default, FromRow, PartialEq)]
+#[sqlx(default)]
+struct InternalNames {
+    __row: i64,
+    __default: i64,
+    missing: String,
+    value: i64,
+}
+
+mod shadowed_prelude {
+    // Caller names must not redirect the derive's default initialization.
+    #[allow(dead_code)]
+    struct Default;
+
+    #[derive(Debug, sqlx::FromRow, PartialEq)]
+    pub struct Record {
+        #[sqlx(default)]
+        pub missing: String,
+        #[sqlx(skip)]
+        pub skipped: Vec<u8>,
+    }
+}
+
 #[derive(Debug, FromRow)]
 struct Borrowed<'row> {
     name: &'row str,
@@ -112,6 +135,24 @@ async fn named_tuple_borrowed_and_generic_records_decode_actual_sqlite_rows() ->
         .fetch_one(&mut database)
         .await?;
     assert_eq!(reserved, Reserved { value: 11 });
+    let internal =
+        sqlx::query_as::<_, InternalNames>("SELECT 12 AS __row,13 AS __default,14 AS value")
+            .fetch_one(&mut database)
+            .await?;
+    assert_eq!(
+        internal,
+        InternalNames {
+            __row: 12,
+            __default: 13,
+            missing: String::new(),
+            value: 14,
+        }
+    );
+    let defaults = sqlx::query_as::<_, shadowed_prelude::Record>("SELECT 1")
+        .fetch_one(&mut database)
+        .await?;
+    assert!(defaults.missing.is_empty());
+    assert!(defaults.skipped.is_empty());
     let row = sqlx::query("SELECT 'borrowed' AS name")
         .fetch_one(&mut database)
         .await?;

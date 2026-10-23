@@ -34,10 +34,11 @@ test('server and browser groups are independent and preserve every gate', () => 
     'python3 -I -B tools/rust-sources/test_audit.py',
     'cargo run --quiet --locked --offline -p blog-assets -- test --product-root . --offline',
     'cargo test --locked --offline -p blog-assets -p blog-browser-domain-tests',
+    'bash scripts/test-maintained.sh',
   ]) assert.ok(server.includes(command), `missing server check: ${command}`);
   const expected = [
     'language', 'admin-layout', 'account-settings', 'admin-cleanup',
-    'management', 'contract-fixes', 'blog-interface-runtime', 'async-state', 'startup-failure', 'rust-native-domain', 'public-footer', 'public-layout', 'anonymous-comments',
+    'management', 'contract-fixes', 'blog-interface-runtime', 'async-state', 'transport-lifecycle', 'startup-failure', 'rust-native-domain', 'public-footer', 'public-layout', 'anonymous-comments',
   ];
   const actual = [...browser.matchAll(/node tests\/([a-z-]+)\.mjs/g)].map(match => match[1]);
   assert.deepEqual(actual.sort(), expected.sort());
@@ -99,7 +100,7 @@ test('both matrix branches execute every original UI script exactly once', () =>
     assert.deepEqual(actual.sort(), [
       'run test:unit', 'tests/language.mjs', 'tests/admin-layout.mjs',
       'tests/account-settings.mjs', 'tests/admin-cleanup.mjs', 'tests/management.mjs',
-      'tests/contract-fixes.mjs', 'tests/blog-interface-runtime.mjs', 'tests/async-state.mjs', 'tests/startup-failure.mjs', 'tests/rust-native-domain.mjs',
+      'tests/contract-fixes.mjs', 'tests/blog-interface-runtime.mjs', 'tests/async-state.mjs', 'tests/transport-lifecycle.mjs', 'tests/startup-failure.mjs', 'tests/rust-native-domain.mjs',
       'tests/public-footer.mjs', 'tests/public-layout.mjs', 'tests/anonymous-comments.mjs',
     ].sort());
     const unknown = spawnSync('bash', ['-c', run], {

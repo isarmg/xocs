@@ -28,6 +28,17 @@ pub const DEFAULT_MAX_RESPONSE_BYTES: usize = 2 * 1024 * 1024;
 pub const MAX_RESPONSE_BYTES: usize = 64 * 1024 * 1024;
 pub const AUTH_CHANGE_EVENT: &str = "blog-auth-change";
 
+// A request owns its network operation as well as its timeout. In particular,
+// rejecting response headers or dropping the Rust future must not leave an
+// unread response downloading after the timeout and caller listener are gone.
+struct AbortOnDrop(AbortController);
+
+impl Drop for AbortOnDrop {
+    fn drop(&mut self) {
+        self.0.abort();
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct ApiError {
     pub status: u16,
@@ -343,6 +354,7 @@ async fn send_body(
     }
     let target = resolve(path)?;
     let controller = AbortController::new().map_err(|_| ApiError::local("network_error"))?;
+    let _abort = AbortOnDrop(controller.clone());
     let timed_out = Rc::new(Cell::new(false));
     let timeout = {
         let controller = controller.clone();

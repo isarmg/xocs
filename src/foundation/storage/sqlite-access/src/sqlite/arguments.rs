@@ -2,8 +2,8 @@ use crate::sqlite::encode::{Encode, IsNull};
 use crate::sqlite::error::Error;
 use crate::sqlite::statement::StatementHandle;
 use crate::sqlite::Sqlite;
-use atoi::atoi;
 use libsqlite3_sys::SQLITE_OK;
+use std::num::NonZeroUsize;
 use std::sync::Arc;
 
 pub(crate) use crate::query_engine::arguments::*;
@@ -71,24 +71,26 @@ impl Arguments for SqliteArguments {
 impl SqliteArguments {
     pub(super) fn bind(&self, handle: &mut StatementHandle, offset: usize) -> Result<usize, Error> {
         let mut arg_i = offset;
-        // for handle in &statement.handles {
-
         let cnt = handle.bind_parameter_count();
 
         for param_i in 1..=cnt {
             // figure out the index of this bind parameter into our argument tuple
             let n: usize = if let Some(name) = handle.bind_parameter_name(param_i) {
-                if let Some(name) = name.strip_prefix('?') {
-                    // parameter should have the form ?NNN
-                    atoi(name.as_bytes()).expect("parameter of the form ?NNN")
-                } else if let Some(name) = name.strip_prefix('$') {
-                    // parameter should have the form $NNN
-                    atoi(name.as_bytes()).ok_or_else(|| {
-                        err_protocol!(
-                            "parameters with non-integer names are not currently supported: {}",
-                            name
-                        )
-                    })?
+                if let Some(number) = name.strip_prefix('?').or_else(|| name.strip_prefix('$')) {
+                    // SQLite accepts arbitrary names after `$`, including `$0`
+                    // and `$1suffix`. Our positional API supports positive decimal
+                    // indices only: reject the entire name before indexing values.
+                    number
+                        .parse::<NonZeroUsize>()
+                        .ok()
+                        .filter(|_| number.bytes().all(|byte| byte.is_ascii_digit()))
+                        .ok_or_else(|| {
+                            err_protocol!(
+                                "SQL parameter must have a positive decimal index: {}",
+                                name
+                            )
+                        })?
+                        .get()
                 } else {
                     return Err(err_protocol!("unsupported SQL parameter format: {}", name));
                 }
@@ -98,13 +100,10 @@ impl SqliteArguments {
             };
 
             if n > self.values.0.len() {
-                // SQLite treats unbound variables as NULL
-                // we reproduce this here
-                // If you are reading this and think this should be an error, open an issue and we can
-                // discuss configuring this somehow
-                // Note that the query macros have a different way of enforcing
-                // argument arity
-                break;
+                // Preserve SQLite's NULL value for missing bindings.
+                // Later named parameters may still refer to supplied arguments,
+                // e.g. `$2, $1` when only argument 1 is present.
+                continue;
             }
 
             self.values.0[n - 1].bind(handle, param_i)?;

@@ -225,6 +225,8 @@ def static_structure(root, policy):
     for item in profiles:
         if item['target'] not in TARGETS or item['role'] not in ('runtime', 'compile') or not item['manifests']:
             raise ValueError(f'invalid source profile: {item["id"]}')
+        if not isinstance(item.get('include_dev', False), bool):
+            raise ValueError(f'source profile include_dev must be boolean: {item["id"]}')
         if any(name not in documents for name in item['manifests']):
             raise ValueError(f'profile references unknown manifest: {item["id"]}')
     return documents
@@ -578,7 +580,7 @@ def cargo_metadata(root, target, cargo_home):
     return metadata
 
 
-def closure(metadata, manifests, role):
+def closure(metadata, manifests, role, *, include_dev=False):
     packages = {item['id']: item for item in metadata['packages']}
     nodes = {item['id']: item for item in metadata['resolve']['nodes']}
     workspace = set(metadata['workspace_members'])
@@ -597,8 +599,11 @@ def closure(metadata, manifests, role):
         used[identity].add(current_role)
         for edge in nodes[identity]['deps']:
             for kind in edge['dep_kinds']:
-                if kind['kind'] != 'dev':
-                    queue.append((edge['pkg'], 'compile' if current_role == 'compile' or kind['kind'] == 'build' else 'runtime'))
+                # Cargo builds development dependencies for the selected test
+                # roots, not for every library reached through those roots.
+                if kind['kind'] == 'dev' and (not include_dev or identity not in selected):
+                    continue
+                queue.append((edge['pkg'], 'compile' if current_role == 'compile' or kind['kind'] == 'build' else 'runtime'))
     result = {}
     for identity, roles in used.items():
         path = Path(packages[identity]['manifest_path']).parent.relative_to(root).as_posix()
@@ -614,7 +619,8 @@ def resolutions(root, policy):
             target = profile['target']
             if target not in cache:
                 cache[target] = cargo_metadata(root, target, Path(temporary))
-            packages = closure(cache[target], profile['manifests'], profile['role'])
+            packages = closure(cache[target], profile['manifests'], profile['role'],
+                               include_dev=profile.get('include_dev', False))
             result.append(dict(profile=profile['id'], target=target, packages=packages))
     return result
 
@@ -671,9 +677,10 @@ def architecture_document(catalog, policy):
              '本表由 workspaces.json 的明确职责映射、当前 manifest 本地路径边和已验证的构建入口生成。',
              '层名用于说明职责，不自动证明依赖方向或无环。依赖列包含目标条件、optional、dev 和 build 声明；入口列来自统一 workspace 特性图的保守闭包，不能当作精确链接结果。',
              '每个当前包都必须有 layer、purpose 和可重放的身份；合并包保留多个原始来源，拆分包共享来源，完全不再活动的来源必须有明确退役事件。', '',
-             '## 构建入口', '', '| 入口 | 目标 | 职责 | 根包 |', '| --- | --- | --- | --- |']
+             '## 构建入口', '', '| 入口 | 目标 | 职责 | 测试根 dev 依赖 | 根包 |', '| --- | --- | --- | --- | --- |']
     for item in policy['profiles']:
-        lines.append(table_row([item['id'], item['target'], item.get('purpose', item['role']), ', '.join(item['manifests'])]))
+        lines.append(table_row([item['id'], item['target'], item.get('purpose', item['role']),
+                                '包含' if item.get('include_dev', False) else '不包含', ', '.join(item['manifests'])]))
     lines += ['', '## 职责层及实际声明关系', '', '| 职责层 | 包数 | 构建入口 | 依赖的其他层 |', '| --- | --- | --- | --- |']
     for layer, directories in sorted(layers.items()):
         selected = sorted({profile for directory in directories for profile in profiles[directory]})

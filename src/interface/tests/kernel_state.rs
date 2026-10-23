@@ -50,6 +50,121 @@ fn owner_cleanup_runs_once_and_disposes_its_signals() {
 }
 
 #[test]
+fn owner_scope_restores_context_after_a_caught_panic() {
+    use std::panic::{AssertUnwindSafe, catch_unwind};
+
+    let outer = Owner::new();
+    let inner = outer.child();
+    outer.with(|| {
+        provide_context(String::from("outer"));
+        let result = catch_unwind(AssertUnwindSafe(|| {
+            inner.with(|| {
+                provide_context(String::from("inner"));
+                panic!("failed component construction");
+            });
+        }));
+        assert!(result.is_err());
+        assert_eq!(Owner::current(), Some(outer.clone()));
+        assert_eq!(use_context::<String>().as_deref(), Some("outer"));
+
+        // Values created after recovery must belong to the recovered scope.
+        let value = RwSignal::new(7);
+        inner.cleanup();
+        assert_eq!(value.try_get(), Some(7));
+        outer.cleanup();
+        assert_eq!(value.try_get(), None);
+    });
+}
+
+#[test]
+fn unsetting_last_owner_allows_cleanup_to_access_current_owner() {
+    use std::sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    };
+
+    let owner = Owner::new();
+    owner.set();
+    let cleaned = Arc::new(AtomicBool::new(false));
+    on_cleanup({
+        let cleaned = Arc::clone(&cleaned);
+        move || {
+            assert!(Owner::current().is_none());
+            // Cleanup may create an independent scope without a TLS borrow panic.
+            let replacement = Owner::new();
+            replacement.with(|| assert_eq!(Owner::current(), Some(replacement.clone())));
+            cleaned.store(true, Ordering::SeqCst);
+        }
+    });
+    owner.unset();
+    assert!(cleaned.load(Ordering::SeqCst));
+    assert!(Owner::current().is_none());
+}
+
+#[test]
+fn nested_observers_preserve_the_outer_untracked_scope() {
+    use blog_interface::reactive::graph::{Observer, ToAnySubscriber, WithObserver};
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
+
+    let owner = Owner::new();
+    owner.with(|| {
+        let signal = RwSignal::new(1);
+        let unrelated = RwSignal::new(10);
+        let runs = Arc::new(AtomicUsize::new(0));
+        let memo = ArcMemo::new({
+            let runs = Arc::clone(&runs);
+            move |_| {
+                runs.fetch_add(1, Ordering::Relaxed);
+                signal.get()
+            }
+        });
+        assert_eq!(memo.get_untracked(), 1);
+        let subscriber = memo.to_any_subscriber();
+
+        subscriber.with_observer_untracked(|| {
+            assert!(Observer::get().is_none());
+            untrack(|| assert!(Observer::get().is_none()));
+            assert!(Observer::get().is_none());
+            assert_eq!(unrelated.get(), 10);
+            subscriber.with_observer(|| assert_eq!(Observer::get(), Some(subscriber.clone())));
+            assert!(Observer::get().is_none());
+            subscriber.with_observer_untracked(|| assert!(Observer::get().is_none()));
+            assert!(Observer::get().is_none());
+        });
+        assert!(Observer::get().is_none());
+        unrelated.set(20);
+        assert_eq!(memo.get_untracked(), 1);
+        assert_eq!(runs.load(Ordering::Relaxed), 1);
+        signal.set(2);
+        assert_eq!(memo.get_untracked(), 2);
+        assert_eq!(runs.load(Ordering::Relaxed), 2);
+
+        subscriber.with_observer(|| {
+            subscriber.with_observer_untracked(|| {
+                untrack(|| {});
+            });
+            assert_eq!(Observer::get(), Some(subscriber.clone()));
+        });
+    });
+}
+
+#[test]
+fn new_owners_inherit_the_current_parents_pause_state() {
+    let parent = Owner::new();
+    parent.pause();
+    let child = parent.with(Owner::new);
+    let grandchild = child.with(Owner::new);
+    assert!(child.paused());
+    assert!(grandchild.paused());
+    parent.resume();
+    assert!(!child.paused());
+    assert!(!grandchild.paused());
+}
+
+#[test]
 fn escaping_keeps_text_and_quoted_attribute_boundaries() {
     let input = "<script data-x=\"'&\">";
     assert_eq!(

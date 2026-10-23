@@ -204,7 +204,7 @@ struct Module {
     source: PathBuf,
     output: String,
     imports: BTreeSet<PathBuf>,
-    facades: Vec<String>,
+    derived_outputs: Vec<String>,
 }
 
 pub struct Linker {
@@ -217,7 +217,11 @@ pub struct Linker {
     modules: BTreeMap<PathBuf, Module>,
     visiting: BTreeSet<PathBuf>,
     assets: BTreeMap<PathBuf, String>,
-    css_seen: BTreeSet<PathBuf>,
+    // ESM evaluates a CSS side-effect import once; CSS @import has occurrence
+    // semantics and must repeat its rules at every position in the cascade.
+    css_entries: BTreeSet<PathBuf>,
+    css_cache: BTreeMap<PathBuf, String>,
+    css_cache_bytes: usize,
     css_stack: BTreeSet<PathBuf>,
     css: Vec<String>,
 }
@@ -276,7 +280,9 @@ impl Linker {
             modules: BTreeMap::new(),
             visiting: BTreeSet::new(),
             assets: BTreeMap::new(),
-            css_seen: BTreeSet::new(),
+            css_entries: BTreeSet::new(),
+            css_cache: BTreeMap::new(),
+            css_cache_bytes: 0,
             css_stack: BTreeSet::new(),
             css: Vec::new(),
         }
@@ -573,8 +579,8 @@ impl Linker {
             "Circular CSS @import: {}",
             source.display()
         );
-        if self.css_seen.contains(source) {
-            return Ok(String::new());
+        if let Some(css) = self.css_cache.get(source) {
+            return Ok(css.clone());
         }
         self.css_stack.insert(source.into());
         let text = String::from_utf8(inventory::read(source)?)?;
@@ -599,7 +605,8 @@ impl Linker {
                     }
                     .as_str(),
                 )?;
-                imported.push_str(&self.stylesheet(&path)?);
+                let css = self.stylesheet(&path)?;
+                self.append_css(&mut imported, &css)?;
             }
         }
         sheet
@@ -620,10 +627,31 @@ impl Linker {
             })
             .map_err(|e| anyhow::anyhow!("CSS print error: {e}"))?
             .code;
-        imported.push_str(&code);
+        self.append_css(&mut imported, &code)?;
         self.css_stack.remove(source);
-        self.css_seen.insert(source.into());
+        // The cache is an optimization: a long import-only chain can have a
+        // tiny final output but repeat the same expansion in every cache entry.
+        // Decline new entries when full instead of rejecting a valid bundle.
+        if let Some(size) = self.css_cache_bytes.checked_add(imported.len())
+            && size <= self.config.web.max_total_bytes
+        {
+            self.css_cache.insert(source.into(), imported.clone());
+            self.css_cache_bytes = size;
+        }
         Ok(imported)
+    }
+
+    fn append_css(&self, output: &mut String, css: &str) -> Result<()> {
+        ensure!(
+            output
+                .len()
+                .checked_add(css.len())
+                .is_some_and(|size| { size <= self.config.web.max_asset_bytes }),
+            "Expanded CSS exceeds {}-byte asset budget",
+            self.config.web.max_asset_bytes
+        );
+        output.push_str(css);
+        Ok(())
     }
 
     pub fn module(&mut self, source: &Path) -> Result<String> {
@@ -641,6 +669,7 @@ impl Linker {
             .with_context(|| format!("Parse {}", source.display()))?;
         let mut replacements = Vec::new();
         let mut children = BTreeSet::new();
+        let mut derived_outputs = BTreeSet::new();
         for import in references.imports {
             let child = self.resolve(&source, &import.url)?;
             if child.extension().is_some_and(|v| v == "css") {
@@ -648,14 +677,17 @@ impl Linker {
                     !import.has_bindings,
                     "CSS imports cannot create JavaScript bindings"
                 );
-                let css = self.stylesheet(&child)?;
-                self.css.push(css);
+                if self.css_entries.insert(child.clone()) {
+                    let css = self.stylesheet(&child)?;
+                    self.css.push(css);
+                }
                 let (start, end) = crate::javascript::range(import.statement);
                 replacements.push((start, end, String::new()));
             } else if import.url.ends_with("?url") {
-                let binding = import
-                    .asset_binding
-                    .context("?url requires a default import or export {default as name}")?;
+                ensure!(
+                    import.default_asset,
+                    "?url requires a default import or export {{default as name}}"
+                );
                 let output = self.asset(&child)?;
                 let value = serde_json::to_string(&self.module_url(&output))?;
                 let expression = if self.config.web.relative_urls {
@@ -663,14 +695,17 @@ impl Linker {
                 } else {
                     value
                 };
-                let (start, end) = crate::javascript::range(import.statement);
+                // Keep import/export declarations intact. A separate ESM owns
+                // the URL value, so exported names need not be identifiers and
+                // the consuming module cannot capture the generated URL call.
+                let bytes = crate::javascript::minify(&format!("export default {expression};"))?;
+                let module = self.output("asset-url", "js", bytes)?;
+                derived_outputs.insert(module.clone());
+                let (start, end) = crate::javascript::range(import.source);
                 replacements.push((
                     start,
                     end,
-                    format!(
-                        "{}const {binding}={expression};",
-                        if import.is_export { "export " } else { "" }
-                    ),
+                    serde_json::to_string(&self.module_url(&module))?,
                 ));
             } else {
                 ensure!(
@@ -741,7 +776,7 @@ impl Linker {
                 source: source.clone(),
                 output: output.clone(),
                 imports: children,
-                facades: Vec::new(),
+                derived_outputs: derived_outputs.into_iter().collect(),
             },
         );
         self.visiting.remove(&source);
@@ -772,7 +807,7 @@ impl Linker {
                 self.modules
                     .get_mut(&source)
                     .context("Entry module")?
-                    .facades
+                    .derived_outputs
                     .push(facade);
             }
         } else {
@@ -901,7 +936,7 @@ impl Linker {
                 relative
             };
             let mut delivered = vec![module.output.clone()];
-            delivered.extend(module.facades.clone());
+            delivered.extend(module.derived_outputs.clone());
             modules.push(json!({"path":relative,"sha256":inventory::sha(&inventory::read(&module.source)?),"files":delivered,"imports":module.imports.iter().map(|path|ids[path]).collect::<Vec<_>>()}));
         }
         let outputs = self
@@ -1363,7 +1398,7 @@ mod tests {
         assert!(
             outputs
                 .iter()
-                .any(|(name, bytes)| name.starts_with("assets/main-")
+                .any(|(name, bytes)| name.starts_with("assets/asset-url-")
                     && String::from_utf8_lossy(bytes).contains("/legacy/bannerWave1.png"))
         );
         assert!(
@@ -1421,7 +1456,7 @@ mod tests {
         assert!(
             outputs
                 .iter()
-                .any(|(name, bytes)| name.starts_with("assets/main-")
+                .any(|(name, bytes)| name.starts_with("assets/asset-url-")
                     && String::from_utf8_lossy(bytes).contains("../legacy/bannerWave1.png"))
         );
         assert!(
@@ -1497,6 +1532,119 @@ mod tests {
         assert!(!all_js.contains("./style.css"));
         Ok(())
     }
+    #[test]
+    fn css_imports_preserve_repeated_cascade_positions() -> Result<()> {
+        let dir = tempfile::tempdir()?;
+        let web = dir.path();
+        fs::write(web.join("red.css"), ".x{color:red}")?;
+        fs::write(web.join("blue.css"), ".x{color:blue}")?;
+        fs::write(
+            web.join("main.css"),
+            "@import './red.css';@import './blue.css';@import './red.css';",
+        )?;
+        fs::write(
+            web.join("main.js"),
+            "import './main.css';import './main.css';",
+        )?;
+        let mut linker = Linker::new(web, web, Config::default());
+        linker.module(&web.join("main.js"))?;
+        // CSS imports repeat at their authored cascade positions; the ESM
+        // module itself still evaluates a side-effect stylesheet only once.
+        assert_eq!(linker.css, [".x{color:red}.x{color:#00f}.x{color:red}"]);
+        Ok(())
+    }
+
+    #[test]
+    fn css_import_expansion_is_bounded_and_cycles_fail() -> Result<()> {
+        let dir = tempfile::tempdir()?;
+        let web = dir.path();
+        fs::write(web.join("leaf.css"), ".x{color:red}")?;
+        fs::write(
+            web.join("main.css"),
+            "@import './leaf.css';@import './leaf.css';",
+        )?;
+        let mut config = Config::default();
+        config.web.max_asset_bytes = 20;
+        let error = Linker::new(web, web, config)
+            .stylesheet(&web.join("main.css"))
+            .unwrap_err();
+        assert!(error.to_string().contains("Expanded CSS exceeds 20-byte"));
+        fs::write(web.join("leaf.css"), "@import './main.css';")?;
+        let error = Linker::new(web, web, Config::default())
+            .stylesheet(&web.join("main.css"))
+            .unwrap_err();
+        assert!(error.to_string().contains("Circular CSS @import"));
+        Ok(())
+    }
+
+    #[test]
+    fn css_cache_stays_bounded_for_long_import_only_chains() -> Result<()> {
+        let dir = tempfile::tempdir()?;
+        let web = dir.path();
+        fs::write(web.join("0.css"), ".x{color:red}")?;
+        for index in 1..32 {
+            fs::write(
+                web.join(format!("{index}.css")),
+                format!("@import './{}.css';", index - 1),
+            )?;
+        }
+        let mut config = Config::default();
+        config.web.max_total_bytes = 32;
+        let mut linker = Linker::new(web, web, config);
+        assert_eq!(linker.stylesheet(&web.join("31.css"))?, ".x{color:red}");
+        assert!(linker.css_cache_bytes <= 32);
+        assert_eq!(
+            linker.css_cache.values().map(String::len).sum::<usize>(),
+            linker.css_cache_bytes
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn asset_url_modules_preserve_export_names_and_lexical_scope() -> Result<()> {
+        let dir = tempfile::tempdir()?;
+        let web = dir.path();
+        fs::write(web.join("icon.svg"), "<svg/>")?;
+        fs::write(
+            web.join("main.js"),
+            r#"import icon from './icon.svg?url';
+               export { default } from './icon.svg?url';
+               export { default as "icon-url" } from './icon.svg?url';
+               const URL = class { constructor() { throw new Error('captured'); } };
+               export { icon, URL };
+               export function local(URL) { return new URL('./missing.svg', import.meta.url); }"#,
+        )?;
+        let mut config = Config::default();
+        config.web.relative_urls = true;
+        let mut linker = Linker::new(web, web, config);
+        let output = linker.module(&web.join("main.js"))?;
+        let javascript = std::str::from_utf8(&linker.outputs[&output])?;
+        let refs = crate::javascript::references(javascript)?;
+        assert_eq!(refs.imports.len(), 3);
+        assert!(refs.assets.is_empty());
+        assert!(
+            refs.imports
+                .iter()
+                .all(|import| import.url == refs.imports[0].url)
+        );
+        let url_module = format!("assets/{}", refs.imports[0].url.strip_prefix("./").unwrap());
+        let helper = std::str::from_utf8(&linker.outputs[&url_module])?;
+        let refs = crate::javascript::references(helper)?;
+        assert_eq!(refs.assets.len(), 1, "{helper}");
+        assert!(refs.assets[0].0.starts_with("./icon-"));
+        assert!(helper.starts_with("export default "), "{helper}");
+        assert!(javascript.contains("icon-url"), "{javascript}");
+        assert_eq!(
+            linker
+                .outputs
+                .keys()
+                .filter(|name| name.starts_with("assets/asset-url-"))
+                .count(),
+            1,
+        );
+        Ok(())
+    }
+
     #[test]
     fn budgets_cannot_be_relaxed_and_bare_imports_fail() -> Result<()> {
         let dir = tempfile::tempdir()?;

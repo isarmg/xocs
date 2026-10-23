@@ -22,11 +22,11 @@ struct ObserverState {
 pub struct Observer;
 
 #[derive(Debug)]
-struct SetObserverOnDrop(Option<AnySubscriber>);
+struct SetObserverOnDrop(Option<ObserverState>);
 
 impl Drop for SetObserverOnDrop {
     fn drop(&mut self) {
-        Observer::set(self.0.take());
+        OBSERVER.with_borrow_mut(|observer| *observer = self.0.take());
     }
 }
 
@@ -49,48 +49,27 @@ impl Observer {
     }
 
     fn take() -> SetObserverOnDrop {
-        SetObserverOnDrop(OBSERVER.with_borrow_mut(Option::take).map(|o| o.subscriber))
-    }
-
-    fn set(observer: Option<AnySubscriber>) {
-        OBSERVER.with_borrow_mut(|o| {
-            *o = observer.map(|subscriber| ObserverState {
-                subscriber,
-                untracked: false,
-            })
-        });
+        SetObserverOnDrop(OBSERVER.with_borrow_mut(Option::take))
     }
 
     fn replace(observer: Option<AnySubscriber>) -> SetObserverOnDrop {
-        SetObserverOnDrop(
-            OBSERVER
-                .with_borrow_mut(|o| {
-                    mem::replace(
-                        o,
-                        observer.map(|subscriber| ObserverState {
-                            subscriber,
-                            untracked: false,
-                        }),
-                    )
-                })
-                .map(|o| o.subscriber),
-        )
+        Self::replace_state(observer, false)
     }
 
     fn replace_untracked(observer: Option<AnySubscriber>) -> SetObserverOnDrop {
-        SetObserverOnDrop(
-            OBSERVER
-                .with_borrow_mut(|o| {
-                    mem::replace(
-                        o,
-                        observer.map(|subscriber| ObserverState {
-                            subscriber,
-                            untracked: true,
-                        }),
-                    )
-                })
-                .map(|o| o.subscriber),
-        )
+        Self::replace_state(observer, true)
+    }
+
+    fn replace_state(observer: Option<AnySubscriber>, untracked: bool) -> SetObserverOnDrop {
+        SetObserverOnDrop(OBSERVER.with_borrow_mut(|o| {
+            mem::replace(
+                o,
+                observer.map(|subscriber| ObserverState {
+                    subscriber,
+                    untracked,
+                }),
+            )
+        }))
     }
 }
 

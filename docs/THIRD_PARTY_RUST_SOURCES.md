@@ -70,9 +70,7 @@ Rust 工具链、系统原生构建材料、审计数据库和非 Rust 测试工
 | src/foundation/encoding/decimal-float-format | blog-encoding-decimal-float-format | zmij@1.0.23 | zmij@1.0.23: MIT |
 | src/foundation/encoding/framing | blog-encoding-framing | cobs@0.3.0 | cobs@0.3.0: MIT OR Apache-2.0 |
 | src/foundation/encoding/hex-codec | blog-encoding-hex-codec | hex@0.4.3 | hex@0.4.3: MIT OR Apache-2.0 |
-| src/foundation/encoding/http-base-encoding | blog-encoding-http-base-encoding | base64@0.22.1 | base64@0.22.1: MIT OR Apache-2.0 |
 | src/foundation/encoding/integer-format | blog-encoding-integer-format | itoa@1.0.18 | itoa@1.0.18: MIT OR Apache-2.0 |
-| src/foundation/encoding/integer-parser | blog-encoding-integer-parser | atoi@2.0.0 | atoi@2.0.0: MIT |
 | src/foundation/encoding/radix-codecs | blog-encoding-radix-codecs | data-encoding@2.11.1 | data-encoding@2.11.1: MIT |
 | src/foundation/encoding/roundtrip-float-format | blog-encoding-roundtrip-float-format | ryu@1.0.23 | ryu@1.0.23: Apache-2.0 OR BSL-1.0 |
 | src/foundation/encoding/script-float-format | blog-encoding-script-float-format | dragonbox_ecma@0.1.12 | dragonbox_ecma@0.1.12: Apache-2.0 WITH LLVM-exception OR BSL-1.0 |
@@ -171,7 +169,6 @@ Rust 工具链、系统原生构建材料、审计数据库和非 Rust 测试工
 | src/foundation/runtime/parallel-iterator | blog-runtime-parallel-iterator | rayon@1.12.0 | rayon@1.12.0: MIT OR Apache-2.0 |
 | src/foundation/runtime/readiness-signal | blog-runtime-readiness-signal | want@0.3.2 | want@0.3.2: MIT |
 | src/foundation/runtime/scheduled-io | blog-runtime-scheduled-io | tokio-util@0.7.19, tokio-util@0.7.20 | tokio-util@0.7.19: MIT; tokio-util@0.7.20: MIT |
-| src/foundation/runtime/scheduled-stream | blog-runtime-scheduled-stream | tokio-stream@0.1.19 | tokio-stream@0.1.19: MIT |
 | src/foundation/runtime/signal-registry | blog-runtime-signal-registry | signal-hook-registry@1.4.8 | signal-hook-registry@1.4.8: MIT OR Apache-2.0 |
 | src/foundation/runtime/task-entry | blog-runtime-task-entry | tokio-macros@2.7.2 | tokio-macros@2.7.2: MIT |
 | src/foundation/runtime/task-scheduler | blog-runtime-task-scheduler | tokio@1.53.2 | tokio@1.53.2: MIT |
@@ -265,9 +262,11 @@ Rust 工具链、系统原生构建材料、审计数据库和非 Rust 测试工
 | --- | --- | --- |
 | async-lock@3.4.2 | browser-csr-module-specialization | Remove unselected async resource/transition functionality from the browser CSR kernel; no implementation from this package remains. |
 | async-once-cell@0.5.4 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
+| atoi@2.0.0 | review-base64-and-unused-sqlite-support | SQLite positional parameters now use strict standard-library positive-integer parsing; no other manifest consumes this prefix parser. |
 | attribute-derive-macro@0.11.0 | browser-csr-module-specialization | Replace the unused macro/casing/import support with the scoped CSR component compiler and independent Unicode name conversion; no implementation from this origin remains. |
 | attribute-derive@0.11.0 | browser-csr-module-specialization | Replace the unused macro/casing/import support with the scoped CSR component compiler and independent Unicode name conversion; no implementation from this origin remains. |
 | base16@0.2.1 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
+| base64@0.22.1 | review-base64-and-unused-sqlite-support | Unify ordinary Base64 consumers on application-base-encoding after wire-format and malformed-input differential checks; no code from the older implementation remains active. |
 | byteorder@1.5.0 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
 | camino@1.2.6 | unused-optional-source-retirement | No supported native, browser, build or test graph selects this source; all incoming unused optional declarations have been removed. |
 | chacha20@0.10.2 | unused-optional-source-retirement | No supported native, browser, build or test graph selects this source; all incoming unused optional declarations have been removed. |
@@ -301,6 +300,7 @@ Rust 工具链、系统原生构建材料、审计数据库和非 Rust 测试工
 | sqlx-postgres@0.9.0 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
 | stringprep@0.1.5 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
 | tinyvec@1.13.3 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
+| tokio-stream@0.1.19 | review-base64-and-unused-sqlite-support | Remove the unused SQLite stream-adapter dependency; no current manifest or source consumer remains. |
 | unicode-bidi@0.3.18 | unused-optional-source-retirement | No supported native, browser, build or test graph selects this source; all incoming unused optional declarations have been removed. |
 | unicode-normalization@0.1.25 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |
 | unicode-properties@0.1.4 | purpose-specialization | No remaining product, browser, build or test declaration consumes this implementation after SQLite/CSR specialization. |

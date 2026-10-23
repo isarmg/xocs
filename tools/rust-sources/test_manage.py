@@ -108,6 +108,28 @@ directory = "compliance/empty-registry"
                          ['x86_64-unknown-linux-gnu', 'wasm32-unknown-unknown'])
         self.assertIn('src/foundation/third-1.0.0', catalog['resolutions'][0]['packages'])
 
+    def test_test_profile_includes_development_only_dependency(self):
+        manifest = self.root / 'src/server/Cargo.toml'
+        manifest.write_text(manifest.read_text().replace('[dependencies]', '[dev-dependencies]'))
+        policy = manage.read_json(self.root / manage.POLICY)
+        policy['profiles'].append(dict(id='tests', target='x86_64-unknown-linux-gnu',
+                                      role='compile', include_dev=True,
+                                      manifests=['src/server/Cargo.toml']))
+        self.write(manage.POLICY, json.dumps(policy))
+        manage.refresh(self.root)
+        manage.verify(self.root, metadata=True)
+        profiles = {row['profile']: row['packages']
+                    for row in manage.read_json(self.root / manage.CATALOG)['resolutions']}
+        self.assertNotIn('src/foundation/third-1.0.0', profiles['native'])
+        self.assertIn('src/foundation/third-1.0.0', profiles['tests'])
+
+    def test_test_profile_requires_boolean_development_selection(self):
+        policy = manage.read_json(self.root / manage.POLICY)
+        policy['profiles'][0]['include_dev'] = 'false'
+        self.write(manage.POLICY, json.dumps(policy))
+        with self.assertRaisesRegex(ValueError, 'include_dev must be boolean'):
+            manage.refresh(self.root)
+
     def test_virtual_root_supports_same_name_multiple_local_versions(self):
         original = {**self.original, 'Cargo.toml': self.original['Cargo.toml'].replace(b'1.0.0', b'2.0.0')}
         archive = self.root / 'compliance/provenance/archives/third-2.0.0.crate'
@@ -283,6 +305,39 @@ class GeneratedOutputs(unittest.TestCase):
         self.write(directory + '/src/target/Cargo.lock', 'version = 4\n')
         with self.assertRaisesRegex(ValueError, 'nested Cargo.lock'):
             self.inventory()
+
+
+class TestClosures(unittest.TestCase):
+    def test_development_dependencies_belong_only_to_selected_roots(self):
+        root = Path('/workspace/closure-fixture')
+        manifests = {name: f'src/{name}/Cargo.toml'
+                     for name in ('entry', 'library', 'test-helper', 'library-test', 'derive', 'build')}
+        packages = [dict(id=name, name=name, version='0.0.0',
+                         manifest_path=str(root / manifest),
+                         targets=[dict(kind=['proc-macro' if name == 'derive' else 'lib'])])
+                    for name, manifest in manifests.items()]
+        links = {'entry': [('library', None), ('test-helper', 'dev'), ('derive', None)],
+                 'library': [('library-test', 'dev'), ('build', 'build')],
+                 'test-helper': [('library', None)]}
+        nodes = [dict(id=name, features=[],
+                      deps=[dict(pkg=target, dep_kinds=[dict(kind=kind)])
+                            for target, kind in links.get(name, [])])
+                 for name in manifests]
+        metadata = dict(packages=packages, resolve=dict(nodes=nodes),
+                        workspace_members=['entry', 'library'], workspace_root=str(root))
+
+        production = manage.closure(metadata, [manifests['entry']], 'runtime')
+        tests = manage.closure(metadata, [manifests['entry']], 'runtime', include_dev=True)
+        self.assertNotIn('src/test-helper', production)
+        self.assertIn('src/test-helper', tests)
+        self.assertNotIn('src/library-test', tests)
+        self.assertEqual(tests['src/derive']['roles'], ['compile'])
+        self.assertEqual(tests['src/build']['roles'], ['compile'])
+        self.assertEqual(tests['src/test-helper']['roles'], ['runtime'])
+
+        both = manage.closure(metadata, [manifests['entry'], manifests['library']],
+                              'compile', include_dev=True)
+        self.assertIn('src/library-test', both)
 
 
 class Migrations(unittest.TestCase):

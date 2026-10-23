@@ -7,7 +7,7 @@ use compiler::toolkit::{
     codegen::{Codegen, CodegenOptions},
     minifier::{Minifier, MinifierOptions},
     parser::Parser,
-    semantic::SemanticBuilder,
+    semantic::{Semantic, SemanticBuilder},
     span::{SourceType, Span},
 };
 
@@ -16,8 +16,7 @@ pub struct Import {
     pub url: String,
     pub source: Span,
     pub statement: Span,
-    pub asset_binding: Option<String>,
-    pub is_export: bool,
+    pub default_asset: bool,
     pub has_bindings: bool,
 }
 
@@ -29,30 +28,42 @@ pub struct References {
     errors: Vec<String>,
 }
 
-impl<'a> Visit<'a> for References {
+struct ReferenceCollector<'s, 'a> {
+    semantic: &'s Semantic<'a>,
+    result: References,
+}
+
+// The minifier may print a string as a no-substitution template literal.
+// Both forms have a statically known cooked value and a complete AST span.
+fn static_string(expression: &Expression<'_>) -> Option<(String, Span)> {
+    match expression {
+        Expression::StringLiteral(literal) => Some((literal.value.to_string(), literal.span)),
+        Expression::TemplateLiteral(literal) => literal
+            .single_quasi()
+            .map(|value| (value.to_string(), literal.span)),
+        _ => None,
+    }
+}
+
+impl<'a> Visit<'a> for ReferenceCollector<'_, 'a> {
     fn visit_import_declaration(&mut self, node: &ImportDeclaration<'a>) {
-        let asset_binding = node.specifiers.as_ref().and_then(|items| {
-            if items.len() == 1 {
-                match &items[0] {
-                    ImportDeclarationSpecifier::ImportDefaultSpecifier(item) => {
-                        Some(item.local.name.to_string())
-                    }
-                    _ => None,
-                }
-            } else {
-                None
-            }
+        let default_asset = node.specifiers.as_ref().is_some_and(|items| {
+            items.len() == 1
+                && matches!(
+                    items[0],
+                    ImportDeclarationSpecifier::ImportDefaultSpecifier(_)
+                )
         });
         if node.with_clause.is_some() || node.phase.is_some() {
-            self.errors
+            self.result
+                .errors
                 .push("Import attributes/phases are unsupported".into());
         }
-        self.imports.push(Import {
+        self.result.imports.push(Import {
             url: node.source.value.to_string(),
             source: node.source.span,
             statement: node.span,
-            asset_binding,
-            is_export: false,
+            default_asset,
             has_bindings: node
                 .specifiers
                 .as_ref()
@@ -60,42 +71,46 @@ impl<'a> Visit<'a> for References {
         });
     }
     fn visit_export_from_declaration(&mut self, node: &ExportFromDeclaration<'a>) {
-        let binding = if node.specifiers.len() == 1
-            && node.specifiers[0].local.name().as_str() == "default"
-        {
-            Some(node.specifiers[0].exported.name().to_string())
-        } else {
-            None
-        };
-        self.imports.push(Import {
+        let default_asset =
+            node.specifiers.len() == 1 && node.specifiers[0].local.name().as_str() == "default";
+        if node.with_clause.is_some() {
+            self.result
+                .errors
+                .push("Export attributes are unsupported".into());
+        }
+        self.result.imports.push(Import {
             url: node.source.value.to_string(),
             source: node.source.span,
             statement: node.span,
-            asset_binding: binding,
-            is_export: true,
+            default_asset,
             has_bindings: true,
         });
     }
     fn visit_export_all_declaration(&mut self, node: &ExportAllDeclaration<'a>) {
-        self.imports.push(Import {
+        if node.with_clause.is_some() {
+            self.result
+                .errors
+                .push("Export attributes are unsupported".into());
+        }
+        self.result.imports.push(Import {
             url: node.source.value.to_string(),
             source: node.source.span,
             statement: node.span,
-            asset_binding: None,
-            is_export: true,
+            default_asset: false,
             has_bindings: true,
         });
     }
     fn visit_import_expression(&mut self, node: &ImportExpression<'a>) {
-        if let Expression::StringLiteral(literal) = &node.source {
+        if let Some(reference) = static_string(&node.source) {
             if node.options.is_none() && node.phase.is_none() {
-                self.dynamic.push((literal.value.to_string(), literal.span));
+                self.result.dynamic.push(reference);
             } else {
-                self.errors
+                self.result
+                    .errors
                     .push("Dynamic import attributes are unsupported".into());
             }
         } else {
-            self.errors.push(
+            self.result.errors.push(
                 "Computed dynamic imports are unsupported; use an explicit vendored ESM import"
                     .into(),
             );
@@ -103,20 +118,23 @@ impl<'a> Visit<'a> for References {
         walk::walk_import_expression(self, node);
     }
     fn visit_new_expression(&mut self, node: &NewExpression<'a>) {
-        if matches!(&node.callee, Expression::Identifier(name) if name.name == "URL")
+        if matches!(&node.callee, Expression::Identifier(name) if name.name == "URL"
+                && self.semantic.is_reference_to_global_variable(name))
             && node.arguments.len() == 2
-            && let (Argument::StringLiteral(literal), Argument::StaticMemberExpression(member)) =
-                (&node.arguments[0], &node.arguments[1])
+            && let Some(reference) = node.arguments[0].as_expression().and_then(static_string)
+            && let Argument::StaticMemberExpression(member) = &node.arguments[1]
             && member.property.name == "url"
             && matches!(&member.object, Expression::ImportMeta(_))
         {
-            self.assets.push((literal.value.to_string(), literal.span));
+            self.result.assets.push(reference);
         }
         walk::walk_new_expression(self, node);
     }
     fn visit_call_expression(&mut self, node: &CallExpression<'a>) {
-        if matches!(&node.callee, Expression::Identifier(name) if name.name == "require") {
-            self.errors.push(
+        if matches!(&node.callee, Expression::Identifier(name) if name.name == "require"
+            && self.semantic.is_reference_to_global_variable(name))
+        {
+            self.result.errors.push(
                 "CommonJS require() is unsupported; vendor the upstream ESM distribution".into(),
             );
         }
@@ -140,8 +158,12 @@ pub fn references(text: &str) -> Result<References> {
         "JavaScript semantic error: {:?}",
         semantic.diagnostics
     );
-    let mut references = References::default();
-    references.visit_program(&parsed.program);
+    let mut collector = ReferenceCollector {
+        semantic: &semantic.semantic,
+        result: References::default(),
+    };
+    collector.visit_program(&parsed.program);
+    let references = collector.result;
     if !references.errors.is_empty() {
         bail!("{}", references.errors.join("; "));
     }
@@ -210,6 +232,49 @@ const asset=new URL('./a.wasm',import.meta.url);"#;
         assert_eq!(&source[start..end], "'./static.js'");
         Ok(())
     }
+    #[test]
+    fn global_asset_references_respect_lexical_bindings() -> Result<()> {
+        let source = r#"
+            export function local(URL, require) {
+                require('./not-a-module');
+                return new URL('./not-an-asset', import.meta.url);
+            }
+            export function hoisted() {
+                const value = new URL('./also-not-an-asset', import.meta.url);
+                function URL() {}
+                return value;
+            }
+            export const real = new URL('./real.wasm', import.meta.url);
+        "#;
+        let refs = references(source)?;
+        assert_eq!(refs.assets.len(), 1);
+        assert_eq!(refs.assets[0].0, "./real.wasm");
+        assert!(references("require('./unsupported.js')").is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn static_template_urls_use_cooked_values_and_whole_literal_spans() -> Result<()> {
+        let source = r"export const asset = new URL(`./a\u002ewasm`, import.meta.url); import(`./module.js`);";
+        let refs = references(source)?;
+        assert_eq!(refs.assets[0].0, "./a.wasm");
+        let (start, end) = range(refs.assets[0].1);
+        assert_eq!(&source[start..end], r"`./a\u002ewasm`");
+        assert_eq!(refs.dynamic[0].0, "./module.js");
+        assert!(references("import(`./${name}.js`)").is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn export_attributes_cannot_bypass_the_module_contract() {
+        for source in [
+            "export { default } from './data.json' with { type: 'json' };",
+            "export * from './data.json' with { type: 'json' };",
+        ] {
+            assert!(references(source).is_err(), "Accepted {source}");
+        }
+    }
+
     #[test]
     fn compression_preserves_string_and_regular_expression_literals() -> Result<()> {
         let code = minify("export const s = 'a  b'; export const r = /a  b/; // comment\n")?;

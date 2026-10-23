@@ -119,7 +119,7 @@ name = "blog_network_http_middleware"
 path = "src/lib.rs"
 
 [dependencies]
-base64 = { optional = true, path = "../../encoding/http-base-encoding",package = "blog-encoding-http-base-encoding"}
+base64 = { optional = true, path = "../../encoding/application-base-encoding",package = "blog-encoding-application-base-encoding"}
 
 [dependencies.bitflags]
 path = "../../collections/bit-set"

@@ -36,8 +36,8 @@ path = "../../diagnostics/error-context"
 package = "blog-diagnostics-error-context"
 
 [dependencies.base64]
-path = "../../encoding/http-base-encoding"
-package = "blog-encoding-http-base-encoding"
+path = "../../encoding/application-base-encoding"
+package = "blog-encoding-application-base-encoding"
 
 [dependencies.leb128]
 path = "../../encoding/signed-variable-integer"

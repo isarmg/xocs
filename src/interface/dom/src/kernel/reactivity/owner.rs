@@ -109,6 +109,14 @@ thread_local! {
     static OWNER: RefCell<Option<WeakOwner>> = Default::default();
 }
 
+struct RestoreOwner(Option<WeakOwner>);
+
+impl Drop for RestoreOwner {
+    fn drop(&mut self) {
+        OWNER.with_borrow_mut(|owner| *owner = self.0.take());
+    }
+}
+
 impl Owner {
     /// Returns a unique identifier for this owner, which can be used to identify it for debugging
     /// purposes.
@@ -145,47 +153,9 @@ impl Owner {
 
     /// Creates a new `Owner` and registers it as a child of the current `Owner`, if there is one.
     pub fn new() -> Self {
-        let parent = OWNER.with(|o| {
-            o.borrow()
-                .as_ref()
-                .and_then(|o| o.upgrade())
-                .map(|o| Arc::downgrade(&o.inner))
-        });
-        #[cfg(any())]
-        let (parent, shared_context) = OWNER
-            .with(|o| {
-                o.borrow()
-                    .as_ref()
-                    .and_then(|o| o.upgrade())
-                    .map(|o| (Some(Arc::downgrade(&o.inner)), o.shared_context.clone()))
-            })
-            .unwrap_or((None, None));
-        let this = Self {
-            inner: Arc::new(RwLock::new(OwnerInner {
-                parent: parent.clone(),
-                nodes: Default::default(),
-                contexts: Default::default(),
-                cleanups: Default::default(),
-                children: Default::default(),
-                #[cfg(any())]
-                arena: parent
-                    .as_ref()
-                    .and_then(|parent| parent.upgrade())
-                    .map(|parent| parent.read().or_poisoned().arena.clone())
-                    .unwrap_or_default(),
-                paused: false,
-            })),
-            #[cfg(any())]
-            shared_context,
-        };
-        if let Some(parent) = parent.and_then(|n| n.upgrade()) {
-            parent
-                .write()
-                .or_poisoned()
-                .children
-                .push(Arc::downgrade(&this.inner));
-        }
-        this
+        Self::current()
+            .map(|parent| parent.child())
+            .unwrap_or_default()
     }
 
     /// Creates a new "root" context with the given [`SharedContext`], which allows sharing data
@@ -254,7 +224,7 @@ impl Owner {
             #[cfg(any())]
             shared_context: self.shared_context.clone(),
         };
-        inner.children.push(Arc::downgrade(&child.inner));
+        inner.register_child(&child);
         child
     }
 
@@ -266,25 +236,10 @@ impl Owner {
     }
 
     /// Runs the given function with this as the current `Owner`.
+    /// Restores the previous owner on return and during panic unwinding.
     pub fn with<T>(&self, fun: impl FnOnce() -> T) -> T {
-        // codegen optimisation:
-        fn inner_1(self_: &Owner) -> Option<WeakOwner> {
-            let prev = OWNER.with_borrow_mut(|o| o.replace(self_.downgrade()));
-            #[cfg(any())]
-            Arena::set(&self_.inner.read().or_poisoned().arena);
-            prev
-        }
-        let prev = inner_1(self);
-
-        let val = fun();
-
-        // monomorphisation optimisation:
-        fn inner_2(prev: Option<WeakOwner>) {
-            OWNER.with_borrow_mut(|o| *o = prev);
-        }
-        inner_2(prev);
-
-        val
+        let _restore = RestoreOwner(OWNER.with_borrow_mut(|o| o.replace(self.downgrade())));
+        fun()
     }
 
     /// Cleans up this owner, the given function with this as the current `Owner`.
@@ -343,10 +298,15 @@ impl Owner {
     /// see [`Owner::unset_with_forced_cleanup`].
     pub fn unset(self) {
         OWNER.with_borrow_mut(|owner| {
-            if owner.as_ref().and_then(|n| n.upgrade()) == Some(self) {
-                mem::take(owner);
+            if owner
+                .as_ref()
+                .is_some_and(|current| Weak::ptr_eq(&current.inner, &Arc::downgrade(&self.inner)))
+            {
+                *owner = None;
             }
-        })
+        });
+        // Drop the strong reference only after releasing the thread-local
+        // borrow: cleanups may themselves read or set the current owner.
     }
 
     /// Removes this from its state as the thread-local owner and drops it.
@@ -356,11 +316,9 @@ impl Owner {
         OWNER.with_borrow_mut(|owner| {
             if owner
                 .as_ref()
-                .and_then(|n| n.upgrade())
-                .map(|o| o == self)
-                .unwrap_or(false)
+                .is_some_and(|current| Weak::ptr_eq(&current.inner, &Arc::downgrade(&self.inner)))
             {
-                mem::take(owner);
+                *owner = None;
             }
         });
         self.cleanup();
@@ -499,6 +457,23 @@ pub(crate) struct OwnerInner {
     paused: bool,
 }
 
+impl OwnerInner {
+    fn register_child(&mut self, child: &Owner) {
+        // Keyed rows outlive the list's render effect. Their parent can stay
+        // alive for the whole page, so retaining every removed row's weak
+        // allocation until parent cleanup would grow with all past edits.
+        if self.children.len() == self.children.capacity() {
+            self.children.retain(|child| child.strong_count() > 0);
+            // Leave geometric headroom even if only a few entries expired.
+            // Otherwise a nearly full live list would be scanned on every add.
+            if self.children.len() > self.children.capacity() / 2 {
+                self.children.reserve(self.children.len());
+            }
+        }
+        self.children.push(Arc::downgrade(&child.inner));
+    }
+}
+
 impl Debug for OwnerInner {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("OwnerInner")
@@ -582,5 +557,48 @@ impl Cleanup for RwLock<OwnerInner> {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    #[test]
+    fn changing_keyed_rows_does_not_retain_every_removed_owner() {
+        let parent = Owner::new();
+        let cleaned = Arc::new(AtomicUsize::new(0));
+        let live = (0..128)
+            .map(|_| {
+                let child = parent.child();
+                child.with(|| {
+                    let cleaned = Arc::clone(&cleaned);
+                    on_cleanup(move || {
+                        cleaned.fetch_add(1, Ordering::Relaxed);
+                    });
+                });
+                child
+            })
+            .collect::<Vec<_>>();
+
+        for index in 0..10_000 {
+            // Both ways of creating a child share the bounded registry.
+            let row = if index % 2 == 0 {
+                parent.child()
+            } else {
+                parent.with(Owner::new)
+            };
+            assert_eq!(row.parent(), Some(parent.clone()));
+            drop(row);
+        }
+        assert!(parent.inner.read().or_poisoned().children.len() <= 2 * live.len());
+        assert_eq!(cleaned.load(Ordering::Relaxed), 0);
+
+        // Compaction must preserve all surviving children for parent cleanup.
+        parent.cleanup();
+        assert_eq!(cleaned.load(Ordering::Relaxed), live.len());
+        drop(live);
+        assert_eq!(cleaned.load(Ordering::Relaxed), 128);
     }
 }

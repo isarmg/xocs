@@ -29,7 +29,12 @@ impl<T: Body + ?Sized> Future for Collect<T> {
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> std::task::Poll<Self::Output> {
         let mut me = self.project();
 
-        loop {
+        // A body can keep returning ready frames without ever yielding (including
+        // empty DATA frames and trailers, which do not consume a byte limit).
+        // Bound each poll so the caller's timeout and other tasks can make
+        // progress even when the source does not implement cooperative yielding.
+        const FRAMES_PER_POLL: usize = 32;
+        for _ in 0..FRAMES_PER_POLL {
             let frame = ready!(me.body.as_mut().poll_frame(cx));
 
             let frame = if let Some(frame) = frame {
@@ -40,5 +45,8 @@ impl<T: Body + ?Sized> Future for Collect<T> {
 
             me.collected.as_mut().unwrap().push_frame(frame);
         }
+
+        cx.waker().wake_by_ref();
+        Poll::Pending
     }
 }

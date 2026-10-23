@@ -54,12 +54,8 @@ const MIN_ENCODE_CHUNK_SIZE: usize = 3;
 /// It has some minor performance loss compared to encoding slices (a couple percent).
 /// It does not do any heap allocation.
 ///
-/// # Limitations
-///
-/// Owing to the specification of the `write` and `flush` methods on the `Write` trait and their
-/// implications for a buffering implementation, these methods may not behave as expected. In
-/// particular, calling `write_all` on this interface may fail with `io::ErrorKind::WriteZero`.
-/// See the documentation of the `Write` trait implementation for further details.
+/// `write_all` handles buffered output and short writes to the underlying writer. `flush` writes
+/// complete encoded groups; call `finish` to encode the final partial group and padding.
 pub struct EncoderWriter<'e, E: Engine, W: io::Write> {
     engine: &'e E,
     /// Where encoded data is written to. It's an Option as it's None immediately before Drop is
@@ -158,11 +154,11 @@ impl<'e, E: Engine, W: io::Write> EncoderWriter<'e, E, W> {
                 .expect("buffer is large enough");
 
             self.output_occupied_len = encoded_len;
+            // The output buffer now owns this input. If the delegate fails after a partial write,
+            // finish() must resume that buffer without encoding the same input a second time.
+            self.extra_input_occupied_len = 0;
 
             self.write_all_encoded_output()?;
-
-            // write succeeded, do not write the encoding of extra again if finish() is retried
-            self.extra_input_occupied_len = 0;
         }
 
         Ok(())
@@ -190,10 +186,7 @@ impl<'e, E: Engine, W: io::Write> EncoderWriter<'e, E, W> {
 
             if consumed < current_output_len {
                 self.output_occupied_len = current_output_len.checked_sub(consumed).unwrap();
-                // If we're blocking on I/O, the minor inefficiency of copying bytes to the
-                // start of the buffer is the least of our concerns...
-                // TODO Rotate moves more than we need to; copy_within now stable.
-                self.output.rotate_left(consumed);
+                self.output.copy_within(consumed..current_output_len, 0);
             } else {
                 self.output_occupied_len = 0;
             }
@@ -202,8 +195,7 @@ impl<'e, E: Engine, W: io::Write> EncoderWriter<'e, E, W> {
 
     /// Write all buffered encoded output. If this returns `Ok`, `self.output_occupied_len` is `0`.
     ///
-    /// This is basically `write_all` for the remaining buffered data but without the undesirable
-    /// abort-on-`Ok(0)` behavior.
+    /// Like `Write::write_all`, a delegate that accepts no bytes produces `WriteZero`.
     ///
     /// # Errors
     ///
@@ -217,7 +209,12 @@ impl<'e, E: Engine, W: io::Write> EncoderWriter<'e, E, W> {
                 Err(ref e) if e.kind() == ErrorKind::Interrupted => {}
                 // other errors return
                 Err(e) => return Err(e),
-                // success no-ops because remaining length is already updated
+                Ok(()) if self.output_occupied_len == remaining_len => {
+                    return Err(io::Error::new(
+                        ErrorKind::WriteZero,
+                        "failed to write buffered base64 output",
+                    ));
+                }
                 Ok(()) => {}
             };
         }
@@ -250,9 +247,8 @@ impl<'e, E: Engine, W: io::Write> io::Write for EncoderWriter<'e, E, W> {
     /// Encode input and then write to the delegate writer.
     ///
     /// Under non-error circumstances, this returns `Ok` with the value being the number of bytes
-    /// of `input` consumed. The value may be `0`, which interacts poorly with `write_all`, which
-    /// interprets `Ok(0)` as an error, despite it being allowed by the contract of `write`. See
-    /// <https://github.com/rust-lang/rust/issues/56889> for more on that.
+    /// of `input` consumed. The value may be `0` while draining previously buffered output.
+    /// Use this encoder's `write_all` implementation to handle that case automatically.
     ///
     /// If the previous call to `write` provided more (encoded) data than the delegate writer could
     /// accept in a single call to its `write`, the remaining data is buffered. As long as buffered
@@ -383,6 +379,26 @@ impl<'e, E: Engine, W: io::Write> io::Write for EncoderWriter<'e, E, W> {
 
                 e
             })
+    }
+
+    fn write_all(&mut self, mut input: &[u8]) -> Result<()> {
+        while !input.is_empty() {
+            // Draining output is progress, but consumes none of this call's input. The default
+            // Write::write_all would misinterpret that Ok(0) as failure after a short write.
+            self.write_all_encoded_output()?;
+            match self.write(input) {
+                Ok(0) => {
+                    return Err(io::Error::new(
+                        ErrorKind::WriteZero,
+                        "failed to encode base64 input",
+                    ));
+                }
+                Ok(consumed) => input = &input[consumed..],
+                Err(ref error) if error.kind() == ErrorKind::Interrupted => {}
+                Err(error) => return Err(error),
+            }
+        }
+        Ok(())
     }
 
     /// Because this is usually treated as OK to call multiple times, it will *not* flush any

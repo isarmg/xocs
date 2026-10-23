@@ -360,11 +360,16 @@ impl<F> ServeDir<F> {
         };
 
         let buf_chunk_size = self.buf_chunk_size;
-        let range_header = req
-            .headers()
-            .get(header::RANGE)
-            .and_then(|value| value.to_str().ok())
-            .map(|s| s.to_owned());
+        // RFC 9110 section 14.2 applies Range only to GET. In particular, HEAD
+        // describes the complete representation even if it carries Range.
+        let range_header = if req.method() == Method::GET {
+            req.headers()
+                .get(header::RANGE)
+                .and_then(|value| value.to_str().ok())
+                .map(str::to_owned)
+        } else {
+            None
+        };
 
         let negotiated_encodings: Vec<_> = encodings(
             req.headers(),

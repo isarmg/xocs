@@ -35,6 +35,7 @@ cargo +1.99.0 clippy --locked --offline -p blog-assets -p blog-browser-domain-te
 cargo +1.99.0 clippy --locked --offline -p blog-browser --target wasm32-unknown-unknown -- -D warnings
 cargo +1.99.0 test --locked --offline
 cargo +1.99.0 test --locked --offline -p blog-assets -p blog-browser-domain-tests
+bash scripts/test-maintained.sh
 cargo +1.99.0 run --locked --offline -p blog-assets -- test --product-root . --offline
 bash scripts/smoke.sh
 ```

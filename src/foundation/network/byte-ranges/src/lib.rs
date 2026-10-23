@@ -226,21 +226,21 @@ impl ParsedRanges {
         &self,
         file_size_bytes: u64,
     ) -> Result<Vec<RangeInclusive<u64>>, RangeUnsatisfiableError> {
+        if file_size_bytes == 0 {
+            return Err(RangeUnsatisfiableError::EmptyFile);
+        }
         let len = self.ranges.len();
         let mut validated = Vec::with_capacity(len);
         for parsed in &self.ranges {
             let start = match parsed.start {
                 StartPosition::Index(i) => i,
-                StartPosition::FromLast(i) => {
-                    if i > file_size_bytes {
-                        return Err(RangeUnsatisfiableError::FileSuffixOutOfBounds);
-                    }
-                    file_size_bytes.saturating_sub(i)
-                }
+                // RFC 9110 section 14.1.2: a suffix longer than the selected
+                // representation selects the entire representation.
+                StartPosition::FromLast(i) => file_size_bytes.saturating_sub(i),
             };
             let end = match parsed.end {
-                EndPosition::Index(i) => core::cmp::min(i, file_size_bytes.saturating_sub(1)),
-                EndPosition::LastByte => file_size_bytes.saturating_sub(1),
+                EndPosition::Index(i) => core::cmp::min(i, file_size_bytes - 1),
+                EndPosition::LastByte => file_size_bytes - 1,
             };
 
             let valid = RangeInclusive::new(start, end);
@@ -260,7 +260,7 @@ impl ParsedRanges {
 pub enum RangeUnsatisfiableError {
     OverlappingRanges,
     RangeReversed,
-    FileSuffixOutOfBounds,
+    EmptyFile,
     IllegalWhitespace,
     StartsWithWhitespace,
     DoesNotStartWithToken,
@@ -280,9 +280,9 @@ impl Display for RangeUnsatisfiableError {
             RangeUnsatisfiableError::RangeReversed => {
                 f.write_str("RangeUnsatisfiable: Reversed range")
             }
-            RangeUnsatisfiableError::FileSuffixOutOfBounds => f.write_str(
-                "RangeUnsatisfiable: File suffix out of bounds (larger than file bytes)",
-            ),
+            RangeUnsatisfiableError::EmptyFile => {
+                f.write_str("RangeUnsatisfiable: Empty file has no byte ranges")
+            }
             RangeUnsatisfiableError::IllegalWhitespace => {
                 f.write_str("RangeUnsatisfiable: Illegal whitespaces in range")
             }
@@ -331,12 +331,12 @@ fn validate_ranges(ranges: &[RangeInclusive<u64>]) -> RangeValidationResult {
         }
         bounds.push((range.start(), range.end()));
     }
-    for i in 0..bounds.len() {
-        for j in i + 1..bounds.len() {
-            if bounds[i].0 <= bounds[j].1 && bounds[j].0 <= bounds[i].1 {
-                return RangeValidationResult::Overlapping;
-            }
-        }
+    // Sort only the bounds, leaving the returned ranges in request order.
+    // Adjacent entries suffice to detect an overlap in start-sorted ranges;
+    // avoid quadratic work on a request-controlled number of ranges.
+    bounds.sort_unstable_by_key(|&(start, _)| start);
+    if bounds.windows(2).any(|pair| pair[0].1 >= pair[1].0) {
+        return RangeValidationResult::Overlapping;
     }
     RangeValidationResult::Valid
 }
@@ -568,12 +568,18 @@ mod tests {
     }
 
     #[test]
-    fn parse_out_of_bounds_suffix_overrun_as_unsatisfiable() {
+    fn suffix_larger_than_file_selects_the_entire_file() {
         let input = &format!("bytes=-{}", TEST_FILE_LENGTH + 1);
         let parsed = parse_range_header(input)
             .unwrap()
             .validate(TEST_FILE_LENGTH);
-        assert_eq!(parsed, Err(RangeUnsatisfiableError::FileSuffixOutOfBounds));
+        assert_eq!(parsed, Ok(vec![0..=TEST_FILE_LENGTH - 1]));
+        assert_eq!(
+            parse_range_header("bytes=-18446744073709551615")
+                .unwrap()
+                .validate(1),
+            Ok(vec![0..=0])
+        );
     }
 
     #[test]
@@ -597,26 +603,18 @@ mod tests {
     fn parse_zero_range_as_invalid() {
         let input = "bytes=15-";
         let parsed = parse_range_header(input).unwrap();
-        assert_eq!(
-            parsed.validate(0),
-            Err(RangeUnsatisfiableError::RangeReversed)
-        );
+        assert_eq!(parsed.validate(0), Err(RangeUnsatisfiableError::EmptyFile));
     }
 
     #[test]
-    fn parse_zero_range_last_byte_valid_if_file_size_0() {
-        let input = "bytes=0-";
-        let expect = SyntacticallyCorrectRange::new(StartPosition::Index(0), EndPosition::LastByte);
-        let actual = parse_range_header(input).unwrap().ranges[0];
-        assert_eq!(actual, expect);
-    }
-
-    #[test]
-    fn parse_zero_range_closed_valid_if_file_size_0() {
-        let input = "bytes=0-0";
-        let expect = SyntacticallyCorrectRange::new(StartPosition::Index(0), EndPosition::Index(0));
-        let actual = parse_range_header(input).unwrap().ranges[0];
-        assert_eq!(actual, expect);
+    fn no_range_can_select_a_byte_from_an_empty_file() {
+        for input in ["bytes=0-", "bytes=0-0", "bytes=-1", "bytes=0-99"] {
+            assert_eq!(
+                parse_range_header(input).unwrap().validate(0),
+                Err(RangeUnsatisfiableError::EmptyFile),
+                "{input}"
+            );
+        }
     }
 
     #[test]
@@ -720,21 +718,74 @@ mod tests {
         assert!(parsed.is_err());
     }
 
-    #[quickcheck_macros::quickcheck]
-    #[allow(clippy::needless_pass_by_value)]
-    fn always_errs_on_random_input(input: String) -> quickcheck::TestResult {
-        // Basic regex matching most valid range headers
-        let acceptable = regex::Regex::new(
-            "^bytes=((\\d+-\\d+,\\s?)|(\\d+-,\\s?)|(-\\d+,\\s?))*((\\d+-\\d+)|(\\d+-)|(-\\d+))+$",
-        )
-        .unwrap();
-        if acceptable.is_match(&input) {
-            quickcheck::TestResult::discard()
-        } else if let Ok(passed_first_pass) = parse_range_header(&input) {
-            quickcheck::TestResult::from_bool(passed_first_pass.validate(u64::MAX).is_err())
-        } else {
-            quickcheck::TestResult::passed()
+    #[test]
+    fn unsorted_validation_matches_pairwise_overlap_reference() {
+        // Exhaustively compare all triples of small ranges, including reversed,
+        // duplicate, touching, nested and disjoint intervals. Keep the reference
+        // deliberately independent of the sorted production algorithm.
+        let candidates: Vec<_> = (0..4)
+            .flat_map(|start| (0..4).map(move |end| start..=end))
+            .collect();
+        for first in &candidates {
+            for second in &candidates {
+                for third in &candidates {
+                    let ranges = [first, second, third];
+                    let expected = if ranges.iter().any(|r| r.start() > r.end()) {
+                        Err(RangeUnsatisfiableError::RangeReversed)
+                    } else if (0..ranges.len()).any(|i| {
+                        (i + 1..ranges.len()).any(|j| {
+                            ranges[i].start() <= ranges[j].end()
+                                && ranges[j].start() <= ranges[i].end()
+                        })
+                    }) {
+                        Err(RangeUnsatisfiableError::OverlappingRanges)
+                    } else {
+                        Ok(ranges.iter().map(|r| (*r).clone()).collect())
+                    };
+                    let input = format!(
+                        "bytes={}-{},{}-{},{}-{}",
+                        first.start(),
+                        first.end(),
+                        second.start(),
+                        second.end(),
+                        third.start(),
+                        third.end(),
+                    );
+                    assert_eq!(parse_range_header(&input).unwrap().validate(4), expected);
+                }
+            }
         }
+    }
+
+    #[test]
+    fn malformed_ascii_in_range_numbers_is_rejected() {
+        for byte in 0..=127u8 {
+            if byte.is_ascii_digit() {
+                continue;
+            }
+            for input in [
+                format!("bytes=1{}2-5", char::from(byte)),
+                format!("bytes=1-2{}3", char::from(byte)),
+                format!("bytes=-2{}3", char::from(byte)),
+            ] {
+                assert!(parse_range_header(&input).is_err(), "{:?}", input);
+            }
+        }
+    }
+
+    #[test]
+    fn many_disjoint_ranges_keep_request_order() {
+        let expected: Vec<_> = (0..8192u64).rev().map(|i| i * 2..=i * 2).collect();
+        let ranges = expected
+            .iter()
+            .map(|r| {
+                SyntacticallyCorrectRange::new(
+                    StartPosition::Index(*r.start()),
+                    EndPosition::Index(*r.end()),
+                )
+            })
+            .collect();
+        assert_eq!(ParsedRanges::new(ranges).validate(16384), Ok(expected));
     }
 
     fn single_range(syntactically_correct: SyntacticallyCorrectRange) -> ParsedRanges {

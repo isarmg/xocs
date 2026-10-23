@@ -113,7 +113,26 @@
       ],
       "target": "x86_64-unknown-linux-gnu",
       "role": "compile",
-      "purpose": "Web 域逻辑的宿主测试"
+      "purpose": "Web 域逻辑的宿主测试",
+      "include_dev": true
+    },
+    {
+      "id": "workspace-tests",
+      "manifests": [
+        "src/application/Cargo.toml",
+        "src/server/Cargo.toml",
+        "tools/setup/Cargo.toml",
+        "tools/assets/Cargo.toml",
+        "src/browser/Cargo.toml",
+        "test/browser-domain/Cargo.toml",
+        "src/interface/Cargo.toml",
+        "src/interface/dom/Cargo.toml",
+        "src/interface/macros/Cargo.toml"
+      ],
+      "target": "x86_64-unknown-linux-gnu",
+      "role": "compile",
+      "include_dev": true,
+      "purpose": "项目原生测试及所选测试根的开发依赖"
     }
   ],
   "maintained_sources": [
@@ -610,28 +629,12 @@
       "purpose": "hex codec"
     },
     {
-      "directory": "src/foundation/encoding/http-base-encoding",
-      "origins": [
-        "base64@0.22.1"
-      ],
-      "layer": "encoding",
-      "purpose": "http base encoding"
-    },
-    {
       "directory": "src/foundation/encoding/integer-format",
       "origins": [
         "itoa@1.0.18"
       ],
       "layer": "encoding",
       "purpose": "integer format"
-    },
-    {
-      "directory": "src/foundation/encoding/integer-parser",
-      "origins": [
-        "atoi@2.0.0"
-      ],
-      "layer": "encoding",
-      "purpose": "integer parser"
     },
     {
       "directory": "src/foundation/encoding/radix-codecs",
@@ -1441,14 +1444,6 @@
       ],
       "layer": "runtime",
       "purpose": "scheduled io"
-    },
-    {
-      "directory": "src/foundation/runtime/scheduled-stream",
-      "origins": [
-        "tokio-stream@0.1.19"
-      ],
-      "layer": "runtime",
-      "purpose": "scheduled stream"
     },
     {
       "directory": "src/foundation/runtime/signal-registry",

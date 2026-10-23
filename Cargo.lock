@@ -555,19 +555,8 @@ name = "blog-encoding-hex-codec"
 version = "0.0.0"
 
 [[package]]
-name = "blog-encoding-http-base-encoding"
-version = "0.0.0"
-
-[[package]]
 name = "blog-encoding-integer-format"
 version = "0.0.0"
-
-[[package]]
-name = "blog-encoding-integer-parser"
-version = "0.0.0"
-dependencies = [
- "blog-math-numeric-traits",
-]
 
 [[package]]
 name = "blog-encoding-radix-codecs"
@@ -1311,15 +1300,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "blog-runtime-scheduled-stream"
-version = "0.0.0"
-dependencies = [
- "blog-runtime-async-toolkit",
- "blog-runtime-task-scheduler",
- "blog-sync-pinned-projection",
-]
-
-[[package]]
 name = "blog-runtime-signal-registry"
 version = "0.0.0"
 dependencies = [
@@ -1397,8 +1377,6 @@ dependencies = [
  "blog-diagnostics-typed-error",
  "blog-encoding-byte-buffer",
  "blog-encoding-byte-search",
- "blog-encoding-http-base-encoding",
- "blog-encoding-integer-parser",
  "blog-format-data-model",
  "blog-format-date-time",
  "blog-format-json",
@@ -1406,7 +1384,6 @@ dependencies = [
  "blog-network-web-address",
  "blog-runtime-async-toolkit",
  "blog-runtime-intrusive-futures",
- "blog-runtime-scheduled-stream",
  "blog-runtime-task-scheduler",
  "blog-storage-record-derive",
  "blog-storage-sqlite-native",
@@ -1894,7 +1871,7 @@ dependencies = [
  "blog-diagnostics-error-context",
  "blog-diagnostics-event-facade",
  "blog-diagnostics-symbol-decoder",
- "blog-encoding-http-base-encoding",
+ "blog-encoding-application-base-encoding",
  "blog-encoding-signed-variable-integer",
  "blog-format-data-model",
  "blog-format-json",

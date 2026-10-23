@@ -1,12 +1,12 @@
 use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote};
 use syn::{
-    Data, DataStruct, DeriveInput, Expr, Field, Fields, FieldsNamed, FieldsUnnamed, Lifetime, Stmt,
-    parse_quote, punctuated::Punctuated, token::Comma,
+    parse_quote, punctuated::Punctuated, token::Comma, Data, DataStruct, DeriveInput, Expr, Field,
+    Fields, FieldsNamed, FieldsUnnamed, Lifetime, Stmt,
 };
 
 use super::{
-    attributes::{JsonAttribute, parse_child_attributes, parse_container_attributes},
+    attributes::{parse_child_attributes, parse_container_attributes, JsonAttribute},
     rename_all,
 };
 
@@ -42,6 +42,10 @@ fn expand_derive_from_row_struct(
 ) -> syn::Result<TokenStream> {
     let ident = &input.ident;
     let row = row_parameter(input);
+    // Mixed-site hygiene keeps generated locals distinct from legal field names
+    // such as `__row` and `__default` in the caller's struct.
+    let row_value = syn::Ident::new("__row", Span::mixed_site());
+    let default_value = syn::Ident::new("__default", Span::mixed_site());
 
     let generics = &input.generics;
 
@@ -69,7 +73,7 @@ fn expand_derive_from_row_struct(
     let default_instance: Option<Stmt> = if container_attributes.default {
         predicates.push(parse_quote!(#ident #ty_generics: ::std::default::Default));
         Some(parse_quote!(
-            let __default = <#ident #ty_generics as ::std::default::Default>::default();
+            let #default_value = <#ident #ty_generics as ::std::default::Default>::default();
         ))
     } else {
         None
@@ -85,7 +89,7 @@ fn expand_derive_from_row_struct(
             if attributes.skip {
                 predicates.push(parse_quote!(#ty: ::std::default::Default));
                 return Ok(parse_quote!(
-                    let #id: #ty = Default::default();
+                    let #id: #ty = ::std::default::Default::default();
                 ));
             }
 
@@ -106,18 +110,18 @@ fn expand_derive_from_row_struct(
                         .push(parse_quote!(#ty: ::sqlx::decode::Decode<#lifetime, #row::Database>));
                     predicates.push(parse_quote!(#ty: ::sqlx::types::Type<#row::Database>));
 
-                    parse_quote!(__row.try_get(#id_s))
+                    parse_quote!(#row_value.try_get(#id_s))
                 }
                 // Flatten
                 (true, None, None) => {
                     predicates.push(parse_quote!(#ty: ::sqlx::FromRow<#lifetime, #row>));
-                    parse_quote!(<#ty as ::sqlx::FromRow<#lifetime, #row>>::from_row(__row))
+                    parse_quote!(<#ty as ::sqlx::FromRow<#lifetime, #row>>::from_row(#row_value))
                 }
                 // Flatten + Try from
                 (true, Some(try_from), None) => {
                     predicates.push(parse_quote!(#try_from: ::sqlx::FromRow<#lifetime, #row>));
                     parse_quote!(
-                        <#try_from as ::sqlx::FromRow<#lifetime, #row>>::from_row(__row)
+                        <#try_from as ::sqlx::FromRow<#lifetime, #row>>::from_row(#row_value)
                             .and_then(|v| {
                                 <#ty as ::std::convert::TryFrom::<#try_from>>::try_from(v)
                                     .map_err(|e| {
@@ -142,7 +146,7 @@ fn expand_derive_from_row_struct(
                     predicates.push(parse_quote!(#try_from: ::sqlx::types::Type<#row::Database>));
 
                     parse_quote!(
-                        __row.try_get(#id_s)
+                        #row_value.try_get(#id_s)
                             .and_then(|v| {
                                 <#ty as ::std::convert::TryFrom::<#try_from>>::try_from(v)
                                     .map_err(|e| {
@@ -163,7 +167,7 @@ fn expand_derive_from_row_struct(
                     predicates.push(parse_quote!(::sqlx::types::Json<#try_from>: ::sqlx::types::Type<#row::Database>));
 
                     parse_quote!(
-                        __row.try_get::<::sqlx::types::Json<_>, _>(#id_s)
+                        #row_value.try_get::<::sqlx::types::Json<_>, _>(#id_s)
                             .and_then(|v| {
                                 <#ty as ::std::convert::TryFrom::<#try_from>>::try_from(v.0)
                                     .map_err(|e| {
@@ -187,14 +191,14 @@ fn expand_derive_from_row_struct(
                         .push(parse_quote!(::sqlx::types::Json<#ty>: ::sqlx::decode::Decode<#lifetime, #row::Database>));
                     predicates.push(parse_quote!(::sqlx::types::Json<#ty>: ::sqlx::types::Type<#row::Database>));
 
-                    parse_quote!(__row.try_get::<::sqlx::types::Json<_>, _>(#id_s).map(|x| x.0))
+                    parse_quote!(#row_value.try_get::<::sqlx::types::Json<_>, _>(#id_s).map(|x| x.0))
                 },
                 (false, None, Some(JsonAttribute::Nullable)) => {
                     predicates
                         .push(parse_quote!(::core::option::Option<::sqlx::types::Json<#ty>>: ::sqlx::decode::Decode<#lifetime, #row::Database>));
                     predicates.push(parse_quote!(::core::option::Option<::sqlx::types::Json<#ty>>: ::sqlx::types::Type<#row::Database>));
 
-                    parse_quote!(__row.try_get::<::core::option::Option<::sqlx::types::Json<_>>, _>(#id_s).map(|x| x.and_then(|y| y.0)))
+                    parse_quote!(#row_value.try_get::<::core::option::Option<::sqlx::types::Json<_>>, _>(#id_s).map(|x| x.and_then(|y| y.0)))
                 },
             };
 
@@ -203,7 +207,7 @@ fn expand_derive_from_row_struct(
                 Ok(parse_quote!(
                     let #id: #ty = #expr.or_else(|e| match e {
                         ::sqlx::Error::ColumnNotFound(_) => {
-                            ::std::result::Result::Ok(Default::default())
+                            ::std::result::Result::Ok(::std::default::Default::default())
                         },
                         e => ::std::result::Result::Err(e)
                     })?;
@@ -212,7 +216,7 @@ fn expand_derive_from_row_struct(
                 Ok(parse_quote!(
                     let #id: #ty = #expr.or_else(|e| match e {
                         ::sqlx::Error::ColumnNotFound(_) => {
-                            ::std::result::Result::Ok(__default.#id)
+                            ::std::result::Result::Ok(#default_value.#id)
                         },
                         e => ::std::result::Result::Err(e)
                     })?;
@@ -232,7 +236,7 @@ fn expand_derive_from_row_struct(
     Ok(quote!(
         #[automatically_derived]
         impl #impl_generics ::sqlx::FromRow<#lifetime, #row> for #ident #ty_generics #where_clause {
-            fn from_row(__row: &#lifetime #row) -> ::sqlx::Result<Self> {
+            fn from_row(#row_value: &#lifetime #row) -> ::sqlx::Result<Self> {
                 #default_instance
 
                 #(#reads)*

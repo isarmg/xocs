@@ -17,7 +17,7 @@
     "build:blog-interface": "cargo +1.99.0 run --quiet --locked --offline --manifest-path ../Cargo.toml -p blog-assets -- build --product-root .. --offline",
     "check:blog-interface": "cargo +1.99.0 run --quiet --locked --offline --manifest-path ../Cargo.toml -p blog-assets -- check --product-root .. --offline",
     "test:blog-interface": "cargo +1.99.0 run --quiet --locked --offline --manifest-path ../Cargo.toml -p blog-assets -- test --product-root .. --offline && cargo +1.99.0 test --locked --offline --manifest-path ../Cargo.toml -p blog-browser-domain-tests",
-    "test:browser:blog-interface": "npm run build && node tests/blog-interface-runtime.mjs && node tests/async-state.mjs && node tests/browser-smoke.mjs && node tests/rust-native-domain.mjs",
+    "test:browser:blog-interface": "npm run build && node tests/blog-interface-runtime.mjs && node tests/async-state.mjs && node tests/transport-lifecycle.mjs && node tests/browser-smoke.mjs && node tests/rust-native-domain.mjs",
     "test:domain:rust": "cargo +1.99.0 test --locked --offline --manifest-path ../Cargo.toml -p blog-browser-domain-tests",
     "test:startup": "node tests/startup-failure.mjs",
     "check:toolchain": "node scripts/check-toolchain.mjs && node --test tests/toolchain-contract.test.mjs"

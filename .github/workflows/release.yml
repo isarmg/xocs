@@ -60,6 +60,7 @@ jobs:
           cargo clippy --locked --offline -p blog-browser --target wasm32-unknown-unknown -- -D warnings
           cargo test --locked --offline
           cargo test --locked --offline -p blog-assets -p blog-browser-domain-tests
+          bash scripts/test-maintained.sh
           cargo run --quiet --locked --offline -p blog-assets -- test --product-root . --offline
           export BLOG_SOURCE_REVISION="$(git rev-parse HEAD)"
           test "$BLOG_SOURCE_REVISION" = "${GITHUB_SHA}"
@@ -83,6 +84,7 @@ jobs:
           node tests/contract-fixes.mjs
           node tests/blog-interface-runtime.mjs
           node tests/async-state.mjs
+          node tests/transport-lifecycle.mjs
           node tests/rust-native-domain.mjs
           node tests/public-footer.mjs
           node tests/public-layout.mjs

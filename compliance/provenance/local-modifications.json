@@ -764,6 +764,103 @@
         "tests/kernel_state.rs"
       ],
       "reason": "Add actual tuple class/style consumers and isolated native executor consumers covering thread-local scope, global fallback, repeated installation and reentrant dispatch."
+    },
+    {
+      "directory": "src/foundation/encoding/application-base-encoding",
+      "files": [
+        "Cargo.toml",
+        "src/write/encoder.rs",
+        "tests/consumer_contracts.rs"
+      ],
+      "reason": "Use one ordinary Base64 implementation and preserve streaming writes across short writes, zero progress, interruptions and retried finish; register wire-format and SIMD regression contracts."
+    },
+    {
+      "directory": "src/foundation/network/body-stream",
+      "files": [
+        "src/utilities/combinators/collect.rs"
+      ],
+      "reason": "Bound aggregation frames per poll and self-wake so empty frames and trailers cannot prevent caller timeouts or cooperative scheduling."
+    },
+    {
+      "directory": "src/foundation/network/byte-ranges",
+      "files": [
+        "src/lib.rs"
+      ],
+      "reason": "Validate empty files and oversized suffixes correctly; sort temporary bounds for O(n log n) overlap detection without changing requested order; replace unavailable test helpers with deterministic reference checks."
+    },
+    {
+      "directory": "src/foundation/network/http-middleware",
+      "files": [
+        "Cargo.toml",
+        "src/services/fs/serve_dir/mod.rs",
+        "src/services/fs/serve_dir/tests.rs"
+      ],
+      "reason": "Use the shared ordinary Base64 engine and ignore Range for HEAD per HTTP semantics; update empty-file consumer regression."
+    },
+    {
+      "directory": "src/foundation/storage/sqlite-access",
+      "files": [
+        "Cargo.toml",
+        "src/sqlite/arguments.rs",
+        "src/sqlite/connection/collation.rs"
+      ],
+      "reason": "Strictly validate positive parameter indices, continue binding later available parameters, and release collation callback ownership on invalid names; remove unused support declarations."
+    },
+    {
+      "directory": "src/foundation/storage/record-derive",
+      "files": [
+        "src/row.rs"
+      ],
+      "reason": "Give generated row/default locals hygienic identities and qualify Default so legal consumer field/type names cannot capture generated bindings."
+    },
+    {
+      "directory": "src/foundation/wasm/browser-module",
+      "files": [
+        "Cargo.toml"
+      ],
+      "reason": "Migrate inline-WASM Base64 encoding to the common ordinary engine after output-equivalence verification."
+    },
+    {
+      "directory": "src/interface/dom",
+      "files": [
+        "src/kernel/reactivity/graph/subscriber.rs",
+        "src/kernel/reactivity/owner.rs"
+      ],
+      "reason": "Restore complete owner/observer state with unwind-safe guards, permit cleanup reentrancy, inherit paused state and bound accumulation of dead child registrations."
+    },
+    {
+      "directory": "src/interface",
+      "files": [
+        "src/api.rs",
+        "tests/kernel_state.rs"
+      ],
+      "reason": "Abort browser requests on future completion/cancellation and rejected headers; add consumer regressions for reactive scope and lifecycle behavior."
+    },
+    {
+      "directory": "src/application",
+      "files": [
+        "tests/body_collection.rs",
+        "tests/crypto_vectors.rs"
+      ],
+      "reason": "Add consumer regressions for bounded body aggregation and published SHA256, HMAC-SHA256 and Argon2id standard vectors."
+    },
+    {
+      "directory": "src/server",
+      "files": [
+        "tests/media_ranges.rs",
+        "tests/record_derives.rs",
+        "tests/sqlite_bindings.rs"
+      ],
+      "reason": "Add SQLite binding/callback, derive hygiene and actual media GET/HEAD Range regression coverage."
+    },
+    {
+      "directory": "tools/assets",
+      "files": [
+        "README.md",
+        "src/assets.rs",
+        "src/javascript.rs"
+      ],
+      "reason": "Resolve JavaScript references with lexical scope, retain native ESM asset import/export syntax using URL modules, recognize static cooked templates, preserve repeated CSS cascade positions with bounded expansion caching."
     }
   ]
 }

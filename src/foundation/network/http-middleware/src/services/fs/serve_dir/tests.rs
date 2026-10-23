@@ -517,9 +517,8 @@ async fn read_partial_empty() {
         .unwrap();
     let res = svc.oneshot(req).await.unwrap();
 
-    assert_eq!(res.status(), StatusCode::PARTIAL_CONTENT);
-    assert_eq!(res.headers()["content-length"], "0");
-    assert_eq!(res.headers()["content-range"], "bytes 0-0/0");
+    assert_eq!(res.status(), StatusCode::RANGE_NOT_SATISFIABLE);
+    assert_eq!(res.headers()["content-range"], "bytes */0");
 
     let body = to_bytes(res.into_body()).await.ok().unwrap();
     assert!(body.is_empty());

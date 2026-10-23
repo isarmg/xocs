@@ -24,7 +24,7 @@ license = "MIT OR Apache-2.0"
 publish = false
 
 [features]
-_rt-tokio = ["tokio", "tokio-stream"]
+_rt-tokio = ["tokio"]
 _sqlite = []
 chrono = ["dep:chrono"]
 default = []
@@ -56,12 +56,6 @@ path = "../record-derive"
 package = "blog-storage-record-derive"
 
 
-
-[dependencies.base64]
-features = ["alloc"]
-default-features = false
-path = "../../encoding/http-base-encoding"
-package = "blog-encoding-http-base-encoding"
 
 [dependencies.bytes]
 path = "../../encoding/byte-buffer"
@@ -154,16 +148,6 @@ optional = true
 default-features = false
 path = "../../runtime/task-scheduler"
 package = "blog-runtime-task-scheduler"
-
-[dependencies.tokio-stream]
-features = ["fs"]
-optional = true
-path = "../../runtime/scheduled-stream"
-package = "blog-runtime-scheduled-stream"
-
-[dependencies.atoi]
-path = "../../encoding/integer-parser"
-package = "blog-encoding-integer-parser"
 
 [dependencies.flume]
 features = ["async"]
