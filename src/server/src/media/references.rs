@@ -1,6 +1,6 @@
 //! References in saved content that retain managed media, including drafts.
 use pulldown_cmark::{
-    Event, Options, Parser, Tag, TagEnd,
+    CodeBlockKind, Event, Options, Parser, Tag, TagEnd,
     autolink::{LinkFinder, LinkKind},
 };
 use sqlx::{Row, SqliteConnection};
@@ -77,17 +77,29 @@ fn text_contains_reference(value: &str, path: &str) -> bool {
     let mut finder = LinkFinder::new();
     finder.url_must_have_scheme(false);
     let mut code = false;
+    let mut video = None::<String>;
     Parser::new_ext(
         value,
         Options::ENABLE_TABLES | Options::ENABLE_STRIKETHROUGH,
     )
     .any(|event| match event {
-        Event::Start(Tag::CodeBlock(_)) => {
+        Event::Start(Tag::CodeBlock(kind)) => {
             code = true;
+            video = matches!(kind, CodeBlockKind::Fenced(info) if info.trim() == "video")
+                .then(String::new);
             false
         }
         Event::End(TagEnd::CodeBlock) => {
             code = false;
+            // A video fence is an active media destination. Its text is a URL,
+            // not CommonMark, so preserve literal escapes while normalizing the
+            // path exactly as for an ordinary media URL field.
+            video
+                .take()
+                .is_some_and(|source| url_references(source.trim(), path))
+        }
+        Event::Text(text) if video.is_some() => {
+            video.as_mut().expect("active video fence").push_str(&text);
             false
         }
         Event::Start(Tag::Image { dest_url, .. } | Tag::Link { dest_url, .. }) => {

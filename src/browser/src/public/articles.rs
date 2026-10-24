@@ -471,21 +471,22 @@ fn Reading(article: ArticleModel) -> impl IntoView {
                             html::a()
                                 .child(t("← 返回文章", "← Back to articles"))
                                 .href(href("/")),
-                            safe_url(&article.video_url.clone().unwrap_or_default(), false).map(
-                                |u| {
-                                    View::new(
-                                        html::video()
-                                            .class("article-video")
-                                            .controls(true)
-                                            .preload("metadata")
-                                            .poster(safe_url(
-                                                &article.article_cover.clone().unwrap_or_default(),
-                                                false,
-                                            ))
-                                            .src(u),
+                            article
+                                .video_url
+                                .as_deref()
+                                .and_then(|source| {
+                                    crate::markdown::video_html(
+                                        source,
+                                        article.article_cover.as_deref(),
                                     )
-                                },
-                            ),
+                                })
+                                .map(|markup| {
+                                    View::new(
+                                        html::div()
+                                            .class("article-featured-media")
+                                            .inner_html(markup),
+                                    )
+                                }),
                             (!article.password_required).then(|| {
                                 View::new(News(component_props_builder(&News).id(id).build()))
                             }),

@@ -32,7 +32,8 @@ pub fn reading_markup(content: &str, copy: &str, image: &str, section: &str) -> 
             headings: vec![],
         };
     };
-    // This string contains only pulldown-cmark's escaped, URL-filtered output.
+    // Only escaped Markdown and the renderer's fixed, URL-validated video
+    // elements enter this detached tree; authored HTML never becomes markup.
     holder.set_inner_html(&html);
     let mut headings = Vec::new();
     if let Ok(nodes) = holder.query_selector_all("h2,h3,h4") {

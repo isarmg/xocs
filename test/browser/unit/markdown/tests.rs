@@ -98,3 +98,146 @@ fn bare_links_with_ports_and_path_colons_receive_an_http_scheme() {
         );
     }
 }
+
+#[test]
+fn video_fences_render_multiple_native_and_canonical_provider_players() {
+    let rendered = html(
+        "Before\n\n```video\n/media/clip.webm\n```\n\nMiddle\n\n```video\nhttps://cdn.example.org/video.MP4?token=one&part=two#t=3\n```\n\n```video\nhttps://www.youtube.com/watch?v=dQw4w9WgXcQ&autoplay=1&origin=https://evil.example\n```\n\n```video\nhttps://www.bilibili.com/video/BV1xx411c7mD/?p=2&autoplay=1\n```\n\nAfter",
+    );
+    assert_eq!(rendered.matches("<video ").count(), 2, "{rendered}");
+    assert_eq!(rendered.matches("<iframe ").count(), 2, "{rendered}");
+    assert!(rendered.contains("src=\"/media/clip.webm\""));
+    assert!(
+        rendered.contains("src=\"https://cdn.example.org/video.MP4?token=one&amp;part=two#t=3\"")
+    );
+    assert!(rendered.contains("src=\"https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ\""));
+    assert!(rendered.contains("src=\"https://player.bilibili.com/player.html?bvid=BV1xx411c7mD&amp;page=2&amp;autoplay=0\""));
+    assert!(!rendered.contains("evil.example"));
+    assert!(!rendered.contains("autoplay=1"));
+    assert!(rendered.contains("<p>Before</p>"));
+    assert!(rendered.contains("<p>Middle</p>"));
+    assert!(rendered.contains("<p>After</p>"));
+    assert!(rendered.contains("controls playsinline preload=\"metadata\""));
+    assert!(rendered.contains("sandbox=\"allow-scripts allow-same-origin allow-presentation\""));
+    assert!(
+        rendered.contains("loading=\"lazy\" referrerpolicy=\"strict-origin-when-cross-origin\"")
+    );
+}
+
+#[test]
+fn equivalent_platform_watch_short_and_embed_addresses_are_normalized() {
+    let youtube = video_html("https://www.youtube.com/watch?v=dQw4w9WgXcQ", None).unwrap();
+    for source in [
+        "https://youtu.be/dQw4w9WgXcQ?si=tracking",
+        "https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1",
+        "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
+        "https://m.youtube.com/shorts/dQw4w9WgXcQ",
+        "https://www.youtube.com/live/dQw4w9WgXcQ",
+    ] {
+        assert_eq!(
+            video_html(source, None).as_deref(),
+            Some(youtube.as_str()),
+            "{source}"
+        );
+    }
+    let bilibili = video_html("https://www.bilibili.com/video/BV1xx411c7mD?p=2", None).unwrap();
+    assert_eq!(
+        video_html(
+            "https://player.bilibili.com/player.html?bvid=BV1xx411c7mD&page=2&autoplay=1",
+            None
+        )
+        .as_deref(),
+        Some(bilibili.as_str())
+    );
+    assert!(
+        video_html("https://m.bilibili.com/video/av170001", None)
+            .unwrap()
+            .contains("?aid=170001&amp;autoplay=0")
+    );
+    assert!(
+        video_html("https://player.bilibili.com/player.html?aid=170001", None)
+            .unwrap()
+            .contains("?aid=170001&amp;autoplay=0")
+    );
+}
+
+#[test]
+fn invalid_video_fences_remain_literal_and_never_create_a_player() {
+    for source in [
+        "javascript:alert(1)",
+        "data:video/mp4;base64,AAAA",
+        "//cdn.example.org/clip.mp4",
+        "/\\evil.example/clip.mp4",
+        "https://user:secret@cdn.example.org/clip.mp4",
+        "https://cdn.example.org/audio.mp3",
+        "https://cdn.example.org/video",
+        "https://www.youtube.com.evil.example/watch?v=dQw4w9WgXcQ",
+        "https://www.youtube.com:8443/watch?v=dQw4w9WgXcQ",
+        "https://youtu.be/invalid-id",
+        "https://www.youtube.com/watch?v=dQw4w9WgXcQ&v=abcdefghijk",
+        "https://player.bilibili.com/player.html?bvid=bad",
+        "https://www.bilibili.com/video/BV1xx411c7mD?p=0",
+        "https://www.bilibili.com/video/BV1xx411c7mD?p=2&p=3",
+        "/media/clip.mp4\nhttps://evil.example",
+        "<iframe src=\"https://evil.example\"></iframe>",
+    ] {
+        let rendered = html(&format!("```video\n{source}\n```"));
+        assert!(!rendered.contains("<video "), "{source}: {rendered}");
+        assert!(!rendered.contains("<iframe "), "{source}: {rendered}");
+        assert!(
+            rendered.contains("<pre><code class=\"language-video\">"),
+            "{source}: {rendered}"
+        );
+    }
+}
+
+#[test]
+fn video_syntax_is_explicit_and_raw_html_still_cannot_execute() {
+    let rendered = html(
+        "[video](/media/clip.mp4)\n\n![image](/media/clip.mp4)\n\n```rust\n```video\n/media/clip.mp4\n```\n\n~~~text\n```video\n/media/clip.webm\n```\n~~~\n\n```video unsupported-options\n/media/clip.mp4\n```\n\n<video controls src=\"/media/clip.mp4\" onerror=\"alert(1)\"></video>\n\n<iframe src=\"https://www.youtube.com/embed/dQw4w9WgXcQ\"></iframe>",
+    );
+    assert!(!rendered.contains("<video "), "{rendered}");
+    assert!(!rendered.contains("<iframe "), "{rendered}");
+    assert!(rendered.contains("href=\"/media/clip.mp4\""));
+    assert!(rendered.contains("<img src=\"/media/clip.mp4\""));
+    assert!(rendered.contains("&lt;video"));
+    assert!(rendered.contains("&lt;iframe"));
+}
+
+#[test]
+fn video_attachments_escape_urls_and_admit_only_safe_posters() {
+    let rendered = video_html(
+        "https://cdn.example.org/a.mp4?q=%22&x=%3Cscript%3E",
+        Some("/media/poster.png?a=1&b=2"),
+    )
+    .unwrap();
+    assert!(rendered.contains("poster=\"/media/poster.png?a=1&amp;b=2\""));
+    assert!(rendered.contains("src=\"https://cdn.example.org/a.mp4?q=%22&amp;x=%3Cscript%3E\""));
+    assert!(
+        !video_html("/media/a.webm", Some("javascript:alert(1)"))
+            .unwrap()
+            .contains("poster=")
+    );
+    assert!(
+        video_html("/media/a.webm", None)
+            .unwrap()
+            .contains("src=\"/media/a.webm\"")
+    );
+}
+
+#[test]
+fn editor_video_blocks_cannot_inject_another_fence_or_html() {
+    assert_eq!(
+        video_block(" /media/a.webm ").as_deref(),
+        Some("```video\n/media/a.webm\n```")
+    );
+    for source in [
+        "/media/a.webm\n```\n<script>bad</script>",
+        "/media/a.webm`",
+        "javascript:alert(1)",
+        "/media/a.webm\ranything",
+        "https://youtu.be/not-an-id",
+    ] {
+        assert!(video_block(source).is_none(), "{source}");
+    }
+}

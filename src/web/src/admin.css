@@ -44,6 +44,7 @@
 .blog-admin-workspace .editor-markdown-preview pre { border: var(--blog-control-border-width) solid var(--blog-block-border); background: var(--blog-bg-page); color: var(--blog-text-primary); --blog-server-corner-extent: var(--blog-server-corner-panel); }
 .blog-admin-workspace .editor-markdown-preview blockquote { border-inline-start: var(--blog-control-border-width) solid var(--blog-block-border); color: var(--blog-block-muted); }
 .blog-admin-workspace .editor-markdown-preview img { display: block; max-width: 100%; height: auto; --blog-server-corner-extent: var(--blog-server-corner-panel); --blog-server-corner-mode: clip; }
+.blog-admin-workspace .editor-markdown-preview .article-media { margin: 0; --blog-server-corner-extent: var(--blog-server-corner-panel); }
 .blog-admin-workspace .moderation-photo { display: inline-flex; align-items: center; border: 0; padding: 0; background: transparent; cursor: zoom-in; }
 .blog-admin-workspace .moderation-photo img { display: block; width: 72px; height: 56px; object-fit: cover; --blog-server-corner-extent: var(--blog-server-corner-panel); --blog-server-corner-mode: clip; }
 .blog-admin-workspace .site-media-grid { align-items: start; row-gap: var(--blog-block-gap); }

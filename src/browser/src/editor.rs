@@ -6,6 +6,47 @@ use blog_interface::components::notify;
 use blog_interface::prelude::*;
 use serde_json::{Value, json};
 
+mod insertion;
+use insertion::Insertion;
+
+fn video_address_error() -> String {
+    t(
+        "请输入 MP4 / WebM 视频地址或 B 站、YouTube 视频链接。",
+        "Enter an MP4 / WebM video URL or a Bilibili / YouTube video link.",
+    )
+}
+
+fn capture_insertion(
+    source: String,
+    area: NodeRef<blog_interface::html::Textarea>,
+    touched: bool,
+) -> Insertion {
+    let selection = touched
+        .then(|| {
+            let area = area.get()?;
+            Some((area.selection_start().ok()??, area.selection_end().ok()??))
+        })
+        .flatten();
+    Insertion::new(source, selection)
+}
+
+fn insert_body_video(
+    form: RwSignal<ArticleDraft>,
+    area: NodeRef<blog_interface::html::Textarea>,
+    insertion: Insertion,
+    block: &str,
+) {
+    let (content, cursor) = insertion.apply(&form.get_untracked().article_content, block);
+    form.update(|draft| draft.article_content = content.clone());
+    if let Some(area) = area.get() {
+        // Write the same value as the controlled property before restoring the
+        // selection; the next reactive render then leaves this caret intact.
+        area.set_value(&content);
+        let _ = area.focus();
+        let _ = area.set_selection_range(cursor, cursor);
+    }
+}
+
 #[derive(Clone)]
 struct CreationReceipt {
     key: String,
@@ -85,6 +126,9 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
     let existing = RwSignal::new(false);
     let ready = RwSignal::new(id == 0);
     let preview = RwSignal::new(false);
+    let body_area = NodeRef::<blog_interface::html::Textarea>::new();
+    let body_touched = RwSignal::new(false);
+    let body_video_url = RwSignal::new(String::new());
     let save = Action::new();
     let upload = Action::new();
     let validation = RwSignal::new(String::new());
@@ -115,6 +159,37 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
             notify(t("图片已上传", "Image uploaded"));
         });
     };
+    let upload_article_video =
+        move |file: blog_interface::thread_bound::SendWrapper<web_sys::File>, inline: bool| {
+            if !ready.get_untracked() || save.busy.get_untracked() || upload.busy.get_untracked() {
+                return;
+            }
+            let insertion = inline.then(|| {
+                capture_insertion(
+                    form.get_untracked().article_content,
+                    body_area,
+                    body_touched.get_untracked(),
+                )
+            });
+            let previous = form.get_untracked().video_url;
+            upload.upload_video(file, move |response| {
+                let path = text(&response, "path");
+                if let Some(insertion) = insertion {
+                    let Some(block) = crate::markdown::video_block(&path) else {
+                        upload.error.set(Some(invalid()));
+                        return;
+                    };
+                    insert_body_video(form, body_area, insertion, &block);
+                } else {
+                    form.update(|draft| {
+                        if draft.video_url == previous {
+                            draft.video_url = Some(path);
+                        }
+                    });
+                }
+                notify(t("视频已上传", "Video uploaded"));
+            });
+        };
     let render_form = move || {
         (
             blog_interface::html::form()
@@ -245,8 +320,12 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                                     blog_interface::html::span().class("blog-field-label blog-row").child(t("Markdown 正文", "Markdown content")),
                                     blog_interface::html::textarea()
                                         .class("blog-input editor-textarea")
+                                        .node_ref(body_area)
                                         .required(true)
                                         .prop("value", move || form.get().article_content)
+                                        .on(blog_interface::ev::focus, move |_| {
+                                            body_touched.set(true);
+                                        })
                                         .on(blog_interface::ev::input, move |ev| {
                                             form.update(|f| {
                                                 f.article_content = event_target_value(&ev)
@@ -282,6 +361,68 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                                     ),
                                 ))
                                 .class("blog-actions blog-flow"),
+                            blog_interface::html::div()
+                                .class("blog-stack blog-stack--spaced")
+                                .child((
+                                    blog_interface::html::div()
+                                        .class("form-grid")
+                                        .child((
+                                            ControlledField(
+                                                component_props_builder(&ControlledField)
+                                                    .label(t("正文视频地址", "Content video URL"))
+                                                    .value(Signal::derive(move || body_video_url.get()))
+                                                    .change(Callback::new(move |value: String| {
+                                                        body_video_url.set(value);
+                                                    }))
+                                                    .max(2048)
+                                                    .build(),
+                                            ),
+                                            FilePicker(
+                                                component_props_builder(&FilePicker)
+                                                    .label(t("上传正文视频", "Upload content video"))
+                                                    .accept("video/mp4,video/webm".into())
+                                                    .disabled(Signal::derive(move || {
+                                                        save.busy.get() || upload.busy.get()
+                                                    }))
+                                                    .choose(Callback::new(move |file| {
+                                                        upload_article_video(file, true);
+                                                    }))
+                                                    .build(),
+                                            ),
+                                        )),
+                                    blog_interface::html::div()
+                                        .class("blog-actions blog-flow")
+                                        .child(
+                                            blog_interface::html::button()
+                                                .class("blog-button")
+                                                .r#type("button")
+                                                .child(t("插入视频", "Insert video"))
+                                                .disabled(move || save.busy.get() || upload.busy.get())
+                                                .on(blog_interface::ev::click, move |_| {
+                                                    if save.busy.get_untracked() || upload.busy.get_untracked() {
+                                                        return;
+                                                    }
+                                                    let Some(block) = crate::markdown::video_block(&body_video_url.get_untracked()) else {
+                                                        validation.set(video_address_error());
+                                                        return;
+                                                    };
+                                                    let insertion = capture_insertion(
+                                                        form.get_untracked().article_content,
+                                                        body_area,
+                                                        body_touched.get_untracked(),
+                                                    );
+                                                    insert_body_video(form, body_area, insertion, &block);
+                                                    body_video_url.set(String::new());
+                                                    validation.set(String::new());
+                                                }),
+                                        ),
+                                    blog_interface::html::p()
+                                        .class("blog-field-help blog-row")
+                                        .child(t(
+                                            "视频插入正文光标处。支持 MP4 / WebM 地址及 B 站、YouTube 链接，上传最大 50 MB。",
+                                            "Insert videos at the text cursor. Use MP4 / WebM URLs or Bilibili / YouTube links. Uploads: up to 50 MB.",
+                                        )),
+                                )),
                             move || {
                                 preview.get().then(|| {
                                     View::new(
@@ -295,17 +436,40 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                             },
                             blog_interface::html::div()
                                 .child((
-                                    ControlledField(
-                                        component_props_builder(&ControlledField)
-                                            .label(t("视频地址", "Video URL"))
-                                            .value(Signal::derive(move || {
-                                                form.get().video_url.unwrap_or_default()
-                                            }))
-                                            .change(Callback::new(move |v: String| {
-                                                form.update(|f| f.video_url = Some(v))
-                                            }))
-                                            .build(),
-                                    ),
+                                    blog_interface::html::div()
+                                        .class("blog-stack blog-stack--spaced")
+                                        .child((
+                                            ControlledField(
+                                                component_props_builder(&ControlledField)
+                                                    .label(t("视频地址", "Video URL"))
+                                                    .value(Signal::derive(move || {
+                                                        form.get().video_url.unwrap_or_default()
+                                                    }))
+                                                    .change(Callback::new(move |v: String| {
+                                                        form.update(|f| f.video_url = Some(v))
+                                                    }))
+                                                    .max(2048)
+                                                    .build(),
+                                            ),
+                                            FilePicker(
+                                                component_props_builder(&FilePicker)
+                                                    .label(t("上传文章视频", "Upload article video"))
+                                                    .accept("video/mp4,video/webm".into())
+                                                    .disabled(Signal::derive(move || {
+                                                        save.busy.get() || upload.busy.get()
+                                                    }))
+                                                    .choose(Callback::new(move |file| {
+                                                        upload_article_video(file, false);
+                                                    }))
+                                                    .build(),
+                                            ),
+                                            blog_interface::html::p()
+                                                .class("blog-field-help blog-row")
+                                                .child(t(
+                                                    "显示在正文上方；留空则不显示。",
+                                                    "Displayed above the content. Leave empty to hide.",
+                                                )),
+                                        )),
                                     move || {
                                         (!form.get().view_status).then(|| {
                                             View::new(
@@ -429,7 +593,7 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                                     blog_interface::html::button()
                                         .child(move || {
                                             if upload.busy.get() {
-                                                t("图片上传中…", "Uploading image…")
+                                                t("媒体上传中…", "Uploading media…")
                                             } else if save.busy.get() {
                                                 t("保存中…", "Saving…")
                                             } else if creation.get().is_some() {
@@ -464,6 +628,10 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                         || f.article_title.chars().count() > 120
                     {
                         Some(t("文章标题须为 1–120 个字符", "Article title must contain 1–120 characters"))
+                    } else if f.video_url.as_deref().is_some_and(|source| {
+                        !source.trim().is_empty() && crate::markdown::video_block(source).is_none()
+                    }) {
+                        Some(video_address_error())
                     } else if f.view_status {
                         None
                     } else {

@@ -93,3 +93,48 @@ fn browser_normalized_url_paths_retain_media_across_document_containers() {
         &path
     ));
 }
+
+#[test]
+fn video_fences_retain_browser_normalized_media_without_activating_other_code() {
+    let path = format!("/media/{}.webm", "b".repeat(64));
+    for alias in [
+        path.clone(),
+        path.replace("/media/", "/media/./"),
+        path.replace("/media/", "/media/nested/../"),
+        path.replace("/media/", "/media/%2e/"),
+        path.replace("/media/", "/media/nested/%2E%2e/"),
+        format!(
+            "https://site.example{}?download=1#t=2",
+            path.replace("/media/", "/media/./")
+        ),
+    ] {
+        for source in [
+            format!("```video\n{alias}\n```"),
+            format!("Before\n\n~~~video \n\n{alias}\n\n~~~\n\nAfter"),
+            format!("```rust\nexample\n```\n\n```video\n{alias}\n```"),
+        ] {
+            assert!(contains_reference(&source, &path), "{source}");
+            assert!(
+                contains_reference(&format!("\0{source}\0"), &path),
+                "SQL field boundaries: {source}"
+            );
+            assert!(
+                contains_reference(&serde_json::to_string(&source).unwrap(), &path),
+                "JSON document: {source}"
+            );
+        }
+    }
+
+    // These aliases occur only in inert examples. Treating all code-block text
+    // as an active destination would change ordinary Markdown retention rules.
+    let alias = path.replace("/media/", "/media/./");
+    for source in [
+        format!("```rust\n{alias}\n```"),
+        format!("```VIDEO\n{alias}\n```"),
+        format!("```video example\n{alias}\n```"),
+        format!("````markdown\n```video\n{alias}\n```\n````"),
+        format!("`{alias}`"),
+    ] {
+        assert!(!contains_reference(&source, &path), "{source}");
+    }
+}

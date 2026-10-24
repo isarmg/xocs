@@ -122,6 +122,7 @@ jobs:
               node ../../test/browser/admin-layout.mjs
               node ../../test/browser/style-contract.mjs
               node ../../test/browser/configured-media.mjs
+              node ../../test/browser/article-video.mjs
               node ../../test/browser/account-settings.mjs
               node ../../test/browser/admin-cleanup.mjs
               node ../../test/browser/management.mjs

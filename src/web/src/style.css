@@ -64,6 +64,10 @@ html:lang(en) .original-public .public-header nav {gap:.55rem;font-size:.8rem;}
 
 .reading-card.reading-article,.public-tools > button { --blog-server-corner-extent: 0px; }
 
+/* Generated players share sizing in the public article and the editor preview. */
+.article-media { display: block; width: 100%; max-width: 100%; box-sizing: border-box; background: #101827; }
+.article-video-embed { aspect-ratio: 16 / 9; height: auto; border: 0; margin: 1.5rem 0; --blog-server-corner-extent: 36px; --blog-server-corner-mode: clip; }
+
 /* A highlighted token has one box, so the continuous contour never reverts to
    circular corners when a long token wraps. Preformatted code uses its parent. */
 .article-markdown code,.link-card mark {

@@ -742,6 +742,87 @@ async fn real_video_upload_range_and_site_references_share_managed_media_lifecyc
 }
 
 #[tokio::test]
+async fn saved_article_video_fences_retain_uploaded_media_until_the_reference_is_removed() {
+    let (directory, app, pool) = setup().await;
+    let session = login(&app).await;
+    let response = upload_video_bytes(
+        &app,
+        &session,
+        include_bytes!("../../../browser/fixtures/background.webm").to_vec(),
+        "video/webm",
+    )
+    .await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let video = body_json(response).await;
+    let path = video["path"].as_str().unwrap();
+    sqlx::raw_sql("INSERT INTO sort(id,sort_name) VALUES(1,'Video'); INSERT INTO label(id,sort_id,label_name) VALUES(1,1,'Video');")
+        .execute(&pool).await.unwrap();
+    let mut draft = json!({
+        "article_title":"Private video draft",
+        "article_content":format!("Before\n\n```video\n{path}\n```\n\nAfter"),
+        "sort_id":1,
+        "label_id":1,
+        "view_status":false,
+        "recommend_status":false,
+        "comment_status":true,
+        "password":"TemporaryVideoPassphrase123"
+    });
+    let response = admin(
+        &app,
+        &session,
+        "POST",
+        "/api/v1/content/articles",
+        draft.clone(),
+    )
+    .await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let article = body_json(response).await;
+    let article_uri = format!("/api/v1/content/articles/{}", article["id"]);
+    draft["password"] = Value::Null;
+
+    for alias in [
+        path.to_owned(),
+        path.replace("/media/", "/media/./"),
+        path.replace("/media/", "/media/nested/../"),
+        path.replace("/media/", "/media/%2e/"),
+        path.replace("/media/", "/media/nested/%2E%2e/"),
+        format!(
+            "http://127.0.0.1:18881{}?download=1#t=2",
+            path.replace("/media/", "/media/./")
+        ),
+    ] {
+        draft["article_content"] = json!(format!("Before\n\n```video\n{alias}\n```\n\nAfter"));
+        let response = admin(&app, &session, "PUT", &article_uri, draft.clone()).await;
+        assert_eq!(response.status(), StatusCode::OK, "{alias}");
+        let saved = body_json(response).await;
+        assert_eq!(saved["article_content"], draft["article_content"]);
+        assert_eq!(saved["view_status"], 0);
+        assert_eq!(saved["password_required"], 1);
+        assert_eq!(
+            remove(&app, &session, &video).await.status(),
+            StatusCode::CONFLICT,
+            "saved video fence: {alias}"
+        );
+        assert!(image_file(directory.path(), &video).exists());
+        assert_eq!(get(&app, path).await.status(), StatusCode::OK);
+    }
+
+    draft["article_content"] = json!("The video was removed from this draft.");
+    assert_eq!(
+        admin(&app, &session, "PUT", &article_uri, draft)
+            .await
+            .status(),
+        StatusCode::OK
+    );
+    assert_eq!(
+        remove(&app, &session, &video).await.status(),
+        StatusCode::OK
+    );
+    assert!(!image_file(directory.path(), &video).exists());
+    assert_eq!(get(&app, path).await.status(), StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
 async fn video_upload_rejects_documents_images_and_oversized_bodies() {
     let (_directory, app, pool) = setup().await;
     let anonymous = app

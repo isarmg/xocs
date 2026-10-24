@@ -120,7 +120,7 @@ try {
       await page.getByRole('button', { name: 'Choose file: Upload cover image', exact: true }).click();
       await (await chooser).setFiles({ name: 'late.png', mimeType: 'image/png', buffer: Buffer.from([1]) });
       await expect.poll(() => page.evaluate(() => Boolean(window.asyncHeld))).toBe(true);
-      await expect(page.getByRole('button', { name: 'Uploading image…', exact: true })).toBeDisabled();
+      await expect(page.getByRole('button', { name: 'Uploading media…', exact: true })).toBeDisabled();
       await page.getByRole('button', { name: 'Cancel', exact: true }).click();
       await page.getByRole('button', { name: 'Add article', exact: true }).click();
       await page.getByLabel('Title', { exact: true }).fill('Fresh article draft');

@@ -1,9 +1,13 @@
 //! Markdown is parsed as structured CommonMark events, never as trusted HTML.
 //! Raw HTML events become escaped text; URL destinations are admitted before
 //! the upstream HTML renderer escapes text and attributes. No sanitizer accepts
-//! arbitrary HTML here, and only tables/strikethrough extensions are enabled.
+//! arbitrary HTML here. A dedicated video fence emits only validated players.
 use pulldown_cmark::autolink::{LinkFinder, LinkKind};
-use pulldown_cmark::{CowStr, Event, LinkType, Options, Parser, Tag, TagEnd, html};
+use pulldown_cmark::{CodeBlockKind, CowStr, Event, LinkType, Options, Parser, Tag, TagEnd, html};
+
+#[path = "markdown/video.rs"]
+mod video;
+pub(crate) use video::{video_block, video_html};
 
 #[cfg(target_arch = "wasm32")]
 fn scheme(value: &str) -> Option<String> {
@@ -56,10 +60,33 @@ pub fn html(content: &str) -> String {
     let mut links = Vec::new();
     let mut images = Vec::new();
     let mut code = false;
+    let mut video = None::<(CodeBlockKind<'_>, String)>;
     for event in parser {
+        // A fence is parsed before linkification or HTML handling. Only the
+        // renderer constructs these HTML events; author HTML remains text.
+        if let Some((kind, source)) = &mut video {
+            match event {
+                Event::Text(text) => source.push_str(&text),
+                Event::End(TagEnd::CodeBlock) => {
+                    if let Some(player) = video_html(source, None) {
+                        events.push(Event::Html(player.into()));
+                    } else {
+                        events.push(Event::Start(Tag::CodeBlock(kind.clone())));
+                        events.push(Event::Text(std::mem::take(source).into()));
+                        events.push(Event::End(TagEnd::CodeBlock));
+                    }
+                    video = None;
+                }
+                _ => {}
+            }
+            continue;
+        }
         match event {
             Event::Html(text) | Event::InlineHtml(text) => events.push(Event::Text(text)),
             Event::SoftBreak => events.push(Event::HardBreak),
+            Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(info))) if info.trim() == "video" => {
+                video = Some((CodeBlockKind::Fenced(info), String::new()));
+            }
             Event::Start(Tag::CodeBlock(kind)) => {
                 code = true;
                 events.push(Event::Start(Tag::CodeBlock(kind)));
