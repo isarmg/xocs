@@ -1,21 +1,13 @@
-//! The selected non-rational degree-seven Mac mini enclosure profile.
-//! Derivative hulls certify curvature and each adaptive interpolation budget;
-//! the emitted SVG chords themselves are not mathematically G3 curves.
+//! ZXS's G4 curvature profile and error-bounded SVG tessellation.
+//! Analytic curvature bounds control each parallel-curve interpolation budget;
+//! the emitted SVG chords themselves do not have G4 geometric continuity.
+use super::profile as source;
+pub use super::profile::{
+    CIRCULAR_ARC_RATIO, INTEGRATION_INTERVALS, NORMALIZED_MAX_CURVATURE, PROFILE,
+    TRANSITION_PARAMETER,
+};
 use serde::Serialize;
 use std::{cell::RefCell, collections::VecDeque, f64::consts::PI, rc::Rc};
-
-pub const PROFILE: &str = "mac-mini-bezier7";
-pub const PHOTO_EXTENT: f64 = 0.31056899327095955;
-pub const CONTROL_POINTS: [[f64; 2]; 8] = [
-    [0.0, 0.0],
-    [0.3633595684909532, 0.0],
-    [0.5804546942007682, 0.0],
-    [0.7281206143651912, 0.0],
-    [1.0, 0.27187938563480885],
-    [1.0, 0.41954530579923177],
-    [1.0, 0.6366404315090468],
-    [1.0, 1.0],
-];
 
 #[derive(Clone, Copy, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -49,6 +41,7 @@ pub struct Bounds {
     pub minimum_radius: f64,
     pub convex: bool,
     pub arithmetic_relative_margin: f64,
+    pub coordinate_integration_error_bound: f64,
 }
 
 #[derive(Clone, Copy, Debug, Serialize)]
@@ -131,15 +124,7 @@ struct Sample {
 }
 
 thread_local! {
-    static DERIVATIVES: [Vec<Vector>; 5] = {
-        let mut result: [Vec<Vector>; 5] = std::array::from_fn(|_| Vec::new());
-        result[0] = CONTROL_POINTS.map(|[x, y]| Vector { x, y }).to_vec();
-        for order in 1..=4 {
-            result[order] = derivative(&result[order - 1]);
-        }
-        result
-    };
-    static BOUNDS: Bounds = certify_profile();
+    static BOUNDS: Bounds = analytic_bounds();
     static GEOMETRIES: RefCell<Cache<[u64; 4], Rc<Geometry>>> = RefCell::new(Cache::new());
     static SAMPLES: RefCell<Cache<[u64; 2], Sample>> = RefCell::new(Cache::new());
 }
@@ -157,193 +142,61 @@ fn finite(value: f64, name: &str) -> Result<f64, String> {
     }
 }
 
-fn derivative(points: &[Vector]) -> Vec<Vector> {
-    let degree = (points.len() - 1) as f64;
-    points
-        .windows(2)
-        .map(|pair| Vector {
-            x: degree * (pair[1].x - pair[0].x),
-            y: degree * (pair[1].y - pair[0].y),
-        })
-        .collect()
-}
-
-fn evaluate(points: &[Vector], t: f64) -> Vector {
-    let mut row = points.to_vec();
-    for length in (1..row.len()).rev() {
-        for index in 0..length {
-            row[index] = Vector {
-                x: row[index].x * (1.0 - t) + row[index + 1].x * t,
-                y: row[index].y * (1.0 - t) + row[index + 1].y * t,
-            };
-        }
-    }
-    row[0]
-}
-
-fn cross(a: Vector, b: Vector) -> f64 {
-    a.x * b.y - a.y * b.x
-}
-
-fn dot(a: Vector, b: Vector) -> f64 {
-    a.x * b.x + a.y * b.y
-}
-
-/// Analytic position, derivatives, curvature, and arc-length derivatives.
+/// Analytic position and Frenet derivatives for normalized total arc length.
 pub fn profile(t: f64) -> Result<Profile, String> {
     finite(t, "t")?;
     if !(0.0..=1.0).contains(&t) {
         return Err("t must be in [0, 1]".into());
     }
-    let [point, first, second, third, fourth] =
-        DERIVATIVES.with(|derivatives| derivatives.each_ref().map(|row| evaluate(row, t)));
-    let speed = first.x.hypot(first.y);
-    let va = dot(first, second);
-    let n = cross(first, second);
-    let nt = cross(first, third);
-    let ntt = cross(second, third) + cross(first, fourth);
-    let kt = nt / speed.powi(3) - 3.0 * n * va / speed.powi(5);
-    let ktt = ntt / speed.powi(3)
-        - 6.0 * nt * va / speed.powi(5)
-        - 3.0 * n * (dot(second, second) + dot(first, third)) / speed.powi(5)
-        + 15.0 * n * va.powi(2) / speed.powi(7);
+    let q = source::evaluate(t);
+    let (sin, cos) = q.heading.sin_cos();
+    let k = q.curvature;
+    let ks = q.curvature_derivative;
+    let kss = q.curvature_second_derivative;
+    let speed = source::SPEED;
+    // T=(cos θ,sin θ), N=(-sin θ,cos θ), d/dt = speed*d/ds.
     Ok(Profile {
-        x: point.x,
-        y: point.y,
-        first,
-        second,
-        third,
-        fourth,
+        x: q.x,
+        y: q.y,
+        first: Vector {
+            x: speed * cos,
+            y: speed * sin,
+        },
+        second: Vector {
+            x: -speed.powi(2) * k * sin,
+            y: speed.powi(2) * k * cos,
+        },
+        third: Vector {
+            x: speed.powi(3) * (-ks * sin - k.powi(2) * cos),
+            y: speed.powi(3) * (ks * cos - k.powi(2) * sin),
+        },
+        fourth: Vector {
+            x: speed.powi(4) * (-(kss - k.powi(3)) * sin - 3.0 * k * ks * cos),
+            y: speed.powi(4) * ((kss - k.powi(3)) * cos - 3.0 * k * ks * sin),
+        },
         speed,
-        heading: first.y.atan2(first.x),
-        curvature: n / speed.powi(3),
-        curvature_derivative: kt / speed,
-        curvature_second_derivative: ktt / speed.powi(2) - kt * va / speed.powi(4),
+        heading: q.heading,
+        curvature: k,
+        curvature_derivative: ks,
+        curvature_second_derivative: kss,
     })
 }
 
-fn split_vectors(points: &[Vector]) -> (Vec<Vector>, Vec<Vector>) {
-    let mut row = points.to_vec();
-    let mut left = vec![row[0]];
-    let mut right = vec![row[row.len() - 1]];
-    while row.len() > 1 {
-        row = row
-            .windows(2)
-            .map(|pair| Vector {
-                x: (pair[0].x + pair[1].x) / 2.0,
-                y: (pair[0].y + pair[1].y) / 2.0,
-            })
-            .collect();
-        left.push(row[0]);
-        right.push(row[row.len() - 1]);
-    }
-    right.reverse();
-    (left, right)
-}
-
-fn split_numbers(points: &[f64]) -> (Vec<f64>, Vec<f64>) {
-    let mut row = points.to_vec();
-    let mut left = vec![row[0]];
-    let mut right = vec![row[row.len() - 1]];
-    while row.len() > 1 {
-        row = row
-            .windows(2)
-            .map(|pair| (pair[0] + pair[1]) / 2.0)
-            .collect();
-        left.push(row[0]);
-        right.push(row[row.len() - 1]);
-    }
-    right.reverse();
-    (left, right)
-}
-
-fn binomial(n: usize, k: usize) -> f64 {
-    let mut result = 1.0;
-    for i in 1..=k {
-        result = result * (n - i + 1) as f64 / i as f64;
-    }
-    result
-}
-
-fn product(a: &[f64], b: &[f64]) -> Vec<f64> {
-    let n = a.len() - 1;
-    let m = b.len() - 1;
-    (0..=n + m)
-        .map(|k| {
-            let mut result = 0.0;
-            for i in k.saturating_sub(m)..=n.min(k) {
-                result +=
-                    a[i] * b[k - i] * binomial(n, i) * binomial(m, k - i) / binomial(n + m, k);
-            }
-            result
-        })
-        .collect()
-}
-
-fn minimum_speed(points: &[Vector]) -> f64 {
-    let distance = |axis: fn(&Vector) -> f64| {
-        let low = points.iter().map(axis).fold(f64::INFINITY, f64::min);
-        let high = points.iter().map(axis).fold(f64::NEG_INFINITY, f64::max);
-        if low > 0.0 {
-            low
-        } else if high < 0.0 {
-            -high
-        } else {
-            0.0
-        }
-    };
-    distance(|q| q.x).hypot(distance(|q| q.y))
-}
-
-/// Polynomial convex-hull certificate over 512 dyadic intervals, rather than
-/// a sampled maximum. The relative margin covers floating-point arithmetic.
-fn certify_profile() -> Bounds {
-    let (velocity, numerator) = DERIVATIVES.with(|derivatives| {
-        let v = &derivatives[1];
-        let a = &derivatives[2];
-        let vx: Vec<_> = v.iter().map(|p| p.x).collect();
-        let vy: Vec<_> = v.iter().map(|p| p.y).collect();
-        let ax: Vec<_> = a.iter().map(|p| p.x).collect();
-        let ay: Vec<_> = a.iter().map(|p| p.y).collect();
-        let numerator: Vec<_> = product(&vx, &ay)
-            .into_iter()
-            .zip(product(&vy, &ax))
-            .map(|(x, y)| x - y)
-            .collect();
-        (v.clone(), numerator)
-    });
-    assert!(
-        numerator.iter().all(|value| *value >= -1e-12),
-        "Mac mini profile convexity certificate failed"
-    );
-    let mut parts = vec![(velocity, numerator)];
-    for _ in 0..9 {
-        parts = parts
-            .into_iter()
-            .flat_map(|(velocity, numerator)| {
-                let (vl, vr) = split_vectors(&velocity);
-                let (nl, nr) = split_numbers(&numerator);
-                [(vl, nl), (vr, nr)]
-            })
-            .collect();
-    }
-    let mut maximum_curvature: f64 = 0.0;
-    let mut minimum: f64 = f64::INFINITY;
-    for (velocity, numerator) in &parts {
-        let speed = minimum_speed(velocity);
-        minimum = minimum.min(speed);
-        maximum_curvature = maximum_curvature
-            .max(numerator.iter().copied().fold(f64::NEG_INFINITY, f64::max) / speed.powi(3));
-    }
-    maximum_curvature *= 1.0 + 1e-10;
-    minimum *= 1.0 - 1e-10;
+/// q(u)=6u⁵-15u⁴+10u³ has q'(u)=30u²(1-u)²>=0, so 0<=κ<=K.
+/// Arc-length speed is constant, and the central circle attains κ=K. The
+/// relative margin reserves room for floating-point arithmetic; coordinates
+/// also carry the separately derived Simpson truncation bound.
+fn analytic_bounds() -> Bounds {
+    let margin = 1e-10;
+    let maximum_curvature = NORMALIZED_MAX_CURVATURE * (1.0 + margin);
     Bounds {
-        intervals: parts.len(),
-        minimum_speed: minimum,
+        intervals: INTEGRATION_INTERVALS,
+        minimum_speed: source::SPEED * (1.0 - margin),
         maximum_curvature,
         minimum_radius: 1.0 / maximum_curvature,
         convex: true,
-        arithmetic_relative_margin: 1e-10,
+        arithmetic_relative_margin: margin,
+        coordinate_integration_error_bound: source::integration_error_bound(),
     }
 }
 
@@ -443,27 +296,11 @@ struct Sampler {
 }
 
 impl Sampler {
-    fn visit(
-        &mut self,
-        velocity: &[Vector],
-        acceleration: &[Vector],
-        jerk: &[Vector],
-        interval: [f64; 2],
-        depth: usize,
-    ) -> Result<(), String> {
+    fn visit(&mut self, interval: [f64; 2], depth: usize) -> Result<(), String> {
         let [start, end] = interval;
-        let speed = minimum_speed(velocity);
-        let acceleration_bound = acceleration
-            .iter()
-            .map(|q| q.x.hypot(q.y))
-            .fold(f64::NEG_INFINITY, f64::max);
-        let jerk_bound = jerk
-            .iter()
-            .map(|q| q.x.hypot(q.y))
-            .fold(f64::NEG_INFINITY, f64::max);
-        let second = acceleration_bound
-            + self.offset.abs()
-                * (jerk_bound / speed + 3.0 * acceleration_bound.powi(2) / speed.powi(2));
+        // For γ+dN, d²/dt² = speed²[(1-dκ)κN-dκ_sT]. Its norm
+        // is bounded globally even where a segment crosses a circle junction.
+        let second = source::parallel_second_derivative_bound(self.offset);
         let error = second * (end - start).powi(2) / 8.0 * (1.0 + 1e-10);
         if error.is_finite() && error <= self.budget {
             self.bound = self.bound.max(error);
@@ -473,12 +310,9 @@ impl Sampler {
         if depth == 24 {
             return Err("Corner sampling cannot meet the requested budget".into());
         }
-        let (vl, vr) = split_vectors(velocity);
-        let (al, ar) = split_vectors(acceleration);
-        let (jl, jr) = split_vectors(jerk);
         let middle = (start + end) / 2.0;
-        self.visit(&vl, &al, &jl, [start, middle], depth + 1)?;
-        self.visit(&vr, &ar, &jr, [middle, end], depth + 1)
+        self.visit([start, middle], depth + 1)?;
+        self.visit([middle, end], depth + 1)
     }
 }
 
@@ -493,15 +327,7 @@ fn sample_profile(offset: f64, budget: f64) -> Result<Sample, String> {
         points: vec![profile_point(0.0, offset)],
         bound: 0.0,
     };
-    DERIVATIVES.with(|derivatives| {
-        sampler.visit(
-            &derivatives[1],
-            &derivatives[2],
-            &derivatives[3],
-            [0.0, 1.0],
-            0,
-        )
-    })?;
+    sampler.visit([0.0, 1.0], 0)?;
     let sampled = Sample {
         points: sampler.points,
         bound: sampler.bound,
@@ -723,6 +549,6 @@ pub fn offset_path(geometry: &Geometry, offset: f64) -> Result<String, String> {
         .set(key(offset), result, 16))
 }
 
-#[path = "../../../../test/interface/unit/server_corners/geometry/tests.rs"]
 #[cfg(test)]
+#[path = "../../../../test/interface/unit/server_corners/geometry/tests.rs"]
 mod tests;

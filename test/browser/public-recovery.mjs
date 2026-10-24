@@ -139,7 +139,10 @@ async function renderedLanguage(browser) {
     await expect(page.locator('.public-header .brand')).toHaveAttribute('href', '/?lang=zh-CN');
     await expect(page.locator('.home-content .article-card').first()).toHaveAttribute('href', '/article/1?lang=zh-CN');
     assert.ok((await page.locator('.public-header nav > a').evaluateAll(nodes => nodes.map(node => new URL(node.href).searchParams.get('lang')))).every(locale => locale === 'zh-CN'));
-    const [opened] = await Promise.all([context.waitForEvent('page'), articles.click({ button: 'middle' })]);
+    // A modifier-click uses native new-tab navigation consistently in headless CI.
+    const [opened] = await Promise.all([context.waitForEvent('page'), articles.click({ modifiers: ['ControlOrMeta'] })]);
+    await opened.bringToFront();
+    await opened.waitForURL(`${base}/sort?lang=zh-CN`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
     await expect(opened).toHaveURL(`${base}/sort?lang=zh-CN`);
     await expect(opened.locator('html')).toHaveAttribute('lang', 'zh-CN');
     await expect(opened.getByRole('heading', { name: '文章分类', exact: true })).toBeVisible();

@@ -547,7 +547,7 @@
 @media(max-width:900px){.original-public .public-header nav.open{height:auto;background:#fff;color:#333}.original-public .public-header nav>a{font-size:1rem}.original-public .home-aside{order:1;grid-template-columns:repeat(2,minmax(0,1fr))}.original-public .home-content{order:2}.original-public .journey-page{padding:35px 22px}}
 @media(max-width:650px){.original-public .home-hero{height:420px;min-height:0}.original-public .public-main{padding-left:16px;padding-right:16px}.original-public .home-aside{grid-template-columns:1fr}.original-public .article-grid{grid-template-columns:1fr}.original-public .article-card,.original-public .article-card:nth-child(even){height:300px;min-height:0}.original-public .article-card-body,.original-public .article-card:nth-child(even) .article-card-body{height:130px}.original-public .journey-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.original-public .journey-item{padding-top:16px}.original-public .travel-page{padding-top:10px}.original-public .travel-content{padding:25px 8px}.original-public .page-jotting .wall-layout{padding:16px}.original-public .public-header .brand{width:70px}}
 
-/* Explicit Mac mini surfaces on supported modern browsers. */
+/* Public surface extents are retained while the shared renderer uses G4 geometry. */
 .original-public .home-aside>section,.original-public .aside-search { --blog-server-corner-extent: var(--blog-server-corner-panel, 42px); }
 .original-public .aside-recommended img,.original-public .aside-recommend-cover { --blog-server-corner-extent: var(--blog-server-corner-photo, 31.0568993271%); --blog-server-corner-mode: clip; }
 .original-public .aside-categories a { --blog-server-corner-extent: var(--blog-server-corner-notification, 48px); }

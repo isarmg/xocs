@@ -1,0 +1,27 @@
+{
+  "format": 1,
+  "origin": "https://github.com/isarmg/zxs",
+  "base_revision": "8c062902a995e23551662bcf1a723f0c78b5cedd",
+  "scope": "Selected current geometry, paint, style and regression sources; not a complete repository archive.",
+  "license_declaration": "Apache-2.0 AND MIT",
+  "archive": "zxs-interface.snapshot.tar.gz",
+  "archive_sha256": "2e16fa432fd8f3825582a4e0432e25fb67b2337bde2b7dd9d85aa89dab918be1",
+  "files": {
+    "compliance/licenses/project/LICENSE-APACHE-2.0.txt": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+    "compliance/licenses/shared/vendor/web/dependencies/LICENSE-MIT": "76356e713a0d1ea0bde549f4236b01c750100ab31790019843faa5aec449310f",
+    "src/interface/Cargo.toml": "5de729a8f1f5d4c9c65f580fd07a2a27808f837d28a4537f89ce6eb4cfccf6bc",
+    "src/interface/src/contours/controller.rs": "14f18e7de4c27674505855fdd0036794e623aaff88185e9fe8c32d429eaa64c2",
+    "src/interface/src/contours/geometry.rs": "88025d1e2cfc38aff75a80b5622d1e3568dac1bfd383d4e26a15bbd4c6d199d0",
+    "src/interface/src/contours/paint.rs": "cc08baf9bf598aaf9ca5351ad1240220a3659d5c3ae04d2beaa2b3bbb0399c4c",
+    "src/interface/src/contours/profile.rs": "ff5f8c063bd6e04bf3fd9442c8b9dae5f407799d77c93133010e38b2e3c5225a",
+    "src/web/public/styles/components/account-settings.css": "0967c37683b906f60e26a341ac1ca871540e2fbd9d11d91dd46032b2fda7439a",
+    "src/web/public/styles/components/auth.css": "4271ab119a9c9d5866068a7b699a9083154d1742cc356df8d93ef3d593baa199",
+    "src/web/public/styles/components/base.css": "e2f469487a7b33ff58497e862be6a77c66c8abb7f3782b35de02fdac005c663e",
+    "src/web/public/styles/components/content-blocks.css": "208f9df1b45ab80fa1c3c0d47a21ae5a7ed994eb1ee22afa156b347e39d9ee9f",
+    "src/web/public/styles/components/geometry.css": "eac81fd2add68d319d3329845d0fee994c6be6cb7226e47e4b9bca60049e8531",
+    "src/web/public/styles/components/select.css": "223fccce70b5aa763a82b46f0f8d1c027f77cab8b2e814f18a7e0259bb3958c6",
+    "src/web/styles.css": "b58c99bd9710d736c23322ba39d888b252d25063e4b1eba9f883e107c858c9d5",
+    "test/interface/unit/contours/geometry/tests.rs": "49d8a77fbdac00f7a13ef0c143bf8064eba4ef9c94e219a3702627c71f601b0e",
+    "test/interface/unit/contours/paint/tests.rs": "2bfa6f109cb40cd871c53b04550ce6562ee8d41741f9b19a8b9ec766744e8067"
+  }
+}

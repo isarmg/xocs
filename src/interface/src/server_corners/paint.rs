@@ -282,7 +282,22 @@ pub(super) fn mask(geometry: &Geometry, margin: f64) -> String {
 pub(super) struct Decoration {
     pub image: String,
     pub margin: f64,
+    /// Physical inset of a compact nine-slice tile, including its margin.
     pub slice: Option<f64>,
+}
+
+impl Decoration {
+    pub fn border_image_slice(&self) -> String {
+        match self.slice {
+            // A compact tile has a 1px centre strip. CSS <number> slices are
+            // rounded to image pixels by browsers: a half-pixel inset would
+            // consume that strip from both sides. Percentage slices retain
+            // its subpixel boundaries while border-image-width stays in
+            // physical CSS pixels, so the corner profile is not rescaled.
+            Some(inset) => format!("{}% fill", inset / (inset * 2.0 + 1.0) * 100.0),
+            None => format!("{} fill", fmt(self.margin)),
+        }
+    }
 }
 
 #[derive(PartialEq)]

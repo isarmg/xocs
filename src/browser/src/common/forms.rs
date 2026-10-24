@@ -44,7 +44,7 @@ pub(crate) fn Field(
             .child((
                 blog_interface::html::span()
                     .child(label.clone())
-                    .class("blog-field-label"),
+                    .class("blog-field-label blog-row"),
                 if textarea {
                     View::new(
                         blog_interface::html::textarea()
@@ -97,11 +97,12 @@ pub(crate) fn Field(
                     (!error.get().is_empty()).then(|| {
                         blog_interface::html::span()
                             .role("alert")
+                            .class("blog-row")
                             .child(error.get())
                     })
                 },
             ))
-            .class("blog-form-field"),
+            .class("blog-form-field blog-stack"),
     )
 }
 
@@ -128,7 +129,7 @@ pub(crate) fn ControlledField(
             .child((
                 blog_interface::html::span()
                     .child(label.clone())
-                    .class("blog-field-label"),
+                    .class("blog-field-label blog-row"),
                 blog_interface::html::input()
                     .node_ref(input)
                     .aria_label(label)
@@ -152,11 +153,12 @@ pub(crate) fn ControlledField(
                     (!error.get().is_empty()).then(|| {
                         blog_interface::html::span()
                             .role("alert")
+                            .class("blog-row")
                             .child(error.get())
                     })
                 },
             ))
-            .class("blog-form-field"),
+            .class("blog-form-field blog-stack"),
     )
 }
 
@@ -167,30 +169,34 @@ pub(crate) fn ControlledCheck(
     change: Callback<bool>,
 ) -> impl IntoView {
     View::new(
-        blog_interface::html::label().child((
-            blog_interface::html::input()
-                .r#type("checkbox")
-                .prop("checked", move || value.get())
-                .on(blog_interface::ev::change, move |ev| {
-                    change.run(event_target_checked(&ev))
-                }),
-            label,
-        )),
+        blog_interface::html::label()
+            .class("blog-row blog-flow")
+            .child((
+                blog_interface::html::input()
+                    .r#type("checkbox")
+                    .prop("checked", move || value.get())
+                    .on(blog_interface::ev::change, move |ev| {
+                        change.run(event_target_checked(&ev))
+                    }),
+                label,
+            )),
     )
 }
 
 #[component]
 pub(crate) fn Check(label: String, key: &'static str, form: RwSignal<Value>) -> impl IntoView {
     View::new(
-        blog_interface::html::label().child((
-            blog_interface::html::input()
-                .r#type("checkbox")
-                .prop("checked", move || flag(&form.get(), key))
-                .on(blog_interface::ev::change, move |ev| {
-                    form.update(|f| f[key] = Value::Bool(event_target_checked(&ev)))
-                }),
-            label,
-        )),
+        blog_interface::html::label()
+            .class("blog-row blog-flow")
+            .child((
+                blog_interface::html::input()
+                    .r#type("checkbox")
+                    .prop("checked", move || flag(&form.get(), key))
+                    .on(blog_interface::ev::change, move |ev| {
+                        form.update(|f| f[key] = Value::Bool(event_target_checked(&ev)))
+                    }),
+                label,
+            )),
     )
 }
 
@@ -211,6 +217,7 @@ pub(crate) fn FilePicker(
         blog_interface::html::div()
             .child((
                 blog_interface::html::label()
+                    .class("blog-row")
                     .child(label.clone())
                     .r#for(id.clone()),
                 blog_interface::html::div()
@@ -251,12 +258,12 @@ pub(crate) fn FilePicker(
                                     f
                                 }
                             })
-                            .class("blog-file-picker-name")
+                            .class("blog-file-picker-name blog-row")
                             .id(format!("{id}-filename"))
                             .aria_live("polite"),
                     ))
-                    .class("blog-file-picker"),
+                    .class("blog-file-picker blog-flow"),
             ))
-            .class("blog-form-field"),
+            .class("blog-form-field blog-stack"),
     )
 }

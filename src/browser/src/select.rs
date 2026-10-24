@@ -419,7 +419,7 @@ pub fn Select(
                             .attr("stroke", "currentColor")
                             .attr("stroke-width", "1.8"),
                     ))
-                    .class("blog-input blog-select-trigger")
+                    .class("blog-input blog-input--compact blog-select-trigger")
                     .node_ref(trigger)
                     .id(format!("{}-select", id.get_value()))
                     .r#type("button")
@@ -535,7 +535,7 @@ pub fn Select(
                                                     })
                                                     .aria_hidden("true"),
                                             ))
-                                            .class("blog-select-option")
+                                            .class("blog-select-option blog-row blog-row--option")
                                             .id(format!("{}-options-{i}", id.get_value()))
                                             .role("option")
                                             .aria_selected({
@@ -559,7 +559,7 @@ pub fn Select(
                             })
                             .collect_view()
                     })
-                    .class("blog-select-panel")
+                    .class("blog-select-panel blog-frame")
                     .node_ref(panel)
                     .id(format!("{}-options", id.get_value()))
                     .popover("manual")

@@ -1090,6 +1090,7 @@ impl State {
                 fallback!("invalid-paint-geometry");
             }
         };
+        let border_image_slice = painted.border_image_slice();
         let painted_url = self.image_url(painted.image)?;
         let border_widths: Vec<_> = SIDES
             .iter()
@@ -1140,13 +1141,17 @@ impl State {
                 .first_element_child()
                 .ok_or_else(|| JsValue::from_str("Foreground path is missing"))?;
             path_node.set_attribute("d", &path)?;
-            path_node.set_attribute(
-                "style",
-                &format!(
-                    "fill:{}!important;fill-rule:evenodd!important;stroke:none!important;",
-                    css.get("border-top-color")
-                ),
+            // Attribute style text is blocked by the application's style-src
+            // policy. Use CSSOM, as for the SVG host, so the border keeps its
+            // even-odd hole instead of becoming the default solid black fill.
+            let path_style = path_node.unchecked_ref::<web_sys::SvgElement>().style();
+            path_style.set_property_with_priority(
+                "fill",
+                css.get("border-top-color"),
+                "important",
             )?;
+            path_style.set_property_with_priority("fill-rule", "evenodd", "important")?;
+            path_style.set_property_with_priority("stroke", "none", "important")?;
         }
         if background_child && !media {
             if record.decoration.is_none() {
@@ -1278,10 +1283,7 @@ impl State {
             "border-image-source",
             if exact_control { "none" } else { &painted_url },
         )?;
-        record.put(
-            "border-image-slice",
-            format!("{} fill", painted.slice.unwrap_or(painted.margin)),
-        )?;
+        record.put("border-image-slice", border_image_slice)?;
         record.put(
             "border-image-width",
             format!("{}px", painted.slice.unwrap_or(painted.margin)),

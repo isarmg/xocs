@@ -1,0 +1,122 @@
+/* Authentication keeps its established physical sizes and six-row layout.
+ * Business geometry in geometry.css never targets this shell. */
+.blog-auth-shell { display: grid; place-items: center; min-height: 100dvh; padding: 1rem; box-sizing: border-box; color: var(--blog-text-primary,#18181b); background: var(--blog-bg-page,#fafafa); font-family: var(--blog-font-ui,monospace); line-height: var(--blog-line-height-body,1.5); --blog-server-corner-control: 27px; --blog-server-corner-panel: 42px; --blog-server-corner-notification: 48px; --blog-server-corner-dialog: 54px; }
+.blog-auth-language { position: absolute; inset-block-start: 1rem; inset-inline-end: 1rem; }
+.blog-auth-content { display: grid; justify-items: center; gap: 1rem; width: min(28rem,100%); }
+.blog-auth-card { width: min(28rem,100%); padding: 1.5rem; box-sizing: border-box; background: var(--blog-bg-panel,#fff); border: 1px solid currentColor; border-radius: 0; --blog-server-corner-extent: var(--blog-server-corner-notification); }
+.blog-auth-shell :is(.blog-button,.blog-input) { --blog-server-corner-extent: var(--blog-server-corner-control); }
+html:not([data-blog-appearance]), html[data-blog-appearance="content-blocks"] {
+  /* The existing semantic labels, inputs and submit handler remain untouched.
+   * Grid places their children in the original six rows, including the error row. */
+  .blog-auth-shell { padding: 24px; font-size: 1rem; }
+  .blog-auth-card { width: min(380px, 100%); border: 0; border-radius: 0; }
+  .blog-login-controls { display: flex; align-items: center; gap: 8px; }
+  .blog-login-controls > button { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; height: 44px; padding: 0 8px; line-height: 1; }
+  .blog-login-controls svg { width: var(--blog-header-icon-size, 1em); height: var(--blog-header-icon-size, 1em); }
+  &[data-theme="light"] :is(.blog-auth-card, .blog-login-controls) {
+    --blog-text-primary: #000;
+    --blog-text-link: #000;
+    --blog-action-primary: #000;
+    --blog-block-muted: #000;
+    color: var(--blog-text-primary);
+  }
+
+  .blog-auth-card:has(> form) {
+    position: relative;
+    container-type: inline-size;
+    aspect-ratio: 3 / 2;
+    min-height: 18rem;
+    padding: 0;
+    border-radius: 0;
+  }
+  .blog-auth-card:has(> form .blog-error) { aspect-ratio: auto; height: auto; }
+  .blog-auth-card:has(> form) > .blog-product-identity,
+  .blog-auth-card > form > h1 {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .blog-auth-card > form {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(44px, auto) auto minmax(44px, auto) minmax(1.5em, auto) minmax(44px, auto);
+    padding: 1rem 1.5rem;
+    font-size: max(1rem, calc(100cqw / 18));
+    font-weight: 400;
+    line-height: 1.5;
+  }
+  .blog-auth-card > form :is(label, span, input, button) { font: inherit; }
+  .blog-auth-card .blog-form-field { display: contents; }
+  .blog-auth-card .blog-form-field > span { display: flex; align-items: center; gap: 1ch; color: var(--blog-block-muted); }
+  .blog-auth-card .blog-form-field:has([name="username"]) > span { grid-row: 1; }
+  .blog-auth-card [name="username"] { grid-row: 2; }
+  .blog-auth-card .blog-form-field:has([name="password"]) > span { grid-row: 3; }
+  .blog-auth-card [name="password"] { grid-row: 4; }
+  .blog-auth-card .blog-input {
+    align-self: center;
+    min-height: 44px;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    border-bottom: 1px solid transparent;
+    border-radius: 0;
+  }
+  .blog-auth-card .blog-input:focus { border-bottom-color: var(--blog-focus); outline: 0; }
+  .blog-auth-card .blog-error {
+    grid-row: 5;
+    align-self: stretch;
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    font-size: inherit;
+    overflow: auto;
+  }
+  .blog-auth-card .blog-error .blog-request-id { font-size: inherit; }
+  .blog-auth-card > form > button {
+    grid-row: 6;
+    justify-self: start;
+    align-self: center;
+    display: flex;
+    align-items: center;
+    gap: 1ch;
+    padding: 0;
+    min-height: 44px;
+    height: 100%;
+    border-radius: 0;
+    font-size: inherit;
+  }
+  @media (max-width: 26rem), (max-height: 30rem) {
+    .blog-auth-shell { padding: 1rem; }
+    .blog-auth-card:has(> form) { aspect-ratio: auto; min-height: 0; }
+    .blog-auth-card > form { padding: 1rem 1.25rem; }
+  }
+  .blog-auth-card .blog-form-field > span::before,
+  .blog-auth-card > form > button::before {
+    content: "";
+    width: 1em;
+    height: 1em;
+    flex: 0 0 1em;
+    background: currentColor;
+    mask: var(--blog-block-icon) center / contain no-repeat;
+  }
+  .blog-auth-card .blog-form-field:has([name="username"]) > span {
+    --blog-block-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.4'%3E%3Crect x='1' y='1' width='22' height='22' rx='5'/%3E%3Ccircle cx='12' cy='9' r='3'/%3E%3Cpath d='M6 19v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2'/%3E%3C/svg%3E");
+  }
+  .blog-auth-card .blog-form-field:has([name="password"]) > span {
+    --blog-block-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.4'%3E%3Crect x='1' y='1' width='22' height='22' rx='5'/%3E%3Crect x='6' y='11' width='12' height='8' rx='1'/%3E%3Cpath d='M8 11V8a4 4 0 0 1 8 0v3'/%3E%3C/svg%3E");
+  }
+  .blog-auth-card > form > button {
+    --blog-block-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.4'%3E%3Crect x='1' y='1' width='22' height='22' rx='5'/%3E%3Cpath d='M13 6h5v12h-5M4 12h10m-4-4 4 4-4 4'/%3E%3C/svg%3E");
+  }
+  .blog-auth-shell :is(h1, h2, h3, p, label, span, input, button, strong, small, code, .blog-error, .blog-request-id) { font-size: inherit; }
+
+
+  .blog-auth-card:is([data-blog-server-corner-state="clip"], [data-blog-server-corner-state="paint"]) > form { padding-inline: max(calc(5.5556% - 100cqh / 24), var(--blog-server-corner-text-inset, 26px)); }
+  .blog-auth-card .blog-input, .blog-auth-card .blog-error, .blog-auth-card > form > button { --blog-server-corner-extent: 0px; }
+  @media (forced-colors: active) { .blog-auth-card { border: 1px solid CanvasText; } .blog-auth-card .blog-input { border-bottom-color: ButtonText; } }
+}

@@ -18,6 +18,7 @@
 | 文档 | 内容 |
 | --- | --- |
 | [架构](architecture.md) | 入口职责、Rust 业务层与支持范围 |
+| [界面样式](interface-design.md) | 后台几何、连续圆角与公开页边界 |
 | [开发说明](development.md) | 工具链、离线构建、开发服务、测试和打包 |
 | [测试目录](../test/README.md) | 测试分层、私有单元测试接线和验证命令 |
 | [浏览器测试](browser-testing.md) | Node/Playwright 环境、测试入口与覆盖范围 |

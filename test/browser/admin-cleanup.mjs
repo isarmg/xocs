@@ -29,17 +29,36 @@ async function assertProjectCurve(button) {
       radius: css.borderRadius, compact: !full, actualPath: (full ?? svg.querySelector('svg > path')).getAttribute('d') };
   });
   assert.equal(paint.radius, '0px');
-  assert.equal(paint.extent, 27);
+  assert.equal(paint.extent, 18);
+  assert.ok(Math.abs(paint.height - 36) <= .1, `File chooser is a compact 36px control: ${JSON.stringify(paint)}`);
   const extent = Math.min(paint.extent, paint.width / 2, paint.height / 2);
   const width = paint.compact ? extent * 2 + 1 : paint.width;
   const vertices = [...paint.actualPath.matchAll(/[ML](-?[\d.]+) (-?[\d.]+)/g)]
     .map(match => ({ x: Number(match[1]), y: Number(match[2]) }));
   assert.ok(vertices.length > 12, 'The actual SVG must contain the fitted corner contour');
-  // Independent Bernstein evaluation of the original seven-degree profile.
-  // Compare against actual SVG chords rather than importing production geometry.
-  const controls = [[0, 0], [.3633595684909532, 0], [.5804546942007682, 0], [.7281206143651912, 0],
-    [1, .27187938563480885], [1, .41954530579923177], [1, .6366404315090468], [1, 1]];
-  const choose = [1, 7, 21, 35, 35, 21, 7, 1];
+  // Independently integrate the G4 heading over normalized arc length.
+  // This does not use the production integration table, tessellator or fixtures.
+  const p = .4, curvature = 1.486024529088757;
+  const transition = (1 - p) / (2 - p), speed = Math.PI * (1 - p / 2) / curvature;
+  const heading = t => {
+    if (t >= 1 - transition) return Math.PI / 2 - heading(1 - t);
+    if (t > transition) return Math.PI * ((1 - p) / 4 + (1 - p / 2) * (t - transition));
+    const u = t / transition;
+    return Math.PI * (1 - p) / 2 * (u ** 6 - 3 * u ** 5 + 2.5 * u ** 4);
+  };
+  const pointAt = t => {
+    const intervals = 4096, step = t / intervals;
+    let x = 0, y = 0;
+    for (let index = 0; index <= intervals; index++) {
+      const angle = heading(index * step);
+      const weight = index === 0 || index === intervals ? 1 : index % 2 ? 4 : 2;
+      x += weight * Math.cos(angle);
+      y += weight * Math.sin(angle);
+    }
+    return { x: x * step * speed / 3, y: y * step * speed / 3 };
+  };
+  const end = pointAt(1);
+  assert.ok(Math.abs(end.x - 1) < 1e-10 && Math.abs(end.y - 1) < 1e-10, 'G4 integral closes the unit corner');
   const distance = (point, a, b) => {
     const dx = b.x - a.x, dy = b.y - a.y, length = dx * dx + dy * dy;
     const t = length ? Math.max(0, Math.min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / length)) : 0;
@@ -47,10 +66,8 @@ async function assertProjectCurve(button) {
   };
   for (let sample = 0; sample <= 100; sample++) {
     const t = sample / 100;
-    const point = controls.reduce((point, [x, y], index) => {
-      const weight = choose[index] * t ** index * (1 - t) ** (7 - index);
-      return { x: point.x + extent * x * weight, y: point.y + extent * y * weight };
-    }, { x: width - extent, y: 0 });
+    const normalized = pointAt(t);
+    const point = { x: width - extent + extent * normalized.x, y: extent * normalized.y };
     const error = Math.min(...vertices.slice(1).map((vertex, index) => distance(point, vertices[index], vertex)));
     assert.ok(error <= .02, `Actual project curve deviates by ${error} CSS px`);
   }

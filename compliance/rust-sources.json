@@ -5466,11 +5466,21 @@
         "directory": "src/tools/assets",
         "production_behavior_change": true,
         "reason": "Unify accepted authored Web inputs with source snapshots and watches, bound license paths and accumulated output memory, serialize product build/publication ownership, retain edits and retry contention in the watcher, and bound external commands with concurrent output draining, deadlines and process-group cleanup."
+      },
+      {
+        "directory": "src/interface",
+        "production_behavior_change": true,
+        "reason": "Adapt the current isarmg/zxs G4 transition-circle profile and bounded tessellation from commit 8c062902a995e23551662bcf1a723f0c78b5cedd, preserve source and license receipts, align fractional border slices and CSP-safe foreground paint, and apply compact geometry roles to administration controls while retaining public surface extents."
+      },
+      {
+        "directory": "src/browser",
+        "production_behavior_change": true,
+        "reason": "Apply compact geometry roles to administration navigation, forms and selectors while preserving business validation and keyboard behavior; retain the public page layout, sizes, typography and palette while sharing the requested G4 curve profile."
       }
     ],
     "schema": 1
   },
-  "local_modifications_sha256": "b445c1c36834f0c1610c1303f7c6d2417f8fc302821c089e46ce371c9bee4a97",
+  "local_modifications_sha256": "82e21df5f32a217e515ff14c6d275fb6f80b5bcb8bf91b8a871538caf3132bd5",
   "lockfiles_sha256": {
     "Cargo.lock": "8f655b4a885008a5f062ddc08d848e25c500a798f5a90ed49ada54f8e5b722c8"
   },
@@ -33293,7 +33303,7 @@
       "directory": "src/browser",
       "files_sha256": {
         "Cargo.toml": "0de83da9eccfa9cf07da0cfdaa9e5d2b7bba9c62ca4647206c5606ce96bc49f6",
-        "src/admin.rs": "0685a12d95d83cc3199902b52afa05d682371d6c380284e80ef8d9c892162a79",
+        "src/admin.rs": "64601c4ecb203d7b83792f04a1ef3440e11b328acded8d0adf65326bd1034d35",
         "src/admin/articles.rs": "3b0ca410448f54fa14b986a7363ab707f6c0fc365360749534908618717bfaf7",
         "src/admin/dashboard.rs": "44dc1d7a0907ed07ed46163bcacff3c7876c78d8cf41f6148367007ac7b4b603",
         "src/admin/family.rs": "c37b6dcedf1e6dc91e7e30a20f426ffb2b2e13fbc16b06553f30f502c3cd3855",
@@ -33308,7 +33318,7 @@
         "src/common/action.rs": "c438b318168447c6f9c6080c6614a0819fc8e3a62e68d6e3360e6613eedd6ad7",
         "src/common/decoration.rs": "6796a27233a594f0c66577545f29b8bf136b18d70302e3c59008091199b838e2",
         "src/common/feedback.rs": "63eacac38059172531373eb49555766fc2de237e40efa9aa31ad85ca45354ba9",
-        "src/common/forms.rs": "5aa1c72e376883dd0d3b0204ac1fe76aa1775be7f91fb501eef1638ae4821f37",
+        "src/common/forms.rs": "334ec8d8aae2e02d8d210e19bd22e8389a8197771cccc43dd08f78fa5ca18763",
         "src/common/lightbox.rs": "cb8e7339f6ddf0b35c31602f33fa34f721650c95524e7b47cd2557c309345bc4",
         "src/common/mod.rs": "1be46ecd790454aac3888722fc4a0c3671e81ac8b713959d96cf8f8bfb7d1697",
         "src/common/navigation.rs": "4eb525f4f6136d0e09c8513c7d070eb1db8524e2de68457d5e54fd796156a0dc",
@@ -33330,7 +33340,7 @@
         "src/public/photos.rs": "dbe54156ca9e4728322d37cd8f75d07365a7e1746f1beec8127479cdac3f8b63",
         "src/public/shell.rs": "75568f6a92153f1e0ca2dcd4a0209568af6d97e58abf364628b6e63b52f516e1",
         "src/public/toolbox.rs": "0d443d0157b8b8cea3a09c035ab0343336f25d09a125c2d03099160b50739ca4",
-        "src/select.rs": "be078ba46f48e1cf3641d8533244b7c48814917f0b12f85c7aa6ab53413f2b46"
+        "src/select.rs": "fedf8d11ad0b156d1b1f3674fff563b6585ffe6c932faa2a44b4858eb64433dd"
       },
       "layer": "product",
       "name": "blog-browser",
@@ -33339,8 +33349,8 @@
       "purpose": "浏览器 CSR 博客界面",
       "tests_sha256": {
         "test/browser/account-settings.mjs": "92b4364f2b1d436043ce15fb9860c51d39004cf4ea1889468feeb5299a5dbd79",
-        "test/browser/admin-cleanup.mjs": "828aad7d0a5f023c0cef87db9a081a0a4c5333ea75b2d25efd721c6e8f539610",
-        "test/browser/admin-layout.mjs": "3545146656b59a89df65c580901c92db610e3b995641f9a7c257f8e7ce5e9d8a",
+        "test/browser/admin-cleanup.mjs": "2abeab7caaf75b42462d3bee3eeabdbb846785c37a668ee0dbb1a935fcf61f52",
+        "test/browser/admin-layout.mjs": "5f2fc6e1c445f00badb151f18ff1eb3acf6cea3bc70904af5e81d971b2493c32",
         "test/browser/admin-recovery.mjs": "3c7cc47e2e2974329e9100c85ee2fe7d48d392d17aaac509b03637d04f55b78b",
         "test/browser/anonymous-comments.mjs": "b7b5a25f98a6e6751e8dfa99e8279d1beaee7a84ba09970921f3f3575e6e96f7",
         "test/browser/async-state.mjs": "838d61cb00e3e0453905caa1919f5fea4a5d9c2df176dd2c095bc5015989d567",
@@ -33360,10 +33370,12 @@
         "test/browser/painted-surface.mjs": "7c0e5a53559c1f48a7564338ce63c31bb6ae4e1d8a6cede30f00b432dd422b41",
         "test/browser/public-footer.mjs": "1da00f8c17505f01f1981d3301a21af3e2bb6bd2d241b7206ccf57be94bc10a0",
         "test/browser/public-layout.mjs": "14e1bbe7ce0a0fc3a9fbd75a2f26b354213de94db23d4c819960d966ab5cf31e",
-        "test/browser/public-recovery.mjs": "2b4c64d3b34664af1912f761cf6794dfd61f88e07f0fb7de67f340da9c35a9f4",
+        "test/browser/public-recovery.mjs": "4b562a21b31f37d504f5faa43cd5e4e5f3fb66616b4152df3356e6018acba0c3",
+        "test/browser/public-style-baseline.mjs": "19c5fc9a6cfbe27b59db01b18b3f8c991b6e5317778167e0cdf87578fc3690c3",
         "test/browser/rust-native-domain.mjs": "b1f841e636115e07f88a67cfd40440655b57983cff4f337d4df5777dfda7cc2b",
         "test/browser/startup-failure.mjs": "5a3b6c775c2c1b542a300bc19cef41cd6d5b9d1ddb422d8d847ac92e5eb6c7c5",
         "test/browser/startup-failures.mjs": "16190c27fdefa4d9e064cf7350d2d843f4724e1d7dbe7be9caf9fb5644441006",
+        "test/browser/style-contract.mjs": "0ee7a119daba00308c7f33609e208e3205fb55208eacd92eb077d29ac8b6f701",
         "test/browser/toolchain-contract.test.mjs": "3a0e4e7a336ca6de5b0788c26120b7a776da17c2d4a7d2addf76665ed7ae8838",
         "test/browser/transport-lifecycle.mjs": "d8188d72b6819ee86353a356dd9d0c0139e74b9963fd6708bd28ab79227b48df",
         "test/browser/unit/admin/routes.rs": "ecbc38c1e53301ce47f82cdc213aecb68976a9c70007b13d93b465611a4db064",
@@ -49057,15 +49069,16 @@
         "ORIGIN.json": "bde0d55effc2c7042927f9302813c52aae0f80b65d2170808a9c8f20ab664150",
         "README.md": "b4926c681d00fc3d4c5b4f0c0298daf7dd7c65598fcc6cf9efc87f3eb1065fa6",
         "src/api.rs": "b2ea0e5e5a73477e19944822894eca97f817b8e48338b48b6562af0ee0f03418",
-        "src/components.rs": "abfe2e95b30ba9d6bd50a1cd36eb8845547ec98b6cce3be4a4e8f66ebf26a74e",
+        "src/components.rs": "35fe6fe42a5ab4174173e6a3f0bf51c92b390dcfb340f90d7d08f3d5e969a33b",
         "src/contracts.rs": "45efc1ec3ad0fe5ab8abf07d98681f59830ff0ecd5663c80bf00a8f380b57286",
         "src/i18n.rs": "4d69ca1ae345aa5c349fad12819644f6d3464cc33dbec0a2f07b24f123e2035e",
         "src/lib.rs": "0308afb52d756a9de43e9054b3aac4a185f337f3d0900087db62320aa8f27302",
         "src/modal.rs": "4c31032b5028e08d0b3a11b81ece4a6216378ac6c9238b96d16d3f3564e85d48",
-        "src/server_corners/controller.rs": "93baf0e330aa7586f0cb4152497c5d84f9e66f647b8fd72c639f0f8af0715434",
-        "src/server_corners/geometry.rs": "9790818135b4edc694f65746672a4493879d88a1fcd4d66596c684e1c2302d03",
-        "src/server_corners/mod.rs": "5c20af9f657cf3a359db9aaf4a68d39ff6b9b06a739f3884fe2e1ecf7f3a4fb7",
-        "src/server_corners/paint.rs": "b0fca925f5df77df811c98119bb4520d2f21aacebc103055c81dd1c7b094f238",
+        "src/server_corners/controller.rs": "0ced18e9a34efb72049d555217fb9909435203856a950d1f661183af6e80ec04",
+        "src/server_corners/geometry.rs": "8436890202ea02a20e23be684aa1972949c107e6cf2540b2cb09e3be3ef3fac4",
+        "src/server_corners/mod.rs": "5a0f8529b0ab810302827e79b73132b0b48957f63093b26dbd1499ab0fab9f48",
+        "src/server_corners/paint.rs": "85915b87dc5c8fb53aadfc590762ad3594990513fbd6be0c915de697a142ad7f",
+        "src/server_corners/profile.rs": "7aabf44763e0dec354447cb9e60bd7bfca0dbf680f568d64f5080bb53e41900f",
         "src/theme.rs": "85af94bc7effcb209887c2eb31c659f2d0cdb44fccfbfff05b5faa72cbe50934"
       },
       "layer": "interface",
@@ -49080,8 +49093,8 @@
         "test/interface/unit/api/tests.rs": "16146cef16e7a31c47ee1826f5a9c6622c534e4090bddb413dcc621cfaaee9f2",
         "test/interface/unit/contracts/tests.rs": "2f7609e84988a1ee9477fda500ba9217504ee1ff32e79595479e193a7869c396",
         "test/interface/unit/i18n/tests.rs": "0288e92a6279c139a2952ee5bf09187722c787dc4256f59feb0206128c534408",
-        "test/interface/unit/server_corners/geometry/tests.rs": "764c3c3d38e959c4ef6db55f12ee59a76762e6c241f932ae9e522d832ab81b89",
-        "test/interface/unit/server_corners/paint/tests.rs": "7c001f6eb1ad237a3c1f9113bcb45609e5870e589cd3fe5c0a8ee6eba0ac529d"
+        "test/interface/unit/server_corners/geometry/tests.rs": "926194b526c68e4852a2839e2f52da93914d360b2316daeb4788340f30efb7e5",
+        "test/interface/unit/server_corners/paint/tests.rs": "ed52f6d39993944bb1e1faeb646354dffaf825c9f41df301f1dd9e8a4978bc7f"
       },
       "version": "0.0.0"
     },

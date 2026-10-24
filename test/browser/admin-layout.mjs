@@ -16,9 +16,11 @@ const groups = [
 async function layout(page) {
   await page.evaluate(() => document.fonts.ready);
   const sizes = await page.evaluate(() => ({ width: innerWidth, scroll: document.documentElement.scrollWidth,
-    headerHeight: document.querySelector('.blog-admin-shell > .blog-page-header').getBoundingClientRect().height }));
+    headerPosition: getComputedStyle(document.querySelector('.blog-admin-shell > .blog-page-header')).position,
+    navigationWrap: getComputedStyle(document.querySelector('.blog-header-navigation')).flexWrap }));
   assert.ok(sizes.scroll <= sizes.width, `${page.url()}: body overflows: ${JSON.stringify(sizes)}`);
-  if (sizes.width === 390) assert.ok(sizes.headerHeight < 220, `Mobile header is too tall: ${sizes.headerHeight}`);
+  assert.ok(['static', 'relative'].includes(sizes.headerPosition), `Header must remain in document flow: ${JSON.stringify(sizes)}`);
+  assert.equal(sizes.navigationWrap, 'wrap', 'Navigation wraps naturally instead of clipping links');
 }
 
 async function accessible(page) {

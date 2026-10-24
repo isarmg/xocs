@@ -20,7 +20,7 @@ pub fn LoadingState() -> impl IntoView {
                     IntoRender::into_render({ t("正在加载…", "Loading…") })
                 },
             )
-            .class("blog-loading")
+            .class("blog-loading blog-row")
             .role("status")
             .aria_live("polite"),
     )
@@ -35,7 +35,7 @@ pub fn EmptyState(message: String) -> impl IntoView {
                     IntoRender::into_render(message)
                 },
             )
-            .class("blog-empty"),
+            .class("blog-empty blog-row"),
     )
 }
 #[component]
@@ -69,7 +69,7 @@ pub fn ErrorState(
                         })
                 }),
             ))
-            .class("blog-error")
+            .class("blog-error blog-row")
             .role("alert"),
     )
 }
@@ -80,13 +80,13 @@ pub fn Dialog(title: String, close: Callback<()>, children: ChildrenFn) -> impl 
     crate::modal::ModalSurface(
         component_props_builder(&crate::modal::ModalSurface)
             .label(title.clone())
-            .class("blog-dialog")
+            .class("blog-dialog blog-stack")
             .close(close)
             .children(blog_interface::children::ToChildren::to_children(
                 move || {
                     (
                         blog_interface::html::div()
-                            .class("blog-dialog-heading")
+                            .class("blog-dialog-heading blog-flow")
                             .child((
                                 blog_interface::html::h2().child(title.clone()),
                                 blog_interface::html::button()
@@ -220,7 +220,7 @@ pub fn HeaderNavigation(
                                     IntoRender::into_render(children())
                                 },
                             )
-                            .class("blog-header-navigation")
+                            .class("blog-header-navigation blog-flow")
                             .aria_label(
                                 ::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
                                     label.get_value(),
@@ -559,7 +559,7 @@ pub fn AdminShell(
                                             )
                                     },
                                 )
-                                .class("blog-product-identity"),
+                                .class("blog-product-identity blog-row"),
                             IntoRender::into_render({
                                 if current.phase == AuthPhase::Error {
                                     View::new(
@@ -689,12 +689,12 @@ pub fn AdminShell(
                                                         )
                                                 },
                                             )
-                                            .class("blog-product-identity"),
+                                            .class("blog-product-identity blog-row"),
                                         blog_interface::html::div()
                                             .node_ref(targets.navigation)
                                             .style(("display", "contents")),
                                     ))
-                                    .class("blog-header-brand-navigation")
+                                    .class("blog-header-brand-navigation blog-flow")
                             },
                         )
                         .class("blog-header-navigation-slot"),
@@ -833,7 +833,7 @@ pub fn AdminShell(
                                     },
                                 ),
                         ))
-                        .class("blog-header-actions")
+                        .class("blog-header-actions blog-flow blog-control-group--comfortable")
                         .role("group")
                         .aria_label(
                             ::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
@@ -841,7 +841,7 @@ pub fn AdminShell(
                             ),
                         ),
                 ))
-                .class("blog-page-header"),
+                .class("blog-page-header blog-flow"),
             {
                 #[allow(unreachable_code)] #[allow(unused_mut)]
                 #[allow(clippy::let_and_return, clippy::let_unit_value, clippy::unit_arg)]
@@ -903,7 +903,7 @@ pub fn AdminShell(
                     move |_| toasts.records.update(|v| v.retain(|r| r.id != id)),
                 ),
         ))
-        .class("blog-toast")
+        .class("blog-toast blog-row blog-flow")
         .role("status")
         .aria_live("polite")
         .aria_atomic("true"),
@@ -943,14 +943,14 @@ pub fn AdminShell(
                                     IntoRender::into_render(children())
                                 },
                             )
-                            .class("blog-shell-main")
+                            .class("blog-shell-main blog-stack")
                             .id("blog-main-content")
                             .tabindex("-1")
                     },
                 )
                 .class("blog-shell-layout blog-shell-layout--full"),
         ))
-        .class("blog-admin-shell")
+        .class("blog-admin-shell blog-app-shell")
         .style(("--blog-header-icon-size", "1em")),
 )
             .into_any()
@@ -1177,7 +1177,7 @@ pub fn AccountPage() -> impl IntoView {
                                         .child((
                                             blog_interface::html::label()
                                                 .child((
-                                                    blog_interface::html::span()
+                                                    blog_interface::html::span().class("blog-row blog-row--center")
                                                         .child(
                                                             #[allow(unused_braces)]
                                                             {
@@ -1187,7 +1187,7 @@ pub fn AccountPage() -> impl IntoView {
                                                             },
                                                         ),
                                                     blog_interface::html::input()
-                                                        .class("blog-input")
+                                                        .class("blog-input blog-input--compact")
                                                         .node_ref(username)
                                                         .name("username")
                                                         .value(
@@ -1207,7 +1207,7 @@ pub fn AccountPage() -> impl IntoView {
                                                 .class("blog-form-field"),
                                             blog_interface::html::label()
                                                 .child((
-                                                    blog_interface::html::span()
+                                                    blog_interface::html::span().class("blog-row blog-row--center")
                                                         .child(
                                                             #[allow(unused_braces)]
                                                             {
@@ -1217,7 +1217,7 @@ pub fn AccountPage() -> impl IntoView {
                                                             },
                                                         ),
                                                     blog_interface::html::input()
-                                                        .class("blog-input")
+                                                        .class("blog-input blog-input--compact")
                                                         .node_ref(current)
                                                         .name("current_password")
                                                         .r#type("password")
@@ -1232,7 +1232,7 @@ pub fn AccountPage() -> impl IntoView {
                                                 .class("blog-form-field"),
                                             blog_interface::html::label()
                                                 .child((
-                                                    blog_interface::html::span()
+                                                    blog_interface::html::span().class("blog-row blog-row--center")
                                                         .child(
                                                             #[allow(unused_braces)]
                                                             {
@@ -1242,7 +1242,7 @@ pub fn AccountPage() -> impl IntoView {
                                                             },
                                                         ),
                                                     blog_interface::html::input()
-                                                        .class("blog-input")
+                                                        .class("blog-input blog-input--compact")
                                                         .node_ref(new_password)
                                                         .name("new_password")
                                                         .r#type("password")
@@ -1256,7 +1256,7 @@ pub fn AccountPage() -> impl IntoView {
                                                 .class("blog-form-field"),
                                             blog_interface::html::label()
                                                 .child((
-                                                    blog_interface::html::span()
+                                                    blog_interface::html::span().class("blog-row blog-row--center")
                                                         .child(
                                                             #[allow(unused_braces)]
                                                             {
@@ -1266,7 +1266,7 @@ pub fn AccountPage() -> impl IntoView {
                                                             },
                                                         ),
                                                     blog_interface::html::input()
-                                                        .class("blog-input")
+                                                        .class("blog-input blog-input--compact")
                                                         .node_ref(confirmation)
                                                         .name("confirm_password")
                                                         .r#type("password")
@@ -1328,9 +1328,9 @@ pub fn AccountPage() -> impl IntoView {
                                                     )
                                             },
                                         )
-                                        .class("blog-actions"),
+                                        .class("blog-actions blog-flow"),
                                 ))
-                                .class("blog-account-form")
+                                .class("blog-account-form blog-stack")
                                 .novalidate(true)
                                 .aria_busy(
                                     ::blog_interface::prelude::IntoAttributeValue::into_attribute_value(move ||
@@ -1456,10 +1456,10 @@ pub fn AccountPage() -> impl IntoView {
                                 )
                         },
                     )
-                    .class("blog-content-panel")
+                    .class("blog-content-panel blog-frame blog-stack")
             },
         )
-        .class("blog-content-stack blog-account-page")
+        .class("blog-content-stack blog-account-page blog-stack")
         .aria_label(
             ::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
                 t("账号设置", "Account settings"),

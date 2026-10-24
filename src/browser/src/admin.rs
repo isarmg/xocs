@@ -199,7 +199,7 @@ fn Workspace() -> impl IntoView {
     let route = Memo::new(move |_| Route::parse(&hash.get()));
     View::new(
         blog_interface::html::div()
-            .class("blog-admin-workspace blog-content-stack")
+            .class("blog-admin-workspace blog-content-stack blog-stack")
             .child((
                 HeaderNavigation(
                     component_props_builder(&HeaderNavigation)
@@ -228,7 +228,7 @@ fn Workspace() -> impl IntoView {
                     component_props_builder(&HeaderActions)
                         .children(ToChildren::to_children(move || {
                             blog_interface::html::a()
-                                .class("blog-site-link")
+                                .class("blog-site-link blog-button")
                                 .href(href("/"))
                                 .aria_label(t("返回网站", "Back to site"))
                                 .title(t("返回网站", "Back to site"))
@@ -257,7 +257,7 @@ fn Workspace() -> impl IntoView {
                         .map(|group| {
                             View::new(
                                 blog_interface::html::nav()
-                                    .class("blog-secondary-navigation")
+                                    .class("blog-secondary-navigation blog-flow")
                                     .aria_label(group.title())
                                     .child(
                                         group

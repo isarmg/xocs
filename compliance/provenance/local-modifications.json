@@ -4406,6 +4406,16 @@
       "directory": "src/tools/assets",
       "reason": "Unify accepted authored Web inputs with source snapshots and watches, bound license paths and accumulated output memory, serialize product build/publication ownership, retain edits and retry contention in the watcher, and bound external commands with concurrent output draining, deadlines and process-group cleanup.",
       "production_behavior_change": true
+    },
+    {
+      "directory": "src/interface",
+      "reason": "Adapt the current isarmg/zxs G4 transition-circle profile and bounded tessellation from commit 8c062902a995e23551662bcf1a723f0c78b5cedd, preserve source and license receipts, align fractional border slices and CSP-safe foreground paint, and apply compact geometry roles to administration controls while retaining public surface extents.",
+      "production_behavior_change": true
+    },
+    {
+      "directory": "src/browser",
+      "reason": "Apply compact geometry roles to administration navigation, forms and selectors while preserving business validation and keyboard behavior; retain the public page layout, sizes, typography and palette while sharing the requested G4 curve profile.",
+      "production_behavior_change": true
     }
   ]
 }

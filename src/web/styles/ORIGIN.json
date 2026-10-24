@@ -17,6 +17,10 @@
     {
       "date": "2026-10-22",
       "description": "Move the required CSS and licensed fonts into web/styles; maintain blog DOM/CSS/font identifiers locally."
+    },
+    {
+      "date": "2026-10-24",
+      "description": "Apply compact administration geometry from isarmg/zxs commit 8c062902a995e23551662bcf1a723f0c78b5cedd while retaining the public stylesheet layout and surface extents; preserve original CSS/font receipts and unchanged licensed font bytes. Curve reference archive: compliance/interface-reference/zxs-interface.snapshot.tar.gz."
     }
   ]
 }

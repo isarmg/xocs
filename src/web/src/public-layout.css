@@ -403,7 +403,7 @@
   .original-public .reference-petals { display: none; }
 }
 
-/* Explicit Mac mini surfaces on supported modern browsers. */
+/* Public surface extents are retained while the shared renderer uses G4 geometry. */
 .original-public .public-menu-toggle { --blog-server-corner-extent: var(--blog-server-corner-control, 27px); }
 .original-public .article-card,
 .original-public .article-card:nth-child(even) { --blog-server-corner-extent: var(--blog-server-corner-notification, 48px); }
@@ -439,7 +439,7 @@
 .original-public .love-tab-icon,.original-public .love-heart,
 .original-public .journey-turn,.original-public .reference-petals > span { --blog-server-corner-extent: 0px; }
 
-/* Keep text clear of the active Mac mini corners without changing vertical spacing. */
+/* Keep text clear of the active continuous corners without changing vertical spacing. */
 .original-public :is(.article-card, .original-list-card):is([data-blog-server-corner-state="paint"], [data-blog-server-corner-state="clip"]) > :is(.article-card-body, .original-list-body),
 .original-public :is(.wall-card, .love-moment-card, .favorite-group-empty, .announcement):is([data-blog-server-corner-state="paint"], [data-blog-server-corner-state="clip"]),
 .original-public .wall-list > .wall-card:is([data-blog-server-corner-state="paint"], [data-blog-server-corner-state="clip"]),

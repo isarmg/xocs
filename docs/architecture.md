@@ -63,6 +63,8 @@ Linux 系统层使用固定 ABI、原始系统调用、epoll/eventfd 和系统�
 
 原生弹窗由 `src/interface/src/modal.rs` 统一管理显示、键盘焦点、Escape 关闭和卸载后的焦点恢复。产品页面保留内容、样式和关闭状态，共享层负责浏览器模态语义。
 
+管理后台复用一组布局与控件几何角色；公开页面保留独立布局与尺寸，只共享 Rust 实现的 G4 连续圆角。尺寸、来源与验证入口见[界面样式](interface-design.md)。
+
 `src/web/src/main.js` 导入样式、加载绑定并启动 WASM；`src/web/runtime/startup.js` 提供 WASM 或字体准备失败时的错误面板及重载按钮。`src/web/pkg` 中的 JavaScript 由绑定工具生成，`.mjs` 脚本用于测试与工具检查。
 
 ## 资源构建

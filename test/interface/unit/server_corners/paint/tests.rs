@@ -127,6 +127,30 @@ fn compact_paint_shares_physical_corner_size() {
 }
 
 #[test]
+fn fractional_compact_slices_keep_the_centre_strip_in_both_axes() {
+    for (width, height, extent) in [
+        (1768.0, 63.0, 100.0),
+        (63.0, 1768.0, 100.0),
+        (1768.25, 63.25, 100.0),
+        (63.25, 1768.25, 100.0),
+        (1768.0, 100.0, 19.75),
+    ] {
+        let geometry = geometry::create(width, height, extent, 0.02).unwrap();
+        let painted = decoration(&geometry, &css(0.0, "none"), &[], false, false)
+            .unwrap()
+            .unwrap();
+        let inset = painted.slice.unwrap();
+        let slice_css = painted.border_image_slice();
+        assert!(slice_css.ends_with("% fill"), "{slice_css}");
+        let fraction = number(&slice_css) / 100.0;
+        let source_size = inset * 2.0 + 1.0;
+        assert!((source_size * (1.0 - fraction * 2.0) - 1.0).abs() < 1e-10);
+        assert!((source_size * fraction - inset).abs() < 1e-10);
+        assert_eq!(inset, geometry.extent + painted.margin);
+    }
+}
+
+#[test]
 fn border_shadows_and_foreground_follow_existing_paint_contract() {
     let geometry = geometry::create(120.0, 80.0, 20.0, 0.02).unwrap();
     let layers = shadows("red 3px -4px 2px 1px, blue 1px 2px").unwrap();

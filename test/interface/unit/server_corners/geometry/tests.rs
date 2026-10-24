@@ -7,34 +7,65 @@ fn close(actual: f64, expected: f64, tolerance: f64) {
     );
 }
 
-// Independent Bernstein summation, rather than production de Casteljau.
-fn polynomial(controls: &[[f64; 2]], t: f64) -> Vector {
-    let n = controls.len() - 1;
-    let mut result = Vector { x: 0.0, y: 0.0 };
-    for (i, [x, y]) in controls.iter().enumerate() {
-        let weight = binomial(n, i) * t.powi(i as i32) * (1.0 - t).powi((n - i) as i32);
-        result.x += x * weight;
-        result.y += y * weight;
+// Independent composite Simpson reference over total normalized arc
+// length. It integrates the tangent directly, never production coordinates,
+// transition lookup tables, or the production circle-position formula.
+const REFERENCE_INTERVALS: usize = 16_384;
+const REFERENCE_K: f64 = 1.486_024_529_088_757;
+
+fn reference_heading(t: f64) -> f64 {
+    if t > 0.625 {
+        return PI / 2.0 - reference_heading(1.0 - t);
     }
-    result
+    if t > 0.375 {
+        return PI * (0.15 + 0.8 * (t - 0.375));
+    }
+    let u = t / 0.375;
+    PI * 0.3 * (u.powi(6) - 3.0 * u.powi(5) + 2.5 * u.powi(4))
+}
+
+fn reference_step(start: f64, end: f64) -> Vector {
+    let mut point = Vector { x: 0.0, y: 0.0 };
+    for (t, weight) in [(start, 1.0), ((start + end) / 2.0, 4.0), (end, 1.0)] {
+        let angle = reference_heading(t);
+        point.x += weight * angle.cos();
+        point.y += weight * angle.sin();
+    }
+    let scale = (end - start) * (PI * 0.8 / REFERENCE_K) / 6.0;
+    Vector {
+        x: point.x * scale,
+        y: point.y * scale,
+    }
+}
+
+thread_local! {
+    static REFERENCE_POINTS: Vec<Vector> = {
+        let mut table = vec![Vector { x: 0.0, y: 0.0 }];
+        for index in 1..=REFERENCE_INTERVALS {
+            let step = reference_step(
+                (index - 1) as f64 / REFERENCE_INTERVALS as f64,
+                index as f64 / REFERENCE_INTERVALS as f64,
+            );
+            let previous = table[index - 1];
+            table.push(Vector { x: previous.x + step.x, y: previous.y + step.y });
+        }
+        table
+    };
 }
 
 fn reference(t: f64, source: Source) -> Vector {
-    let controls: Vec<_> = CONTROL_POINTS
-        .windows(2)
-        .map(|pair| {
-            [
-                7.0 * (pair[1][0] - pair[0][0]),
-                7.0 * (pair[1][1] - pair[0][1]),
-            ]
-        })
-        .collect();
-    let q = polynomial(&CONTROL_POINTS, t);
-    let v = polynomial(&controls, t);
-    let speed = v.x.hypot(v.y);
+    let q = REFERENCE_POINTS.with(|table| {
+        let index = ((t * REFERENCE_INTERVALS as f64).floor() as usize).min(REFERENCE_INTERVALS);
+        let step = reference_step(index as f64 / REFERENCE_INTERVALS as f64, t);
+        Vector {
+            x: table[index].x + step.x,
+            y: table[index].y + step.y,
+        }
+    });
+    let heading = reference_heading(t);
     Vector {
-        x: q.x * source.extent - source.offset * v.y / speed,
-        y: q.y * source.extent + source.offset * (v.x / speed - 1.0),
+        x: q.x * source.extent - source.offset * heading.sin(),
+        y: q.y * source.extent + source.offset * (heading.cos() - 1.0),
     }
 }
 
@@ -122,64 +153,139 @@ fn check_error(geometry: &Geometry) {
 }
 
 #[test]
-fn source_controls_proportions_and_independent_polynomial_agree() {
-    assert_eq!(PROFILE, "mac-mini-bezier7");
-    assert_eq!(PHOTO_EXTENT, 0.31056899327095955);
-    assert_eq!(CONTROL_POINTS[3], [0.7281206143651912, 0.0]);
+fn source_curvature_formula_normalizes_the_requested_corner_extent() {
+    assert_eq!(PROFILE, "zxs-g4");
+    assert_eq!(CIRCULAR_ARC_RATIO, 0.4);
+    assert_eq!(TRANSITION_PARAMETER, 0.375);
     let diagonal = profile(0.5).unwrap();
-    close(diagonal.x, 0.8141975551596445, 1e-10);
-    close(diagonal.y, 0.1858024448403555, 1e-10);
-    close(diagonal.heading, PI / 4.0, 1e-10);
-    close(diagonal.curvature, 1.7600990604903817, 1e-10);
-    for i in 0..=100 {
-        let t = f64::from(i) / 100.0;
+    close(diagonal.x + diagonal.y, 1.0, 1e-10);
+    close(diagonal.heading, PI / 4.0, 1e-12);
+    close(diagonal.curvature, REFERENCE_K, 1e-12);
+    let unit = Source {
+        extent: 1.0,
+        radius: 1.0 / REFERENCE_K,
+        offset: 0.0,
+    };
+    for i in 0..=1000 {
+        let t = f64::from(i) / 1000.0;
         let q = profile(t).unwrap();
-        let independent = polynomial(&CONTROL_POINTS, t);
+        let independent = reference(t, unit);
         close(q.x, independent.x, 1e-10);
         close(q.y, independent.y, 1e-10);
     }
-    let geometry = create(127.0, 127.0, 127.0 * PHOTO_EXTENT, 0.05).unwrap();
-    close(geometry.extent, 39.44226214541186, 1e-10);
-    close(
-        geometry.width - 2.0 * geometry.extent,
-        48.11547570917629,
-        1e-10,
-    );
+    let row = create(240.0, 36.0, 12.0, 0.02).unwrap();
+    close(row.extent, 12.0, 1e-12);
+    close(row.height - 2.0 * row.extent, 12.0, 1e-12);
+    let list = create(240.0, 216.0, 12.0, 0.02).unwrap();
+    close(list.extent, row.extent, 1e-12);
+    let input = create(240.0, 44.0, 44.0 / 3.0, 0.02).unwrap();
+    close(input.height - 2.0 * input.extent, input.extent, 1e-12);
 }
 
 #[test]
-fn analytic_endpoints_join_lines_at_g3_not_g4() {
+fn analytic_endpoints_and_circle_junctions_are_g4() {
     let start = profile(0.0).unwrap();
     let end = profile(1.0).unwrap();
-    close(start.x, 0.0, 1e-10);
-    close(start.y, 0.0, 1e-10);
-    close(end.x, 1.0, 1e-10);
-    close(end.y, 1.0, 1e-10);
-    close(start.heading, 0.0, 1e-10);
-    close(end.heading, PI / 2.0, 1e-10);
+    close(start.x, 0.0, 1e-12);
+    close(start.y, 0.0, 1e-12);
+    close(end.x, 1.0, 1e-12);
+    close(end.y, 1.0, 1e-12);
+    close(start.heading, 0.0, 1e-12);
+    close(end.heading, PI / 2.0, 1e-12);
     for q in [&start, &end] {
-        close(q.curvature, 0.0, 1e-10);
-        close(q.curvature_derivative, 0.0, 1e-10);
-        assert!(q.curvature_second_derivative > 5.4 && q.curvature_second_derivative < 5.5);
+        close(q.curvature, 0.0, 1e-12);
+        close(q.curvature_derivative, 0.0, 1e-12);
+        close(q.curvature_second_derivative, 0.0, 1e-12);
+        close(q.second.x.hypot(q.second.y), 0.0, 1e-12);
+        close(q.third.x.hypot(q.third.y), 0.0, 1e-12);
+        close(q.fourth.x.hypot(q.fourth.y), 0.0, 1e-12);
         assert!(q.speed > 0.0);
     }
-    assert!(start.fourth.y > 0.0 && end.fourth.x < 0.0);
+    for t in [0.375, 0.625] {
+        let q = profile(t).unwrap();
+        close(q.curvature, REFERENCE_K, 1e-12);
+        close(q.curvature_derivative, 0.0, 1e-12);
+        close(q.curvature_second_derivative, 0.0, 1e-12);
+        // Independent one-sided checks across both analytic pieces.
+        let before = profile(t - 1e-9).unwrap();
+        let after = profile(t + 1e-9).unwrap();
+        close(before.x, after.x, 4e-9);
+        close(before.y, after.y, 4e-9);
+        close(before.curvature, after.curvature, 1e-10);
+        close(
+            before.curvature_derivative,
+            after.curvature_derivative,
+            1e-10,
+        );
+        close(
+            before.curvature_second_derivative,
+            after.curvature_second_derivative,
+            1e-5,
+        );
+        close(before.fourth.x, after.fourth.x, 1e-4);
+        close(before.fourth.y, after.fourth.y, 1e-4);
+    }
 }
 
 #[test]
-fn polynomial_hulls_certify_speed_curvature_and_offset_radius() {
+fn analytic_bounds_cover_speed_curvature_offsets_and_integration() {
     let bound = bounds();
-    assert_eq!(bound.intervals, 512);
+    assert_eq!(bound.intervals, INTEGRATION_INTERVALS);
     assert!(bound.convex);
-    assert!(bound.minimum_radius > 0.563 && bound.minimum_radius < 0.565);
+    assert!(bound.minimum_radius > 0.672 && bound.minimum_radius < 0.674);
+    assert!(bound.coordinate_integration_error_bound > 0.0);
+    assert!(bound.coordinate_integration_error_bound < 1e-12);
     let mut maximum: f64 = 0.0;
     for i in 0..=5000 {
         let q = profile(f64::from(i) / 5000.0).unwrap();
         assert!(q.speed >= bound.minimum_speed);
-        assert!(q.curvature >= -1e-12 && q.curvature <= bound.maximum_curvature);
+        assert!(q.curvature >= 0.0 && q.curvature <= bound.maximum_curvature);
         maximum = maximum.max(q.curvature);
     }
-    assert!(bound.maximum_curvature / maximum < 1.01);
+    assert!(bound.maximum_curvature / maximum < 1.000_000_001);
+    let a = PI * 0.3;
+    let first = profile(0.375 / 2.0).unwrap();
+    close(
+        first.curvature_derivative,
+        REFERENCE_K.powi(2) / a * 1.875,
+        1e-12,
+    );
+    let last = profile(1.0 - 0.375 / 2.0).unwrap();
+    close(
+        last.curvature_derivative,
+        -first.curvature_derivative,
+        1e-12,
+    );
+}
+
+#[test]
+fn frenet_derivatives_follow_the_integrated_curve_and_parallel_bounds() {
+    let h = 1e-6;
+    for t in [0.1, 0.25, 0.5, 0.75, 0.9] {
+        let before = profile(t - h).unwrap();
+        let q = profile(t).unwrap();
+        let after = profile(t + h).unwrap();
+        close((after.x - before.x) / (2.0 * h), q.first.x, 1e-8);
+        close((after.y - before.y) / (2.0 * h), q.first.y, 1e-8);
+        for (before, after, expected) in [
+            (before.first, after.first, q.second),
+            (before.second, after.second, q.third),
+            (before.third, after.third, q.fourth),
+        ] {
+            close((after.x - before.x) / (2.0 * h), expected.x, 1e-6);
+            close((after.y - before.y) / (2.0 * h), expected.y, 1e-6);
+        }
+    }
+    for offset in [-4.0, -0.5, 0.0, 0.3, 0.6] {
+        let bound = source::parallel_second_derivative_bound(offset);
+        for index in 0..=1000 {
+            let q = profile(f64::from(index) / 1000.0).unwrap();
+            let actual = q.speed.powi(2)
+                * ((1.0 - offset * q.curvature) * q.curvature)
+                    .hypot(offset * q.curvature_derivative);
+            assert!(actual <= bound * (1.0 + 1e-12));
+        }
+    }
 }
 
 #[test]
@@ -213,7 +319,7 @@ fn adaptive_error_budgets_bound_independently_evaluated_curves() {
         [600.0, 400.0, 150.0],
         [536.0, 336.0, 118.0],
         [100.0, 80.0, 27.0],
-        [72.0, 56.0, 56.0 * PHOTO_EXTENT],
+        [72.0, 56.0, 56.0 / 3.0],
     ] {
         let g = create(width, height, extent, 0.02).unwrap();
         assert!(g.error_bound <= 0.02);
@@ -228,8 +334,8 @@ fn all_four_corners_preserve_identical_physical_coordinates() {
     for [width, height, extent] in [
         [240.0, 120.0, 27.0],
         [120.0, 240.0, 27.0],
-        [127.0, 127.0, 127.0 * PHOTO_EXTENT],
-        [274.0, 144.0, 144.0 * PHOTO_EXTENT],
+        [127.0, 127.0, 127.0 / 3.0],
+        [274.0, 144.0, 144.0 / 3.0],
         [48.0, 44.0, 27.0],
     ] {
         let g = create(width, height, extent, 0.02).unwrap();

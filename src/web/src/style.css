@@ -50,7 +50,7 @@ html:lang(en) .original-public .public-header nav {gap:.55rem;font-size:.8rem;}
 @media(max-width:900px){.reading-layout{grid-template-columns:1fr}.reading-toc{order:-1}.reading-toc nav{display:none}.reading-toc details{display:block;background:#fff;border:1px solid #e1e7f0;padding:.8rem 1rem}.reading-toc summary{cursor:pointer;font-weight:700}.image-lightbox{padding:1rem}}
 @media(prefers-reduced-motion:reduce){.reading-progress span{transition:none}}
 
-/* Explicit Mac mini surfaces on supported modern browsers. */
+/* Public surface extents are retained while the shared renderer uses G4 geometry. */
 .editor-form { --blog-server-corner-extent: var(--blog-server-corner-panel, 42px); }
 .article-card,.reading-card:not(.reading-article) { --blog-server-corner-extent: var(--blog-server-corner-notification, 48px); }
 .article-markdown pre { --blog-server-corner-extent: var(--blog-server-corner-panel, 42px); }
@@ -79,7 +79,7 @@ html:lang(en) .original-public .public-header nav {gap:.55rem;font-size:.8rem;}
 
 .reading-card.reading-article,.public-tools > button { --blog-server-corner-extent: 0px; }
 
-/* A highlighted token has one box, so the Mac mini contour never reverts to
+/* A highlighted token has one box, so the continuous contour never reverts to
    circular corners when a long token wraps. Preformatted code uses its parent. */
 .article-markdown code,.link-card mark {
   display: inline-block;
