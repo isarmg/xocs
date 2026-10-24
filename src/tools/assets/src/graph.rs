@@ -2,7 +2,7 @@
 //! Metadata may include features from conditional edges that the current host
 //! compilation does not activate. This policy guard is not a compiled-unit
 //! inventory; host proc-macros are never counted as browser WASM code.
-use crate::{Options, inventory};
+use crate::{Options, inventory, layout};
 use anyhow::{Context, Result, ensure};
 use serde_json::{Value, json};
 use std::{
@@ -13,7 +13,7 @@ use std::{
 
 pub fn browser_package(root: &Path) -> Result<String> {
     let manifest: toml::Value = toml::from_str(&String::from_utf8(inventory::read(
-        &root.join("src/browser/Cargo.toml"),
+        &root.join(layout::BROWSER).join("Cargo.toml"),
     )?)?)?;
     Ok(manifest["package"]["name"]
         .as_str()
@@ -75,7 +75,7 @@ fn local_manifest<'a>(package: &'a Value, repository: &Path) -> Result<&'a Path>
 /// build/dev edges. Portable identities can be independently rechecked by the
 /// release producer in a private source export.
 pub fn runtime(options: &Options, inputs: &Value) -> Result<Value> {
-    let frontend = options.root.join("src/browser");
+    let frontend = options.root.join(layout::BROWSER);
     let manifest = options.root.join("Cargo.toml");
     let package = browser_package(&options.root)?;
     let run = |arguments: &[&str]| -> Result<Vec<u8>> {
@@ -137,7 +137,7 @@ pub fn runtime(options: &Options, inputs: &Value) -> Result<Value> {
         }
         Ok(())
     };
-    append("src/browser/", &inputs["browser_inputs"])?;
+    append(&format!("{}/", layout::BROWSER), &inputs["browser_inputs"])?;
     for (directory, files) in inputs["patched_inputs"]
         .as_object()
         .context("Local Rust dependencies")?
@@ -151,15 +151,15 @@ pub fn runtime(options: &Options, inputs: &Value) -> Result<Value> {
     }
     Ok(
         json!({"target":crate::TARGET,"mode":"csr","package":browser_root(&metadata,&frontend)?["name"],
-        "manifest":"src/browser/Cargo.toml","default_features":true,"features":[],"profile":if options.debug {"debug"} else {"web-release"},"toolchain":{"rust":crate::RUST,"wasm_bindgen":crate::BRIDGE_ABI},
+        "manifest":format!("{}/Cargo.toml",layout::BROWSER),"default_features":true,"features":[],"profile":if options.debug {"debug"} else {"web-release"},"toolchain":{"rust":crate::RUST,"wasm_bindgen":crate::BRIDGE_ABI},
         "lockfile":"Cargo.lock","lock_sha256":inventory::sha(&inventory::read(&options.root.join("Cargo.lock"))?),"source_inputs":source_inputs,"graph":graph}),
     )
 }
 
 fn runtime_selection(metadata: &Value, tree: &str, frontend: &Path) -> Result<Value> {
     let repository = frontend
-        .parent()
-        .and_then(Path::parent)
+        .ancestors()
+        .nth(Path::new(layout::BROWSER).components().count())
         .context("Repository directory")?
         .canonicalize()?;
     let browser = browser_root(metadata, frontend)?;
@@ -294,7 +294,7 @@ fn runtime_selection(metadata: &Value, tree: &str, frontend: &Path) -> Result<Va
 }
 
 pub fn resolve(options: &Options) -> Result<Value> {
-    let frontend = options.root.join("src/browser");
+    let frontend = options.root.join(layout::BROWSER);
     let mut command = Command::new("cargo");
     command
         .arg(format!("+{}", crate::RUST))
@@ -359,12 +359,12 @@ pub fn validate(metadata: &Value, frontend: &Path) -> Result<Value> {
             pending.push(dependency.as_str().context("Dependency id")?);
         }
     }
-    let web = frontend.parent().context("Web source directory")?;
-    let repository = web
-        .parent()
+    let repository = frontend
+        .ancestors()
+        .nth(Path::new(layout::BROWSER).components().count())
         .context("Repository directory")?
         .canonicalize()?;
-    let integrated = repository.join("src/interface");
+    let integrated = repository.join(layout::INTERFACE);
     let facade = reachable
         .iter()
         .filter_map(|id| {

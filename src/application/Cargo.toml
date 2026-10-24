@@ -23,7 +23,7 @@ subtle = {  path = "../foundation/crypto/constant-time-comparison",package = "bl
 thiserror = {  path = "../foundation/diagnostics/typed-error",package = "blog-diagnostics-typed-error"}
 bytes = {  path = "../foundation/encoding/byte-buffer",package = "blog-encoding-byte-buffer"}
 mime = {  path = "../foundation/network/media-type",package = "blog-network-media-type"}
-tokio = {  features = ["fs", "io-util", "macros", "net", "rt-multi-thread", "signal", "sync", "test-util", "time"], path = "../foundation/runtime/task-scheduler",package = "blog-runtime-task-scheduler"}
+tokio = {  features = ["fs", "io-util", "macros", "net", "rt-multi-thread", "signal", "sync", "time"], path = "../foundation/runtime/task-scheduler",package = "blog-runtime-task-scheduler"}
 serde = {  features = ["derive", "error-path"], path = "../foundation/format/data-model",package = "blog-format-data-model",default-features = true,optional = false}
 serde_json = {  path = "../foundation/format/json",package = "blog-format-json"}
 async-trait = {  path = "../foundation/syntax/async-trait",package = "blog-syntax-async-trait"}
@@ -37,6 +37,9 @@ socket2 = {  path = "../foundation/platform/socket-options",package = "blog-plat
 chrono = {  default-features = false, features = ["clock", "std"], path = "../foundation/format/date-time",package = "blog-format-date-time"}
 anyhow = {  path = "../foundation/diagnostics/error-context",package = "blog-diagnostics-error-context"}
 http = {  path = "../foundation/network/http-message",package = "blog-network-http-message"}
+
+[dev-dependencies]
+tokio = { default-features = false, features = ["test-util"], path = "../foundation/runtime/task-scheduler", package = "blog-runtime-task-scheduler" }
 
 [lints.rust]
 unsafe_code = "deny"

@@ -4361,6 +4361,26 @@
       "directory": "src/browser",
       "reason": "Replace fixed photos, avatars and background video with owner-configured media, native theme/initial fallbacks and clearable upload previews; add typed read/upload contracts and preserve cancellation and save ownership.",
       "production_behavior_change": true
+    },
+    {
+      "directory": "src/application",
+      "reason": "Keep Tokio simulated-time controls in explicit development dependencies so production runtime feature selection follows application requirements.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/server",
+      "reason": "Co-locate public and administrative handlers by content domain, keep site media validation private to site configuration, centralize media format metadata across uploads and deletion checks, separate container parsing, reference queries and storage recovery while retaining the visible deletion transaction, and share runtime and installation layout definitions.",
+      "production_behavior_change": false
+    },
+    {
+      "directory": "src/browser",
+      "reason": "Organize public and administrative pages into private feature modules, separate request state, mutations, navigation and UI primitives without moving reactive ownership, remove redundant generated view wrappers, derive required nullable site response validation from typed models, and use canonical typed administration navigation so fallback selection agrees with rendered content.",
+      "production_behavior_change": true
+    },
+    {
+      "directory": "src/tools/assets",
+      "reason": "Share bounded source collection, verification roots and digest encoding between build-script and runtime snapshots, reuse fixed product layout definitions, and reject unused web directory and script configuration fields while retaining configurable output and native build settings.",
+      "production_behavior_change": true
     }
   ]
 }

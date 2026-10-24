@@ -5,21 +5,21 @@ use url_encoding::address::Url;
 
 #[derive(Default, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct SiteMedia {
-    pub logo: Option<String>,
-    pub journey_background: Option<String>,
-    pub journal_background: Option<String>,
-    pub guestbook_background: Option<String>,
-    pub love_letter_background: Option<String>,
-    pub love_moments_cover: Option<String>,
-    pub love_photos_cover: Option<String>,
-    pub love_wishes_cover: Option<String>,
-    pub toolbox_background: Option<String>,
-    pub toolbox_video: Option<String>,
+pub(super) struct SiteMedia {
+    logo: Option<String>,
+    journey_background: Option<String>,
+    journal_background: Option<String>,
+    guestbook_background: Option<String>,
+    love_letter_background: Option<String>,
+    love_moments_cover: Option<String>,
+    love_photos_cover: Option<String>,
+    love_wishes_cover: Option<String>,
+    toolbox_background: Option<String>,
+    toolbox_video: Option<String>,
 }
 
 impl SiteMedia {
-    pub fn normalize(&mut self) -> Result<(), AppError> {
+    pub(super) fn normalize(&mut self) -> Result<(), AppError> {
         for field in [
             &mut self.logo,
             &mut self.journey_background,
@@ -38,7 +38,7 @@ impl SiteMedia {
     }
 }
 
-pub(crate) fn normalize_url(field: &mut Option<String>) -> Result<(), AppError> {
+pub(super) fn normalize_url(field: &mut Option<String>) -> Result<(), AppError> {
     let Some(value) = field.as_deref() else {
         return Ok(());
     };
@@ -71,7 +71,7 @@ pub(crate) fn normalize_url(field: &mut Option<String>) -> Result<(), AppError> 
     Ok(())
 }
 
-pub(crate) fn normalize_covers(field: &mut Option<String>) -> Result<(), AppError> {
+pub(super) fn normalize_covers(field: &mut Option<String>) -> Result<(), AppError> {
     let Some(value) = field.as_deref() else {
         return Ok(());
     };

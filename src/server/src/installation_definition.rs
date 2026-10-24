@@ -1,4 +1,5 @@
 //! Build-time export of product-owned current installation data.
+use crate::config_definition::{DATABASE_FILENAME, DEFAULT_ROOT, STATE_DIRECTORY};
 use blog_application::contracts::{ReleaseIdentity, SchemaIdentity};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -21,7 +22,10 @@ fn asset(directory: &Path, name: &str, bytes: &[u8]) -> Value {
 fn relocate_defaults(value: &mut Value) {
     match value {
         Value::String(text) => {
-            if let Some(suffix) = text.strip_prefix("/opt/isarmg/blog/") {
+            if let Some(suffix) = text
+                .strip_prefix(DEFAULT_ROOT)
+                .and_then(|suffix| suffix.strip_prefix('/'))
+            {
                 *text = format!("$ROOT/{suffix}");
             }
         }
@@ -58,7 +62,7 @@ pub(crate) fn emit(
         .unwrap();
     database["name"] = json!("site");
     let mut path = crate::config_definition::data_path_spec();
-    path["suffix"] = json!("site.sqlite");
+    path["suffix"] = json!(DATABASE_FILENAME);
     database["path"] = path;
     database["ddl"] = asset(&directory, "current-schema.sql", ddl.as_bytes());
     database["initialize"].as_array_mut().unwrap().insert(0, json!({
@@ -98,19 +102,21 @@ pub(crate) fn emit(
         (
             "business-subtree",
             "media",
-            json!("$ROOT/state/archive/videos"),
+            json!(format!("$ROOT/{STATE_DIRECTORY}/archive/videos")),
             true,
         ),
         (
             "business-exposes-database",
             "media",
-            json!("$ROOT/state/site.sqlite.private"),
+            json!(format!(
+                "$ROOT/{STATE_DIRECTORY}/{DATABASE_FILENAME}.private"
+            )),
             false,
         ),
         (
             "business-exposes-locks",
             "media",
-            json!("$ROOT/state/.state-instance.lock"),
+            json!(format!("$ROOT/{STATE_DIRECTORY}/.state-instance.lock")),
             false,
         ),
         (

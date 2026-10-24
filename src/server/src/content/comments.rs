@@ -1,4 +1,4 @@
-use super::PageResult;
+use super::{AdminPageQuery, PageResult};
 use crate::{ApiResult, AppError, AppState, absent, db_error, invalid};
 use axum::{Json, extract::State, http::StatusCode};
 use blog_application::server_cli::{ContractPath as Path, ContractQuery as Query};
@@ -348,4 +348,62 @@ pub(super) async fn love_comment_replies(
         page,
         size,
     }))
+}
+
+#[derive(Serialize, sqlx::FromRow)]
+pub(super) struct AdminComment {
+    id: i64,
+    source: i64,
+    comment_type: Option<String>,
+    user_id: Option<i64>,
+    username: Option<String>,
+    comment_content: String,
+    create_time: Option<String>,
+}
+pub(super) async fn admin_comments(
+    State(state): State<AppState>,
+    Query(query): Query<AdminPageQuery>,
+) -> ApiResult<PageResult<AdminComment>> {
+    let (page, size) = query.bounds();
+    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM comment")
+        .fetch_one(&state.pool)
+        .await
+        .map_err(db_error)?;
+    let items=sqlx::query_as::<_,AdminComment>("SELECT c.id,c.source,c.type AS comment_type,c.user_id,u.username,c.comment_content,c.create_time FROM comment c LEFT JOIN user u ON u.id=c.user_id ORDER BY c.id DESC LIMIT ? OFFSET ?")
+        .bind(size).bind((page-1)*size).fetch_all(&state.pool).await.map_err(db_error)?;
+    Ok(Json(PageResult {
+        items,
+        total,
+        page,
+        size,
+    }))
+}
+pub(super) async fn delete_comment(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> ApiResult<serde_json::Value> {
+    let root: Option<Option<i64>> =
+        sqlx::query_scalar("SELECT parent_comment_id FROM comment WHERE id=?")
+            .bind(id)
+            .fetch_optional(&state.pool)
+            .await
+            .map_err(db_error)?;
+    let Some(parent) = root else {
+        return Err(absent());
+    };
+    if parent.unwrap_or(0) == 0 {
+        sqlx::query("DELETE FROM comment WHERE id=? OR floor_comment_id=?")
+            .bind(id)
+            .bind(id)
+            .execute(&state.pool)
+            .await
+            .map_err(db_error)?;
+    } else {
+        sqlx::query("DELETE FROM comment WHERE id=?")
+            .bind(id)
+            .execute(&state.pool)
+            .await
+            .map_err(db_error)?;
+    }
+    Ok(Json(serde_json::json!({"deleted":true})))
 }

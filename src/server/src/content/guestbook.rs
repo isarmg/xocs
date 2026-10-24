@@ -1,5 +1,7 @@
-use crate::{ApiResult, AppState, db_error, invalid};
+use super::{AdminPageQuery, PageResult};
+use crate::{ApiResult, AppState, absent, db_error, invalid};
 use axum::{Json, extract::State};
+use blog_application::server_cli::{ContractPath as Path, ContractQuery as Query};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, sqlx::FromRow)]
@@ -49,4 +51,43 @@ pub(super) async fn create_guest_tree_hole(
         .last_insert_rowid();
     Ok(Json(sqlx::query_as("SELECT t.id,t.user_id,u.username,t.avatar,t.message,t.image_path,t.create_time FROM tree_hole t LEFT JOIN user u ON u.id=t.user_id WHERE t.id=?")
         .bind(id).fetch_one(&state.pool).await.map_err(db_error)?))
+}
+
+pub(super) async fn content_tree_hole(
+    State(state): State<AppState>,
+    Query(query): Query<AdminPageQuery>,
+) -> ApiResult<PageResult<TreeHole>> {
+    let (page, size) = query.bounds();
+    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM tree_hole")
+        .fetch_one(&state.pool)
+        .await
+        .map_err(db_error)?;
+    let items = sqlx::query_as::<_, TreeHole>(
+        "SELECT t.id,t.user_id,u.username,t.avatar,t.message,t.image_path,t.create_time FROM tree_hole t LEFT JOIN user u ON u.id=t.user_id ORDER BY t.id DESC LIMIT ? OFFSET ?",
+    )
+    .bind(size)
+    .bind((page - 1) * size)
+    .fetch_all(&state.pool)
+    .await
+    .map_err(db_error)?;
+    Ok(Json(PageResult {
+        items,
+        total,
+        page,
+        size,
+    }))
+}
+pub(super) async fn delete_tree_hole(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> ApiResult<serde_json::Value> {
+    let changed = sqlx::query("DELETE FROM tree_hole WHERE id=?")
+        .bind(id)
+        .execute(&state.pool)
+        .await
+        .map_err(db_error)?;
+    if changed.rows_affected() == 0 {
+        return Err(absent());
+    }
+    Ok(Json(serde_json::json!({"deleted": true})))
 }

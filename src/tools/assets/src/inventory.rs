@@ -1,117 +1,36 @@
-use anyhow::{Context, Result, bail, ensure};
+use crate::{
+    layout,
+    source_inputs::{self, SnapshotFiles},
+};
+use anyhow::{Context, Result, ensure};
 use serde_json::{Value, json};
-use sha2::{Digest, Sha256};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
-    path::{Component, Path, PathBuf},
+    path::{Path, PathBuf},
 };
 
 pub type Files = BTreeMap<String, String>;
-pub const MAX_FILE: u64 = 32 * 1024 * 1024;
+pub const MAX_FILE: u64 = source_inputs::MAX_FILE;
 
 pub fn sha(bytes: &[u8]) -> String {
-    Sha256::digest(bytes)
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
+    source_inputs::sha(bytes)
 }
 
 pub fn relative(path: &Path) -> Result<String> {
-    ensure!(
-        !path.as_os_str().is_empty() && !path.is_absolute(),
-        "Expected a nonempty relative path"
-    );
-    ensure!(
-        path.components().all(|p| matches!(p, Component::Normal(_))),
-        "Uncontrolled relative path: {}",
-        path.display()
-    );
-    let name = path.to_str().context("Path must be UTF-8")?;
-    ensure!(
-        !name.contains('\\'),
-        "Backslashes are forbidden in source/output paths: {name}"
-    );
-    Ok(name.to_owned())
+    Ok(source_inputs::relative(path)?)
 }
 
 pub fn physical(path: &Path) -> Result<()> {
-    for ancestor in path.ancestors() {
-        let info = fs::symlink_metadata(ancestor)
-            .with_context(|| format!("Inspect {}", ancestor.display()))?;
-        ensure!(
-            !info.file_type().is_symlink(),
-            "Symlink input/output is forbidden: {}",
-            ancestor.display()
-        );
-    }
-    Ok(())
+    Ok(source_inputs::physical(path)?)
 }
 
 pub fn read(path: &Path) -> Result<Vec<u8>> {
-    physical(path)?;
-    let info = fs::symlink_metadata(path)?;
-    ensure!(
-        info.is_file() && info.len() <= MAX_FILE,
-        "Expected bounded physical file: {}",
-        path.display()
-    );
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::MetadataExt;
-        ensure!(
-            info.nlink() == 1,
-            "Hard linked input/output is forbidden: {}",
-            path.display()
-        );
-    }
-    let bytes = fs::read(path)?;
-    ensure!(
-        bytes.len() as u64 <= MAX_FILE,
-        "Input grew beyond byte bound"
-    );
-    Ok(bytes)
+    Ok(source_inputs::read(path)?)
 }
 
 pub fn walk(root: &Path) -> Result<Vec<PathBuf>> {
-    let mut paths = Vec::new();
-    if !root.exists() {
-        return Ok(paths);
-    }
-    physical(root)?;
-    let mut entries = fs::read_dir(root)?.collect::<std::io::Result<Vec<_>>>()?;
-    entries.sort_by_key(|entry| entry.file_name());
-    for entry in entries {
-        let name = entry.file_name();
-        if matches!(
-            name.to_str(),
-            Some(".git" | "__pycache__" | ".pytest_cache")
-        ) {
-            continue;
-        }
-        if name == "target" && root.join("Cargo.toml").is_file() {
-            continue;
-        }
-        let path = entry.path();
-        let kind = entry.file_type()?;
-        ensure!(
-            !kind.is_symlink(),
-            "Symlink input/output is forbidden: {}",
-            path.display()
-        );
-        if kind.is_dir() {
-            paths.extend(walk(&path)?);
-        } else if kind.is_file() {
-            paths.push(path);
-        } else {
-            bail!("Special object is forbidden: {}", path.display());
-        }
-        ensure!(
-            paths.len() <= 16384,
-            "Input/output file count exceeds bound"
-        );
-    }
-    Ok(paths)
+    Ok(source_inputs::walk(root, source_inputs::MAX_PACKAGE_FILES)?)
 }
 
 pub fn files(root: &Path) -> Result<Files> {
@@ -218,9 +137,8 @@ pub fn builder_source(directory: &Path, required: bool) -> Result<Option<Value>>
         return Ok(None);
     }
     let repository = directory
-        .parent()
-        .and_then(Path::parent)
-        .and_then(Path::parent)
+        .ancestors()
+        .nth(Path::new(layout::BUILDER).components().count())
         .context("Builder repository")?;
     let source = maintained_source(repository, directory)?;
     let manifest: toml::Value =
@@ -231,36 +149,6 @@ pub fn builder_source(directory: &Path, required: bool) -> Result<Option<Value>>
         "Web builder must be the repository-maintained blog-assets implementation"
     );
     Ok(Some(source))
-}
-
-/// Reuse source digests within a single snapshot. A fresh cache is created
-/// for every snapshot; before/after checks always reread source bytes.
-#[derive(Default)]
-struct SnapshotFiles {
-    hashes: BTreeMap<PathBuf, String>,
-}
-
-impl SnapshotFiles {
-    fn read(&mut self, path: &Path) -> Result<Vec<u8>> {
-        let bytes = read(path)?;
-        self.hashes.insert(path.into(), sha(&bytes));
-        Ok(bytes)
-    }
-
-    fn hash(&mut self, path: &Path) -> Result<String> {
-        if let Some(digest) = self.hashes.get(path) {
-            return Ok(digest.clone());
-        }
-        self.read(path)?;
-        Ok(self.hashes[path].clone())
-    }
-
-    fn files(&mut self, root: &Path) -> Result<Files> {
-        walk(root)?
-            .into_iter()
-            .map(|path| Ok((relative(path.strip_prefix(root)?)?, self.hash(&path)?)))
-            .collect()
-    }
 }
 
 /// Include complete local packages, including build-script data outside src/.
@@ -365,89 +253,25 @@ fn cargo_sources(
     Ok(())
 }
 
-/// Source moved outside crate directories can still be consumed by include_str!.
-/// This tree digest is also embedded when compiling the builder, so an old
-/// executable cannot claim newly modified local dependencies as its own inputs.
-fn foundation_paths(root: &Path) -> Result<Vec<PathBuf>> {
-    fn collect(directory: &Path, paths: &mut Vec<PathBuf>) -> Result<()> {
-        if !directory.exists() {
-            return Ok(());
-        }
-        physical(directory)?;
-        let mut entries = fs::read_dir(directory)?.collect::<std::io::Result<Vec<_>>>()?;
-        entries.sort_by_key(|entry| entry.file_name());
-        for entry in entries {
-            if matches!(
-                entry.file_name().to_str(),
-                Some(".git" | "__pycache__" | ".pytest_cache")
-            ) {
-                continue;
-            }
-            if entry.file_name() == "target" && directory.join("Cargo.toml").is_file() {
-                continue;
-            }
-            let path = entry.path();
-            let kind = entry.file_type()?;
-            ensure!(
-                !kind.is_symlink(),
-                "Symlink foundation input: {}",
-                path.display()
-            );
-            if kind.is_dir() {
-                collect(&path, paths)?;
-            } else {
-                ensure!(
-                    kind.is_file(),
-                    "Non-regular foundation input: {}",
-                    path.display()
-                );
-                paths.push(path);
-                ensure!(paths.len() <= 131072, "Foundation file count exceeds bound");
-            }
-        }
-        Ok(())
-    }
-    let mut paths = Vec::new();
-    for name in [
-        "src/foundation",
-        "docs/dependencies",
-        "test",
-        "compliance/licenses/upstream",
-    ] {
-        collect(&root.join(name), &mut paths)?;
-    }
-    Ok(paths)
-}
-
+/// Full source verification includes documentation, legal records and test
+/// inputs outside package directories. This is deliberately the same broad
+/// coverage used by the compiled implementation basis; it is not a list of
+/// Cargo compilation units.
 pub fn foundation_inputs(root: &Path) -> Result<Files> {
     foundation_inputs_with(root, &mut SnapshotFiles::default())
 }
 
 fn foundation_inputs_with(root: &Path, hashes: &mut SnapshotFiles) -> Result<Files> {
-    foundation_paths(root)?
-        .into_iter()
-        .map(|path| Ok((relative(path.strip_prefix(root)?)?, hashes.hash(&path)?)))
-        .collect()
+    Ok(hashes.verification_inputs(root)?)
 }
 
 pub fn foundation_digest(files: &Files) -> String {
-    let mut digest = Sha256::new();
-    for (name, hash) in files {
-        digest.update(name.as_bytes());
-        digest.update([0]);
-        digest.update(hash.as_bytes());
-        digest.update(b"\n");
-    }
-    digest
-        .finalize()
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
+    source_inputs::digest(files)
 }
 
 pub fn snapshot(root: &Path) -> Result<Value> {
-    let web = root.join("src/web");
-    let frontend = root.join("src/browser");
+    let web = root.join(layout::WEB);
+    let frontend = root.join(layout::BROWSER);
     let mut rust = BTreeMap::new();
     let mut seen = BTreeSet::new();
     let mut hashes = SnapshotFiles::default();
@@ -461,7 +285,7 @@ pub fn snapshot(root: &Path) -> Result<Value> {
         &mut hashes,
         &mut rust,
     )?;
-    let builder = root.join("src/tools/assets");
+    let builder = root.join(layout::BUILDER);
     if builder.join("Cargo.toml").exists() {
         cargo_sources(
             root,
@@ -480,7 +304,7 @@ pub fn snapshot(root: &Path) -> Result<Value> {
             assets.insert(relative(path.strip_prefix(&web)?)?, hashes.hash(&path)?);
         }
     }
-    for name in ["src", "runtime", "vendor", "styles", "public", "licenses"] {
+    for name in layout::WEB_INPUT_DIRECTORIES {
         for path in walk(&web.join(name))? {
             assets.insert(relative(path.strip_prefix(&web)?)?, hashes.hash(&path)?);
         }
@@ -505,7 +329,7 @@ pub fn snapshot(root: &Path) -> Result<Value> {
     if builder.join("Cargo.toml").exists() {
         tool_inputs.extend(workspace_inputs.clone());
         tool_inputs.insert(
-            "src/foundation".into(),
+            layout::FOUNDATION.into(),
             foundation_digest(&foundation_inputs),
         );
         for name in ["Cargo.toml", "build.rs", "ORIGIN.json"] {
@@ -550,8 +374,8 @@ pub fn snapshot(root: &Path) -> Result<Value> {
             Value::Object(record)
         })
         .collect::<Vec<_>>();
-    let browser_inputs = rust.remove("src/browser").unwrap_or_default();
-    let shared_inputs = rust.get("src/interface").cloned().unwrap_or_default();
+    let browser_inputs = rust.remove(layout::BROWSER).unwrap_or_default();
+    let shared_inputs = rust.get(layout::INTERFACE).cloned().unwrap_or_default();
     Ok(
         json!({"browser_inputs":browser_inputs,"shared_inputs":shared_inputs,"patched_inputs":rust,"asset_inputs":assets,
         "builder_sha256":sha(&serde_json::to_vec(&tool_inputs)?),"builder_inputs":tool_inputs,"builder_source":builder_source,"cargo_packages":cargo_packages,"origin_inputs":origin_inputs,"workspace_inputs":workspace_inputs,"foundation_inputs":foundation_inputs,"lockfile":"Cargo.lock"}),
@@ -593,7 +417,7 @@ pub fn public_provenance(snapshot: &Value, runtime: &Value) -> Result<Value> {
 /// after compilation/linking. Include inode/ctime on Unix to notice replacement
 /// even when an editor restores the previous modification timestamp.
 pub fn signature(root: &Path) -> Result<String> {
-    let web = root.join("src/web");
+    let web = root.join(layout::WEB);
     let mut result = String::new();
     let mut paths = Vec::new();
     for entry in fs::read_dir(&web)? {
@@ -602,13 +426,13 @@ pub fn signature(root: &Path) -> Result<String> {
             paths.push(path);
         }
     }
-    for name in ["src", "runtime", "vendor", "styles", "public", "licenses"] {
+    for name in layout::WEB_INPUT_DIRECTORIES {
         paths.extend(walk(&web.join(name))?);
     }
-    for name in ["src/browser", "src/interface", "src/tools/assets"] {
+    for name in [layout::BROWSER, layout::INTERFACE, layout::BUILDER] {
         paths.extend(walk(&root.join(name))?);
     }
-    paths.extend(foundation_paths(root)?);
+    paths.extend(source_inputs::verification_paths(root)?);
     for name in ["Cargo.toml", "Cargo.lock", ".cargo/config.toml"] {
         let path = root.join(name);
         if path.exists() {

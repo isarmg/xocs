@@ -1,8 +1,6 @@
 {
   "format": 1,
   "web": {
-    "directory": "src/web",
-    "script": "build",
     "dist": "dist"
   },
   "rust": {

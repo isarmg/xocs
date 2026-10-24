@@ -6,6 +6,8 @@
 
 Rust 单元测试使用条件模块路径保留原模块作用域，集成测试使用 manifest 显式入口；业务模块中只保留必要的测试接线。目录与命令见[测试说明](../test/README.md)。
 
+服务端的 `content`、`media` 和浏览器的 `public`、`admin`、`common` 按业务或生命周期职责组织私有模块，组合入口只暴露调用方需要的接口。模块职责见[架构说明](architecture.md)；拆分模块不改变 Cargo 包所有权，测试仍由对应包接线。
+
 ## 输入与身份
 
 | 文件或目录 | 内容 |
@@ -38,6 +40,20 @@ python3 src/tools/check-independence.py
 工具生成的入口闭包按 normal、build、proc-macro 和测试用途标注。声明图包含条件和 optional 分支，是受管输入的保守集合。`include_dev: true` 纳入指定测试根的开发依赖，再跟踪其 normal/build 依赖；不递归纳入依赖库自身的测试。具体可执行验证见[开发说明](development.md)和[浏览器验证](browser-testing.md)。
 
 运行依赖使用对应目标的 metadata 图；build 依赖、过程宏及其后续依赖统一切换到 Linux AMD64 宿主图，浏览器 WASM 构建也遵守这一规则。同一包可同时具有运行和编译职责，特性取相关 workspace 图的并集；这仍是保守闭包，不代表最终链接的精确特性集合。
+
+application 和服务端的暂停时间测试通过各自的显式开发依赖启用 Tokio `test-util`，正常依赖不启用该特性。检查产品运行闭包时排除开发依赖：
+
+```sh
+cargo tree --locked --offline -p blog -p blog-setup -e features,no-dev -i blog-runtime-task-scheduler
+```
+
+该输出不应出现 `test-util`；包含测试依赖的图和来源收据的保守特性集合可以包含它。
+
+## 构建输入边界
+
+资源构建器的 `src/tools/assets/src/layout.rs` 定义固定的产品源码目录；前端输入位于 `src/web`。构建器的构建脚本、资源清单和源码监控共用 `source_inputs.rs` 的文件读取、目录遍历和摘要编码规则。每个输入必须是受限大小的普通文件，路径不能穿越目录，也不能经过符号链接；硬链接和特殊文件会被拒绝。读取前后检查文件身份与元数据，变动中的输入不能形成有效快照。
+
+目录遍历限制文件数量，单个源码输入上限为 32 MiB。编译实现依据保守地包含 foundation、依赖资料、完整测试树和原始许可；源码身份与实际参与某次编译的文件分别验证。生成目录按明确边界排除，真实源码中名为 `target` 的普通子目录仍属于输入。
 
 ## 接纳文件变动
 

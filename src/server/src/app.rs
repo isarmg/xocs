@@ -1,4 +1,4 @@
-use crate::{PRODUCT_ID, admin, content, home, media, schema, static_assets};
+use crate::{PRODUCT_ID, content, home, media, schema, static_assets};
 use axum::{
     Json, Router,
     extract::{Request, State},
@@ -135,7 +135,6 @@ pub(crate) fn now_micros() -> anyhow::Result<u64> {
 
 pub(crate) fn router(state: AppState, web: Option<PathBuf>) -> anyhow::Result<Router> {
     let admin_routes = content::admin_routes()
-        .merge(admin::routes())
         .merge(media::admin_routes())
         .merge(home::admin_routes())
         .route_layer(from_fn_with_state(state.clone(), admin_gate))

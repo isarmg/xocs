@@ -1,3 +1,4 @@
+use serde::Deserialize;
 use serde_json::Value;
 fn fields(v: &Value, keys: &[&str], test: fn(&Value) -> bool) -> bool {
     v.is_object() && keys.iter().all(|k| v.get(k).is_some_and(test))
@@ -87,34 +88,12 @@ fn admin_comment(v: &Value) -> bool {
         && fields(v, &["comment_type", "username", "create_time"], nullable)
 }
 pub fn site(v: &Value) -> bool {
-    fields(
-        v,
-        &[
-            "web_name",
-            "web_title",
-            "notices",
-            "background_image",
-            "avatar",
-            "random_cover",
-        ],
-        nullable,
-    ) && fields(
-        &v["media"],
-        &[
-            "logo",
-            "journey_background",
-            "journal_background",
-            "guestbook_background",
-            "love_letter_background",
-            "love_moments_cover",
-            "love_photos_cover",
-            "love_wishes_cover",
-            "toolbox_background",
-            "toolbox_video",
-        ],
-        nullable,
-    )
+    // Derived Serde structs also accept sequences; this endpoint requires objects.
+    v.is_object()
+        && v.get("media").is_some_and(Value::is_object)
+        && crate::models::Site::deserialize(v).is_ok()
 }
+
 pub fn note(v: &Value) -> bool {
     id(&v["id"])
         && v.get("user_id").is_some_and(nullable_id)

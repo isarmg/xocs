@@ -427,6 +427,11 @@ async fn site_media_rejects_invalid_shapes_and_urls_before_mutating_saved_state(
         input["media"]["toolbox_video"] = json!(url);
         invalid.push(input);
     }
+    for key in original["media"].as_object().unwrap().keys() {
+        let mut input = bad.clone();
+        input["media"][key] = "javascript:alert(1)".into();
+        invalid.push(input);
+    }
     for key in ["avatar", "background_image"] {
         let mut input = bad.clone();
         input[key] = "javascript:alert(1)".into();

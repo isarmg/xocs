@@ -1,0 +1,20 @@
+{
+  "web_name": null,
+  "web_title": "Title",
+  "notices": null,
+  "background_image": null,
+  "avatar": null,
+  "random_cover": null,
+  "media": {
+    "logo": null,
+    "journey_background": null,
+    "journal_background": null,
+    "guestbook_background": null,
+    "love_letter_background": null,
+    "love_moments_cover": null,
+    "love_photos_cover": null,
+    "love_wishes_cover": null,
+    "toolbox_background": null,
+    "toolbox_video": "/media/background.webm"
+  }
+}

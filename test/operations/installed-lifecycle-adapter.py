@@ -45,9 +45,11 @@ def verify_public(request, state, require):
 
 def exercise(request, session, sensitive, require):
     csrf = session['csrf_token']
-    site = dict(author_name='Installed writer', web_name='Installed blog',
-                web_title='Production lifecycle', notices=None, background_image=None,
-                avatar=None, random_cover=None)
+    site = api(request, SITE)
+    if not isinstance(site, dict):
+        raise RuntimeError('Invalid site settings')
+    site.update(author_name='Installed writer', web_name='Installed blog',
+                web_title='Production lifecycle')
     require(api(request, SITE, 'PUT', site, csrf) == site, 'Site update differs')
     category = api(request, CATEGORIES, 'POST', {'name': 'Installed category'}, csrf)
     label = api(request, LABELS, 'POST', {'sort_id': category['id'], 'name': 'Installed label'}, csrf)

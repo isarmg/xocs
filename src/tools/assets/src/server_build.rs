@@ -1,4 +1,5 @@
 //! Source-bound native server builds without a JavaScript launcher.
+use crate::layout;
 use anyhow::{Context, Result, bail, ensure};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -21,8 +22,6 @@ struct Config {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct WebConfig {
-    directory: String,
-    script: String,
     dist: String,
 }
 #[derive(Deserialize)]
@@ -98,10 +97,7 @@ fn name(value: &str) -> bool {
             .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || matches!(b, b'-' | b'_'))
 }
 
-fn path(root: &Path, relative: &str, allow_root: bool) -> Result<PathBuf> {
-    if allow_root && relative == "." {
-        return Ok(root.to_owned());
-    }
+fn path(root: &Path, relative: &str) -> Result<PathBuf> {
     ensure!(
         crate::inventory::relative(Path::new(relative))? == relative,
         "Build path must be canonical and relative"
@@ -197,7 +193,7 @@ fn verify_assets(inventory: &Inventory, dist: &Path, binary: &[u8]) -> Result<()
             asset.path.as_str() > previous && sha(&asset.sha256) && !asset.content_type.is_empty(),
             "Invalid compiled asset entry"
         );
-        let source = path(dist, &asset.path, false)?;
+        let source = path(dist, &asset.path)?;
         let bytes = read(&source, 256 * 1024 * 1024)?;
         ensure!(
             bytes.len() as u64 == asset.size
@@ -286,6 +282,18 @@ pub fn source_stamp(root: &Path) -> Result<SourceStamp> {
             .current_dir(root),
         64 * 1024 * 1024,
     )?;
+    let generated_prefixes = [
+        "target/".to_owned(),
+        "dist/".into(),
+        format!("{}/dist/", layout::WEB),
+        format!("{}/pkg/", layout::WEB),
+        format!("{}/node_modules/", layout::WEB),
+        format!("{}/.previous-", layout::WEB),
+        format!("{}/target/", layout::BUILDER),
+        format!("{}/target/", layout::BROWSER),
+        "test/browser-domain/target/".into(),
+        ".local-run/".into(),
+    ];
     let mut names = BTreeSet::new();
     for name in output
         .split(|byte| *byte == 0)
@@ -302,20 +310,9 @@ pub fn source_stamp(root: &Path) -> Result<SourceStamp> {
         }) {
             continue;
         }
-        if [
-            "target/",
-            "dist/",
-            "src/web/dist/",
-            "src/web/pkg/",
-            "src/web/node_modules/",
-            "src/web/.previous-",
-            "src/tools/assets/target/",
-            "src/browser/target/",
-            "test/browser-domain/target/",
-            ".local-run/",
-        ]
-        .iter()
-        .any(|prefix| name.starts_with(prefix))
+        if generated_prefixes
+            .iter()
+            .any(|prefix| name.starts_with(prefix))
         {
             continue;
         }
@@ -403,13 +400,10 @@ pub fn build(
         "Invalid native build mode"
     );
     let root = &options.root;
-    let config_file = path(root, config_path.unwrap_or("blog-assets.json"), false)?;
+    let config_file = path(root, config_path.unwrap_or("blog-assets.json"))?;
     let config: Config = serde_json::from_slice(&read(&config_file, 64 * 1024)?)?;
     ensure!(
-        config.format == 1
-            && name(&config.rust.package)
-            && name(&config.rust.binary)
-            && !config.web.script.is_empty(),
+        config.format == 1 && name(&config.rust.package) && name(&config.rust.binary),
         "Invalid Server build declaration"
     );
     let variable = &config.rust.source_revision_env;
@@ -420,9 +414,9 @@ pub fn build(
                 .all(|b| b.is_ascii_uppercase() || b.is_ascii_digit() || b == b'_'),
         "Invalid source identity environment name"
     );
-    let web = path(root, &config.web.directory, true)?;
-    let manifest = path(root, &config.rust.manifest, false)?;
-    let default_dist = path(&web, &config.web.dist, false)?;
+    let web = root.join(layout::WEB);
+    let manifest = path(root, &config.rust.manifest)?;
+    let default_dist = path(&web, &config.web.dist)?;
     let selected = crate::Options {
         dist: Some(options.dist.clone().unwrap_or(default_dist)),
         ..options.clone()

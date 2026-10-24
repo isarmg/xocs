@@ -1,0 +1,149 @@
+//! References in saved content that retain managed media, including drafts.
+use pulldown_cmark::{Event, Options, Parser, Tag};
+use sqlx::{Row, SqliteConnection};
+
+use crate::{AppError, db_error};
+
+fn decoded_reference(value: &str) -> String {
+    let mut decoded = url_encoding::percent::percent_decode_str(value)
+        .decode_utf8_lossy()
+        .into_owned();
+    // HTML attributes may use numeric entities; Markdown and ordinary URL
+    // fields may percent-encode the same image path. Compare their decoded form.
+    for _ in 0..3 {
+        let mut output = String::with_capacity(decoded.len());
+        let mut rest = decoded.as_str();
+        while let Some(start) = rest.find('&') {
+            output.push_str(&rest[..start]);
+            let candidate = &rest[start..];
+            let Some(end) = candidate.find(';').filter(|end| *end <= 16) else {
+                output.push('&');
+                rest = &candidate[1..];
+                continue;
+            };
+            let entity = &candidate[1..end];
+            let character = match entity {
+                "sol" => Some('/'),
+                "period" => Some('.'),
+                "amp" => Some('&'),
+                _ => entity
+                    .strip_prefix("#x")
+                    .or_else(|| entity.strip_prefix("#X"))
+                    .and_then(|hex| u32::from_str_radix(hex, 16).ok())
+                    .and_then(char::from_u32)
+                    .or_else(|| {
+                        entity
+                            .strip_prefix('#')
+                            .and_then(|number| number.parse().ok())
+                            .and_then(char::from_u32)
+                    }),
+            };
+            if let Some(character) = character {
+                output.push(character);
+                rest = &candidate[end + 1..];
+            } else {
+                output.push('&');
+                rest = &candidate[1..];
+            }
+        }
+        output.push_str(rest);
+        output = url_encoding::percent::percent_decode_str(&output)
+            .decode_utf8_lossy()
+            .into_owned();
+        if output == decoded {
+            break;
+        }
+        decoded = output;
+    }
+    decoded
+}
+
+fn text_contains_reference(value: &str, path: &str) -> bool {
+    if value.contains(path) || decoded_reference(value).contains(path) {
+        return true;
+    }
+    // The browser uses this same tokenizer: backslash escapes depend on the
+    // Markdown context and must never be stripped from arbitrary stored text.
+    // Its destinations have already decoded CommonMark escapes and entities;
+    // only URL percent decoding remains, not another HTML-entity pass.
+    value.contains('\\')
+        && Parser::new_ext(
+            value,
+            Options::ENABLE_TABLES | Options::ENABLE_STRIKETHROUGH,
+        )
+        .any(|event| match event {
+            Event::Start(Tag::Image { dest_url, .. } | Tag::Link { dest_url, .. }) => {
+                dest_url.contains(path)
+                    || url_encoding::percent::percent_decode_str(&dest_url)
+                        .decode_utf8_lossy()
+                        .contains(path)
+            }
+            _ => false,
+        })
+}
+
+fn contains_reference(value: &str, path: &str) -> bool {
+    fn json_contains(value: &serde_json::Value, path: &str) -> bool {
+        match value {
+            serde_json::Value::String(value) => text_contains_reference(value, path),
+            serde_json::Value::Array(values) => {
+                values.iter().any(|value| json_contains(value, path))
+            }
+            serde_json::Value::Object(values) => {
+                values.values().any(|value| json_contains(value, path))
+            }
+            _ => false,
+        }
+    }
+    value.split('\0').any(|field| {
+        // Each SQL column is a separate document. Parsing their NUL-separated
+        // concatenation changes CommonMark reference-definition boundaries.
+        text_contains_reference(field, path)
+            || serde_json::from_str::<serde_json::Value>(field)
+                .is_ok_and(|value| json_contains(&value, path))
+    })
+}
+
+pub(super) async fn referenced(
+    connection: &mut SqliteConnection,
+    path: &str,
+) -> Result<bool, AppError> {
+    // Inspect all current content, including drafts, so removing an unused
+    // upload cannot break a saved article, profile, album, note or letter.
+    const QUERIES: &[&str] = &[
+        "SELECT id,coalesce(article_cover,'')||char(0)||coalesce(video_url,'')||char(0)||coalesce(article_content,'')||char(0)||coalesce(tips,'') AS value FROM article NOT INDEXED WHERE deleted=0",
+        "SELECT id,coalesce(background_image,'')||char(0)||coalesce(avatar,'')||char(0)||coalesce(random_cover,'')||char(0)||coalesce(notices,'')||char(0)||coalesce(media,'') AS value FROM web_info",
+        "SELECT id,coalesce(bg_cover,'')||char(0)||coalesce(man_cover,'')||char(0)||coalesce(woman_cover,'')||char(0)||coalesce(family_info,'') AS value FROM family",
+        "SELECT id,coalesce(cover,'')||char(0)||coalesce(url,'')||char(0)||coalesce(introduction,'')||char(0)||coalesce(remark,'') AS value FROM resource_path",
+        "SELECT id,coalesce(image_path,'')||char(0)||coalesce(content,'') AS value FROM wei_yan",
+        "SELECT id,coalesce(image_path,'')||char(0)||coalesce(avatar,'')||char(0)||coalesce(message,'') AS value FROM tree_hole",
+        "SELECT id,coalesce(avatar,'') AS value FROM user WHERE deleted=0",
+        "SELECT id,coalesce(comment_content,'')||char(0)||coalesce(comment_info,'') AS value FROM comment",
+    ];
+    for query in QUERIES {
+        // SQL filters the usual unencoded case without materializing every
+        // article. Encoded references are checked in bounded individual rows.
+        // The article feed indexes order by date, so using them here would sort
+        // the remaining corpus on every batch. Walk its rowid range instead.
+        let mut after = i64::MIN;
+        loop {
+            let rows = sqlx::query(sqlx::AssertSqlSafe(format!("SELECT id,value FROM ({query}) WHERE id>? AND (instr(value,?)>0 OR instr(value,'%')>0 OR instr(value,'&')>0 OR instr(value,char(92))>0) ORDER BY id LIMIT 8")))
+                .bind(after).bind(path).fetch_all(&mut *connection).await.map_err(db_error)?;
+            if rows.is_empty() {
+                break;
+            }
+            for row in rows {
+                after = row.try_get("id").map_err(db_error)?;
+                let value: String = row.try_get("value").map_err(db_error)?;
+                if contains_reference(&value, path) {
+                    return Ok(true);
+                }
+            }
+        }
+    }
+    Ok(false)
+}
+
+#[cfg(test)]
+#[path = "../../../../test/server/unit/media/references.rs"]
+mod tests;

@@ -16,6 +16,14 @@ cargo +1.99.0 build --locked --offline --bin blog
 cargo +1.99.0 build --locked --offline -p blog-setup
 ```
 
+## 修改位置
+
+服务端内容功能位于 `src/server/src/content/`，同一功能的公开读取和后台写入放在同一私有模块，路由在 `content/mod.rs` 组合。媒体格式、引用与文件存储分别位于 `src/server/src/media/`；涉及数据库和文件的提交顺序保留在 `media.rs` 协调流程中。产品配置默认值与安装计划共用 `config_definition.rs`；初始化工具经服务端 `maintenance` 入口复用这些定义。
+
+浏览器公开页面和后台页面分别位于 `src/browser/src/public/` 与 `src/browser/src/admin/`。请求、写操作、导航、分页和表单使用 `common` 中的生命周期原语，让取消和响应校验保持一致。类型化响应投影在 `models.rs`，请求合同在 `contracts.rs`；站点配置中的可空字段必须保留“字段存在且允许为 null”的解码约束。界面样式和最小加载入口位于 `src/web`。
+
+业务测试与专用输入统一放在 `test/`，通过现有包的条件模块或显式集成测试入口连接。使用暂停时间的测试在 application 或服务端的开发依赖中启用 Tokio `test-util`；产品运行依赖不启用它。特性闭包检查见[源码组织与校验](source-layout.md#校验当前源码)。
+
 ## 本机运行
 
 创建独立的开发 ROOT。以下配置允许回环 HTTP，初始化密码从标准输入读取：
@@ -44,12 +52,12 @@ cargo +1.99.0 run --locked --offline -p blog-assets -- serve --product-root . --
 cargo +1.99.0 run --locked --offline -p blog-assets -- server --product-root . --config blog-assets.json --mode development --offline
 ```
 
-`serve` 提供开发资源和变更监控；需要后台 API 时启动本机服务，并用 `--proxy /api=http://127.0.0.1:18091` 配置转发。`preview` 只读提供已有资源。`server` 按根 `blog-assets.json` 协调前端与服务端构建，具体选项见[构建器说明](../src/tools/assets/README.md)。
+`serve` 提供开发资源和变更监控；需要后台 API 时启动本机服务，并用 `--proxy /api=http://127.0.0.1:18091` 配置转发。`preview` 只读提供已有资源。`server` 按根 `blog-assets.json` 协调前端与服务端构建。前端源码固定为 `src/web`，该文件的 `web.dist` 只选择静态输出目录；资源编译直接调用 Rust 构建器。具体选项见[构建器说明](../src/tools/assets/README.md)。
 
 | 输入或输出 | 用途 |
 | --- | --- |
 | `src/web/rust-web.toml` | 前端入口、资源和预算配置 |
-| `blog-assets.json` | 前端与服务端构建入口 |
+| `blog-assets.json` | 静态资源输出与服务端构建参数 |
 | `src/web/pkg` | 生成的 WASM、浏览器绑定与元数据 |
 | `src/web/dist` | 可分发静态资源 |
 | `src/web/dist/assets/blog-assets.json` | 资源与源码摘要收据 |

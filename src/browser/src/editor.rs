@@ -1,7 +1,7 @@
 use crate::common::Action;
 use crate::common::*;
 use crate::models::{Article, ArticleDraft, Category, Label, News, Page};
-use blog_interface::component::{component_props_builder, component_view};
+use blog_interface::component::component_props_builder;
 use blog_interface::components::notify;
 use blog_interface::prelude::*;
 use serde_json::{Value, json};
@@ -50,392 +50,448 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
             notify(t("图片已上传", "Image uploaded"));
         });
     };
-    View::new(
-    blog_interface::html::section()
-        .child(
-            (
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::h1()
-                    .child(#[allow(unused_braces)] {
-                    IntoRender::into_render({ if id > 0 {
-                    t("编辑文章", "Edit article") } else { t("新增文章",
-                    "Add article") } }) })),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::p()
-                    .child(#[allow(unused_braces)] {
-                    IntoRender::into_render({
-                    t("支持 Markdown 正文，发布后可从网站访问。",
-                    "Write in Markdown. Published articles are available on the site.")
-                    }) })), IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & Feedback, { let mut props =
-                    component_props_builder(& Feedback)
-                    .error(#[allow(unused_braces)] { categories.error })
-                    .fallback(#[allow(unused_braces)] { t("分类加载失败",
-                    "Unable to load categories") }).retry(#[allow(unused_braces)] {
-                    Some(Callback::new(move | () | categories.reload())) }).build();
-                    props }) }),
-                    IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & Feedback, { let mut props =
-                    component_props_builder(& Feedback)
-                    .error(#[allow(unused_braces)] { labels.error })
-                    .fallback(#[allow(unused_braces)] { t("标签加载失败",
-                    "Unable to load tags") }).retry(#[allow(unused_braces)] {
-                    Some(Callback::new(move | () | labels.reload())) }).build();
-                    props }) }),
-                    IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & Feedback, { let mut props =
-                    component_props_builder(& Feedback)
-                    .error(#[allow(unused_braces)] { article.error })
-                    .fallback(#[allow(unused_braces)] { t("文章加载失败",
-                    "Unable to load article") }).retry(#[allow(unused_braces)] {
-                    Some(Callback::new(move | () | article.reload())) }).build();
-                    props }) }),
-                    IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & Feedback, { let mut props =
-                    component_props_builder(& Feedback)
-                    .error(#[allow(unused_braces)] { save.error })
-                    .fallback(#[allow(unused_braces)] {
-                    t("尚未确认文章是否已创建，请保留原内容重试。",
-                    "Article creation is not yet confirmed. Retry with the original content unchanged.")
-                    }).build(); props }) }),
-                    IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & Feedback, { let mut props =
-                    component_props_builder(& Feedback)
-                    .error(#[allow(unused_braces)] { upload.error }).build(); props
-                    }) }),
-                    IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
-                    move | | (! validation.get().is_empty()).then(| | View::new(
-    blog_interface::html::p()
-        .child(
-            #[allow(unused_braces)]
-            { IntoRender::into_render({ validation.get() }) },
-        )
-        .role("alert"),
-)) })),
-                    IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & Show, { let mut props =
-                    component_props_builder(& Show)
-                    .when(#[allow(unused_braces)] { move | | ready.get() })
-                    .fallback(#[allow(unused_braces)] { move | | View::new(
-    (
-            IntoMaybeErased::into_maybe_erased(blog_interface::html::p()
-            .child(#[allow(unused_braces)] {
-            IntoRender::into_render({ t("正在加载…",
-            "Loading…") }) }).role("status")),
-            IntoMaybeErased::into_maybe_erased(blog_interface::html::button()
-            .child(#[allow(unused_braces)] {
-            IntoRender::into_render({ t("取消", "Cancel") }) })
-            .class("blog-button").on(blog_interface::ev::click, move | _ |
-            navigate("articles")))
-        ,),
-) })
-                    .children({ ::blog_interface::children::ToChildren::to_children(move ||
-                    (IntoMaybeErased::into_maybe_erased(blog_interface::html::form()
-                    .child(#[allow(unused_braces)] {
+    let render_form = move || {
+        (
+            blog_interface::html::form()
+                .child(
                     blog_interface::html::fieldset()
-                    .child((IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & ControlledField, { let mut props =
-                    component_props_builder(& ControlledField)
-                    .label(#[allow(unused_braces)] { t("标题", "Title") })
-                    .value(#[allow(unused_braces)] { Signal::derive(move | | form
-                    .get().article_title) }).change(#[allow(unused_braces)] {
-                    Callback::new(move | v : String | form.update(| f | f
-                    .article_title = v)) }).required(#[allow(unused_braces)] { true
-                    }).max(#[allow(unused_braces)] { 120 }).build(); props }) }),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::div()
-                    .child((IntoMaybeErased::into_maybe_erased(blog_interface::html::label()
-                    .child((IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
-                    t("分类", "Category") })),
-                    IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & crate ::select::Select, { let mut props =
-                    component_props_builder(& crate
-                    ::select::Select).label(#[allow(unused_braces)] {
-                    Signal::derive(| | t("分类", "Category")) })
-                    .value(#[allow(unused_braces)] { Signal::derive(move | | form
-                    .get().sort_id.to_string()) }).options(#[allow(unused_braces)] {
-                    Signal::derive(move | | std::iter::once(("0".to_string(),
-                    t("选择分类", "Select a category"))).chain(categories.value
-                    .get().unwrap_or_default().into_iter().map(| c | (c.id
-                    .to_string(), c.sort_name))).collect()) })
-                    .required(#[allow(unused_braces)] { true })
-                    .change(#[allow(unused_braces)] { Callback::new(move | v : String
-                    | form.update(| f | { f.sort_id = v.parse:: < i64 > ()
-                    .unwrap_or(0); f.label_id = 0; })) }).build(); props }) }),))
-                    .class("blog-form-field")),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::label()
-                    .child((IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
-                    t("标签", "Tags") })),
-                    IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & crate ::select::Select, { let mut props =
-                    component_props_builder(& crate
-                    ::select::Select).label(#[allow(unused_braces)] {
-                    Signal::derive(| | t("标签", "Tags")) })
-                    .value(#[allow(unused_braces)] { Signal::derive(move | | form
-                    .get().label_id.to_string()) }).options(#[allow(unused_braces)] {
-                    Signal::derive(move | | std::iter::once(("0".to_string(),
-                    t("选择标签", "Select a tag"))).chain(labels.value.get()
-                    .unwrap_or_default().into_iter().filter(| c | c.sort_id == form
-                    .get().sort_id).map(| c | (c.id.to_string(), c.label_name)))
-                    .collect()) }).required(#[allow(unused_braces)] { true })
-                    .change(#[allow(unused_braces)] { Callback::new(move | v : String
-                    | form.update(| f | f.label_id = v.parse:: < i64 > ()
-                    .unwrap_or(0))) }).build(); props }) }),))
-                    .class("blog-form-field")),)).class("form-grid")),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::div()
-                    .child((IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & ControlledField, { let mut props =
-                    component_props_builder(& ControlledField)
-                    .label(#[allow(unused_braces)] { t("封面图片地址",
-                    "Cover image URL") }).value(#[allow(unused_braces)] {
-                    Signal::derive(move | | form.get().article_cover
-                    .unwrap_or_default()) }).change(#[allow(unused_braces)] {
-                    Callback::new(move | v : String | form.update(| f | f
-                    .article_cover = Some(v))) }).build(); props }) }),
-                    IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & FilePicker, { let mut props =
-                    component_props_builder(& FilePicker)
-                    .label(#[allow(unused_braces)] { t("上传封面图片",
-                    "Upload cover image") }).disabled(#[allow(unused_braces)] {
-                    Signal::derive(move | | save.busy.get() || upload.busy.get()) })
-                    .choose(#[allow(unused_braces)] { Callback::new(move | file |
-                    upload_file(file, true)) }).build(); props }) }),))
-                    .class("form-grid")),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::label()
-                    .child((IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
-                    t("Markdown 正文", "Markdown content") })),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::textarea()
-                    .class("blog-input editor-textarea").required(true).prop("value",
-                    move | | form.get()
-                    .article_content).on(blog_interface::ev::input, move
-                    | ev | form.update(| f | f.article_content = event_target_value(&
-                    ev)))),)).class("blog-form-field")),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::div()
-                    .child((IntoMaybeErased::into_maybe_erased(blog_interface::html::button()
-                    .child(#[allow(unused_braces)] {
-                    IntoRender::into_render({
-                    move | | if preview.get() { t("收起预览", "Hide preview") }
-                    else { t("预览正文", "Preview content") } }) })
-                    .class("blog-button").r#type("button")
-                    .on(blog_interface::ev::click, move | _ | preview
-                    .update(| v | * v = ! * v))),
-                    IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & FilePicker, { let mut props =
-                    component_props_builder(& FilePicker)
-                    .label(#[allow(unused_braces)] { t("插入正文图片",
-                    "Insert content image") }).disabled(#[allow(unused_braces)] {
-                    Signal::derive(move | | save.busy.get() || upload.busy.get()) })
-                    .choose(#[allow(unused_braces)] { Callback::new(move | file |
-                    upload_file(file, false)) }).build(); props }) }),))
-                    .class("blog-actions")),
-                    IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
-                    move | | preview.get().then(| | View::new(
-    blog_interface::html::div()
-        .class("editor-markdown-preview article-markdown")
-        .inner_html(
-            ::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                crate::browser::markdown_html(&form.get().article_content),
-            ),
-        ),
-))
-                    })),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::div()
-                    .child((IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & ControlledField, { let mut props =
-                    component_props_builder(& ControlledField)
-                    .label(#[allow(unused_braces)] { t("视频地址", "Video URL")
-                    }).value(#[allow(unused_braces)] { Signal::derive(move | | form
-                    .get().video_url.unwrap_or_default()) })
-                    .change(#[allow(unused_braces)] { Callback::new(move | v : String
-                    | form.update(| f | f.video_url = Some(v))) }).build(); props })
-                    }),
-                    IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
-                    move | | (! form.get().view_status).then(| | View::new(
+                        .child((
+                            ControlledField(
+                                component_props_builder(&ControlledField)
+                                    .label(t("标题", "Title"))
+                                    .value(Signal::derive(move || form.get().article_title))
+                                    .change(Callback::new(move |v: String| {
+                                        form.update(|f| f.article_title = v)
+                                    }))
+                                    .required(true)
+                                    .max(120)
+                                    .build(),
+                            ),
+                            blog_interface::html::div()
+                                .child((
+                                    blog_interface::html::label()
+                                        .child((
+                                            t("分类", "Category"),
+                                            crate::select::Select(
+                                                component_props_builder(&crate::select::Select)
+                                                    .label(Signal::derive(|| t("分类", "Category")))
+                                                    .value(Signal::derive(move || {
+                                                        form.get().sort_id.to_string()
+                                                    }))
+                                                    .options(Signal::derive(move || {
+                                                        std::iter::once((
+                                                            "0".to_string(),
+                                                            t("选择分类", "Select a category"),
+                                                        ))
+                                                        .chain(
+                                                            categories
+                                                                .value
+                                                                .get()
+                                                                .unwrap_or_default()
+                                                                .into_iter()
+                                                                .map(|c| {
+                                                                    (c.id.to_string(), c.sort_name)
+                                                                }),
+                                                        )
+                                                        .collect()
+                                                    }))
+                                                    .required(true)
+                                                    .change(Callback::new(move |v: String| {
+                                                        form.update(|f| {
+                                                            f.sort_id =
+                                                                v.parse::<i64>().unwrap_or(0);
+                                                            f.label_id = 0;
+                                                        })
+                                                    }))
+                                                    .build(),
+                                            ),
+                                        ))
+                                        .class("blog-form-field"),
+                                    blog_interface::html::label()
+                                        .child((
+                                            t("标签", "Tags"),
+                                            crate::select::Select(
+                                                component_props_builder(&crate::select::Select)
+                                                    .label(Signal::derive(|| t("标签", "Tags")))
+                                                    .value(Signal::derive(move || {
+                                                        form.get().label_id.to_string()
+                                                    }))
+                                                    .options(Signal::derive(move || {
+                                                        std::iter::once((
+                                                            "0".to_string(),
+                                                            t("选择标签", "Select a tag"),
+                                                        ))
+                                                        .chain(
+                                                            labels
+                                                                .value
+                                                                .get()
+                                                                .unwrap_or_default()
+                                                                .into_iter()
+                                                                .filter(|c| {
+                                                                    c.sort_id == form.get().sort_id
+                                                                })
+                                                                .map(|c| {
+                                                                    (c.id.to_string(), c.label_name)
+                                                                }),
+                                                        )
+                                                        .collect()
+                                                    }))
+                                                    .required(true)
+                                                    .change(Callback::new(move |v: String| {
+                                                        form.update(|f| {
+                                                            f.label_id =
+                                                                v.parse::<i64>().unwrap_or(0)
+                                                        })
+                                                    }))
+                                                    .build(),
+                                            ),
+                                        ))
+                                        .class("blog-form-field"),
+                                ))
+                                .class("form-grid"),
+                            blog_interface::html::div()
+                                .child((
+                                    ControlledField(
+                                        component_props_builder(&ControlledField)
+                                            .label(t("封面图片地址", "Cover image URL"))
+                                            .value(Signal::derive(move || {
+                                                form.get().article_cover.unwrap_or_default()
+                                            }))
+                                            .change(Callback::new(move |v: String| {
+                                                form.update(|f| f.article_cover = Some(v))
+                                            }))
+                                            .build(),
+                                    ),
+                                    FilePicker(
+                                        component_props_builder(&FilePicker)
+                                            .label(t("上传封面图片", "Upload cover image"))
+                                            .disabled(Signal::derive(move || {
+                                                save.busy.get() || upload.busy.get()
+                                            }))
+                                            .choose(Callback::new(move |file| {
+                                                upload_file(file, true)
+                                            }))
+                                            .build(),
+                                    ),
+                                ))
+                                .class("form-grid"),
+                            blog_interface::html::label()
+                                .child((
+                                    t("Markdown 正文", "Markdown content"),
+                                    blog_interface::html::textarea()
+                                        .class("blog-input editor-textarea")
+                                        .required(true)
+                                        .prop("value", move || form.get().article_content)
+                                        .on(blog_interface::ev::input, move |ev| {
+                                            form.update(|f| {
+                                                f.article_content = event_target_value(&ev)
+                                            })
+                                        }),
+                                ))
+                                .class("blog-form-field"),
+                            blog_interface::html::div()
+                                .child((
+                                    blog_interface::html::button()
+                                        .child(move || {
+                                            if preview.get() {
+                                                t("收起预览", "Hide preview")
+                                            } else {
+                                                t("预览正文", "Preview content")
+                                            }
+                                        })
+                                        .class("blog-button")
+                                        .r#type("button")
+                                        .on(blog_interface::ev::click, move |_| {
+                                            preview.update(|v| *v = !*v)
+                                        }),
+                                    FilePicker(
+                                        component_props_builder(&FilePicker)
+                                            .label(t("插入正文图片", "Insert content image"))
+                                            .disabled(Signal::derive(move || {
+                                                save.busy.get() || upload.busy.get()
+                                            }))
+                                            .choose(Callback::new(move |file| {
+                                                upload_file(file, false)
+                                            }))
+                                            .build(),
+                                    ),
+                                ))
+                                .class("blog-actions"),
+                            move || {
+                                preview.get().then(|| {
+                                    View::new(
+                                        blog_interface::html::div()
+                                            .class("editor-markdown-preview article-markdown")
+                                            .inner_html(crate::browser::markdown_html(
+                                                &form.get().article_content,
+                                            )),
+                                    )
+                                })
+                            },
+                            blog_interface::html::div()
+                                .child((
+                                    ControlledField(
+                                        component_props_builder(&ControlledField)
+                                            .label(t("视频地址", "Video URL"))
+                                            .value(Signal::derive(move || {
+                                                form.get().video_url.unwrap_or_default()
+                                            }))
+                                            .change(Callback::new(move |v: String| {
+                                                form.update(|f| f.video_url = Some(v))
+                                            }))
+                                            .build(),
+                                    ),
+                                    move || {
+                                        (!form.get().view_status).then(|| {
+                                            View::new(
     blog_interface::html::div()
         .child(
             (
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::label()
-                    .child((IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
-                    t("文章访问密码", "Article access password") })),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::input()
+                    blog_interface::html::label()
+                    .child((t("文章访问密码", "Article access password"),
+                    blog_interface::html::input()
                     .class("blog-input").r#type("password")
-                    .aria_describedby(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(move
+                    .aria_describedby(move
                     | | crate ::dates::password_error(& form.get().password
                     .unwrap_or_default(), existing.get()).map(| _ |
-                    "blog-article-password-error")))
-                    .aria_invalid(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(move
+                    "blog-article-password-error"))
+                    .aria_invalid(move
                     | | crate ::dates::password_error(& form.get().password
-                    .unwrap_or_default(), existing.get()).is_some().to_string()))
-                    .placeholder(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(move
+                    .unwrap_or_default(), existing.get()).is_some().to_string())
+                    .placeholder(move
                     | | if existing.get() { t("留空则保留原密码",
                     "Leave empty to keep the current password") } else {
-                    t("至少 12 字节", "At least 12 bytes") })).prop("value",
+                    t("至少 12 字节", "At least 12 bytes") }).prop("value",
                     move | | form.get().password
                     .unwrap_or_default()).on(blog_interface::ev::input,
                     move | ev | form.update(| f | f.password =
-                    Some(event_target_value(& ev))))),)).class("blog-form-field")),
-                    IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
+                    Some(event_target_value(& ev)))),)).class("blog-form-field"),
                     move | | crate ::dates::password_error(& form.get().password
                     .unwrap_or_default(), existing.get()).map(| e | View::new(
     blog_interface::html::p()
         .child(
-            #[allow(unused_braces)]
-            { IntoRender::into_render({ e }) },
+
+            e,
         )
         .id("blog-article-password-error")
         .role("alert"),
 ))
-                    }))
                 ,),
         ),
-)) })),)).class("form-grid")),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::div()
-                    .child((IntoMaybeErased::into_maybe_erased(blog_interface::html::label()
-                    .child((IntoMaybeErased::into_maybe_erased(blog_interface::html::input()
-                    .r#type("checkbox").prop("checked",
-                    move | | form.get()
-                    .view_status).on(blog_interface::ev::change, move |
-                    ev | { let v = event_target_checked(& ev); form.update(| f | { f
-                    .view_status = v; if v { f.password = None; } }); })),
-                    IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
-                    t(" 公开访问（关闭后需设置密码）",
-                    " Public access (a password is required when disabled)") })),))),
-                    IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & ControlledCheck, { let mut props =
-                    component_props_builder(& ControlledCheck)
-                    .label(#[allow(unused_braces)] { t(" 推荐", " Recommended") })
-                    .value(#[allow(unused_braces)] { Signal::derive(move | | form
-                    .get().recommend_status) }).change(#[allow(unused_braces)] {
-                    Callback::new(move | v | form.update(| f | f.recommend_status =
-                    v)) }).build(); props }) }),
-                    IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & ControlledCheck, { let mut props =
-                    component_props_builder(& ControlledCheck)
-                    .label(#[allow(unused_braces)] { t(" 允许评论",
-                    " Allow comments") }).value(#[allow(unused_braces)] {
-                    Signal::derive(move | | form.get().comment_status) })
-                    .change(#[allow(unused_braces)] { Callback::new(move | v | form
-                    .update(| f | f.comment_status = v)) }).build(); props }) }),))
-                    .class("check-row")),
-                    IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
-                    move | | (! form.get().view_status).then(| | View::new(
+)
+                                        })
+                                    },
+                                ))
+                                .class("form-grid"),
+                            blog_interface::html::div()
+                                .child((
+                                    blog_interface::html::label().child((
+                                        blog_interface::html::input()
+                                            .r#type("checkbox")
+                                            .prop("checked", move || form.get().view_status)
+                                            .on(blog_interface::ev::change, move |ev| {
+                                                let v = event_target_checked(&ev);
+                                                form.update(|f| {
+                                                    f.view_status = v;
+                                                    if v {
+                                                        f.password = None;
+                                                    }
+                                                });
+                                            }),
+                                        t(
+                                            " 公开访问（关闭后需设置密码）",
+                                            " Public access (a password is required when disabled)",
+                                        ),
+                                    )),
+                                    ControlledCheck(
+                                        component_props_builder(&ControlledCheck)
+                                            .label(t(" 推荐", " Recommended"))
+                                            .value(Signal::derive(move || {
+                                                form.get().recommend_status
+                                            }))
+                                            .change(Callback::new(move |v| {
+                                                form.update(|f| f.recommend_status = v)
+                                            }))
+                                            .build(),
+                                    ),
+                                    ControlledCheck(
+                                        component_props_builder(&ControlledCheck)
+                                            .label(t(" 允许评论", " Allow comments"))
+                                            .value(Signal::derive(move || {
+                                                form.get().comment_status
+                                            }))
+                                            .change(Callback::new(move |v| {
+                                                form.update(|f| f.comment_status = v)
+                                            }))
+                                            .build(),
+                                    ),
+                                ))
+                                .class("check-row"),
+                            move || {
+                                (!form.get().view_status).then(|| {
+                                    View::new((
+                                        ControlledField(
+                                            component_props_builder(&ControlledField)
+                                                .label(t("密码提示", "Password hint"))
+                                                .value(Signal::derive(move || {
+                                                    form.get().tips.unwrap_or_default()
+                                                }))
+                                                .change(Callback::new(move |v: String| {
+                                                    form.update(|f| f.tips = Some(v))
+                                                }))
+                                                .build(),
+                                        ),
+                                        blog_interface::html::span()
+                                            .child(t(
+                                                "显示在文章访问密码输入页。",
+                                                "Displayed on the article access password screen.",
+                                            ))
+                                            .class("blog-field-help"),
+                                    ))
+                                })
+                            },
+                            blog_interface::html::div()
+                                .child((
+                                    blog_interface::html::button()
+                                        .child(t("取消", "Cancel"))
+                                        .class("blog-button")
+                                        .r#type("button")
+                                        .disabled(move || save.busy.get())
+                                        .on(blog_interface::ev::click, move |_| {
+                                            upload.abort();
+                                            navigate("articles")
+                                        }),
+                                    blog_interface::html::button()
+                                        .child(move || {
+                                            if upload.busy.get() {
+                                                t("图片上传中…", "Uploading image…")
+                                            } else if save.busy.get() {
+                                                t("保存中…", "Saving…")
+                                            } else {
+                                                t("保存文章", "Save article")
+                                            }
+                                        })
+                                        .class("blog-button")
+                                        .r#type("submit")
+                                        .disabled(move || save.busy.get() || upload.busy.get()),
+                                ))
+                                .class("blog-actions"),
+                        ))
+                        .class("blog-fieldset")
+                        .disabled(move || save.busy.get()),
+                )
+                .class("editor-form")
+                .on(blog_interface::ev::submit, move |ev| {
+                    ev.prevent_default();
+                    if upload.busy.get_untracked() || !ready.get_untracked() {
+                        return;
+                    }
+                    let f = form.get_untracked();
+                    let issue = if f.view_status {
+                        None
+                    } else {
+                        crate::dates::password_error(
+                            f.password.as_deref().unwrap_or_default(),
+                            existing.get_untracked(),
+                        )
+                    };
+                    if let Some(issue) = issue {
+                        validation.set(issue);
+                        return;
+                    }
+                    let f = f.for_submission();
+                    let Ok(body) = blog_interface::api::encode_json_body(&f) else {
+                        save.error.set(Some(invalid()));
+                        return;
+                    };
+                    let target = if id > 0 {
+                        Some(id)
+                    } else {
+                        created_id.get_value()
+                    };
+                    let path = target
+                        .map(|id| format!("/api/v1/content/articles/{id}"))
+                        .unwrap_or("/api/v1/content/articles".into());
+                    let opts = RequestOptions {
+                        headers: if target.is_none() {
+                            vec![("Idempotency-Key".into(), creation.get_value())]
+                        } else {
+                            vec![]
+                        },
+                        ..Default::default()
+                    };
+                    save.run_typed_options(
+                        path,
+                        if target.is_some() { "PUT" } else { "POST" },
+                        Some(body),
+                        opts,
+                        move |v: Article| {
+                            if id == 0 {
+                                created_id.set_value(Some(v.id));
+                            }
+                            notify(t("文章已保存", "Article saved"));
+                            navigate("articles");
+                        },
+                    );
+                }),
+            (id > 0).then(|| {
+                View::new(NewsEditor(
+                    component_props_builder(&NewsEditor).id(id).build(),
+                ))
+            }),
+        )
+    };
+    View::new(
+    blog_interface::html::section()
+        .child(
+            (
+                    blog_interface::html::h1()
+                    .child( if id > 0 {
+                    t("编辑文章", "Edit article") } else { t("新增文章",
+                    "Add article") }),
+                    blog_interface::html::p()
+                    .child( t("支持 Markdown 正文，发布后可从网站访问。",
+                    "Write in Markdown. Published articles are available on the site.")), Feedback(component_props_builder(& Feedback)
+                    .error( categories.error)
+                    .fallback( t("分类加载失败",
+                    "Unable to load categories")).retry( Some(Callback::new(move | () | categories.reload()))).build()),
+                    Feedback(component_props_builder(& Feedback)
+                    .error( labels.error)
+                    .fallback( t("标签加载失败",
+                    "Unable to load tags")).retry( Some(Callback::new(move | () | labels.reload()))).build()),
+                    Feedback(component_props_builder(& Feedback)
+                    .error( article.error)
+                    .fallback( t("文章加载失败",
+                    "Unable to load article")).retry( Some(Callback::new(move | () | article.reload()))).build()),
+                    Feedback(component_props_builder(& Feedback)
+                    .error( save.error)
+                    .fallback( t("尚未确认文章是否已创建，请保留原内容重试。",
+                    "Article creation is not yet confirmed. Retry with the original content unchanged.")).build()),
+                    Feedback(component_props_builder(& Feedback)
+                    .error( upload.error).build()),
+                    move | | (! validation.get().is_empty()).then(| | View::new(
+    blog_interface::html::p()
+        .child(
+
+            validation.get(),
+        )
+        .role("alert"),
+)),
+                    Show(component_props_builder(& Show)
+                    .when( move | | ready.get())
+                    .fallback( move | | View::new(
     (
-            IntoMaybeErased::into_maybe_erased({
-            #[allow(unreachable_code)] #[allow(unused_mut)]
-            #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-            component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-            & ControlledField, { let mut props =
-            component_props_builder(& ControlledField)
-            .label(#[allow(unused_braces)] { t("密码提示", "Password hint") })
-            .value(#[allow(unused_braces)] { Signal::derive(move | | form.get().tips
-            .unwrap_or_default()) }).change(#[allow(unused_braces)] {
-            Callback::new(move | v : String | form.update(| f | f.tips = Some(v))) })
-            .build(); props }) }),
-            IntoMaybeErased::into_maybe_erased(blog_interface::html::span()
-            .child(#[allow(unused_braces)] {
-            IntoRender::into_render({
-            t("显示在文章访问密码输入页。",
-            "Displayed on the article access password screen.") }) })
-            .class("blog-field-help"))
+            blog_interface::html::p()
+            .child( t("正在加载…",
+            "Loading…")).role("status"),
+            blog_interface::html::button()
+            .child( t("取消", "Cancel"))
+            .class("blog-button").on(blog_interface::ev::click, move | _ |
+            navigate("articles"))
         ,),
-)) })),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::div()
-                    .child((IntoMaybeErased::into_maybe_erased(blog_interface::html::button()
-                    .child(#[allow(unused_braces)] {
-                    IntoRender::into_render({ t("取消",
-                    "Cancel") }) }).class("blog-button").r#type("button")
-                    .disabled(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(move
-                    | | save.busy.get())).on(blog_interface::ev::click,
-                    move | _ | { upload.abort(); navigate("articles") })),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::button()
-                    .child(#[allow(unused_braces)] {
-                    IntoRender::into_render({
-                    move | | if upload.busy.get() { t("图片上传中…",
-                    "Uploading image…") } else if save.busy.get() {
-                    t("保存中…", "Saving…") } else { t("保存文章",
-                    "Save article") } }) }).class("blog-button").r#type("submit")
-                    .disabled(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(move
-                    | | save.busy.get() || upload.busy.get()))),))
-                    .class("blog-actions")),)).class("blog-fieldset")
-                    .disabled(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(move
-                    | | save.busy.get())) }).class("editor-form")
-                    .on(blog_interface::ev::submit, move | ev | { ev
-                    .prevent_default(); if upload.busy.get_untracked() || ! ready
-                    .get_untracked() { return; } let f = form.get_untracked(); let
-                    issue = if f.view_status { None } else { crate
-                    ::dates::password_error(f.password.as_deref()
-                    .unwrap_or_default(), existing.get_untracked()) }; if let
-                    Some(issue) = issue { validation.set(issue); return; } let f = f
-                    .for_submission(); let Ok(body) =
-                    blog_interface::api::encode_json_body(& f) else { save.error
-                    .set(Some(invalid())); return; }; let target = if id > 0 {
-                    Some(id) } else { created_id.get_value() }; let path = target
-                    .map(| id | format!("/api/v1/content/articles/{id}"))
-                    .unwrap_or("/api/v1/content/articles".into()); let opts =
-                    RequestOptions { headers : if target.is_none() {
-                    vec![("Idempotency-Key".into(), creation.get_value())] } else {
-                    vec![] }, ..Default::default() }; save.run_typed_options(path, if
-                    target.is_some() { "PUT" } else { "POST" }, Some(body), opts,
-                    move | v : Article | { if id == 0 { created_id.set_value(Some(v
-                    .id)); } notify(t("文章已保存", "Article saved"));
-                    navigate("articles"); }); })),
-                    IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
-                    (id > 0).then(| | View::new({
-    #[allow(unreachable_code)] #[allow(unused_mut)] #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-    component_view(
-        #[allow(clippy::needless_borrows_for_generic_args)]
-        &NewsEditor,
-        {
-            let mut props = component_props_builder(&NewsEditor)
-                .id(#[allow(unused_braces)] { id })
-                .build();
-            props
-        },
-    )
-})) })),)) })
-                    .build(); props }) })
+))
+                    .children(::blog_interface::children::ToChildren::to_children(render_form))
+                    .build())
                 ,),
         )
         .class("blog-content-stack"),
@@ -464,103 +520,138 @@ fn NewsEditor(id: i64) -> impl IntoView {
         receipt.set_value(None);
         validation.set(String::new());
     });
+    let render_row = move |item: News| {
+        let entry_id = item.id;
+        let edit = item.clone();
+        View::new(
+            blog_interface::html::tr().child((
+                blog_interface::html::td()
+                    .child(crate::dates::format(&item.create_time.unwrap_or_default())),
+                blog_interface::html::td()
+                    .child(item.content)
+                    .class("comment-cell"),
+                blog_interface::html::td().child(
+                    blog_interface::html::div()
+                        .child((
+                            blog_interface::html::button()
+                                .child(t("编辑", "Edit"))
+                                .class("blog-button")
+                                .disabled(move || save.busy.get())
+                                .on(blog_interface::ev::click, move |_| {
+                                    if form.get_untracked() != original.get_untracked()
+                                        && !web_sys::window()
+                                            .unwrap()
+                                            .confirm_with_message(&t(
+                                                "放弃当前未保存的进展修改？",
+                                                "Discard the current unsaved update changes?",
+                                            ))
+                                            .unwrap_or(false)
+                                    {
+                                        return;
+                                    }
+                                    let f = json!({ "content" : edit.content,
+                    "create_time" : crate ::dates::input(& edit.create_time.clone()
+                    .unwrap_or_default()) });
+                                    form.set(f.clone());
+                                    original.set(f);
+                                    editing.set(Some(entry_id));
+                                }),
+                            blog_interface::html::button()
+                                .child(t("删除", "Delete"))
+                                .class("blog-button blog-danger")
+                                .disabled(move || save.busy.get())
+                                .on(blog_interface::ev::click, move |_| {
+                                    if web_sys::window()
+                                        .unwrap()
+                                        .confirm_with_message(&t(
+                                            "确定删除这条文章进展？",
+                                            "Delete this article update?",
+                                        ))
+                                        .unwrap_or(false)
+                                    {
+                                        save.run(
+                                            format!(
+                                                "/api/v1/content/articles/{id}/news/{entry_id}"
+                                            ),
+                                            "DELETE",
+                                            None,
+                                            move |_| {
+                                                if editing.get_untracked() == Some(entry_id) {
+                                                    reset.run(())
+                                                }
+                                                data.reload();
+                                            },
+                                        );
+                                    }
+                                }),
+                        ))
+                        .class("blog-actions"),
+                ),
+            )),
+        )
+    };
     View::new(
     blog_interface::html::section()
         .child(
             (
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::h2()
-                    .child(#[allow(unused_braces)] {
-                    IntoRender::into_render({ t("最新进展",
-                    "Recent updates") }) })),
-                    IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & Feedback, { let mut props =
-                    component_props_builder(& Feedback)
-                    .error(#[allow(unused_braces)] { data.error })
-                    .fallback(#[allow(unused_braces)] { t("文章进展加载失败",
-                    "Unable to load article updates") })
-                    .retry(#[allow(unused_braces)] { Some(Callback::new(move | () |
-                    data.reload())) }).build(); props }) }),
-                    IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & Feedback, { let mut props =
-                    component_props_builder(& Feedback)
-                    .error(#[allow(unused_braces)] { save.error }).build(); props })
-                    }),
-                    IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
+                    blog_interface::html::h2()
+                    .child( t("最新进展",
+                    "Recent updates")),
+                    Feedback(component_props_builder(& Feedback)
+                    .error( data.error)
+                    .fallback( t("文章进展加载失败",
+                    "Unable to load article updates"))
+                    .retry( Some(Callback::new(move | () |
+                    data.reload()))).build()),
+                    Feedback(component_props_builder(& Feedback)
+                    .error( save.error).build()),
                     move | | (! validation.get().is_empty()).then(| | View::new(
     blog_interface::html::p()
         .child(
-            #[allow(unused_braces)]
-            { IntoRender::into_render({ validation.get() }) },
+
+            validation.get(),
         )
         .role("alert"),
-)) })),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::form()
-                    .child(#[allow(unused_braces)] {
-                    blog_interface::html::fieldset()
-                    .child((IntoMaybeErased::into_maybe_erased(blog_interface::html::h3()
-                    .child(#[allow(unused_braces)] {
-                    IntoRender::into_render({
-                    move | | if editing.get().is_some() { t("编辑进展",
-                    "Edit update") } else { t("新增进展", "Add update") } })
-                    })), IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & Field, { let mut props =
-                    component_props_builder(& Field)
-                    .label(#[allow(unused_braces)] { t("进展内容",
-                    "Update content") }).key(#[allow(unused_braces)] { "content" })
-                    .form(#[allow(unused_braces)] { form })
-                    .textarea(#[allow(unused_braces)] { true })
-                    .required(#[allow(unused_braces)] { true })
-                    .max(#[allow(unused_braces)] { 2048 }).build(); props }) }),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::label()
-                    .child((IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
-                    t("进展时间（UTC）", "Update time (UTC)") })),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::input()
+)),
+                    blog_interface::html::form()
+                    .child( blog_interface::html::fieldset()
+                    .child((blog_interface::html::h3()
+                    .child( move | | if editing.get().is_some() { t("编辑进展",
+                    "Edit update") } else { t("新增进展", "Add update") }), Field(component_props_builder(& Field)
+                    .label( t("进展内容",
+                    "Update content")).key( "content")
+                    .form( form)
+                    .textarea( true)
+                    .required( true)
+                    .max( 2048).build()),
+                    blog_interface::html::label()
+                    .child((t("进展时间（UTC）", "Update time (UTC)"),
+                    blog_interface::html::input()
                     .class("blog-input").r#type("datetime-local").step("1")
                     .prop("value", move | | text(&
                     form.get(), "create_time"))
                     .on(blog_interface::ev::input, move | ev | form
                     .update(| f | f["create_time"] = json!(event_target_value(&
-                    ev))))),)).class("blog-form-field")),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::p()
-                    .child(#[allow(unused_braces)] {
-                    IntoRender::into_render({
-                    t("新增时留空使用当前 UTC；编辑时留空保留原时间。",
-                    "Leave blank to use current UTC for a new update, or keep its existing time when editing.")
-                    }) }).class("blog-field-help")),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::div()
-                    .child((IntoMaybeErased::into_maybe_erased(blog_interface::html::button()
-                    .child(#[allow(unused_braces)] {
-                    IntoRender::into_render({
-                    move | | if editing.get().is_some() { t("保存修改",
-                    "Save changes") } else { t("发布进展", "Publish update") }
-                    }) }).class("blog-button").r#type("submit")),
-                    IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
+                    ev)))),)).class("blog-form-field"),
+                    blog_interface::html::p()
+                    .child( t("新增时留空使用当前 UTC；编辑时留空保留原时间。",
+                    "Leave blank to use current UTC for a new update, or keep its existing time when editing.")).class("blog-field-help"),
+                    blog_interface::html::div()
+                    .child((blog_interface::html::button()
+                    .child( move | | if editing.get().is_some() { t("保存修改",
+                    "Save changes") } else { t("发布进展", "Publish update") }).class("blog-button").r#type("submit"),
                     move | | (editing.get().is_some() || form.get() != original
                     .get()).then(| | View::new(
     blog_interface::html::button()
         .child(
-            #[allow(unused_braces)]
-            {
-                IntoRender::into_render({
-                    t("取消编辑", "Cancel editing")
-                })
-            },
+
+            t("取消编辑", "Cancel editing"),
         )
         .class("blog-button")
         .r#type("button")
         .on(
             blog_interface::ev::click,
-            move |_| {
-                if form.get_untracked() == original.get_untracked()
+            move |_| if form.get_untracked() == original.get_untracked()
                     || web_sys::window()
                         .unwrap()
                         .confirm_with_message(
@@ -572,13 +663,12 @@ fn NewsEditor(id: i64) -> impl IntoView {
                         .unwrap_or(false)
                 {
                     reset.run(())
-                }
-            },
+                },
         ),
-)) })),)).class("blog-actions")),))
+)),)).class("blog-actions"),))
                     .class("blog-fieldset")
-                    .disabled(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(move
-                    | | save.busy.get() || data.value.get().is_none())) })
+                    .disabled(move
+                    | | save.busy.get() || data.value.get().is_none()))
                     .class("editor-form").on(blog_interface::ev::submit,
                     move | ev | { ev.prevent_default(); let f = form.get_untracked();
                     let content = text(& f, "content"); if ! (1..= 1024).contains(&
@@ -602,110 +692,47 @@ fn NewsEditor(id: i64) -> impl IntoView {
                     .is_some_and(| i | num(& v, "id") != i) { save.error
                     .set(Some(invalid())); return; } reset.run(()); page.set(1); data
                     .reload(); notify(t("文章进展已保存",
-                    "Article update saved")); }); })),
-                    IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
+                    "Article update saved")); }); }),
                     move | | data.value.get().map(| v | View::new(
     blog_interface::html::div()
         .child(
-            #[allow(unused_braces)]
-            {
-                blog_interface::html::table()
+
+            blog_interface::html::table()
                     .child(
                         (
-                                IntoMaybeErased::into_maybe_erased(blog_interface::html::thead()
-                                .child(#[allow(unused_braces)] {
-                                blog_interface::html::tr()
-                                .child((IntoMaybeErased::into_maybe_erased(blog_interface::html::th()
-                                .child(#[allow(unused_braces)] {
-                                IntoRender::into_render({ t("时间",
-                                "Time") }) })),
-                                IntoMaybeErased::into_maybe_erased(blog_interface::html::th()
-                                .child(#[allow(unused_braces)] {
-                                IntoRender::into_render({ t("内容",
-                                "Content") }) })),
-                                IntoMaybeErased::into_maybe_erased(blog_interface::html::th()
-                                .child(#[allow(unused_braces)] {
-                                IntoRender::into_render({ t("操作",
-                                "Actions") }) })),)) })),
-                                IntoMaybeErased::into_maybe_erased(blog_interface::html::tbody()
-                                .child(#[allow(unused_braces)] {
-                                IntoRender::into_render({ v.items
-                                .into_iter().map(| item | { let entry_id = item.id; let edit
-                                = item.clone(); View::new(
-    blog_interface::html::tr()
-        .child(
-            (
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::td()
-                    .child(#[allow(unused_braces)] {
-                    IntoRender::into_render({ crate
-                    ::dates::format(& item.create_time.unwrap_or_default()) }) })),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::td()
-                    .child(#[allow(unused_braces)] {
-                    IntoRender::into_render({ item.content }) })
-                    .class("comment-cell")),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::td()
-                    .child(#[allow(unused_braces)] {
-                    blog_interface::html::div()
-                    .child((IntoMaybeErased::into_maybe_erased(blog_interface::html::button()
-                    .child(#[allow(unused_braces)] {
-                    IntoRender::into_render({ t("编辑", "Edit")
-                    }) }).class("blog-button")
-                    .disabled(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(move
-                    | | save.busy.get())).on(blog_interface::ev::click,
-                    move | _ | { if form.get_untracked() != original.get_untracked()
-                    && ! web_sys::window().unwrap().confirm_with_message(&
-                    t("放弃当前未保存的进展修改？",
-                    "Discard the current unsaved update changes?")).unwrap_or(false)
-                    { return; } let f = json!({ "content" : edit.content,
-                    "create_time" : crate ::dates::input(& edit.create_time.clone()
-                    .unwrap_or_default()) }); form.set(f.clone()); original.set(f);
-                    editing.set(Some(entry_id)); })),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::button()
-                    .child(#[allow(unused_braces)] {
-                    IntoRender::into_render({ t("删除",
-                    "Delete") }) }).class("blog-button blog-danger")
-                    .disabled(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(move
-                    | | save.busy.get())).on(blog_interface::ev::click,
-                    move | _ | { if web_sys::window().unwrap().confirm_with_message(&
-                    t("确定删除这条文章进展？",
-                    "Delete this article update?")).unwrap_or(false) { save
-                    .run(format!("/api/v1/content/articles/{id}/news/{entry_id}"),
-                    "DELETE", None, move | _ | { if editing.get_untracked() ==
-                    Some(entry_id) { reset.run(()) } data.reload(); }); } })),))
-                    .class("blog-actions") }))
-                ,),
-        ),
-)
-                                }).collect_view() }) }))
+                                blog_interface::html::thead()
+                                .child( blog_interface::html::tr()
+                                .child((blog_interface::html::th()
+                                .child( t("时间",
+                                "Time")),
+                                blog_interface::html::th()
+                                .child( t("内容",
+                                "Content")),
+                                blog_interface::html::th()
+                                .child( t("操作",
+                                "Actions")),))),
+                                blog_interface::html::tbody()
+                                .child( v.items
+                                .into_iter().map(render_row).collect_view())
                             ,),
                     )
                     .class("blog-table")
                     .aria_label(
-                        ::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                            t("文章进展", "Article updates"),
-                        ),
-                    )
-            },
+                        t("文章进展", "Article updates"),
+                    ),
         )
         .class("blog-table-scroll")
         .tabindex("0")
         .role("region")
         .aria_label(
-            ::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                t("数据表格", "Data table"),
-            ),
+            t("数据表格", "Data table"),
         ),
-)) })),
-                    IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & Pager, { let mut props =
-                    component_props_builder(& Pager)
-                    .data(#[allow(unused_braces)] { data })
-                    .page(#[allow(unused_braces)] { page })
-                    .label(#[allow(unused_braces)] { t("进展分页",
-                    "Update pages") }).build(); props }) })
+)),
+                    Pager(component_props_builder(& Pager)
+                    .data( data)
+                    .page( page)
+                    .label( t("进展分页",
+                    "Update pages")).build())
                 ,),
         )
         .class("editor-form"),
@@ -735,158 +762,237 @@ pub fn Notes() -> impl IntoView {
         editing.set(None);
         filename.set(String::new());
     });
+    let render_row = move |item: Value| {
+        let id = num(&item, "id");
+        let edit = item.clone();
+        let toggle = item.clone();
+        View::new(
+            blog_interface::html::tr().child((
+                blog_interface::html::td().child({
+                    let n = text(&item, "username");
+                    if n.is_empty() {
+                        t("站长", "Site owner")
+                    } else {
+                        n
+                    }
+                }),
+                blog_interface::html::td()
+                    .child(text(&item, "content"))
+                    .class("comment-cell"),
+                blog_interface::html::td().child(safe_url(&text(&item, "image_path"), true).map(
+                    |u| {
+                        let click = u.clone();
+                        View::new(
+                            blog_interface::html::button()
+                                .child(
+                                    blog_interface::html::img()
+                                        .src(u)
+                                        .alt(t("查看随笔图片", "View note image")),
+                                )
+                                .class("moderation-photo")
+                                .r#type("button")
+                                .on(blog_interface::ev::click, move |_| {
+                                    lightbox.set(Some(click.clone()))
+                                }),
+                        )
+                    },
+                )),
+                blog_interface::html::td().child(if flag(&item, "is_public") {
+                    t("公开", "Public")
+                } else {
+                    t("私密", "Private")
+                }),
+                blog_interface::html::td().child(table_time(&text(&item, "create_time"))),
+                blog_interface::html::td().child(
+                    blog_interface::html::div()
+                        .child((
+                            blog_interface::html::button()
+                                .child(t("编辑", "Edit"))
+                                .class("blog-button")
+                                .disabled(move || save.busy.get() || upload.busy.get())
+                                .on(blog_interface::ev::click, move |_| {
+                                    if form.get_untracked() != original.get_untracked()
+                                        && !web_sys::window()
+                                            .unwrap()
+                                            .confirm_with_message(&t(
+                                                "放弃当前未保存的随笔修改？",
+                                                "Discard the current unsaved note changes?",
+                                            ))
+                                            .unwrap_or(false)
+                                    {
+                                        return;
+                                    }
+                                    let f = json!({ "content" : edit["content"],
+                    "image_path" : edit["image_path"], "is_public" : flag(& edit,
+                    "is_public") });
+                                    form.set(f.clone());
+                                    original.set(f);
+                                    editing.set(Some(id));
+                                    filename.set(String::new());
+                                }),
+                            blog_interface::html::button()
+                                .child(if flag(&item, "is_public") {
+                                    t("隐藏", "Hide")
+                                } else {
+                                    t("公开", "Publish")
+                                })
+                                .class("blog-button")
+                                .disabled(move || {
+                                    save.busy.get()
+                                        || upload.busy.get()
+                                        || editing.get() == Some(id) && form.get() != original.get()
+                                })
+                                .on(blog_interface::ev::click, move |_| {
+                                    let visible = !flag(&toggle, "is_public");
+                                    let input = json!({
+                    "content" : toggle["content"], "image_path" :
+                    toggle["image_path"], "is_public" : visible });
+                                    save.run(
+                                        format!("/api/v1/content/notes/{id}"),
+                                        "PUT",
+                                        Some(input),
+                                        move |v| {
+                                            if editing.get_untracked() == Some(id) {
+                                                form.update(|f| f["is_public"] = json!(visible));
+                                                original
+                                                    .update(|f| f["is_public"] = json!(visible));
+                                            }
+                                            if num(&v, "id") != id
+                                                || flag(&v, "is_public") != visible
+                                            {
+                                                save.error.set(Some(invalid()));
+                                                return;
+                                            }
+                                            data.reload();
+                                        },
+                                    );
+                                }),
+                            blog_interface::html::button()
+                                .child(t("删除", "Delete"))
+                                .class("blog-button blog-danger")
+                                .disabled(move || save.busy.get() || upload.busy.get())
+                                .on(blog_interface::ev::click, move |_| {
+                                    if web_sys::window()
+                                        .unwrap()
+                                        .confirm_with_message(&t(
+                                            "确定删除这条随笔？",
+                                            "Delete this note?",
+                                        ))
+                                        .unwrap_or(false)
+                                    {
+                                        save.run(
+                                            format!("/api/v1/content/notes/{id}"),
+                                            "DELETE",
+                                            None,
+                                            move |_| {
+                                                if editing.get_untracked() == Some(id) {
+                                                    reset.run(())
+                                                }
+                                                data.reload();
+                                            },
+                                        );
+                                    }
+                                }),
+                        ))
+                        .class("blog-actions"),
+                ),
+            )),
+        )
+    };
     View::new(
     blog_interface::html::section()
         .child(
             (
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::h1()
-                    .child(#[allow(unused_braces)] {
-                    IntoRender::into_render({ t("随笔管理",
-                    "Notes") }) })),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::p()
-                    .child(#[allow(unused_braces)] {
-                    IntoRender::into_render({
-                    t("维护随笔及恋爱日常中的内容。",
-                    "Manage notes shown in the journal and everyday moments.") })
-                    })), IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & Feedback, { let mut props =
-                    component_props_builder(& Feedback)
-                    .error(#[allow(unused_braces)] { data.error })
-                    .fallback(#[allow(unused_braces)] { t("随笔加载失败",
-                    "Unable to load notes") }).retry(#[allow(unused_braces)] {
-                    Some(Callback::new(move | () | data.reload())) }).build(); props
-                    }) }), IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & Feedback, { let mut props =
-                    component_props_builder(& Feedback)
-                    .error(#[allow(unused_braces)] { save.error }).build(); props })
-                    }), IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & Feedback, { let mut props =
-                    component_props_builder(& Feedback)
-                    .error(#[allow(unused_braces)] { upload.error }).build(); props
-                    }) }),
-                    IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
+                    blog_interface::html::h1()
+                    .child( t("随笔管理",
+                    "Notes")),
+                    blog_interface::html::p()
+                    .child( t("维护随笔及恋爱日常中的内容。",
+                    "Manage notes shown in the journal and everyday moments.")), Feedback(component_props_builder(& Feedback)
+                    .error( data.error)
+                    .fallback( t("随笔加载失败",
+                    "Unable to load notes")).retry( Some(Callback::new(move | () | data.reload()))).build()), Feedback(component_props_builder(& Feedback)
+                    .error( save.error).build()), Feedback(component_props_builder(& Feedback)
+                    .error( upload.error).build()),
                     move | | (! validation.get().is_empty()).then(| | View::new(
     blog_interface::html::p()
         .child(
-            #[allow(unused_braces)]
-            { IntoRender::into_render({ validation.get() }) },
+
+            validation.get(),
         )
         .role("alert"),
-)) })),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::form()
-                    .child(#[allow(unused_braces)] {
-                    blog_interface::html::fieldset()
-                    .child((IntoMaybeErased::into_maybe_erased(blog_interface::html::h2()
-                    .child(#[allow(unused_braces)] {
-                    IntoRender::into_render({
-                    move | | if editing.get().is_some() { t("编辑随笔",
-                    "Edit note") } else { t("新增随笔", "Add note") } }) })),
-                    IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & Field, { let mut props =
-                    component_props_builder(& Field)
-                    .label(#[allow(unused_braces)] { t("随笔正文",
-                    "Note content") }).key(#[allow(unused_braces)] { "content" })
-                    .form(#[allow(unused_braces)] { form })
-                    .textarea(#[allow(unused_braces)] { true })
-                    .required(#[allow(unused_braces)] { true })
-                    .max(#[allow(unused_braces)] { 2048 }).build(); props }) }),
-                    IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & FilePicker, { let mut props =
-                    component_props_builder(& FilePicker)
-                    .label(#[allow(unused_braces)] { t("随笔图片", "Note image")
-                    }).filename(#[allow(unused_braces)] { Signal::derive(move | |
-                    filename.get()) }).disabled(#[allow(unused_braces)] {
-                    Signal::derive(move | | upload.busy.get() || save.busy.get()) })
-                    .choose(#[allow(unused_braces)] { Callback::new(move | file :
+)),
+                    blog_interface::html::form()
+                    .child( blog_interface::html::fieldset()
+                    .child((blog_interface::html::h2()
+                    .child( move | | if editing.get().is_some() { t("编辑随笔",
+                    "Edit note") } else { t("新增随笔", "Add note") }),
+                    Field(component_props_builder(& Field)
+                    .label( t("随笔正文",
+                    "Note content")).key( "content")
+                    .form( form)
+                    .textarea( true)
+                    .required( true)
+                    .max( 2048).build()),
+                    FilePicker(component_props_builder(& FilePicker)
+                    .label( t("随笔图片", "Note image")).filename( Signal::derive(move | |
+                    filename.get())).disabled( Signal::derive(move | | upload.busy.get() || save.busy.get()))
+                    .choose( Callback::new(move | file :
                     blog_interface::thread_bound::SendWrapper < web_sys::File > | { let name = file
                     .name(); upload.upload(file, move | v | { form.update(| f |
                     f["image_path"] = v["path"].clone()); filename.set(name);
-                    notify(t("图片已上传", "Image uploaded")); }); }) })
-                    .build(); props }) }),
-                    IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
+                    notify(t("图片已上传", "Image uploaded")); }); }))
+                    .build()),
                     move | | safe_url(& text(& form.get(), "image_path"), true).map(|
                     url | { let click = url.clone(); View::new(
     blog_interface::html::div()
         .child(
             (
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::button()
-                    .child(#[allow(unused_braces)] {
-                    blog_interface::html::img()
-                    .src(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(url))
-                    .alt(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(t("查看随笔图片",
-                    "View note image"))) }).class("moderation-photo")
+                    blog_interface::html::button()
+                    .child( blog_interface::html::img()
+                    .src(url)
+                    .alt(t("查看随笔图片",
+                    "View note image"))).class("moderation-photo")
                     .r#type("button").on(blog_interface::ev::click, move |
-                    _ | lightbox.set(Some(click.clone())))),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::button()
-                    .child(#[allow(unused_braces)] {
-                    IntoRender::into_render({ t("移除图片",
-                    "Remove image") }) }).class("blog-button").r#type("button")
-                    .disabled(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(move
-                    | | upload.busy.get() || save.busy.get()))
+                    _ | lightbox.set(Some(click.clone()))),
+                    blog_interface::html::button()
+                    .child( t("移除图片",
+                    "Remove image")).class("blog-button").r#type("button")
+                    .disabled(move
+                    | | upload.busy.get() || save.busy.get())
                     .on(blog_interface::ev::click, move | _ | { form
                     .update(| f | f["image_path"] = Value::Null); filename
-                    .set(String::new()) }))
+                    .set(String::new()) })
                 ,),
         ),
-) }) })),
-                    IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & Check, { let mut props =
-                    component_props_builder(& Check)
-                    .label(#[allow(unused_braces)] { t(" 公开可见",
-                    " Publicly visible") }).key(#[allow(unused_braces)] { "is_public"
-                    }).form(#[allow(unused_braces)] { form }).build(); props }) }),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::div()
-                    .child((IntoMaybeErased::into_maybe_erased(blog_interface::html::button()
-                    .child(#[allow(unused_braces)] {
-                    IntoRender::into_render({
-                    move | | if upload.busy.get() { t("图片上传中…",
+) }),
+                    Check(component_props_builder(& Check)
+                    .label( t(" 公开可见",
+                    " Publicly visible")).key( "is_public").form( form).build()),
+                    blog_interface::html::div()
+                    .child((blog_interface::html::button()
+                    .child( move | | if upload.busy.get() { t("图片上传中…",
                     "Uploading image…") } else if save.busy.get() {
                     t("保存中…", "Saving…") } else if editing.get().is_some()
                     { t("保存修改", "Save changes") } else { t("发布",
-                    "Publish") } }) }).class("blog-button").r#type("submit")
-                    .disabled(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(move
-                    | | save.busy.get() || upload.busy.get()))),
-                    IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
+                    "Publish") }).class("blog-button").r#type("submit")
+                    .disabled(move
+                    | | save.busy.get() || upload.busy.get()),
                     move | | (editing.get().is_some() || form.get() != original.get()
                     || upload.busy.get()).then(| | View::new(
     blog_interface::html::button()
         .child(
-            #[allow(unused_braces)]
-            {
-                IntoRender::into_render({
-                    t("取消编辑", "Cancel editing")
-                })
-            },
+
+            t("取消编辑", "Cancel editing"),
         )
         .class("blog-button")
         .r#type("button")
         .disabled(
-            ::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                move || save.busy.get(),
-            ),
+            move || save.busy.get(),
         )
         .on(
             blog_interface::ev::click,
-            move |_| {
-                if form.get_untracked() == original.get_untracked()
+            move |_| if form.get_untracked() == original.get_untracked()
                     || web_sys::window()
                         .unwrap()
                         .confirm_with_message(
@@ -898,13 +1004,12 @@ pub fn Notes() -> impl IntoView {
                         .unwrap_or(false)
                 {
                     reset.run(())
-                }
-            },
+                },
         ),
-)) })),)).class("blog-actions")),))
+)),)).class("blog-actions"),))
                     .class("blog-fieldset")
-                    .disabled(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(move
-                    | | save.busy.get())) }).class("editor-form")
+                    .disabled(move
+                    | | save.busy.get())).class("editor-form")
                     .on(blog_interface::ev::submit, move | ev | { ev
                     .prevent_default(); if upload.busy.get_untracked() { return; }
                     let f = form.get_untracked(); let content = text(& f, "content");
@@ -920,183 +1025,52 @@ pub fn Notes() -> impl IntoView {
                     expected, "is_public") || id.is_some_and(| id | num(& v, "id") !=
                     id) { save.error.set(Some(invalid())); return; } reset.run(());
                     page.set(1); data.reload(); notify(t("随笔已保存",
-                    "Note saved")); }); })),
-                    IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
+                    "Note saved")); }); }),
                     move | | data.value.get().map(| v | View::new(
     blog_interface::html::div()
         .child(
-            #[allow(unused_braces)]
-            {
-                blog_interface::html::table()
+
+            blog_interface::html::table()
                     .child(
                         (
-                                IntoMaybeErased::into_maybe_erased(blog_interface::html::thead()
-                                .child(#[allow(unused_braces)] {
-                                blog_interface::html::tr()
-                                .child(#[allow(unused_braces)] {
-                                IntoRender::into_render({ [t("作者",
+                                blog_interface::html::thead()
+                                .child( blog_interface::html::tr()
+                                .child( [t("作者",
                                 "Author"), t("内容", "Content"), t("图片", "Image"),
                                 t("状态", "Status"), t("时间", "Time"), t("操作",
                                 "Actions")].into_iter().map(| l | View::new(
     blog_interface::html::th()
         .child(
-            #[allow(unused_braces)]
-            { IntoRender::into_render({ l }) },
+
+            l,
         ),
-)).collect_view() }) }) })),
-                                IntoMaybeErased::into_maybe_erased(blog_interface::html::tbody()
-                                .child(#[allow(unused_braces)] {
-                                IntoRender::into_render({ rows(& v,
-                                "items").into_iter().map(| item | { let id = num(& item,
-                                "id"); let edit = item.clone(); let toggle = item.clone();
-                                View::new(
-    blog_interface::html::tr()
-        .child(
-            (
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::td()
-                    .child(#[allow(unused_braces)] {
-                    IntoRender::into_render({ let n = text(& item,
-                    "username"); if n.is_empty() { t("站长", "Site owner") } else {
-                    n } }) })),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::td()
-                    .child(#[allow(unused_braces)] {
-                    IntoRender::into_render({ text(& item,
-                    "content") }) }).class("comment-cell")),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::td()
-                    .child(#[allow(unused_braces)] {
-                    IntoRender::into_render({ safe_url(& text(&
-                    item, "image_path"), true).map(| u | { let click = u.clone();
-                    View::new(
-    blog_interface::html::button()
-        .child(
-            #[allow(unused_braces)]
-            {
-                blog_interface::html::img()
-                    .src(
-                        ::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                            u,
-                        ),
-                    )
-                    .alt(
-                        ::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                            t("查看随笔图片", "View note image"),
-                        ),
-                    )
-            },
-        )
-        .class("moderation-photo")
-        .r#type("button")
-        .on(
-            blog_interface::ev::click,
-            move |_| lightbox.set(Some(click.clone())),
-        ),
-) }) }) })),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::td()
-                    .child(#[allow(unused_braces)] {
-                    IntoRender::into_render({ if flag(& item,
-                    "is_public") { t("公开", "Public") } else { t("私密",
-                    "Private") } }) })),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::td()
-                    .child(#[allow(unused_braces)] {
-                    IntoRender::into_render({ table_time(& text(&
-                    item, "create_time")) }) })),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::td()
-                    .child(#[allow(unused_braces)] {
-                    blog_interface::html::div()
-                    .child((IntoMaybeErased::into_maybe_erased(blog_interface::html::button()
-                    .child(#[allow(unused_braces)] {
-                    IntoRender::into_render({ t("编辑", "Edit")
-                    }) }).class("blog-button")
-                    .disabled(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(move
-                    | | save.busy.get() || upload.busy.get()))
-                    .on(blog_interface::ev::click, move | _ | { if form
-                    .get_untracked() != original.get_untracked() && !
-                    web_sys::window().unwrap().confirm_with_message(&
-                    t("放弃当前未保存的随笔修改？",
-                    "Discard the current unsaved note changes?")).unwrap_or(false) {
-                    return; } let f = json!({ "content" : edit["content"],
-                    "image_path" : edit["image_path"], "is_public" : flag(& edit,
-                    "is_public") }); form.set(f.clone()); original.set(f); editing
-                    .set(Some(id)); filename.set(String::new()); })),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::button()
-                    .child(#[allow(unused_braces)] {
-                    IntoRender::into_render({ if flag(& item,
-                    "is_public") { t("隐藏", "Hide") } else { t("公开",
-                    "Publish") } }) }).class("blog-button")
-                    .disabled(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(move
-                    | | save.busy.get() || upload.busy.get() || editing.get() ==
-                    Some(id) && form.get() != original.get()))
-                    .on(blog_interface::ev::click, move | _ | { let
-                    visible = ! flag(& toggle, "is_public"); let input = json!({
-                    "content" : toggle["content"], "image_path" :
-                    toggle["image_path"], "is_public" : visible }); save
-                    .run(format!("/api/v1/content/notes/{id}"), "PUT", Some(input),
-                    move | v | { if editing.get_untracked() == Some(id) { form
-                    .update(| f | f["is_public"] = json!(visible)); original.update(|
-                    f | f["is_public"] = json!(visible)); }
-                    if num(& v, "id") != id
-                    || flag(& v, "is_public") != visible { save.error
-                    .set(Some(invalid())); return; } data.reload(); }); })),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::button()
-                    .child(#[allow(unused_braces)] {
-                    IntoRender::into_render({ t("删除",
-                    "Delete") }) }).class("blog-button blog-danger")
-                    .disabled(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(move
-                    | | save.busy.get() || upload.busy.get()))
-                    .on(blog_interface::ev::click, move | _ | { if
-                    web_sys::window().unwrap().confirm_with_message(&
-                    t("确定删除这条随笔？", "Delete this note?"))
-                    .unwrap_or(false) { save
-                    .run(format!("/api/v1/content/notes/{id}"), "DELETE", None, move
-                    | _ | { if editing.get_untracked() == Some(id) { reset.run(()) }
-                    data.reload(); }); } })),)).class("blog-actions") }))
-                ,),
-        ),
-) }).collect_view() })
-                                }))
+)).collect_view())),
+                                blog_interface::html::tbody()
+                                .child( rows(& v,
+                                "items").into_iter().map(render_row).collect_view())
                             ,),
                     )
                     .class("blog-table")
                     .aria_label(
-                        ::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                            t("随笔列表", "Note list"),
-                        ),
-                    )
-            },
+                        t("随笔列表", "Note list"),
+                    ),
         )
         .class("blog-table-scroll")
         .tabindex("0")
         .role("region")
         .aria_label(
-            ::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                t("数据表格", "Data table"),
-            ),
+            t("数据表格", "Data table"),
         ),
-)) })),
-                    IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & ListState, { let mut props =
-                    component_props_builder(& ListState)
-                    .data(#[allow(unused_braces)] { data })
-                    .empty(#[allow(unused_braces)] { t("暂无随笔",
-                    "No notes yet") }).build(); props }) }),
-                    IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & Pager, { let mut props =
-                    component_props_builder(& Pager)
-                    .data(#[allow(unused_braces)] { data })
-                    .page(#[allow(unused_braces)] { page }).build(); props }) }),
-                    IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & Lightbox, { let mut props =
-                    component_props_builder(& Lightbox)
-                    .src(#[allow(unused_braces)] { lightbox }).build(); props }) })
+)),
+                    ListState(component_props_builder(& ListState)
+                    .data( data)
+                    .empty( t("暂无随笔",
+                    "No notes yet")).build()),
+                    Pager(component_props_builder(& Pager)
+                    .data( data)
+                    .page( page).build()),
+                    Lightbox(component_props_builder(& Lightbox)
+                    .src( lightbox).build())
                 ,),
         )
         .class("blog-content-stack"),

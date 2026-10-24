@@ -1,4 +1,3 @@
-mod admin;
 mod config;
 mod config_definition;
 mod content;
@@ -7,7 +6,6 @@ mod lifecycle;
 mod media;
 mod schema;
 mod schema_definition;
-mod site_media;
 mod static_assets;
 
 mod app;

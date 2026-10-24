@@ -18,16 +18,12 @@ def require(condition, message):
 
 
 class AdapterContract(unittest.TestCase):
-    def test_production_configuration_and_source_bound_retained_files(self):
+    def test_production_configuration_and_retained_private_database(self):
         config = json.loads((ROOT / 'deploy/linux-x86_64/config.json.example').read_text())
         adapter.configure(config, Path('/installed'), Path('/shared'), 12345)
         self.assertEqual(config['development'], False)
         self.assertEqual(config['bind'], '127.0.0.1:12345')
         self.assertEqual(config['data_dir'], '/installed/state')
-        source = (ROOT / 'src/server/src/installation_definition.rs').read_text()
-        self.assertIn('database["name"] = json!("site");', source)
-        self.assertIn('path["suffix"] = json!("site.sqlite");', source)
-        self.assertIn('material["secrets"] = json!([]);', source)
         self.assertEqual(adapter.RETAINED_FILES, ('state/site.sqlite',))
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -45,7 +41,13 @@ class AdapterContract(unittest.TestCase):
 
     def test_business_and_persisted_session_contract(self):
         session = {'csrf_token': 'csrf', 'authenticated': True, 'user_id': 'admin-id'}
-        state = {}
+        original_media = {'logo': '/media/retained-logo.png',
+                          'toolbox_video': '/media/retained-background.webm'}
+        state = {'site': {'author_name': 'Original writer', 'web_name': 'Original blog',
+                          'web_title': 'Original title', 'notices': '["Retained notice"]',
+                          'background_image': '/media/retained-background.png',
+                          'avatar': '/media/retained-avatar.png', 'random_cover': None,
+                          'media': original_media.copy()}}
         calls = []
 
         def request(path, method, body, headers):
@@ -83,7 +85,12 @@ class AdapterContract(unittest.TestCase):
 
         expected = adapter.exercise(request, session, [], require)
         adapter.persisted(request, session, expected, require)
-        self.assertEqual(len(calls), 12)
+        self.assertEqual(len(calls), 13)
+        self.assertEqual(calls[0], (adapter.SITE, 'GET'))
+        self.assertEqual(expected['site']['media'], original_media)
+        self.assertEqual(expected['site']['avatar'], '/media/retained-avatar.png')
+        self.assertEqual(expected['site']['background_image'], '/media/retained-background.png')
+        self.assertEqual(expected['site']['notices'], '["Retained notice"]')
         state['article']['article_content'] = 'lost'
         with self.assertRaisesRegex(RuntimeError, 'Published article differs'):
             adapter.persisted(request, session, expected, require)
@@ -91,11 +98,19 @@ class AdapterContract(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'session did not survive'):
             adapter.persisted(request, session, expected, require)
 
-    def test_routes_are_current_product_routes(self):
-        routes = (ROOT / 'src/server/src/content/mod.rs').read_text() + (ROOT / 'src/server/src/admin.rs').read_text()
-        for path in (adapter.SITE, adapter.CATEGORIES, adapter.LABELS, adapter.ARTICLES,
-                     '/api/v1/site', '/api/v1/categories', '/api/v1/articles/{id}'):
-            self.assertIn('"' + path + '"', routes)
+    def test_site_snapshot_failure_prevents_writes(self):
+        for response in ((500, b'private-read-error'), (200, b'[]')):
+            with self.subTest(status=response[0]):
+                calls = []
+
+                def request(path, method, body, headers):
+                    calls.append((path, method))
+                    return response
+
+                with self.assertRaises(RuntimeError) as error:
+                    adapter.exercise(request, {'csrf_token': 'csrf'}, [], require)
+                self.assertNotIn('private-read-error', str(error.exception))
+                self.assertEqual(calls, [(adapter.SITE, 'GET')])
 
 
 if __name__ == '__main__':

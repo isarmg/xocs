@@ -1,6 +1,15 @@
 //! Current configuration data definition shared by runtime parsing and build-time contract generation.
 use serde::{Deserialize, Serialize};
-use std::{net::SocketAddr, path::PathBuf};
+use std::{
+    net::SocketAddr,
+    path::{Path, PathBuf},
+};
+
+// Product layout shared by runtime defaults and exported installation data.
+pub(crate) const DEFAULT_ROOT: &str = "/opt/isarmg/blog";
+pub(crate) const STATE_DIRECTORY: &str = "state";
+pub(crate) const MEDIA_DIRECTORY: &str = "media";
+pub(crate) const DATABASE_FILENAME: &str = "site.sqlite";
 
 #[derive(Clone, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -17,9 +26,15 @@ pub struct Settings {
 
 impl Default for Settings {
     fn default() -> Self {
+        Self::for_root(Path::new(DEFAULT_ROOT))
+    }
+}
+
+impl Settings {
+    pub(crate) fn for_root(root: &Path) -> Self {
         Self {
-            root: PathBuf::from("/opt/isarmg/blog"),
-            data_dir: PathBuf::from("/opt/isarmg/blog/state"),
+            root: root.to_path_buf(),
+            data_dir: root.join(STATE_DIRECTORY),
             log_level: "info".into(),
             media: None,
             bind: "127.0.0.1:8081".parse().expect("static loopback address"),
@@ -35,7 +50,7 @@ pub(crate) fn data_path_spec() -> serde_json::Value {
     serde_json::json!({"base":"config","value":"/data_dir","fallback":null,"suffix":"","encoding":"path"})
 }
 pub(crate) fn media_path_spec() -> serde_json::Value {
-    serde_json::json!({"base":"config","value":"/media","fallback":{"base":"root","value":"media","fallback":null,"suffix":"","encoding":"path"},"suffix":"","encoding":"path"})
+    serde_json::json!({"base":"config","value":"/media","fallback":{"base":"root","value":MEDIA_DIRECTORY,"fallback":null,"suffix":"","encoding":"path"},"suffix":"","encoding":"path"})
 }
 pub(crate) fn current_rules(source_bound: bool) -> serde_json::Value {
     use serde_json::json;
@@ -48,7 +63,7 @@ pub(crate) fn current_rules(source_bound: bool) -> serde_json::Value {
         {"kind":"path","fields":["/web"],"arguments":{"absolute":true,"optional":true}},
         {"kind":"root-state-paths","fields":[],"arguments":{"paths":[data_path_spec()],"protected":protected}},
         {"kind":"root-state-paths","fields":[],"arguments":{"paths":[media_path_spec()],"protected":protected}},
-        {"kind":"path-relation","fields":[],"arguments":{"parent":data_path_spec(),"child":media_path_spec(),"allow_child_subtree":true,"forbidden_child_first_component_prefixes":["site.sqlite",".state-"]}},
+        {"kind":"path-relation","fields":[],"arguments":{"parent":data_path_spec(),"child":media_path_spec(),"allow_child_subtree":true,"forbidden_child_first_component_prefixes":[DATABASE_FILENAME,".state-"]}},
         {"kind":"external-web-override","fields":["/web"],"arguments":{"development_pointer":"/development","source_bound":source_bound}}
     ])
 }

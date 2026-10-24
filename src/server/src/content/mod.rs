@@ -3,7 +3,7 @@ use axum::{
     Router,
     routing::{get, post},
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 mod articles;
 mod catalog;
@@ -13,7 +13,9 @@ mod guestbook;
 mod letter;
 mod links;
 mod notes;
+mod resources;
 mod site;
+mod statistics;
 
 #[derive(Serialize)]
 struct PageResult<T> {
@@ -21,6 +23,21 @@ struct PageResult<T> {
     total: i64,
     page: i64,
     size: i64,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct AdminPageQuery {
+    page: Option<i64>,
+    size: Option<i64>,
+}
+impl AdminPageQuery {
+    fn bounds(self) -> (i64, i64) {
+        (
+            self.page.unwrap_or(1).clamp(1, 100_000),
+            self.size.unwrap_or(20).clamp(1, 100),
+        )
+    }
 }
 
 pub fn public_routes() -> Router<AppState> {
@@ -105,5 +122,60 @@ pub fn admin_routes() -> Router<AppState> {
         .route(
             "/api/v1/content/categories/{id}",
             axum::routing::put(catalog::update_category).delete(catalog::delete_category),
+        )
+        .route("/api/v1/content/comments", get(comments::admin_comments))
+        .route(
+            "/api/v1/content/comments/{id}",
+            axum::routing::delete(comments::delete_comment),
+        )
+        .route(
+            "/api/v1/content/site",
+            get(site::admin_site).put(site::update_site),
+        )
+        .route(
+            "/api/v1/content/labels",
+            get(catalog::admin_labels).post(catalog::create_label),
+        )
+        .route(
+            "/api/v1/content/labels/{id}",
+            axum::routing::put(catalog::update_label).delete(catalog::delete_label),
+        )
+        .route("/api/v1/content/statistics", get(statistics::statistics))
+        .route("/api/v1/content/resources", get(resources::resources))
+        .route(
+            "/api/v1/content/links",
+            get(links::content_links).post(links::create_link),
+        )
+        .route(
+            "/api/v1/content/links/{id}",
+            axum::routing::put(links::update_link).delete(links::delete_link),
+        )
+        .route(
+            "/api/v1/content/links/{id}/status",
+            axum::routing::put(links::change_link_status),
+        )
+        .route(
+            "/api/v1/content/tree-hole",
+            get(guestbook::content_tree_hole),
+        )
+        .route(
+            "/api/v1/content/notes",
+            get(notes::content_notes).post(notes::create_admin_note),
+        )
+        .route(
+            "/api/v1/content/notes/{id}",
+            axum::routing::put(notes::update_admin_note).delete(notes::delete_note),
+        )
+        .route(
+            "/api/v1/content/tree-hole/{id}",
+            axum::routing::delete(guestbook::delete_tree_hole),
+        )
+        .route(
+            "/api/v1/content/family",
+            get(family::content_family).post(family::create_family),
+        )
+        .route(
+            "/api/v1/content/family/{id}",
+            axum::routing::put(family::update_family).delete(family::delete_family),
         )
 }

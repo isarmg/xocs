@@ -79,11 +79,7 @@ fn load_with_environment(
     }
     let environment =
         blog_application::config::read_environment(&mappings, |name| values.get(name).cloned())?;
-    let defaults = Settings {
-        root: root.to_path_buf(),
-        data_dir: root.join("state"),
-        ..Default::default()
-    };
+    let defaults = Settings::for_root(root);
     let mut settings = blog_application::config::resolve_validated(
         &defaults,
         Some(&bytes),
@@ -118,13 +114,15 @@ fn load_with_environment(
 
 impl Settings {
     pub fn database_path(&self) -> anyhow::Result<PathBuf> {
-        Ok(self.data_dir.join("site.sqlite"))
+        Ok(self
+            .data_dir
+            .join(crate::config_definition::DATABASE_FILENAME))
     }
     pub fn media_path(&self) -> anyhow::Result<PathBuf> {
         Ok(self
             .media
             .clone()
-            .unwrap_or_else(|| self.root.join("media")))
+            .unwrap_or_else(|| self.root.join(crate::config_definition::MEDIA_DIRECTORY)))
     }
     pub fn state_directory(&self) -> anyhow::Result<PathBuf> {
         Ok(self.data_dir.clone())

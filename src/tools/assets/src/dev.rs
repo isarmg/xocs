@@ -1,5 +1,6 @@
 //! Local development uses Axum's HTTP implementation and a bounded, streaming
 //! HTTP/1 proxy. Credentials, Host and Origin are forwarded without rewriting.
+use crate::layout;
 use crate::{Options, assets::Config, inventory};
 use anyhow::{Context, Result, ensure};
 use axum::{
@@ -260,7 +261,7 @@ pub async fn serve(
         bind.ip().is_loopback(),
         "Development credentials/API proxy bind must remain on loopback"
     );
-    let config = Config::read(&options.root.join("src/web"))?;
+    let config = Config::read(&options.root.join(layout::WEB))?;
     let mut proxies = config.web.proxies;
     for value in overrides {
         let (prefix, target) = value

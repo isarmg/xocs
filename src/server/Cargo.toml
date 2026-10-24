@@ -33,6 +33,7 @@ serde_json = { path = "../foundation/format/json",package = "blog-format-json"}
 blog-application = {  path = "../application"}
 
 [dev-dependencies]
+tokio = { default-features = false, features = ["test-util"], path = "../foundation/runtime/task-scheduler", package = "blog-runtime-task-scheduler" }
 http-body = { path = "../foundation/network/body-stream", package = "blog-network-body-stream" }
 
 [lints.rust]

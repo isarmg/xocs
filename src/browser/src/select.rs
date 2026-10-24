@@ -396,309 +396,198 @@ pub fn Select(
     View::new(
         blog_interface::html::span()
             .child((
-                IntoMaybeErased::into_maybe_erased(
-                    blog_interface::html::button()
-                        .child((
-                            IntoMaybeErased::into_maybe_erased(
-                                blog_interface::html::span()
-                                    .child(
-                                        #[allow(unused_braces)]
-                                        {
-                                            IntoRender::into_render({
-                                                move || {
-                                                    options
-                                                        .get()
-                                                        .into_iter()
-                                                        .find(|(v, _)| *v == value.get())
-                                                        .map(|(_, label)| label)
-                                                        .unwrap_or_else(|| "\u{a0}".into())
-                                                }
-                                            })
-                                        },
-                                    )
-                                    .class("blog-select-value"),
-                            ),
-                            IntoMaybeErased::into_maybe_erased(
-                                blog_interface::svg::svg()
-                                    .child(
-                                        #[allow(unused_braces)]
-                                        {
-                                            blog_interface::svg::path().attr("d", "m9 6 6 6-6 6")
-                                        },
-                                    )
-                                    .class("blog-select-arrow")
-                                    .attr("aria-hidden", "true")
-                                    .attr("width", "16")
-                                    .attr("height", "16")
-                                    .attr("viewBox", "0 0 24 24")
-                                    .attr("fill", "none")
-                                    .attr("stroke", "currentColor")
-                                    .attr("stroke-width", "1.8"),
-                            ),
-                        ))
-                        .class("blog-input blog-select-trigger")
-                        .node_ref(trigger)
-                        .id(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                            format!("{}-select", id.get_value()),
-                        ))
-                        .r#type("button")
-                        .role("combobox")
-                        .aria_haspopup("listbox")
-                        .aria_expanded(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                            move || open.get().to_string(),
-                        ))
-                        .aria_controls(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                            format!("{}-options", id.get_value()),
-                        ))
-                        .aria_activedescendant(
-                            ::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                                move || {
-                                    open.get().then(|| {
-                                        format!("{}-options-{}", id.get_value(), active.get())
-                                    })
-                                },
-                            ),
-                        )
-                        .aria_label(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                            move || label.get(),
-                        ))
-                        .aria_describedby(
-                            ::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                                move || {
-                                    (!message.get().is_empty())
-                                        .then(|| format!("{}-error", id.get_value()))
-                                },
-                            ),
-                        )
-                        .aria_required(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                            required.to_string(),
-                        ))
-                        .aria_invalid(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                            move || (!message.get().is_empty()).to_string(),
-                        ))
-                        .disabled(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                            move || disabled.get(),
-                        ))
-                        .on(blog_interface::ev::click, move |ev| {
-                            ev.prevent_default();
-                            if open.get_untracked() {
-                                close.run(())
-                            } else {
-                                show.run(None)
+                blog_interface::html::button()
+                    .child((
+                        blog_interface::html::span()
+                            .child(move || {
+                                options
+                                    .get()
+                                    .into_iter()
+                                    .find(|(v, _)| *v == value.get())
+                                    .map(|(_, label)| label)
+                                    .unwrap_or_else(|| "\u{a0}".into())
+                            })
+                            .class("blog-select-value"),
+                        blog_interface::svg::svg()
+                            .child(blog_interface::svg::path().attr("d", "m9 6 6 6-6 6"))
+                            .class("blog-select-arrow")
+                            .attr("aria-hidden", "true")
+                            .attr("width", "16")
+                            .attr("height", "16")
+                            .attr("viewBox", "0 0 24 24")
+                            .attr("fill", "none")
+                            .attr("stroke", "currentColor")
+                            .attr("stroke-width", "1.8"),
+                    ))
+                    .class("blog-input blog-select-trigger")
+                    .node_ref(trigger)
+                    .id(format!("{}-select", id.get_value()))
+                    .r#type("button")
+                    .role("combobox")
+                    .aria_haspopup("listbox")
+                    .aria_expanded(move || open.get().to_string())
+                    .aria_controls(format!("{}-options", id.get_value()))
+                    .aria_activedescendant(move || {
+                        open.get()
+                            .then(|| format!("{}-options-{}", id.get_value(), active.get()))
+                    })
+                    .aria_label(move || label.get())
+                    .aria_describedby(move || {
+                        (!message.get().is_empty()).then(|| format!("{}-error", id.get_value()))
+                    })
+                    .aria_required(required.to_string())
+                    .aria_invalid(move || (!message.get().is_empty()).to_string())
+                    .disabled(move || disabled.get())
+                    .on(blog_interface::ev::click, move |ev| {
+                        ev.prevent_default();
+                        if open.get_untracked() {
+                            close.run(())
+                        } else {
+                            show.run(None)
+                        }
+                    })
+                    .on(blog_interface::ev::keydown, keydown),
+                blog_interface::html::select()
+                    .child(move || {
+                        options
+                            .get()
+                            .into_iter()
+                            .map(|(v, l)| {
+                                View::new(blog_interface::html::option().child(l).value(
+                                    if required && v == "0" {
+                                        String::new()
+                                    } else {
+                                        v
+                                    },
+                                ))
+                            })
+                            .collect_view()
+                    })
+                    .class("blog-select-native")
+                    .node_ref(native)
+                    .id(format!("{}-native", id.get_value()))
+                    .aria_hidden("true")
+                    .tabindex("-1")
+                    .required(required)
+                    .disabled(move || disabled.get())
+                    .prop("value", move || {
+                        let v = value.get();
+                        if required && v == "0" {
+                            String::new()
+                        } else {
+                            v
+                        }
+                    })
+                    .on(blog_interface::ev::change, move |ev| {
+                        message.set(String::new());
+                        let field = event_target::<web_sys::HtmlSelectElement>(&ev);
+                        field.set_custom_validity("");
+                        change.run(field.value());
+                    })
+                    .on(blog_interface::ev::invalid, move |ev: web_sys::Event| {
+                        ev.prevent_default();
+                        let field = event_target::<web_sys::HtmlSelectElement>(&ev);
+                        let m = t("请填写此项。", "Please fill out this field.");
+                        field.set_custom_validity(&m);
+                        message.set(m);
+                        close.run(());
+                        let field = SendWrapper::new(field);
+                        blog_interface::timers::callback::Timeout::new(0, move || {
+                            if !field.is_connected() {
+                                return;
                             }
-                        })
-                        .on(blog_interface::ev::keydown, keydown),
-                ),
-                IntoMaybeErased::into_maybe_erased(
-                    blog_interface::html::select()
-                        .child(
-                            #[allow(unused_braces)]
-                            {
-                                IntoRender::into_render({
-                                    move || {
-                                        options
-                                            .get()
-                                            .into_iter()
-                                            .map(|(v, l)| {
-                                                View::new(
-    blog_interface::html::option()
-        .child(
-            #[allow(unused_braces)]
-            { IntoRender::into_render({ l }) },
-        )
-        .value(
-            ::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                if required && v == "0" { String::new() } else { v },
-            ),
-        ),
-)
-                                            })
-                                            .collect_view()
-                                    }
-                                })
-                            },
-                        )
-                        .class("blog-select-native")
-                        .node_ref(native)
-                        .id(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                            format!("{}-native", id.get_value()),
-                        ))
-                        .aria_hidden("true")
-                        .tabindex("-1")
-                        .required(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                            required,
-                        ))
-                        .disabled(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                            move || disabled.get(),
-                        ))
-                        .prop("value", move || {
-                            let v = value.get();
-                            if required && v == "0" {
-                                String::new()
-                            } else {
-                                v
-                            }
-                        })
-                        .on(blog_interface::ev::change, move |ev| {
-                            message.set(String::new());
-                            let field = event_target::<web_sys::HtmlSelectElement>(&ev);
-                            field.set_custom_validity("");
-                            change.run(field.value());
-                        })
-                        .on(blog_interface::ev::invalid, move |ev: web_sys::Event| {
-                            ev.prevent_default();
-                            let field = event_target::<web_sys::HtmlSelectElement>(&ev);
-                            let m = t("请填写此项。", "Please fill out this field.");
-                            field.set_custom_validity(&m);
-                            message.set(m);
-                            close.run(());
-                            let field = SendWrapper::new(field);
-                            blog_interface::timers::callback::Timeout::new(0, move || {
-                                if !field.is_connected() {
-                                    return;
-                                }
-                                let first = field.form().and_then(|f| {
-                                    f.query_selector(
-                                        "input:invalid,select:invalid,textarea:invalid",
-                                    )
+                            let first = field.form().and_then(|f| {
+                                f.query_selector("input:invalid,select:invalid,textarea:invalid")
                                     .ok()
                                     .flatten()
-                                });
-                                if first.is_none_or(|e| {
-                                    e == (*field).clone().unchecked_into::<web_sys::Element>()
-                                }) && let Some(trigger) = trigger.get()
-                                {
-                                    let _ = trigger.focus();
-                                }
-                            })
-                            .forget();
-                        }),
-                ),
-                IntoMaybeErased::into_maybe_erased(
-                    blog_interface::html::span()
-                        .child(
-                            #[allow(unused_braces)]
+                            });
+                            if first.is_none_or(|e| {
+                                e == (*field).clone().unchecked_into::<web_sys::Element>()
+                            }) && let Some(trigger) = trigger.get()
                             {
-                                IntoRender::into_render({
-                                    move || {
-                                        options
-                                            .get()
-                                            .into_iter()
-                                            .enumerate()
-                                            .map(|(i, (v, l))| {
-                                                View::new(blog_interface::html::span().child(
-                                                    #[allow(unused_braces)]
-                                                    {
-                                                        blog_interface::html::span()
-                    .child(
-                        (
-                                IntoMaybeErased::into_maybe_erased(blog_interface::html::span()
-                                .child(#[allow(unused_braces)] {
-                                IntoRender::into_render({ l }) })),
-                                IntoMaybeErased::into_maybe_erased(blog_interface::html::span()
-                                .child(#[allow(unused_braces)] {
-                                IntoRender::into_render({ { let v = v
-                                .clone(); move | | if value.get() == v { "✓" } else { "" }
-                                } }) }).aria_hidden("true"))
-                            ,),
-                    )
-                    .class("blog-select-option")
-                    .id(
-                        ::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                            format!("{}-options-{i}", id.get_value()),
-                        ),
-                    )
-                    .role("option")
-                    .aria_selected(
-                        ::blog_interface::prelude::IntoAttributeValue::into_attribute_value({
-                            let v = v.clone();
-                            move || (value.get() == v).to_string()
-                        }),
-                    )
-                    .attr(
-                        "data-option-index",
-                        ::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                            i,
-                        ),
-                    )
-                    .attr(
-                        "data-active",
-                        ::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                            move || {
-                                (active.get() == i).then_some("true")
-                            },
-                        ),
-                    )
-                    .on(
-                        blog_interface::ev::pointermove,
-                        move |_| active.set(i),
-                    )
-                    .on(
-                        blog_interface::ev::click,
-                        move |ev| {
-                            ev.prevent_default();
-                            ev.stop_propagation();
-                            commit.run(i);
-                        },
-                    )
-                                                    },
-                                                ))
-                                            })
-                                            .collect_view()
-                                    }
-                                })
-                            },
-                        )
-                        .class("blog-select-panel")
-                        .node_ref(panel)
-                        .id(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                            format!("{}-options", id.get_value()),
-                        ))
-                        .popover("manual")
-                        .role("listbox")
-                        .aria_label(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                            move || label.get(),
-                        ))
-                        .attr(
-                            "data-blog-select-open",
-                            ::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                                move || open.get().then_some("true"),
-                            ),
-                        )
-                        .on(blog_interface::ev::pointerdown, move |ev| {
-                            if ev
-                                .target()
-                                .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
-                                .is_some_and(|t| {
-                                    t.closest("[role=option]").ok().flatten().is_some()
-                                })
-                            {
-                                ev.prevent_default();
+                                let _ = trigger.focus();
                             }
-                        }),
-                ),
-                IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
-                    move || {
-                        (!message.get().is_empty()).then(|| {
-                            View::new(
-                                blog_interface::html::span()
-                                    .child(
-                                        #[allow(unused_braces)]
-                                        {
-                                            IntoRender::into_render({ message.get() })
-                                        },
-                                    )
-                                    .class("blog-select-error")
-                                    .id(
-                                        ::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                                            format!("{}-error", id.get_value()),
-                                        ),
-                                    )
-                                    .role("alert"),
-                            )
                         })
-                    }
-                })),
+                        .forget();
+                    }),
+                blog_interface::html::span()
+                    .child(move || {
+                        options
+                            .get()
+                            .into_iter()
+                            .enumerate()
+                            .map(|(i, (v, l))| {
+                                View::new(
+                                    blog_interface::html::span().child(
+                                        blog_interface::html::span()
+                                            .child((
+                                                blog_interface::html::span().child(l),
+                                                blog_interface::html::span()
+                                                    .child({
+                                                        let v = v.clone();
+                                                        move || {
+                                                            if value.get() == v {
+                                                                "✓"
+                                                            } else {
+                                                                ""
+                                                            }
+                                                        }
+                                                    })
+                                                    .aria_hidden("true"),
+                                            ))
+                                            .class("blog-select-option")
+                                            .id(format!("{}-options-{i}", id.get_value()))
+                                            .role("option")
+                                            .aria_selected({
+                                                let v = v.clone();
+                                                move || (value.get() == v).to_string()
+                                            })
+                                            .attr("data-option-index", i)
+                                            .attr("data-active", move || {
+                                                (active.get() == i).then_some("true")
+                                            })
+                                            .on(blog_interface::ev::pointermove, move |_| {
+                                                active.set(i)
+                                            })
+                                            .on(blog_interface::ev::click, move |ev| {
+                                                ev.prevent_default();
+                                                ev.stop_propagation();
+                                                commit.run(i);
+                                            }),
+                                    ),
+                                )
+                            })
+                            .collect_view()
+                    })
+                    .class("blog-select-panel")
+                    .node_ref(panel)
+                    .id(format!("{}-options", id.get_value()))
+                    .popover("manual")
+                    .role("listbox")
+                    .aria_label(move || label.get())
+                    .attr("data-blog-select-open", move || {
+                        open.get().then_some("true")
+                    })
+                    .on(blog_interface::ev::pointerdown, move |ev| {
+                        if ev
+                            .target()
+                            .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
+                            .is_some_and(|t| t.closest("[role=option]").ok().flatten().is_some())
+                        {
+                            ev.prevent_default();
+                        }
+                    }),
+                move || {
+                    (!message.get().is_empty()).then(|| {
+                        View::new(
+                            blog_interface::html::span()
+                                .child(message.get())
+                                .class("blog-select-error")
+                                .id(format!("{}-error", id.get_value()))
+                                .role("alert"),
+                        )
+                    })
+                },
             ))
             .class("blog-select"),
     )

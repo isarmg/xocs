@@ -1,4 +1,33 @@
 use super::*;
+
+#[test]
+fn build_config_keeps_output_and_native_overrides_but_rejects_obsolete_web_settings() {
+    let value = serde_json::json!({
+        "format": 1,
+        "web": {"dist": "custom-output"},
+        "rust": {
+            "manifest": "src/custom/Cargo.toml",
+            "package": "custom-server",
+            "binary": "custom-service",
+            "source_revision_env": "CUSTOM_SOURCE_REVISION"
+        }
+    });
+    let config: Config = serde_json::from_value(value.clone()).unwrap();
+    assert_eq!(config.web.dist, "custom-output");
+    assert_eq!(config.rust.manifest, "src/custom/Cargo.toml");
+    assert_eq!(config.rust.package, "custom-server");
+    assert_eq!(config.rust.binary, "custom-service");
+    assert_eq!(config.rust.source_revision_env, "CUSTOM_SOURCE_REVISION");
+    for obsolete in ["directory", "script"] {
+        let mut invalid = value.clone();
+        invalid["web"][obsolete] = "unused".into();
+        assert!(
+            serde_json::from_value::<Config>(invalid).is_err(),
+            "{obsolete}"
+        );
+    }
+}
+
 #[cfg(unix)]
 #[test]
 fn native_receipt_directory_is_private_independently_of_umask() {
@@ -182,6 +211,7 @@ fn receipt_cannot_hide_unknown_fields_or_cross_project_paths() {
         )
         .is_err()
     );
-    assert!(path(Path::new("/tmp/test"), "../other", false).is_err());
-    assert!(path(Path::new("/tmp/test"), "/tmp/other", false).is_err());
+    for invalid in [".", "../other", "/tmp/other"] {
+        assert!(path(Path::new("/tmp/test"), invalid).is_err());
+    }
 }

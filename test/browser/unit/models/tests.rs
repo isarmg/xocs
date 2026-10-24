@@ -1,29 +1,99 @@
 use super::*;
 use serde_json::json;
 
+fn site_payload() -> serde_json::Value {
+    serde_json::from_str(include_str!("site.json")).unwrap()
+}
+
 #[test]
 fn typed_site_keeps_required_nullable_fields_and_ignores_extensions() {
-    let mut site = json!({"web_name":null,"web_title":"Title","notices":null,
-            "background_image":null,"avatar":null,"random_cover":null,"future":true,
-            "media":{"logo":null,"journey_background":null,"journal_background":null,
-                "guestbook_background":null,"love_letter_background":null,
-                "love_moments_cover":null,"love_photos_cover":null,"love_wishes_cover":null,
-                "toolbox_background":null,"toolbox_video":"/media/background.webm"}});
+    let mut site = site_payload();
+    site["future"] = json!({"new":true});
+    site["media"]["future"] = json!([false]);
+    let directly_decoded: Site = serde_json::from_value(site.clone()).unwrap();
     let decoded: Site = decode("/api/v1/site", "GET", site.clone()).unwrap();
     assert_eq!(decoded.web_title.as_deref(), Some("Title"));
     assert!(decoded.web_name.is_none());
     assert_eq!(
-        decoded.media.toolbox_video.as_deref(),
+        directly_decoded.media.toolbox_video.as_deref(),
         Some("/media/background.webm")
     );
+    assert_eq!(
+        decoded.media.toolbox_video,
+        directly_decoded.media.toolbox_video
+    );
     assert!(decoded.media.logo.is_none());
-    for invalid in [json!(null), json!({}), json!({"toolbox_video":false})] {
-        let mut invalid_site = site.clone();
-        invalid_site["media"] = invalid;
-        assert!(decode::<Site>("/api/v1/site", "GET", invalid_site).is_err());
+    site["web_title"] = serde_json::Value::Null;
+    site["media"]["toolbox_video"] = serde_json::Value::Null;
+    let all_null: Site = serde_json::from_value(site.clone()).unwrap();
+    assert!(all_null.web_title.is_none());
+    assert!(all_null.media.toolbox_video.is_none());
+    assert!(decode::<Site>("/api/v1/site", "GET", site).is_ok());
+}
+
+#[test]
+fn typed_site_deserialization_requires_every_nullable_field_without_boundary_help() {
+    let baseline = site_payload();
+    for key in baseline.as_object().unwrap().keys() {
+        let mut missing = baseline.clone();
+        missing.as_object_mut().unwrap().remove(key);
+        assert!(
+            serde_json::from_value::<Site>(missing.clone()).is_err(),
+            "missing {key}"
+        );
+        assert!(
+            decode::<Site>("/api/v1/site", "GET", missing).is_err(),
+            "missing {key}"
+        );
     }
-    site.as_object_mut().unwrap().remove("avatar");
-    assert!(decode::<Site>("/api/v1/site", "GET", site).is_err());
+    for key in baseline["media"].as_object().unwrap().keys() {
+        let mut missing = baseline.clone();
+        missing["media"].as_object_mut().unwrap().remove(key);
+        assert!(
+            serde_json::from_value::<Site>(missing.clone()).is_err(),
+            "missing media.{key}"
+        );
+        assert!(
+            decode::<Site>("/api/v1/site", "GET", missing).is_err(),
+            "missing media.{key}"
+        );
+    }
+}
+
+#[test]
+fn typed_site_nullable_fields_reject_nonstring_values() {
+    let baseline = site_payload();
+    for wrong in [json!(true), json!(12), json!([]), json!({})] {
+        for key in baseline
+            .as_object()
+            .unwrap()
+            .keys()
+            .filter(|key| key.as_str() != "media")
+        {
+            let mut invalid = baseline.clone();
+            invalid[key] = wrong.clone();
+            assert!(
+                serde_json::from_value::<Site>(invalid.clone()).is_err(),
+                "{key}: {wrong}"
+            );
+            assert!(
+                decode::<Site>("/api/v1/site", "GET", invalid).is_err(),
+                "{key}: {wrong}"
+            );
+        }
+        for key in baseline["media"].as_object().unwrap().keys() {
+            let mut invalid = baseline.clone();
+            invalid["media"][key] = wrong.clone();
+            assert!(
+                serde_json::from_value::<Site>(invalid.clone()).is_err(),
+                "media.{key}: {wrong}"
+            );
+            assert!(
+                decode::<Site>("/api/v1/site", "GET", invalid).is_err(),
+                "media.{key}: {wrong}"
+            );
+        }
+    }
 }
 
 #[test]

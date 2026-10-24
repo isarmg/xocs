@@ -160,3 +160,157 @@ pub(super) async fn delete_category(
     transaction.commit().await.map_err(db_error)?;
     Ok(Json(serde_json::json!({"deleted":true})))
 }
+
+#[derive(Serialize, sqlx::FromRow)]
+pub(super) struct AdminLabel {
+    id: i64,
+    sort_id: i64,
+    label_name: String,
+    label_description: Option<String>,
+}
+pub(super) async fn admin_labels(State(state): State<AppState>) -> ApiResult<Vec<AdminLabel>> {
+    Ok(Json(
+        sqlx::query_as::<_, AdminLabel>(
+            "SELECT id,sort_id,label_name,label_description FROM label ORDER BY sort_id,id",
+        )
+        .fetch_all(&state.pool)
+        .await
+        .map_err(db_error)?,
+    ))
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct LabelInput {
+    sort_id: i64,
+    name: String,
+    description: Option<String>,
+}
+pub(super) async fn create_label(
+    State(state): State<AppState>,
+    crate::ContractJson(input): crate::ContractJson<LabelInput>,
+) -> ApiResult<AdminLabel> {
+    if input.name.trim().is_empty() || input.name.chars().count() > 32 {
+        return Err(invalid("标签名称无效"));
+    }
+    let mut transaction = state
+        .pool
+        .begin_with("BEGIN IMMEDIATE")
+        .await
+        .map_err(db_error)?;
+    let exists: Option<i64> = sqlx::query_scalar("SELECT id FROM sort WHERE id=?")
+        .bind(input.sort_id)
+        .fetch_optional(&mut *transaction)
+        .await
+        .map_err(db_error)?;
+    if exists.is_none() {
+        return Err(invalid("分类不存在"));
+    }
+    let id = sqlx::query("INSERT INTO label(sort_id,label_name,label_description) VALUES(?,?,?)")
+        .bind(input.sort_id)
+        .bind(input.name)
+        .bind(input.description)
+        .execute(&mut *transaction)
+        .await
+        .map_err(db_error)?
+        .last_insert_rowid();
+    let label =
+        sqlx::query_as("SELECT id,sort_id,label_name,label_description FROM label WHERE id=?")
+            .bind(id)
+            .fetch_one(&mut *transaction)
+            .await
+            .map_err(db_error)?;
+    transaction.commit().await.map_err(db_error)?;
+    Ok(Json(label))
+}
+pub(super) async fn update_label(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+    crate::ContractJson(input): crate::ContractJson<LabelInput>,
+) -> ApiResult<AdminLabel> {
+    if input.name.trim().is_empty() || input.name.chars().count() > 32 {
+        return Err(invalid("标签名称无效"));
+    }
+    let mut transaction = state
+        .pool
+        .begin_with("BEGIN IMMEDIATE")
+        .await
+        .map_err(db_error)?;
+    let previous: i64 = sqlx::query_scalar("SELECT sort_id FROM label WHERE id=?")
+        .bind(id)
+        .fetch_optional(&mut *transaction)
+        .await
+        .map_err(db_error)?
+        .ok_or_else(absent)?;
+    if previous != input.sort_id {
+        let used: bool = sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM article WHERE label_id=? AND deleted=0)",
+        )
+        .bind(id)
+        .fetch_one(&mut *transaction)
+        .await
+        .map_err(db_error)?;
+        if used {
+            return Err(AppError(
+                StatusCode::CONFLICT,
+                "标签仍被文章使用，不能更改分类；请先修改文章的分类和标签",
+            ));
+        }
+    }
+    let category: Option<i64> = sqlx::query_scalar("SELECT id FROM sort WHERE id=?")
+        .bind(input.sort_id)
+        .fetch_optional(&mut *transaction)
+        .await
+        .map_err(db_error)?;
+    if category.is_none() {
+        return Err(invalid("分类不存在"));
+    }
+    let changed =
+        sqlx::query("UPDATE label SET sort_id=?,label_name=?,label_description=? WHERE id=?")
+            .bind(input.sort_id)
+            .bind(input.name.trim())
+            .bind(input.description)
+            .bind(id)
+            .execute(&mut *transaction)
+            .await
+            .map_err(db_error)?;
+    if changed.rows_affected() == 0 {
+        return Err(absent());
+    }
+    let label =
+        sqlx::query_as("SELECT id,sort_id,label_name,label_description FROM label WHERE id=?")
+            .bind(id)
+            .fetch_one(&mut *transaction)
+            .await
+            .map_err(db_error)?;
+    transaction.commit().await.map_err(db_error)?;
+    Ok(Json(label))
+}
+pub(super) async fn delete_label(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> ApiResult<serde_json::Value> {
+    let mut transaction = state
+        .pool
+        .begin_with("BEGIN IMMEDIATE")
+        .await
+        .map_err(db_error)?;
+    let used: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM article WHERE label_id=? AND deleted=0")
+            .bind(id)
+            .fetch_one(&mut *transaction)
+            .await
+            .map_err(db_error)?;
+    if used > 0 {
+        return Err(AppError(StatusCode::CONFLICT, "标签中还有文章"));
+    }
+    let changed = sqlx::query("DELETE FROM label WHERE id=?")
+        .bind(id)
+        .execute(&mut *transaction)
+        .await
+        .map_err(db_error)?;
+    if changed.rows_affected() == 0 {
+        return Err(absent());
+    }
+    transaction.commit().await.map_err(db_error)?;
+    Ok(Json(serde_json::json!({"deleted":true})))
+}

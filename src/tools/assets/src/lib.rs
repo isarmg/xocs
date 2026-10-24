@@ -4,7 +4,9 @@ pub mod dev;
 pub mod graph;
 pub mod inventory;
 pub mod javascript;
+mod layout;
 pub mod server_build;
+mod source_inputs;
 
 use anyhow::{Context, Result, ensure};
 use serde_json::{Value, json};
@@ -18,7 +20,8 @@ pub const RUST: &str = "1.99.0";
 pub const BRIDGE_ABI: &str = "blog-browser-bridge/1";
 pub const TARGET: &str = "wasm32-unknown-unknown";
 
-/// Bind provenance to the implementation actually compiled into this binary.
+/// Bind the conservative compiled implementation basis to this executable.
+/// Full source verification snapshots retain the same input categories.
 pub fn compiled_inputs() -> Vec<(&'static str, String)> {
     [
         (
@@ -38,7 +41,7 @@ pub fn compiled_inputs() -> Vec<(&'static str, String)> {
             .map(|(name, digest)| (name, digest.to_owned())),
     )
     .chain([(
-        "src/foundation",
+        layout::FOUNDATION,
         include!(concat!(env!("OUT_DIR"), "/foundation-inputs.rs")).to_owned(),
     )])
     .collect()
@@ -55,24 +58,13 @@ pub struct Options {
 fn validate_distribution(root: &Path, output: &Path) -> Result<()> {
     ensure!(
         !root.starts_with(output)
-            && output != root.join("src/web")
+            && output != root.join(layout::WEB)
             && (!output.starts_with(root.join("src"))
-                || output.starts_with(root.join("src/web/dist")))
-            && ![
-                "test",
-                "crates",
-                "tools",
-                "compliance",
-                "docs",
-                "src/web/src",
-                "src/web/vendor",
-                "src/browser",
-                "src/interface",
-                "src/web/styles"
-            ]
-            .iter()
-            .any(|directory| output.starts_with(root.join(directory)))
-            && output != root.join("src/web/pkg"),
+                || output.starts_with(root.join(layout::WEB).join("dist")))
+            && !["test", "crates", "tools", "compliance", "docs"]
+                .iter()
+                .any(|directory| output.starts_with(root.join(directory)))
+            && output != root.join(layout::WEB).join("pkg"),
         "Distribution must be a generated directory separate from authored source and source ancestors"
     );
     Ok(())
@@ -80,7 +72,7 @@ fn validate_distribution(root: &Path, output: &Path) -> Result<()> {
 
 pub fn distribution(options: &Options) -> Result<PathBuf> {
     let output = options.dist.clone().unwrap_or(PathBuf::from(
-        assets::Config::read(&options.root.join("src/web"))?
+        assets::Config::read(&options.root.join(layout::WEB))?
             .web
             .dist,
     ));
@@ -275,8 +267,8 @@ fn replace_pair(
 
 pub fn build(options: &Options) -> Result<Value> {
     inventory::physical(&options.root)?;
-    let web = options.root.join("src/web");
-    let manifest = options.root.join("src/browser/Cargo.toml");
+    let web = options.root.join(layout::WEB);
+    let manifest = options.root.join(layout::BROWSER).join("Cargo.toml");
     let declaration: toml::Value =
         toml::from_str(&String::from_utf8(inventory::read(&manifest)?)?)?;
     let package = declaration["package"]["name"]
@@ -313,7 +305,7 @@ pub fn build(options: &Options) -> Result<Value> {
         "package": "blog-assets",
         "execution": "in-process",
         "backend": "browser-module",
-        "manifest": "src/tools/assets/Cargo.toml",
+        "manifest": format!("{}/Cargo.toml", layout::BUILDER),
         "lockfile": "Cargo.lock",
         "source_snapshot_sha256": inventory::sha(&serde_json::to_vec(&before)?),
     });

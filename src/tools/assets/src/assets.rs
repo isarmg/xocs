@@ -1,6 +1,7 @@
 //! A deliberately bounded ESM linker: no transpilation, eval, npm install or network.
 //! Only static ESM imports, CSS imports and literal import.meta.url assets are accepted.
 use crate::inventory::{self, Files};
+use crate::layout;
 use anyhow::{Context, Result, bail, ensure};
 use compression::streams::{Compression, GzBuilder};
 use regex::Regex;
@@ -104,7 +105,7 @@ impl Default for Web {
             css_output: String::new(),
             relative_urls: false,
             runtime_root: "web".into(),
-            dist: "src/web/dist".into(),
+            dist: format!("{}/dist", layout::WEB),
             base: "/".into(),
             max_asset_bytes: 512 * 1024,
             max_wasm_bytes: 4 * 1024 * 1024,
@@ -845,10 +846,10 @@ impl Linker {
         self.generated_output("assets/blog-assets.json".into(), provenance.into())?;
         let repository = self
             .web
-            .parent()
-            .and_then(Path::parent)
+            .ancestors()
+            .nth(Path::new(layout::WEB).components().count())
             .context("Asset source repository")?;
-        let vendor_sources = inventory::walk(&repository.join("src/interface"))?
+        let vendor_sources = inventory::walk(&repository.join(layout::INTERFACE))?
             .into_iter()
             .chain(inventory::walk(&self.web.join("styles"))?)
             .collect::<Vec<_>>()
@@ -935,7 +936,7 @@ impl Linker {
                 inventory::relative(module.source.strip_prefix(&self.web)?)?
             };
             let relative = if self.config.web.runtime_root == "product" {
-                format!("src/web/{relative}")
+                format!("{}/{relative}", layout::WEB)
             } else {
                 relative
             };

@@ -3,9 +3,16 @@
 //! The endpoint contract is checked before deserialization. In particular,
 //! nullable-but-required JSON fields, safe integers and page identity retain
 //! their original validation; `Option` never makes a missing field acceptable.
-//! These are read projections: unused wire fields stay validated at the boundary
-//! and are not retained or decoded a second time into reactive application state.
+//! These read projections do not retain unused wire fields. Site configuration
+//! owns its required-nullable shape here so boundary validation uses the same
+//! definitions as the decoded reactive state.
 use serde::{Deserialize, Deserializer, Serialize};
+
+// With `deserialize_with`, Serde reports a missing field instead of supplying
+// Option's implicit None. The deserializer still accepts an explicit JSON null.
+fn required_nullable_string<'de, D: Deserializer<'de>>(d: D) -> Result<Option<String>, D::Error> {
+    Option::<String>::deserialize(d)
+}
 
 fn binary_flag<'de, D: Deserializer<'de>>(d: D) -> Result<bool, D::Error> {
     match i64::deserialize(d)? {
@@ -24,26 +31,42 @@ pub struct Page<T> {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Site {
+    #[serde(deserialize_with = "required_nullable_string")]
     pub web_name: Option<String>,
+    #[serde(deserialize_with = "required_nullable_string")]
     pub web_title: Option<String>,
+    #[serde(deserialize_with = "required_nullable_string")]
     pub notices: Option<String>,
+    #[serde(deserialize_with = "required_nullable_string")]
     pub background_image: Option<String>,
+    #[serde(deserialize_with = "required_nullable_string")]
     pub avatar: Option<String>,
+    #[serde(deserialize_with = "required_nullable_string")]
     pub random_cover: Option<String>,
     pub media: SiteMedia,
 }
 
 #[derive(Clone, Debug, Default, Deserialize)]
 pub struct SiteMedia {
+    #[serde(deserialize_with = "required_nullable_string")]
     pub logo: Option<String>,
+    #[serde(deserialize_with = "required_nullable_string")]
     pub journey_background: Option<String>,
+    #[serde(deserialize_with = "required_nullable_string")]
     pub journal_background: Option<String>,
+    #[serde(deserialize_with = "required_nullable_string")]
     pub guestbook_background: Option<String>,
+    #[serde(deserialize_with = "required_nullable_string")]
     pub love_letter_background: Option<String>,
+    #[serde(deserialize_with = "required_nullable_string")]
     pub love_moments_cover: Option<String>,
+    #[serde(deserialize_with = "required_nullable_string")]
     pub love_photos_cover: Option<String>,
+    #[serde(deserialize_with = "required_nullable_string")]
     pub love_wishes_cover: Option<String>,
+    #[serde(deserialize_with = "required_nullable_string")]
     pub toolbox_background: Option<String>,
+    #[serde(deserialize_with = "required_nullable_string")]
     pub toolbox_video: Option<String>,
 }
 

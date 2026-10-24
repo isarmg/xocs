@@ -8,6 +8,48 @@ fn invalid_pages_and_missing_nulls_rejected() {
     ));
     assert!(!site(&json!({"web_name":"blog"})));
 }
+
+#[test]
+fn site_contract_uses_the_typed_required_nullable_shape_and_object_containers() {
+    let baseline: Value = serde_json::from_str(include_str!("../models/site.json")).unwrap();
+    assert!(site(&baseline));
+    let mut extension = baseline.clone();
+    extension["future"] = json!(false);
+    extension["media"]["future"] = json!({"new":true});
+    assert!(site(&extension));
+    for key in baseline.as_object().unwrap().keys() {
+        let mut missing = baseline.clone();
+        missing.as_object_mut().unwrap().remove(key);
+        assert!(!site(&missing), "missing {key}");
+    }
+    for key in baseline["media"].as_object().unwrap().keys() {
+        let mut missing = baseline.clone();
+        missing["media"].as_object_mut().unwrap().remove(key);
+        assert!(!site(&missing), "missing media.{key}");
+    }
+    for wrong in [
+        Value::Null,
+        json!(true),
+        json!(7),
+        json!("media"),
+        json!({}),
+    ] {
+        let mut invalid = baseline.clone();
+        invalid["media"] = wrong;
+        assert!(!site(&invalid));
+    }
+    // Derived Serde structs can accept positional sequences. The HTTP contract
+    // requires JSON objects even when an array has exactly enough elements.
+    let mut outer = vec![Value::Null; baseline.as_object().unwrap().len() - 1];
+    outer.push(baseline["media"].clone());
+    assert!(!site(&json!(outer)));
+    let mut invalid = baseline.clone();
+    invalid["media"] = json!(vec![
+        Value::Null;
+        baseline["media"].as_object().unwrap().len()
+    ]);
+    assert!(!site(&invalid));
+}
 #[test]
 fn read_page_identity_and_nullable_fields() {
     let v = json!({"items":[],"page":2,"size":20,"total":21});
