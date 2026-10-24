@@ -967,8 +967,8 @@ async fn comment_submission_requires_current_identity_and_current_ddl() {
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     }
     let identity = crate::schema::current_identity().unwrap();
-    assert_eq!(identity.application_version, "blog-db-v1");
-    assert_eq!(identity.schema_revision, 1);
+    assert_eq!(identity.application_version, "blog-db-v2");
+    assert_eq!(identity.schema_revision, 2);
     crate::schema::validate(&pool).await.unwrap();
     sqlx::query("DROP TABLE comment_submission")
         .execute(&pool)

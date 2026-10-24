@@ -65,13 +65,15 @@ curl -fsS -c "$scratch_dir/cookies" -o "$scratch_dir/login.json" \
 csrf=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["csrf_token"])' < "$scratch_dir/login.json")
 test "$(curl -s -o "$scratch_dir/site.json" -w '%{http_code}' -X PUT -b "$scratch_dir/cookies" \
   -H "Origin: http://127.0.0.1:$smoke_port" -H 'Sec-Fetch-Site: same-origin' -H "X-CSRF-Token: $csrf" -H 'Content-Type: application/json' \
-  --data '{"author_name":"Smoke writer","web_name":"Smoke site","web_title":null,"notices":null,"background_image":null,"avatar":null,"random_cover":null}' \
+  --data '{"author_name":"Smoke writer","web_name":"Smoke site","web_title":null,"notices":null,"background_image":null,"avatar":null,"random_cover":null,"media":{}}' \
   http://127.0.0.1:$smoke_port/api/v1/content/site)" = 200
 python3 - "$scratch_dir/site.json" <<'PY'
 import json, sys
 with open(sys.argv[1]) as stream:
     site = json.load(stream)
-assert set(site) == {'author_name', 'web_name', 'web_title', 'notices', 'background_image', 'avatar', 'random_cover'}
+assert set(site) == {'author_name', 'web_name', 'web_title', 'notices', 'background_image', 'avatar', 'random_cover', 'media'}
+assert set(site['media']) == {'logo', 'journey_background', 'journal_background', 'guestbook_background', 'love_letter_background', 'love_moments_cover', 'love_photos_cover', 'love_wishes_cover', 'toolbox_background', 'toolbox_video'}
+assert all(value is None for value in site['media'].values())
 assert site['web_name'] == 'Smoke site'
 assert site['author_name'] == 'Smoke writer'
 PY

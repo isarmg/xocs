@@ -1,5 +1,5 @@
 [web]
-# Exact existing public assets; media cap 8 MiB total / 4 MiB each.
+# Optional bundled public files; cap 8 MiB total / 4 MiB each.
 public_assets_manifest = "public-assets.json"
 kind = "spa"
 entry = "src/main.js"

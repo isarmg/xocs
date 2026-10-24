@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { mockApi, summary } from './browser-fixtures.mjs';
+import { emptySiteMedia, fixtureImageBytes, fixtureVideoBytes, mockApi, siteMediaKeys, summary } from './browser-fixtures.mjs';
 
 // Run the same route handler used by Playwright, without launching a browser.
 async function fixtureApi() {
@@ -53,6 +53,19 @@ test('omitted fixture pagination uses each production endpoint default', async (
     assert.equal(value.page, 1, path);
     assert.equal(value.size, size, path);
   }
+});
+
+test('site fixtures expose all media fields as nullable values and fresh empty settings are independent', async () => {
+  const read = await fixtureApi();
+  for (const path of ['/api/v1/site', '/api/v1/content/site']) {
+    const value = await read(path);
+    assert.deepEqual(Object.keys(value.media).sort(), [...siteMediaKeys].sort());
+    assert.ok(Object.values(value.media).every(item => item === null));
+  }
+  const changed = emptySiteMedia(); changed.logo = '/__test-media/logo.png';
+  assert.equal(emptySiteMedia().logo, null);
+  assert.deepEqual(fixtureImageBytes.subarray(0, 8), Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+  assert.deepEqual(fixtureVideoBytes.subarray(0, 4), Buffer.from([0x1a, 0x45, 0xdf, 0xa3]));
 });
 
 // The real router exposes category reads publicly; its managed endpoint is POST-only.

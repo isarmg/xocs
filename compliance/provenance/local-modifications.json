@@ -4351,6 +4351,16 @@
       "directory": "src/foundation/wasm/module-transform",
       "reason": "Separate unit, integration and benchmark implementations, test-only macros and fixtures into the repository test tree; retain private module access and existing Cargo targets, rebase source paths and remove only obsolete hooks whose test files were already absent.",
       "production_behavior_change": false
+    },
+    {
+      "directory": "src/server",
+      "reason": "Persist typed owner-configured site media without bundled personal defaults, validate media URLs, support bounded MP4/WebM uploads with container/video-track checks, preserve reference-aware atomic media deletion, and identify the current database layout as blog-db-v2.",
+      "production_behavior_change": true
+    },
+    {
+      "directory": "src/browser",
+      "reason": "Replace fixed photos, avatars and background video with owner-configured media, native theme/initial fallbacks and clearable upload previews; add typed read/upload contracts and preserve cancellation and save ownership.",
+      "production_behavior_change": true
     }
   ]
 }

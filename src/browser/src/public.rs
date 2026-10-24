@@ -211,6 +211,68 @@ fn article_excerpt(value: &str, limit: usize) -> String {
         plain
     }
 }
+fn css_string(value: &str) -> String {
+    use std::fmt::Write;
+    let mut result = String::with_capacity(value.len() + 2);
+    result.push('"');
+    for character in value.chars() {
+        match character {
+            '"' | '\\' => {
+                result.push('\\');
+                result.push(character);
+            }
+            character if character.is_control() => {
+                write!(&mut result, "\\{:x} ", character as u32).expect("write to a string");
+            }
+            character => result.push(character),
+        }
+    }
+    result.push('"');
+    result
+}
+
+fn background_style(url: Option<String>) -> String {
+    url.map(|url| {
+        format!(
+            "background-image:linear-gradient(#0b2c3e4d,#0b2c3e73),url({})",
+            css_string(&url)
+        )
+    })
+    .unwrap_or_default()
+}
+
+fn site_media_url(site: Data<Site>, field: fn(&Site) -> Option<&str>) -> Option<String> {
+    site.value
+        .get()
+        .and_then(|site| field(&site).and_then(|url| safe_url(url.trim(), false)))
+}
+
+fn site_name(site: Data<Site>) -> String {
+    site.value
+        .get()
+        .and_then(|site| site.web_name.filter(|name| !name.trim().is_empty()))
+        .unwrap_or_else(|| "blog".into())
+}
+
+fn cover_art(source: Option<String>, placeholder: &'static str) -> AnyView {
+    match source {
+        Some(source) => View::new(
+            blog_interface::html::img()
+                .class("love-tab-icon")
+                .src(source)
+                .alt(""),
+        )
+        .into_any(),
+        None => View::new(
+            blog_interface::html::span()
+                .class("love-tab-icon love-tab-fallback")
+                .aria_hidden("true")
+                .child(placeholder),
+        )
+        .into_any(),
+    }
+}
+
 fn site_data() -> Data<Site> {
     use_context::<Data<Site>>().expect("public site context")
 }
@@ -219,6 +281,7 @@ fn Chrome(
     #[prop(default=Signal::derive(String::new))] title: Signal<String>,
     #[prop(default = false)] home: bool,
     #[prop(default = false)] plain: bool,
+    #[prop(default = true)] inherit_background: bool,
     #[prop(default=Signal::derive(String::new))] cover: Signal<String>,
     #[prop(default=Signal::derive(String::new))] subtitle: Signal<String>,
     #[prop(default=Signal::derive(||None))] metadata: Signal<Option<ArticleModel>>,
@@ -323,7 +386,10 @@ fn Chrome(
             (
                     IntoMaybeErased::into_maybe_erased(blog_interface::html::header()
                     .child((IntoMaybeErased::into_maybe_erased(blog_interface::html::a()
-                    .child(#[allow(unused_braces)] { "blog" }).class("brand")
+                    .child(move || match site_media_url(site, |site| site.media.logo.as_deref()) {
+                        Some(url) => View::new(blog_interface::html::img().src(url).alt(site_name(site))).into_any(),
+                        None => View::new(blog_interface::html::span().child(site_name(site))).into_any(),
+                    }).class("brand")
                     .href(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(public_href("/")))
                     .aria_label(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(t("blog 首页",
                     "blog home")))),
@@ -491,7 +557,7 @@ fn Chrome(
             move || {
                 let requested = cover.get();
                 let info = site.value.get();
-                let image = if requested.is_empty() {
+                let image = if requested.is_empty() && inherit_background {
                     let background = info
                         .and_then(|info| info.background_image)
                         .unwrap_or_default();
@@ -503,12 +569,7 @@ fn Chrome(
                 } else {
                     requested
                 };
-                let image = safe_url(&image, false)
-                    .unwrap_or_else(|| "/live/blog-current-hero.jpg".into());
-                format!(
-                    "background-image:linear-gradient(#0b2c3e3d,#0b2c3e52),url({})",
-                    serde_json::to_string(& image).unwrap_or_default()
-                )
+                background_style(safe_url(image.trim(), false))
             },
         )
         .class(
@@ -932,13 +993,12 @@ fn Home() -> impl IntoView {
                             .child((IntoMaybeErased::into_maybe_erased(blog_interface::html::section()
                             .child((IntoMaybeErased::into_maybe_erased(blog_interface::html::div()
                             .child(#[allow(unused_braces)] {
-                            blog_interface::html::img()
-                            .src(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(move
-                            | | site.value.get().and_then(| v | safe_url(& v.avatar
-                            .clone().unwrap_or_default(), false))
-                            .unwrap_or("/legacy/avatar.jpg".into())))
-                            .alt(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(t("站长头像",
-                            "Site owner avatar"))) }).class("aside-avatar")),
+                            move || component_view(Avatar, component_props_builder(&Avatar)
+                                .name(site_name(site))
+                                .src(site.value.get().and_then(|site| site.avatar).unwrap_or_default())
+                                .class("aside-avatar")
+                                .alt(t("站长头像", "Site owner avatar"))
+                                .build()) }).class("aside-avatar-wrap")),
                             IntoMaybeErased::into_maybe_erased(blog_interface::html::h2()
                             .child(#[allow(unused_braces)] {
                             IntoRender::into_render({
@@ -2603,6 +2663,7 @@ fn BrowsePager<T: PageMetadata + Clone + Send + Sync + 'static>(
 }
 #[component]
 fn Journey() -> impl IntoView {
+    let site = site_data();
     let state = search_signal();
     let data = load(Signal::derive(move || {
         format!("/api/v1/articles?page={}&size=20", page_number(state))
@@ -2626,9 +2687,10 @@ fn Journey() -> impl IntoView {
                         .cover(
                             #[allow(unused_braces)]
                             {
-                                Signal::derive(|| "/live/blog-current-menory.jpg".into())
+                                Signal::derive(move || site.value.get().and_then(|site| site.media.journey_background).unwrap_or_default())
                             },
                         )
+                        .inherit_background(false)
                         .children({
                             ::blog_interface::children::ToChildren::to_children(move || {
                                 (
@@ -2747,6 +2809,7 @@ fn Journey() -> impl IntoView {
 }
 #[component]
 fn Journal() -> impl IntoView {
+    let site = site_data();
     let state = search_signal();
     let data = load(Signal::derive(move || {
         format!("/api/v1/notes/page?page={}", page_number(state))
@@ -2770,9 +2833,10 @@ fn Journal() -> impl IntoView {
                     .cover(
                         #[allow(unused_braces)]
                         {
-                            Signal::derive(|| "/live/blog-current-jotting.jpg".into())
+                            Signal::derive(move || site.value.get().and_then(|site| site.media.journal_background).unwrap_or_default())
                         },
                     )
+                    .inherit_background(false)
                     .children({
                         ::blog_interface::children::ToChildren::to_children(move || {
                             (
@@ -2949,6 +3013,7 @@ fn NoteCard(
 }
 #[component]
 fn Message() -> impl IntoView {
+    let site = site_data();
     let data = load(Signal::derive(|| "/api/v1/tree-hole".into()));
     let draft = RwSignal::new(String::new());
     let posts = RwSignal::new(Vec::<Value>::new());
@@ -3068,7 +3133,9 @@ fn Message() -> impl IntoView {
                                         component_props_builder(& Feedback)
                                         .error(#[allow(unused_braces)] { action.error })
                                         .public(#[allow(unused_braces)] { true }).build(); props })
-                                        }),)).class("message-form-wrap")),)).class("message-hero")),
+                                        }),)).class("message-form-wrap")),))
+                                        .style(move || background_style(site_media_url(site, |site| site.media.guestbook_background.as_deref())))
+                                        .class("message-hero")),
                                         IntoMaybeErased::into_maybe_erased(blog_interface::html::div()
                                         .child(#[allow(unused_braces)] { {
                                         #[allow(unreachable_code)] #[allow(unused_mut)]
@@ -3932,6 +3999,14 @@ fn Toolbox() -> impl IntoView {
         )
     }));
     let site = site_data();
+    let reduced_motion = web_sys::window()
+        .and_then(|window| {
+            window
+                .match_media("(prefers-reduced-motion: reduce)")
+                .ok()
+                .flatten()
+        })
+        .is_some_and(|query| query.matches());
     View::new({
         #[allow(unreachable_code)]
         #[allow(unused_mut)]
@@ -3952,10 +4027,16 @@ fn Toolbox() -> impl IntoView {
                             .child(
                                 (
                                         IntoMaybeErased::into_maybe_erased(blog_interface::html::section()
-                                        .child((IntoMaybeErased::into_maybe_erased(blog_interface::html::video()
-                                        .autoplay(true).muted(true).r#loop(true).playsinline(true)
-                                        .preload("metadata").poster("/legacy/backgroundPicture.jpg")
-                                        .src("/legacy/backgroundVideo.mp4")),
+                                        .child((IntoMaybeErased::into_maybe_erased(move || {
+                                            site_media_url(site, |site| site.media.toolbox_video.as_deref()).map(|url| {
+                                                blog_interface::html::video()
+                                                    .autoplay(!reduced_motion).muted(true).r#loop(!reduced_motion).playsinline(true)
+                                                    .controls(reduced_motion)
+                                                    .preload(if reduced_motion { "none" } else { "metadata" })
+                                                    .poster(site_media_url(site, |site| site.media.toolbox_background.as_deref()))
+                                                    .src(url)
+                                            })
+                                        }),
                                         IntoMaybeErased::into_maybe_erased(blog_interface::html::div()
                                         .child((IntoMaybeErased::into_maybe_erased(blog_interface::html::small()
                                         .child(#[allow(unused_braces)] {
@@ -4006,6 +4087,7 @@ fn Toolbox() -> impl IntoView {
 )).collect_view() }) })
                                         .class("favorite-feature-links")),))
                                         .class("favorite-banner-overlay")),))
+                                        .style(move || background_style(site_media_url(site, |site| site.media.toolbox_background.as_deref())))
                                         .class("favorite-banner")),
                                         IntoMaybeErased::into_maybe_erased(blog_interface::html::div()
                                         .child((IntoMaybeErased::into_maybe_erased({
@@ -4398,47 +4480,37 @@ fn Music(items: Vec<Value>) -> impl IntoView {
     )
 }
 #[component]
-fn Avatar(name: String, src: String) -> impl IntoView {
+fn Avatar(
+    name: String,
+    src: String,
+    #[prop(default = "love-avatar")] class: &'static str,
+    #[prop(default = String::new())] alt: String,
+) -> impl IntoView {
+    let image = safe_url(src.trim(), true);
+    let fallback_label = (image.is_none() && !alt.is_empty()).then_some(alt.clone());
     View::new(
         blog_interface::html::span()
-            .child(
-                #[allow(unused_braces)]
-                {
-                    IntoRender::into_render({
-                        if let Some(u) = safe_url(&src, true) {
-                            View::new(
-                                blog_interface::html::img()
-                                    .src(
-                                        ::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                                            u,
-                                        ),
-                                    )
-                                    .alt(""),
-                            )
-                            .into_any()
-                        } else {
-                            View::new(
-                                blog_interface::html::span()
-                                    .child(
-                                        #[allow(unused_braces)]
-                                        {
-                                            IntoRender::into_render({
-                                                name.chars().next().unwrap_or(' ')
-                                            })
-                                        },
-                                    )
-                                    .aria_hidden("true"),
-                            )
-                            .into_any()
-                        }
-                    })
-                },
-            )
-            .class("love-avatar"),
+            .class(class)
+            .attr("role", fallback_label.as_ref().map(|_| "img"))
+            .aria_label(fallback_label)
+            .child(match image {
+                Some(url) => View::new(blog_interface::html::img().src(url).alt(alt)).into_any(),
+                None => View::new(
+                    blog_interface::html::span()
+                        .child(
+                            name.chars()
+                                .find(|character| !character.is_whitespace())
+                                .unwrap_or('•'),
+                        )
+                        .aria_hidden("true"),
+                )
+                .into_any(),
+            }),
     )
 }
 #[component]
 fn Love() -> impl IntoView {
+    let site = site_data();
     let family = load(Signal::derive(|| "/api/v1/family".into()));
     let current = Signal::derive(move || {
         list(family.value.get())
@@ -4526,9 +4598,9 @@ fn Love() -> impl IntoView {
                             .child(#[allow(unused_braces)] {
                             IntoRender::into_render({
                             move | | his.get() }) })),))),
-                            IntoMaybeErased::into_maybe_erased(blog_interface::html::img()
-                            .class("love-heart").src("/legacy/love-heart.svg").alt("")
-                            .aria_hidden("true")),
+                            IntoMaybeErased::into_maybe_erased(blog_interface::svg::svg()
+                            .class("love-heart").attr("viewBox", "0 0 24 24").attr("aria-hidden", "true")
+                            .child(blog_interface::svg::path().attr("d", "M12 21 3.6 12.6A5.5 5.5 0 0 1 11.4 4.8L12 5.4l.6-.6a5.5 5.5 0 0 1 7.8 7.8Z"))),
                             IntoMaybeErased::into_maybe_erased(blog_interface::html::div()
                             .child((IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
                             move | | View::new({
@@ -4572,10 +4644,8 @@ fn Love() -> impl IntoView {
                             .class("love-wave").attr("viewBox", "0 0 1440 110")
                             .attr("preserveAspectRatio", "none").attr("aria-hidden",
                             "true")),)).style(move | |
-                            safe_url(& text(& current.get(), "bg_cover"), true).map(| u
-                            | format!("background-image:url({})",
-                            serde_json::to_string(& u).unwrap_or_default()))
-                            .unwrap_or_default()).class("love-hero")),
+                            background_style(safe_url(text(&current.get(), "bg_cover").trim(), true)))
+                            .class("love-hero")),
                             IntoMaybeErased::into_maybe_erased(blog_interface::html::div()
                             .child((IntoMaybeErased::into_maybe_erased({
                             #[allow(unreachable_code)] #[allow(unused_mut)]
@@ -4691,6 +4761,7 @@ fn Love() -> impl IntoView {
                             IntoRender::into_render({
                             t("飞车传信", "A letter for you") }) }) })
                             .class("love-letter")
+                            .style(move || background_style(site_media_url(site, |site| site.media.love_letter_background.as_deref())))
                             .href(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(public_href("/letter")))),
                             IntoMaybeErased::into_maybe_erased(blog_interface::html::details()
                             .child((IntoMaybeErased::into_maybe_erased(blog_interface::html::summary()
@@ -4716,23 +4787,20 @@ fn Love() -> impl IntoView {
                             IntoMaybeErased::into_maybe_erased(blog_interface::html::div()
                             .child((IntoMaybeErased::into_maybe_erased(blog_interface::html::nav()
                             .child(#[allow(unused_braces)] {
-                            IntoRender::into_render({ [("notes",
-                            t("点点滴滴", "Moments"), "/legacy/love-moments.jpg",
+                            IntoRender::into_render({ move || [("notes",
+                            t("点点滴滴", "Moments"), site_media_url(site, |site| site.media.love_moments_cover.as_deref()), "☀",
                             t("☀️ 今朝有酒今朝醉",
                             "☀️ Little moments of joy")), ("photos",
-                            t("时光相册", "Photos"), "/legacy/love-photos.jpg",
+                            t("时光相册", "Photos"), site_media_url(site, |site| site.media.love_photos_cover.as_deref()), "▧",
                             t("📸 记录美好瞬间",
                             "📸 Keep beautiful memories")), ("wishes", t("祝福板",
-                            "Wishes"), "/legacy/love-wishes.jpg",
+                            "Wishes"), site_media_url(site, |site| site.media.love_wishes_cover.as_deref()), "♡",
                             t("📋 写下你们的祝福", "📋 Leave your wishes"))]
-                            .into_iter().map(| (id, l, icon, desc) | View::new(
+                            .into_iter().map(| (id, l, icon, placeholder, desc) | View::new(
     blog_interface::html::button()
         .child(
             (
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::img()
-                    .class("love-tab-icon")
-                    .src(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(icon))
-                    .alt("")),
+                    IntoMaybeErased::into_maybe_erased(cover_art(icon, placeholder)),
                     IntoMaybeErased::into_maybe_erased(blog_interface::html::span()
                     .child((IntoMaybeErased::into_maybe_erased(blog_interface::html::strong()
                     .child(#[allow(unused_braces)] {

@@ -1,21 +1,4 @@
 {
   "format": 1,
-  "files": {
-    "legacy/README.md": "0ddfcc631c5d786e248cdf99679248f4a9cf715ff87724e19903b34d1343a6e9",
-    "legacy/avatar.jpg": "7460056a7ce3125039b7f35604ca5bce867e3022b79f698a21308827e3791213",
-    "legacy/backgroundPicture.jpg": "3e8f271018eb38347bf48f5e6adcfd8ed29b093c53bd655ae2a96a4a95a49887",
-    "legacy/backgroundVideo.mp4": "8bf55fa5fcc537d625d44bc60d0660674853895ec0531843a3107d08d72489db",
-    "legacy/bannerWave1.png": "8c9bcb4976dea23f6a8c034cae0de57fcb2ef45c7233853aa59fcf288e4b4ee7",
-    "legacy/bannerWave2.png": "6aeb76dba7d747397ed3f1a0905058a5e00678d8fae8606d3ad7c57656d852e3",
-    "legacy/love-heart.svg": "5091d144efa0b6cf6147de1e4c63c6f805200dc2790e21376f39b9c3a6237ecc",
-    "legacy/love-moments.jpg": "61e442ddc876ea59c39f91e1b66c3cecfc2933b590635e9f08e0ced2321bc0ca",
-    "legacy/love-photos.jpg": "2229f53a1d043764e800ee35697b6b4771abf2213f867c50f98c4567dbd408bb",
-    "legacy/love-wishes.jpg": "f9420f669ab57c46cbd1a82e3e14ff892b44e06d7b48f8f453179a62af250223",
-    "live/blog-current-hero.jpg": "b98dfdd0a1fca42ffcb190930c577b8dbf6e1175a839b86504b647fcc21d7ebc",
-    "live/blog-current-jotting.jpg": "49e380e14a0f7733d7de9684c8d6d265a7bdcc5995e45a5d2614a6b7caecb786",
-    "live/blog-current-love.png": "e76964407f052356822aafc643d3824c0a6a72fa878ddd6b01ef452e55ddb28e",
-    "live/blog-current-menory.jpg": "8ae99a45fa5ffa8de784c820f1766fed5a1181d513a8f94194a14fea9128fab8",
-    "live/blog-current-message.jpg": "8d50634f1545ebd45de357ece232727ee036f1e6a37a28cf1aad7c03db9d4ffa",
-    "live/blog-logo.png": "46f18942b4fec084ddf998418eabcb379e481281215edbde8c949924d9cb3893"
-  }
+  "files": {}
 }

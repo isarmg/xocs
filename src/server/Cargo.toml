@@ -53,6 +53,7 @@ path = "../foundation/network/web-address"
 package = "blog-network-web-address"
 default-features = false
 features = [
+    "parser",
     "std",
 ]
 

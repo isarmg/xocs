@@ -10,8 +10,9 @@ pub(super) struct SiteInfo {
     background_image: Option<String>,
     avatar: Option<String>,
     random_cover: Option<String>,
+    media: sqlx::types::Json<crate::site_media::SiteMedia>,
 }
 pub(super) async fn site_info(State(state): State<AppState>) -> ApiResult<SiteInfo> {
-    Ok(Json(sqlx::query_as::<_,SiteInfo>("SELECT web_name,web_title,notices,background_image,avatar,random_cover FROM web_info ORDER BY id LIMIT 1")
-        .fetch_optional(&state.pool).await.map_err(db_error)?.unwrap_or(SiteInfo {web_name:Some("blog".into()),web_title:Some("相信记录的力量".into()),notices:None,background_image:None,avatar:None,random_cover:None})))
+    Ok(Json(sqlx::query_as::<_,SiteInfo>("SELECT web_name,web_title,notices,background_image,avatar,random_cover,media FROM web_info ORDER BY id LIMIT 1")
+        .fetch_optional(&state.pool).await.map_err(db_error)?.unwrap_or(SiteInfo {web_name:Some("blog".into()),web_title:Some("相信记录的力量".into()),notices:None,background_image:None,avatar:None,random_cover:None,media:Default::default()})))
 }

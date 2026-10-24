@@ -14,6 +14,7 @@ use sqlx::{Row, SqliteConnection, SqlitePool};
 use crate::{ApiResult, AppError, AppState, db_error, invalid};
 
 const MAX_IMAGE_BYTES: usize = 10 * 1024 * 1024;
+const MAX_VIDEO_BYTES: usize = 50 * 1024 * 1024;
 
 pub fn admin_routes() -> Router<AppState> {
     Router::new()
@@ -22,13 +23,17 @@ pub fn admin_routes() -> Router<AppState> {
             post(upload).layer(DefaultBodyLimit::max(MAX_IMAGE_BYTES)),
         )
         .route(
+            "/api/v1/content/upload-video",
+            post(upload_video).layer(DefaultBodyLimit::max(MAX_VIDEO_BYTES)),
+        )
+        .route(
             "/api/v1/content/resources/{id}",
             axum::routing::delete(delete_resource),
         )
 }
 
 #[derive(Serialize)]
-struct UploadedImage {
+struct UploadedMedia {
     id: i64,
     path: String,
     mime_type: &'static str,
@@ -51,22 +56,274 @@ fn image_type(bytes: &[u8]) -> Option<(&'static str, &'static str)> {
     None
 }
 
+// Parse only bounded container metadata. The browser remains responsible for
+// codec support; an image, audio-only container or renamed document is not a
+// video upload, regardless of the request MIME type or filename.
+fn video_type(bytes: &[u8]) -> Option<(&'static str, &'static str)> {
+    if bytes.get(4..8) == Some(b"ftyp") && mp4_video(bytes) {
+        Some(("mp4", "video/mp4"))
+    } else if bytes.starts_with(b"\x1a\x45\xdf\xa3") && webm_video(bytes) {
+        Some(("webm", "video/webm"))
+    } else {
+        None
+    }
+}
+
+fn mp4_box<'a>(bytes: &'a [u8], budget: &mut usize) -> Option<(&'a [u8], &'a [u8], &'a [u8])> {
+    *budget = budget.checked_sub(1)?;
+    let size = u32::from_be_bytes(bytes.get(..4)?.try_into().ok()?);
+    let kind = bytes.get(4..8)?;
+    let (header, size) = match size {
+        0 => (8, bytes.len()),
+        1 => (
+            16,
+            usize::try_from(u64::from_be_bytes(bytes.get(8..16)?.try_into().ok()?)).ok()?,
+        ),
+        size => (8, size as usize),
+    };
+    if size < header {
+        return None;
+    }
+    Some((kind, bytes.get(header..size)?, bytes.get(size..)?))
+}
+
+fn mp4_track(bytes: &[u8], depth: u8, budget: &mut usize) -> Option<bool> {
+    let mut remaining = bytes;
+    let mut video = false;
+    while !remaining.is_empty() {
+        let (kind, payload, rest) = mp4_box(remaining, budget)?;
+        remaining = rest;
+        match (depth, kind) {
+            (0, b"trak") | (1, b"mdia") => video |= mp4_track(payload, depth + 1, budget)?,
+            (2, b"hdlr") => {
+                if payload.len() < 24 {
+                    return None;
+                }
+                video |= payload.get(8..12) == Some(b"vide");
+            }
+            _ => {}
+        }
+    }
+    Some(video)
+}
+
+fn mp4_video(bytes: &[u8]) -> bool {
+    fn parse(bytes: &[u8]) -> Option<bool> {
+        let mut budget = 65_536;
+        let (kind, header, mut remaining) = mp4_box(bytes, &mut budget)?;
+        if kind != b"ftyp" || header.len() < 8 || !header.len().is_multiple_of(4) {
+            return None;
+        }
+        let compatible = |brand: &[u8]| {
+            matches!(
+                brand,
+                b"isom"
+                    | b"iso2"
+                    | b"iso3"
+                    | b"iso4"
+                    | b"iso5"
+                    | b"iso6"
+                    | b"iso7"
+                    | b"iso8"
+                    | b"iso9"
+                    | b"mp41"
+                    | b"mp42"
+                    | b"avc1"
+                    | b"dash"
+                    | b"MSNV"
+                    | b"M4V "
+                    | b"M4VH"
+                    | b"M4VP"
+            )
+        };
+        if !compatible(&header[..4])
+            && !header[8..]
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .any(|brand| compatible(brand))
+        {
+            return None;
+        }
+        let mut video = false;
+        let mut data = false;
+        while !remaining.is_empty() {
+            let (kind, payload, rest) = mp4_box(remaining, &mut budget)?;
+            remaining = rest;
+            match kind {
+                b"moov" => video |= mp4_track(payload, 0, &mut budget)?,
+                b"mdat" => data |= !payload.is_empty(),
+                _ => {}
+            }
+        }
+        Some(video && data)
+    }
+    parse(bytes) == Some(true)
+}
+
+fn ebml_vint(bytes: &[u8], id: bool) -> Option<(u64, usize, bool)> {
+    let first = *bytes.first()?;
+    let width = first.leading_zeros() as usize + 1;
+    if width > if id { 4 } else { 8 } {
+        return None;
+    }
+    let mut value = if id {
+        first as u64
+    } else {
+        u64::from(first) & (0xff_u64 >> width)
+    };
+    for byte in bytes.get(1..width)? {
+        value = (value << 8) | u64::from(*byte);
+    }
+    let unknown = !id && value == (1_u64 << (width * 7)) - 1;
+    Some((value, width, unknown))
+}
+
+fn ebml_element<'a>(bytes: &'a [u8], budget: &mut usize) -> Option<(u64, &'a [u8], &'a [u8])> {
+    *budget = budget.checked_sub(1)?;
+    let (id, id_width, _) = ebml_vint(bytes, true)?;
+    let (size, size_width, unknown) = ebml_vint(bytes.get(id_width..)?, false)?;
+    let header = id_width + size_width;
+    let size = if unknown {
+        // Streaming WebM permits unknown Segment/Cluster lengths; these extend
+        // to the parent boundary and cannot reinterpret arbitrary child data.
+        if !matches!(id, 0x1853_8067 | 0x1f43_b675) {
+            return None;
+        }
+        bytes.len().checked_sub(header)?
+    } else {
+        usize::try_from(size).ok()?
+    };
+    let end = header.checked_add(size)?;
+    Some((id, bytes.get(header..end)?, bytes.get(end..)?))
+}
+
+fn webm_video(bytes: &[u8]) -> bool {
+    fn parse(bytes: &[u8]) -> Option<bool> {
+        let mut budget = 65_536;
+        let (kind, header, mut remaining) = ebml_element(bytes, &mut budget)?;
+        if kind != 0x1a45_dfa3 || header.len() > 4096 {
+            return None;
+        }
+        let mut fields = header;
+        let mut webm = false;
+        while !fields.is_empty() {
+            let (id, value, rest) = ebml_element(fields, &mut budget)?;
+            fields = rest;
+            if id == 0x4282 {
+                webm = value == b"webm";
+            }
+        }
+        if !webm {
+            return None;
+        }
+        // Void/CRC metadata may precede the Segment, but no other document is
+        // accepted alongside the video container.
+        let segment = loop {
+            let (id, value, rest) = ebml_element(remaining, &mut budget)?;
+            remaining = rest;
+            match id {
+                0x1853_8067 if remaining.is_empty() => break value,
+                0xec | 0xbf => {}
+                _ => return None,
+            }
+        };
+        let mut children = segment;
+        let mut video = false;
+        let mut data = false;
+        while !children.is_empty() {
+            let (id, value, rest) = ebml_element(children, &mut budget)?;
+            children = rest;
+            if id == 0x1f43_b675 {
+                data |= !value.is_empty();
+            } else if id == 0x1654_ae6b {
+                let mut tracks = value;
+                while !tracks.is_empty() {
+                    let (id, value, rest) = ebml_element(tracks, &mut budget)?;
+                    tracks = rest;
+                    if id != 0xae {
+                        continue;
+                    }
+                    let mut entry = value;
+                    while !entry.is_empty() {
+                        let (id, value, rest) = ebml_element(entry, &mut budget)?;
+                        entry = rest;
+                        if id == 0x83 {
+                            if value.is_empty() || value.len() > 8 {
+                                return None;
+                            }
+                            video |= value
+                                .iter()
+                                .fold(0_u64, |n, byte| (n << 8) | u64::from(*byte))
+                                == 1;
+                        }
+                    }
+                }
+            }
+        }
+        Some(video && data)
+    }
+    parse(bytes) == Some(true)
+}
+
+#[derive(Clone, Copy)]
+enum UploadKind {
+    Image,
+    Video,
+}
+
+impl UploadKind {
+    fn limit(self) -> usize {
+        match self {
+            Self::Image => MAX_IMAGE_BYTES,
+            Self::Video => MAX_VIDEO_BYTES,
+        }
+    }
+
+    fn resource_type(self) -> &'static str {
+        match self {
+            Self::Image => "image",
+            Self::Video => "video",
+        }
+    }
+
+    fn detect(self, bytes: &[u8]) -> Result<(&'static str, &'static str), AppError> {
+        match self {
+            Self::Image => {
+                image_type(bytes).ok_or_else(|| invalid("仅支持 PNG、JPEG、GIF 和 WebP 图片"))
+            }
+            Self::Video => {
+                video_type(bytes).ok_or_else(|| invalid("仅支持包含视频轨道的 MP4 和 WebM 视频"))
+            }
+        }
+    }
+}
+
 async fn upload(
     State(state): State<AppState>,
     headers: HeaderMap,
     body: Bytes,
-) -> ApiResult<UploadedImage> {
+) -> ApiResult<UploadedMedia> {
     let author = crate::site_author_id(&state.pool).await?;
-    save_image(&state, &headers, body, author, MAX_IMAGE_BYTES).await
+    save_media(&state, &headers, body, author, UploadKind::Image).await
 }
 
-async fn save_image(
+async fn upload_video(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> ApiResult<UploadedMedia> {
+    let author = crate::site_author_id(&state.pool).await?;
+    save_media(&state, &headers, body, author, UploadKind::Video).await
+}
+
+async fn save_media(
     state: &AppState,
     headers: &HeaderMap,
     body: Bytes,
     owner: i64,
-    limit: usize,
-) -> ApiResult<UploadedImage> {
+    kind: UploadKind,
+) -> ApiResult<UploadedMedia> {
     let owned = state.clone();
     let headers = headers.clone();
     let result = state
@@ -74,26 +331,26 @@ async fn save_image(
         .commit_tasks
         .try_spawn(async move {
             let _operation = owned.media_operations.lock().await;
-            save_image_inner(&owned, &headers, body, owner, limit).await
+            save_media_inner(&owned, &headers, body, owner, kind).await
         })
         .map_err(|_| AppError(StatusCode::SERVICE_UNAVAILABLE, "服务正在停止"))?
         .await
-        .map_err(|_| AppError(StatusCode::INTERNAL_SERVER_ERROR, "图片保存失败"))?;
+        .map_err(|_| AppError(StatusCode::INTERNAL_SERVER_ERROR, "媒体保存失败"))?;
     result.map(Json)
 }
 
-async fn save_image_inner(
+async fn save_media_inner(
     state: &AppState,
     headers: &HeaderMap,
     body: Bytes,
     owner: i64,
-    limit: usize,
-) -> Result<UploadedImage, AppError> {
+    kind: UploadKind,
+) -> Result<UploadedMedia, AppError> {
+    let limit = kind.limit();
     if body.is_empty() || body.len() > limit {
-        return Err(invalid("图片大小无效"));
+        return Err(invalid("媒体大小无效"));
     }
-    let (extension, mime_type) =
-        image_type(&body).ok_or_else(|| invalid("仅支持 PNG、JPEG、GIF 和 WebP 图片"))?;
+    let (extension, mime_type) = kind.detect(&body)?;
     let original_name = headers
         .get("x-file-name")
         .and_then(|v| v.to_str().ok())
@@ -117,7 +374,7 @@ async fn save_image_inner(
                 let existing = directory.read_bounded(&name, limit)?;
                 anyhow::ensure!(
                     existing.as_slice() == content.as_ref(),
-                    "existing image content does not match its identity"
+                    "existing media content does not match its identity"
                 );
                 Ok(())
             }
@@ -125,10 +382,10 @@ async fn save_image_inner(
         }
     })
     .await
-    .map_err(|_| AppError(StatusCode::INTERNAL_SERVER_ERROR, "图片保存失败"))?
-    .map_err(|_| AppError(StatusCode::INTERNAL_SERVER_ERROR, "图片保存失败"))?;
-    sqlx::query("INSERT INTO resource(user_id,type,path,size,original_name,mime_type,status,store_type) VALUES(?,'image',?,?,?,?,1,'local') ON CONFLICT(path) DO NOTHING")
-        .bind(owner)
+    .map_err(|_| AppError(StatusCode::INTERNAL_SERVER_ERROR, "媒体保存失败"))?
+    .map_err(|_| AppError(StatusCode::INTERNAL_SERVER_ERROR, "媒体保存失败"))?;
+    sqlx::query("INSERT INTO resource(user_id,type,path,size,original_name,mime_type,status,store_type) VALUES(?,?,?,?,?,?,1,'local') ON CONFLICT(path) DO NOTHING")
+        .bind(owner).bind(kind.resource_type())
         .bind(&path).bind(body.len() as i64).bind(original_name.as_deref()).bind(mime_type)
         .execute(&state.pool).await.map_err(db_error)?;
     let id: i64 = sqlx::query_scalar("SELECT id FROM resource WHERE path=?")
@@ -136,7 +393,7 @@ async fn save_image_inner(
         .fetch_one(&state.pool)
         .await
         .map_err(db_error)?;
-    Ok(UploadedImage {
+    Ok(UploadedMedia {
         id,
         path,
         mime_type,
@@ -144,20 +401,29 @@ async fn save_image_inner(
     })
 }
 
-pub(crate) fn is_image_filename(name: &str) -> bool {
-    let Some((hash, extension)) = name.split_once('.') else {
-        return false;
-    };
-    hash.len() == 64
-        && hash
+fn media_filename_kind(name: &str) -> Option<&'static str> {
+    let (hash, extension) = name.split_once('.')?;
+    if hash.len() != 64
+        || !hash
             .bytes()
             .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
-        && matches!(extension, "png" | "jpg" | "gif" | "webp")
+    {
+        return None;
+    }
+    match extension {
+        "png" | "jpg" | "gif" | "webp" => Some("image"),
+        "mp4" | "webm" => Some("video"),
+        _ => None,
+    }
+}
+
+pub(crate) fn is_media_filename(name: &str) -> bool {
+    media_filename_kind(name).is_some()
 }
 
 fn filesystem_error(error: impl std::fmt::Display) -> AppError {
     tracing::error!(%error, "media filesystem operation failed");
-    AppError(StatusCode::INTERNAL_SERVER_ERROR, "图片文件操作失败")
+    AppError(StatusCode::INTERNAL_SERVER_ERROR, "媒体文件操作失败")
 }
 
 fn not_found(error: &blog_application::fs_safety::Error) -> bool {
@@ -269,7 +535,7 @@ async fn referenced(connection: &mut SqliteConnection, path: &str) -> Result<boo
     // upload cannot break a saved article, profile, album, note or letter.
     const QUERIES: &[&str] = &[
         "SELECT id,coalesce(article_cover,'')||char(0)||coalesce(video_url,'')||char(0)||coalesce(article_content,'')||char(0)||coalesce(tips,'') AS value FROM article NOT INDEXED WHERE deleted=0",
-        "SELECT id,coalesce(background_image,'')||char(0)||coalesce(avatar,'')||char(0)||coalesce(random_cover,'')||char(0)||coalesce(notices,'') AS value FROM web_info",
+        "SELECT id,coalesce(background_image,'')||char(0)||coalesce(avatar,'')||char(0)||coalesce(random_cover,'')||char(0)||coalesce(notices,'')||char(0)||coalesce(media,'') AS value FROM web_info",
         "SELECT id,coalesce(bg_cover,'')||char(0)||coalesce(man_cover,'')||char(0)||coalesce(woman_cover,'')||char(0)||coalesce(family_info,'') AS value FROM family",
         "SELECT id,coalesce(cover,'')||char(0)||coalesce(url,'')||char(0)||coalesce(introduction,'')||char(0)||coalesce(remark,'') AS value FROM resource_path",
         "SELECT id,coalesce(image_path,'')||char(0)||coalesce(content,'') AS value FROM wei_yan",
@@ -330,8 +596,8 @@ async fn reconcile_deletion(
                 Ok(()) => Ok(()),
                 Err(error) if not_found(&error) => Ok(()),
                 Err(blog_application::fs_safety::Error::DestinationExists(_)) => {
-                    let pending = directory.read_bounded(&quarantine, MAX_IMAGE_BYTES)?;
-                    let published = directory.read_bounded(&original, MAX_IMAGE_BYTES)?;
+                    let pending = directory.read_bounded(&quarantine, MAX_VIDEO_BYTES)?;
+                    let published = directory.read_bounded(&original, MAX_VIDEO_BYTES)?;
                     if pending != published {
                         return Err(blog_application::fs_safety::Error::IdentityChanged(
                             original.as_path().to_path_buf(),
@@ -371,7 +637,7 @@ pub(crate) async fn recover_deletions(
             continue;
         };
         anyhow::ensure!(
-            is_image_filename(name),
+            is_media_filename(name),
             "invalid media deletion journal name"
         );
         reconcile_deletion(pool, media, name)
@@ -413,9 +679,16 @@ async fn delete_resource(
             let kind: Option<String> = row.try_get("type").map_err(db_error)?;
             let storage: Option<String> = row.try_get("store_type").map_err(db_error)?;
             let path = path
-                .filter(|path| path.strip_prefix("/media/").is_some_and(is_image_filename))
-                .filter(|_| kind.as_deref() == Some("image") && storage.as_deref() == Some("local"))
-                .ok_or(AppError(StatusCode::CONFLICT, "仅可删除本站上传的图片"))?;
+                .filter(|path| {
+                    path.strip_prefix("/media/")
+                        .and_then(media_filename_kind)
+                        .is_some_and(|expected| kind.as_deref() == Some(expected))
+                })
+                .filter(|_| storage.as_deref() == Some("local"))
+                .ok_or(AppError(
+                    StatusCode::CONFLICT,
+                    "仅可删除本站上传的图片或视频",
+                ))?;
             if path != input.path {
                 return Err(AppError(
                     StatusCode::CONFLICT,
@@ -425,12 +698,12 @@ async fn delete_resource(
             if referenced(&mut transaction, &path).await? {
                 return Err(AppError(
                     StatusCode::CONFLICT,
-                    "图片仍被站内内容引用，请先移除引用",
+                    "媒体仍被站内内容引用，请先移除引用",
                 ));
             }
             let filename = path
                 .strip_prefix("/media/")
-                .expect("validated image path")
+                .expect("validated media path")
                 .to_owned();
             let media = owned.media.clone();
             let name = filename.clone();
@@ -470,9 +743,13 @@ async fn delete_resource(
         })
         .map_err(|_| AppError(StatusCode::SERVICE_UNAVAILABLE, "服务正在停止"))?
         .await
-        .map_err(|_| AppError(StatusCode::INTERNAL_SERVER_ERROR, "图片删除失败"))?
+        .map_err(|_| AppError(StatusCode::INTERNAL_SERVER_ERROR, "媒体删除失败"))?
 }
 
 #[path = "../../../test/server/unit/media/reference_tests.rs"]
 #[cfg(test)]
 mod reference_tests;
+
+#[cfg(test)]
+#[path = "../../../test/server/unit/media/video_types.rs"]
+mod video_types;

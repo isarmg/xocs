@@ -30,6 +30,21 @@ pub struct Site {
     pub background_image: Option<String>,
     pub avatar: Option<String>,
     pub random_cover: Option<String>,
+    pub media: SiteMedia,
+}
+
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct SiteMedia {
+    pub logo: Option<String>,
+    pub journey_background: Option<String>,
+    pub journal_background: Option<String>,
+    pub guestbook_background: Option<String>,
+    pub love_letter_background: Option<String>,
+    pub love_moments_cover: Option<String>,
+    pub love_photos_cover: Option<String>,
+    pub love_wishes_cover: Option<String>,
+    pub toolbox_background: Option<String>,
+    pub toolbox_video: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize)]

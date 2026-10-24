@@ -37,7 +37,7 @@ test('server and browser groups are independent and preserve every gate', () => 
     'bash test/run-maintained.sh',
   ]) assert.ok(server.includes(command), `missing server check: ${command}`);
   const expected = [
-    'language', 'admin-layout', 'account-settings', 'admin-cleanup',
+    'language', 'admin-layout', 'configured-media', 'account-settings', 'admin-cleanup',
     'management', 'contract-fixes', 'blog-interface-runtime', 'async-state', 'transport-lifecycle', 'startup-failure', 'rust-native-domain', 'public-footer', 'public-layout', 'anonymous-comments',
   ];
   const actual = [...browser.matchAll(/node \.\.\/\.\.\/test\/browser\/([a-z-]+)\.mjs/g)].map(match => match[1]);
@@ -99,6 +99,7 @@ test('both matrix branches execute every original UI script exactly once', () =>
     }
     assert.deepEqual(actual.sort(), [
       'run test:unit', '../../test/browser/language.mjs', '../../test/browser/admin-layout.mjs',
+      '../../test/browser/configured-media.mjs',
       '../../test/browser/account-settings.mjs', '../../test/browser/admin-cleanup.mjs', '../../test/browser/management.mjs',
       '../../test/browser/contract-fixes.mjs', '../../test/browser/blog-interface-runtime.mjs', '../../test/browser/async-state.mjs', '../../test/browser/transport-lifecycle.mjs', '../../test/browser/startup-failure.mjs', '../../test/browser/rust-native-domain.mjs',
       '../../test/browser/public-footer.mjs', '../../test/browser/public-layout.mjs', '../../test/browser/anonymous-comments.mjs',
@@ -110,7 +111,7 @@ test('both matrix branches execute every original UI script exactly once', () =>
     assert.equal(unknown.status, 1);
     assert.equal(unknown.stdout, '');
     // Every new Rust/WASM regression gate must propagate failures.
-    for (const script of ['rust-native-domain', 'startup-failure', 'async-state']) {
+    for (const script of ['rust-native-domain', 'startup-failure', 'async-state', 'configured-media']) {
       writeFileSync(join(directory, 'node'), `#!/bin/sh\nif [ "$*" = "../../test/browser/${script}.mjs" ]; then exit 9; fi\nprintf "%s\\n" "$*"\n`);
       const failed = spawnSync('bash', ['-c', run], {
         encoding: 'utf8',

@@ -302,6 +302,161 @@ async fn site_author_name_updates_business_content_but_not_credentials() {
 }
 
 #[tokio::test]
+async fn site_media_is_explicit_persistent_and_clearable_without_default_assets() {
+    let (_directory, app, pool) = setup().await;
+    let session = session(&app).await;
+    let empty = public(&app, "/api/v1/site").await;
+    let keys = [
+        "logo",
+        "journey_background",
+        "journal_background",
+        "guestbook_background",
+        "love_letter_background",
+        "love_moments_cover",
+        "love_photos_cover",
+        "love_wishes_cover",
+        "toolbox_background",
+        "toolbox_video",
+    ];
+    assert_eq!(empty["media"].as_object().unwrap().len(), keys.len());
+    for key in keys {
+        assert!(empty["media"][key].is_null(), "{key} must be unconfigured");
+    }
+    let response = admin(&app, &session, "GET", "/api/v1/content/site", json!({})).await;
+    let mut site = body_json(response).await;
+    site["web_name"] = "Configurable media".into();
+    site["background_image"] = " https://images.example.test/home.jpg ".into();
+    site["avatar"] = "/media/owner.png".into();
+    site["random_cover"] = "https://images.example.test/one.jpg\n/media/two.jpg".into();
+    for (index, key) in keys.into_iter().enumerate() {
+        site["media"][key] = if key == "toolbox_video" {
+            " /media/clip.mp4 ".into()
+        } else {
+            json!(format!(
+                " https://images.example.test/{index}.jpg?q=a'b&size=(2) "
+            ))
+        };
+    }
+    let response = admin(&app, &session, "PUT", "/api/v1/content/site", site).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let saved = body_json(response).await;
+    assert_eq!(
+        saved["background_image"],
+        "https://images.example.test/home.jpg"
+    );
+    assert_eq!(saved["media"]["toolbox_video"], "/media/clip.mp4");
+    assert_eq!(
+        saved["media"]["logo"],
+        "https://images.example.test/0.jpg?q=a'b&size=(2)"
+    );
+    assert_eq!(public(&app, "/api/v1/site").await["media"], saved["media"]);
+    let persisted: String = sqlx::query_scalar("SELECT media FROM web_info")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        serde_json::from_str::<Value>(&persisted).unwrap(),
+        saved["media"]
+    );
+    let response = admin(&app, &session, "GET", "/api/v1/content/site", json!({})).await;
+    assert_eq!(body_json(response).await["media"], saved["media"]);
+
+    let mut cleared = saved;
+    cleared["background_image"] = " ".into();
+    cleared["avatar"] = "".into();
+    cleared["random_cover"] = Value::Null;
+    for key in keys {
+        cleared["media"][key] = "  ".into();
+    }
+    let response = admin(&app, &session, "PUT", "/api/v1/content/site", cleared).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let cleared = body_json(response).await;
+    assert!(cleared["background_image"].is_null());
+    assert!(cleared["avatar"].is_null());
+    assert!(cleared["random_cover"].is_null());
+    assert_eq!(cleared["media"], empty["media"]);
+    assert_eq!(public(&app, "/api/v1/site").await["media"], empty["media"]);
+}
+
+#[tokio::test]
+async fn site_media_rejects_invalid_shapes_and_urls_before_mutating_saved_state() {
+    let (_directory, app, pool) = setup().await;
+    let session = session(&app).await;
+    let response = admin(&app, &session, "GET", "/api/v1/content/site", json!({})).await;
+    let mut original = body_json(response).await;
+    original["web_name"] = "Kept".into();
+    let response = admin(
+        &app,
+        &session,
+        "PUT",
+        "/api/v1/content/site",
+        original.clone(),
+    )
+    .await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let mut bad = original.clone();
+    bad["author_name"] = "Must not commit".into();
+    bad["web_name"] = "Must not commit".into();
+    let mut invalid = Vec::new();
+    let mut missing = bad.clone();
+    missing.as_object_mut().unwrap().remove("media");
+    invalid.push(missing);
+    for media in [
+        Value::Null,
+        json!([]),
+        json!({"unknown":null}),
+        json!({"logo":12}),
+    ] {
+        let mut input = bad.clone();
+        input["media"] = media;
+        invalid.push(input);
+    }
+    for url in [
+        "javascript:alert(1)".to_owned(),
+        "data:image/png;base64,AAAA".to_owned(),
+        "//images.example.test/logo.jpg".to_owned(),
+        "/\\images.example.test/logo.jpg".to_owned(),
+        "images/logo.jpg".to_owned(),
+        "http:relative.jpg".to_owned(),
+        "https://".to_owned(),
+        "https://images.example.test/\nlogo.jpg".to_owned(),
+        "https://images.example.test/\0logo.jpg".to_owned(),
+        format!("https://images.example.test/{}", "x".repeat(2048)),
+    ] {
+        let mut input = bad.clone();
+        input["media"]["toolbox_video"] = json!(url);
+        invalid.push(input);
+    }
+    for key in ["avatar", "background_image"] {
+        let mut input = bad.clone();
+        input[key] = "javascript:alert(1)".into();
+        invalid.push(input);
+    }
+    for covers in [
+        "[\"/image.jpg\",\"javascript:alert(1)\"]",
+        "[\"/image.jpg\",12]",
+        "https://images.example.test/one.jpg\n//other.example.test/two.jpg",
+    ] {
+        let mut input = bad.clone();
+        input["random_cover"] = covers.into();
+        invalid.push(input);
+    }
+    for input in invalid {
+        let response = admin(&app, &session, "PUT", "/api/v1/content/site", input.clone()).await;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "{input}");
+    }
+    let response = admin(&app, &session, "GET", "/api/v1/content/site", json!({})).await;
+    assert_eq!(body_json(response).await, original);
+    assert_eq!(
+        sqlx::query_scalar::<_, String>("SELECT username FROM user WHERE user_type=0")
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+        "site-author"
+    );
+}
+
+#[tokio::test]
 async fn news_pagination_reaches_history_beyond_public_limit_and_scopes_updates() {
     let (_directory, app, pool) = setup().await;
     let session = session(&app).await;

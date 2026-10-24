@@ -1032,18 +1032,55 @@ pub fn Petals() -> impl IntoView {
 }
 impl Action {
     pub fn upload(self, file: SendWrapper<web_sys::File>, done: impl FnOnce(Value) + 'static) {
+        self.upload_file(file, false, done);
+    }
+
+    pub fn upload_video(
+        self,
+        file: SendWrapper<web_sys::File>,
+        done: impl FnOnce(Value) + 'static,
+    ) {
+        self.upload_file(file, true, done);
+    }
+
+    fn upload_file(
+        self,
+        file: SendWrapper<web_sys::File>,
+        video: bool,
+        done: impl FnOnce(Value) + 'static,
+    ) {
         if self.busy.get_untracked() {
             return;
         }
-        if file.size() > 10. * 1024. * 1024.
-            || !["image/png", "image/jpeg", "image/gif", "image/webp"]
-                .contains(&file.type_().as_str())
+        let (limit, accepted, route) = if video {
+            (
+                50.,
+                &["video/mp4", "video/webm"][..],
+                "/api/v1/content/upload-video",
+            )
+        } else {
+            (
+                10.,
+                &["image/png", "image/jpeg", "image/gif", "image/webp"][..],
+                "/api/v1/content/upload",
+            )
+        };
+        if file.size() <= 0.
+            || file.size() > limit * 1024. * 1024.
+            || !accepted.contains(&file.type_().as_str())
         {
             self.error.set(Some(ApiError {
-                message: t(
-                    "请选择不超过 10 MB 的 PNG、JPEG、GIF 或 WebP 图片",
-                    "Choose a PNG, JPEG, GIF, or WebP image up to 10 MB",
-                ),
+                message: if video {
+                    t(
+                        "请选择不超过 50 MB 的 MP4 或 WebM 视频",
+                        "Choose an MP4 or WebM video up to 50 MB",
+                    )
+                } else {
+                    t(
+                        "请选择不超过 10 MB 的 PNG、JPEG、GIF 或 WebP 图片",
+                        "Choose a PNG, JPEG, GIF, or WebP image up to 10 MB",
+                    )
+                },
                 code: "display_error".into(),
                 ..invalid()
             }));
@@ -1064,11 +1101,16 @@ impl Action {
             ];
             let body: web_sys::Blob = (*file).clone().unchecked_into();
             let r = blog_interface::api::request_blob(
-                "/api/v1/content/upload",
+                route,
                 "POST",
                 body,
                 RequestOptions {
                     signal: Some(signal.clone()),
+                    timeout_ms: if video {
+                        120_000
+                    } else {
+                        blog_interface::api::DEFAULT_TIMEOUT_MS
+                    },
                     headers,
                     ..Default::default()
                 },
@@ -1078,7 +1120,15 @@ impl Action {
                 return;
             }
             match r {
-                Ok(v) if crate::contracts::upload(&v) => done(v),
+                Ok(v)
+                    if if video {
+                        crate::contracts::upload_video(&v)
+                    } else {
+                        crate::contracts::upload(&v)
+                    } =>
+                {
+                    done(v)
+                }
                 Ok(_) => self.error.set(Some(invalid())),
                 Err(e) => self.error.set(Some(e)),
             }
@@ -1091,6 +1141,7 @@ impl Action {
 pub fn FilePicker(
     label: String,
     choose: Callback<SendWrapper<web_sys::File>>,
+    #[prop(default = "image/png,image/jpeg,image/gif,image/webp".into())] accept: String,
     #[prop(default=Signal::derive(||false))] disabled: Signal<bool>,
     #[prop(default=Signal::derive(String::new))] filename: Signal<String>,
 ) -> impl IntoView {
@@ -1132,7 +1183,7 @@ pub fn FilePicker(
                                             move || disabled.get(),
                                         ),
                                     )
-                                    .accept("image/png,image/jpeg,image/gif,image/webp")
+                                    .accept(accept)
                                     .on(blog_interface::ev::change, move |ev| {
                                         let node = event_target::<web_sys::HtmlInputElement>(&ev);
                                         let file = node.files().and_then(|f| f.get(0));

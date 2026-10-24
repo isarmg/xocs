@@ -1,3 +1,25 @@
+import { readFileSync } from 'node:fs';
+
+export const siteMediaKeys = ['logo', 'journey_background', 'journal_background', 'guestbook_background',
+  'love_letter_background', 'love_moments_cover', 'love_photos_cover', 'love_wishes_cover',
+  'toolbox_background', 'toolbox_video'];
+export const emptySiteMedia = () => Object.fromEntries(siteMediaKeys.map(key => [key, null]));
+export const fixtureImage = '/__test-media/image.png';
+export const fixtureVideo = '/__test-media/background.webm';
+export const fixtureImageBytes = readFileSync(new URL('fixtures/image.png', import.meta.url));
+export const fixtureVideoBytes = readFileSync(new URL('fixtures/background.webm', import.meta.url));
+
+// Only disposable browser fixtures serve these resources. Production builds
+// neither ship a default photograph/video nor depend on test media.
+export async function mockMedia(page) {
+  await page.route('**/__test-media/*', route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('.png')) return route.fulfill({ contentType: 'image/png', body: fixtureImageBytes });
+    if (path.endsWith('.webm')) return route.fulfill({ contentType: 'video/webm', body: fixtureVideoBytes });
+    return route.fulfill({ status: 404, body: '' });
+  });
+}
+
 // Track application requests separately from media and browser lifecycle events.
 const applicationRequests=new WeakMap();
 function observeApplicationRequests(page){
@@ -17,7 +39,7 @@ export async function waitForApplication(page){
   }
 }
 export const session = { authenticated: true, user_id: 'A'.repeat(43), username: 'admin', role: 'admin', csrf_token: 'A'.repeat(43) };
-export const site = { web_name: 'BLOG', web_title: null, notices: null, background_image: null, avatar: null, random_cover: null };
+export const site = { web_name: 'BLOG', web_title: null, notices: null, background_image: null, avatar: null, random_cover: null, media: emptySiteMedia() };
 export const adminSite = { ...site, author_name: 'Site owner' };
 export const letter = { recipient: 'Reader', sender: 'Writer', content: 'A letter from the site.\nEveryday stories belong here.' };
 const category = { id: 1, sort_name: '中文分类', sort_description: null, priority: 0, article_count: 1 };
@@ -44,6 +66,7 @@ export const authored = ['中文分类', '中文文章标题', '中文摘要', '
 export const schemaPrefixes = ['推送标题：', '推送封面：', '推送链接：'];
 export async function mockApi(page, state) {
   observeApplicationRequests(page);
+  await mockMedia(page);
   await page.route('**/api/v1/**', async route => {
     const url = new URL(route.request().url()), path = url.pathname;
     if (route.request().method() !== 'GET') {
@@ -52,7 +75,7 @@ export async function mockApi(page, state) {
     }
     if (path === '/api/v1/content/categories') return route.fulfill({status:405,json:{code:'method_not_allowed'}});
     if (path === '/api/v1/auth/session') return state.authenticated ? route.fulfill({ json: session }) : route.fulfill({ status: 401, json: { code: 'unauthorized' } });
-    const value = path === '/api/v1/content/site' ? adminSite : path.endsWith('/site') ? site
+    const value = path === '/api/v1/content/site' ? state.adminSite ?? adminSite : path.endsWith('/site') ? state.site ?? site
       : path === '/api/v1/letter' ? letter
       : path === '/api/v1/content/letter' ? { ...letter, is_public: true }
       : path === '/api/v1/site/stats' ? { article_count: 1, view_count: 1 }

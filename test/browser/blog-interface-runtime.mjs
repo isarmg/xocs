@@ -121,7 +121,7 @@ for(const engine of [chromium,firefox]){
   await expect(anonymous.getByRole('cell').nth(1)).toHaveText('Anonymous guest');await expect(anonymous.getByRole('cell').nth(3)).toHaveText('—');await expect(anonymous.getByRole('link',{name:'Wishes',exact:true})).toHaveAttribute('href','/love');
   await expect(numeric.getByRole('cell').nth(1)).toHaveText('42');await expect(numeric.getByRole('link',{name:'Article #13',exact:true})).toHaveAttribute('href','/article/13');await expect(numeric.getByRole('link')).toHaveAttribute('target','_blank');
 
-  await page.route('**/api/v1/content/tree-hole?*',route=>route.fulfill({json:pageOf([{id:401,user_id:42,username:null,avatar:null,message:'',image_path:'/legacy/avatar.jpg',create_time:null}],new URL(route.request().url()))}));
+  await page.route('**/api/v1/content/tree-hole?*',route=>route.fulfill({json:pageOf([{id:401,user_id:42,username:null,avatar:null,message:'',image_path:'/__test-media/portrait.png',create_time:null}],new URL(route.request().url()))}));
   await page.goto(base+'/admin?lang=en#tree-hole');await runtime(page);
   const imageMessage=page.getByRole('table',{name:'Message list',exact:true}).getByRole('row').filter({hasText:'User 42'});
   await expect(imageMessage.getByRole('cell').nth(2)).toHaveText('Image message');await expect(imageMessage.getByRole('cell').nth(4)).toHaveText('—');await expect(imageMessage.getByRole('button',{name:'View message image',exact:true})).toBeVisible();

@@ -59,6 +59,8 @@ cargo +1.99.0 run --locked --offline -p blog-assets -- server --product-root . -
 
 生成目录可重建，不能作为依赖源码来源。浏览器运行标记为 `html[data-blog-runtime="blog-interface"]`。
 
+`src/web/public-assets.json` 精确列出随构建分发的公共文件；空 `files` 映射允许仓库没有 `src/web/public` 目录。站点照片、头像、背景和视频由后台配置或上传至实例媒体目录，不作为默认资源打入前端包。
+
 ## 验证
 
 先检查文档链接、Rust 文档输入和依赖资料索引：

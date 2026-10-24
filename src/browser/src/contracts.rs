@@ -98,6 +98,21 @@ pub fn site(v: &Value) -> bool {
             "random_cover",
         ],
         nullable,
+    ) && fields(
+        &v["media"],
+        &[
+            "logo",
+            "journey_background",
+            "journal_background",
+            "guestbook_background",
+            "love_letter_background",
+            "love_moments_cover",
+            "love_photos_cover",
+            "love_wishes_cover",
+            "toolbox_background",
+            "toolbox_video",
+        ],
+        nullable,
     )
 }
 pub fn note(v: &Value) -> bool {
@@ -177,6 +192,27 @@ pub fn resource(v: &Value) -> bool {
         )
 }
 pub fn upload(v: &Value) -> bool {
+    uploaded_file(
+        v,
+        &[
+            ("png", "image/png"),
+            ("jpg", "image/jpeg"),
+            ("gif", "image/gif"),
+            ("webp", "image/webp"),
+        ],
+        10 * 1024 * 1024,
+    )
+}
+
+pub fn upload_video(v: &Value) -> bool {
+    uploaded_file(
+        v,
+        &[("mp4", "video/mp4"), ("webm", "video/webm")],
+        50 * 1024 * 1024,
+    )
+}
+
+fn uploaded_file(v: &Value, types: &[(&str, &str)], limit: u64) -> bool {
     let path = v["path"].as_str().unwrap_or_default();
     let valid_path = path
         .strip_prefix("/media/")
@@ -186,15 +222,11 @@ pub fn upload(v: &Value) -> bool {
                 && hash
                     .bytes()
                     .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
-                && ["png", "jpg", "gif", "webp"].contains(&ext)
+                && types.iter().any(|(extension, mime)| {
+                    *extension == ext && v["mime_type"].as_str() == Some(*mime)
+                })
         });
-    id(&v["id"])
-        && valid_path
-        && ["image/png", "image/jpeg", "image/gif", "image/webp"]
-            .contains(&v["mime_type"].as_str().unwrap_or_default())
-        && v["size"]
-            .as_u64()
-            .is_some_and(|n| n > 0 && n <= 10 * 1024 * 1024)
+    id(&v["id"]) && valid_path && v["size"].as_u64().is_some_and(|n| n > 0 && n <= limit)
 }
 fn page(v: &Value, test: impl Fn(&Value) -> bool) -> bool {
     v["items"]
@@ -216,6 +248,9 @@ pub fn validate(path: &str, method: &str, v: &Value) -> bool {
     }
     if base.ends_with("/upload") {
         return upload(v);
+    }
+    if base.ends_with("/upload-video") {
+        return upload_video(v);
     }
     if base.ends_with("/site/stats") {
         return fields(v, &["article_count", "view_count"], count);

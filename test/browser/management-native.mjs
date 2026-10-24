@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
 import { deflateSync } from 'node:zlib';
 import { chromium, firefox, expect } from './dependencies.mjs';
+import { fixtureVideoBytes, siteMediaKeys } from './browser-fixtures.mjs';
 
 // This script intentionally has no mock, preview server or production fallback.
 // test/operations/smoke.sh owns this exact listener and its disposable database/media.
@@ -54,7 +55,7 @@ for (const engine of [chromium, firefox].filter(engine=>requestedEngines.include
   page.setDefaultTimeout(30_000); publicPage.setDefaultTimeout(30_000);
   const token = `N-${engine.name()}-${Date.now().toString(36)}`;
   const file = { name: `${token}.png`, mimeType: 'image/png', buffer: png(randomUUID()) };
-  const own = { note: null, media: null, category: null, label: null, article: null, news: null, link: null };
+  const own = { note: null, media: null, siteImage: null, siteVideo: null, category: null, label: null, article: null, news: null, link: null };
   let csrf, originalSite, originalLetter, originalFamily, phase = 'fixture guard';
 
   async function read(path) {
@@ -133,6 +134,7 @@ for (const engine of [chromium, firefox].filter(engine=>requestedEngines.include
     assert.equal(typeof csrf, 'string');
     originalSite = await read('/api/v1/content/site'); originalLetter = await read('/api/v1/content/letter');
     assert.ok(!Object.hasOwn(originalSite, 'footer'));
+    assert.deepEqual(Object.keys(originalSite.media).sort(), [...siteMediaKeys].sort());
     const families = await read('/api/v1/content/family');
     assert.equal(families.length,1); assert.equal(families[0].man_name,'A'); assert.equal(families[0].woman_name,'B');
     const {id:familyId,...familyBody}=families[0];
@@ -219,6 +221,7 @@ for (const engine of [chromium, firefox].filter(engine=>requestedEngines.include
     await click('DELETE', `/api/v1/content/resources/${own.media.id}`, fileRow().getByRole('button', { name: 'Delete', exact: true }));
     await expect(fileRow()).toHaveCount(0);
     assert.equal((await context.request.get(`${base}${own.media.path}`)).status(), 404);
+    own.media = null;
 
     phase = 'Site owner display name and retained settings';
     await admin('site', 'Site settings');
@@ -226,6 +229,59 @@ for (const engine of [chromium, firefox].filter(engine=>requestedEngines.include
     await page.getByLabel('Site owner display name', { exact: true }).fill(author);
     const savedSite = await click('PUT', '/api/v1/content/site', page.getByRole('button', { name: 'Save settings', exact: true }));
     assert.deepEqual(savedSite, { ...originalSite, author_name: author });
+
+    phase = 'Site media upload persistence and reference protection';
+    const siteImage = { name: `${token}-site.png`, mimeType: 'image/png', buffer: png(randomUUID()) };
+    let uploadedMedia = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/content/upload' && response.request().method() === 'POST');
+    await chooseFile(page.getByRole('button', { name: 'Choose file: Upload Site logo', exact: true }), siteImage);
+    let mediaResponse = await uploadedMedia; assert.equal(mediaResponse.status(), 200); own.siteImage = await mediaResponse.json();
+    await expect(page.getByRole('textbox', { name: 'Site logo', exact: true })).toHaveValue(own.siteImage.path);
+    const siteVideo = { name: `${token}-background.webm`, mimeType: 'video/webm', buffer: fixtureVideoBytes };
+    uploadedMedia = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/content/upload-video' && response.request().method() === 'POST');
+    await chooseFile(page.getByRole('button', { name: 'Choose file: Upload Toolbox background video', exact: true }), siteVideo);
+    mediaResponse = await uploadedMedia; assert.equal(mediaResponse.status(), 200); own.siteVideo = await mediaResponse.json();
+    assert.equal(own.siteVideo.mime_type, 'video/webm'); assert.equal(own.siteVideo.size, fixtureVideoBytes.length);
+    assert.equal(own.siteVideo.path, `/media/${createHash('sha256').update(fixtureVideoBytes).digest('hex')}.webm`);
+    await expect(page.getByRole('textbox', { name: 'Toolbox background video', exact: true })).toHaveValue(own.siteVideo.path);
+    await page.getByRole('textbox', { name: 'Toolbox background image', exact: true }).fill(own.siteImage.path);
+    const mediaSite = await click('PUT', '/api/v1/content/site', page.getByRole('button', { name: 'Save settings', exact: true }));
+    assert.equal(mediaSite.media.logo, own.siteImage.path);
+    assert.equal(mediaSite.media.toolbox_background, own.siteImage.path);
+    assert.equal(mediaSite.media.toolbox_video, own.siteVideo.path);
+    assert.deepEqual((await read('/api/v1/site')).media, mediaSite.media);
+    await page.reload();
+    await expect(page.getByRole('textbox', { name: 'Site logo', exact: true })).toHaveValue(own.siteImage.path);
+    await expect(page.getByRole('textbox', { name: 'Toolbox background video', exact: true })).toHaveValue(own.siteVideo.path);
+    const range = await context.request.get(`${base}${own.siteVideo.path}`, { headers: { Range: 'bytes=0-15' } });
+    assert.equal(range.status(), 206); assert.equal(range.headers()['content-type'], 'video/webm');
+    assert.deepEqual(await range.body(), fixtureVideoBytes.subarray(0, 16));
+    await publicPage.goto(`${base}/favorite?tab=friends&lang=en`);
+    await expect(publicPage.locator('.favorite-banner video')).toHaveAttribute('src', base + own.siteVideo.path);
+    await expect(publicPage.locator('.favorite-banner video')).toHaveAttribute('poster', base + own.siteImage.path);
+    await publicPage.locator('.favorite-banner video').evaluate(node => { node.preload = 'metadata'; node.load(); });
+    await expect.poll(() => publicPage.locator('.favorite-banner video').evaluate(node => node.videoWidth)).toBe(16);
+    for (const resource of [own.siteImage, own.siteVideo]) {
+      const response = await context.request.delete(`${base}/api/v1/content/resources/${resource.id}`, {
+        data: { path: resource.path }, headers: { Origin: base, 'Sec-Fetch-Site': 'same-origin', 'X-CSRF-Token': csrf },
+      });
+      assert.equal(response.status(), 409, 'Configured site media cannot be removed');
+      receipts.push({ method: 'DELETE', path: `/api/v1/content/resources/${resource.id}`, status: 409 });
+    }
+    for (const label of ['Site logo', 'Toolbox background image', 'Toolbox background video']) {
+      await page.getByRole('button', { name: `Clear ${label}`, exact: true }).click();
+    }
+    const clearedSite = await click('PUT', '/api/v1/content/site', page.getByRole('button', { name: 'Save settings', exact: true }));
+    for (const key of ['logo', 'toolbox_background', 'toolbox_video']) assert.equal(clearedSite.media[key], null);
+    for (const key of ['siteImage', 'siteVideo']) {
+      const resource = own[key];
+      const response = await context.request.delete(`${base}/api/v1/content/resources/${resource.id}`, {
+        data: { path: resource.path }, headers: { Origin: base, 'Sec-Fetch-Site': 'same-origin', 'X-CSRF-Token': csrf },
+      });
+      assert.equal(response.status(), 200); assert.equal((await context.request.get(`${base}${resource.path}`)).status(), 404);
+      receipts.push({ method: 'DELETE', path: `/api/v1/content/resources/${resource.id}`, status: 200 }); own[key] = null;
+    }
+    await publicPage.reload();
+    await expect(publicPage.locator('.favorite-banner video')).toHaveCount(0);
     await admin('notes', 'Notes'); await expect(noteRow(edited).getByRole('cell').first()).toHaveText(author);
 
     phase = 'Letter private draft and publication';
@@ -312,13 +368,16 @@ for (const engine of [chromium, firefox].filter(engine=>requestedEngines.include
       if (own.news && own.article) jobs.push(['DELETE', `/api/v1/content/articles/${own.article.id}/news/${own.news.id}`, {}]);
       if (own.article) jobs.push(['DELETE', `/api/v1/content/articles/${own.article.id}`, {}]);
       if (own.note) jobs.push(['DELETE', `/api/v1/content/notes/${own.note.id}`, {}]);
-      if (own.media) jobs.push(['DELETE', `/api/v1/content/resources/${own.media.id}`, { path: own.media.path }]);
       if (own.label) jobs.push(['DELETE', `/api/v1/content/labels/${own.label.id}`, {}]);
       if (own.category) jobs.push(['DELETE', `/api/v1/content/categories/${own.category.id}`, {}]);
       if (own.link) jobs.push(['DELETE', `/api/v1/content/links/${own.link.id}`, {}]);
       if (originalFamily) jobs.push(['PUT', `/api/v1/content/family/${originalFamily.id}`, originalFamily.body]);
       if (originalSite) jobs.push(['PUT', '/api/v1/content/site', originalSite]);
       if (originalLetter) jobs.push(['PUT', '/api/v1/content/letter', originalLetter]);
+      // Remove content/configuration references before removing our files.
+      for (const resource of [own.media, own.siteImage, own.siteVideo].filter(Boolean)) {
+        jobs.push(['DELETE', `/api/v1/content/resources/${resource.id}`, { path: resource.path }]);
+      }
       for (const [method, path, body] of jobs) {
         try { await cleanup(method, path, body); } catch (error) { cleanupErrors.push(error.message); }
       }

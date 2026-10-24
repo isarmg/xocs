@@ -146,6 +146,7 @@ struct Site {
     background_image: Option<String>,
     avatar: Option<String>,
     random_cover: Option<String>,
+    media: sqlx::types::Json<crate::site_media::SiteMedia>,
 }
 async fn site(State(state): State<AppState>) -> ApiResult<Site> {
     let author = crate::site_author_id(&state.pool).await?;
@@ -154,9 +155,9 @@ async fn site(State(state): State<AppState>) -> ApiResult<Site> {
         .fetch_one(&state.pool)
         .await
         .map_err(db_error)?;
-    Ok(Json(sqlx::query_as::<_,Site>("SELECT ? AS author_name,web_name,web_title,notices,background_image,avatar,random_cover FROM web_info ORDER BY id LIMIT 1")
+    Ok(Json(sqlx::query_as::<_,Site>("SELECT ? AS author_name,web_name,web_title,notices,background_image,avatar,random_cover,media FROM web_info ORDER BY id LIMIT 1")
         .bind(author_name.as_deref().unwrap_or_default())
-        .fetch_optional(&state.pool).await.map_err(db_error)?.unwrap_or(Site{author_name:author_name.unwrap_or_default(),web_name:None,web_title:None,notices:None,background_image:None,avatar:None,random_cover:None})))
+        .fetch_optional(&state.pool).await.map_err(db_error)?.unwrap_or(Site{author_name:author_name.unwrap_or_default(),web_name:None,web_title:None,notices:None,background_image:None,avatar:None,random_cover:None,media:Default::default()})))
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -168,11 +169,16 @@ struct SiteInput {
     background_image: Option<String>,
     avatar: Option<String>,
     random_cover: Option<String>,
+    media: crate::site_media::SiteMedia,
 }
 async fn update_site(
     State(state): State<AppState>,
-    crate::ContractJson(input): crate::ContractJson<SiteInput>,
+    crate::ContractJson(mut input): crate::ContractJson<SiteInput>,
 ) -> ApiResult<Site> {
+    input.media.normalize()?;
+    crate::site_media::normalize_url(&mut input.background_image)?;
+    crate::site_media::normalize_url(&mut input.avatar)?;
+    crate::site_media::normalize_covers(&mut input.random_cover)?;
     let author_name = input.author_name.trim();
     if author_name.is_empty()
         || author_name.chars().count() > 100
@@ -221,12 +227,12 @@ async fn update_site(
         .await
         .map_err(db_error)?;
     if let Some(id) = id {
-        sqlx::query("UPDATE web_info SET web_name=?,web_title=?,notices=?,background_image=?,avatar=?,random_cover=? WHERE id=?")
-            .bind(input.web_name).bind(input.web_title).bind(input.notices).bind(input.background_image).bind(input.avatar).bind(input.random_cover).bind(id)
+        sqlx::query("UPDATE web_info SET web_name=?,web_title=?,notices=?,background_image=?,avatar=?,random_cover=?,media=? WHERE id=?")
+            .bind(input.web_name).bind(input.web_title).bind(input.notices).bind(input.background_image).bind(input.avatar).bind(input.random_cover).bind(sqlx::types::Json(input.media)).bind(id)
             .execute(&mut *transaction).await.map_err(db_error)?;
     } else {
-        sqlx::query("INSERT INTO web_info(web_name,web_title,notices,background_image,avatar,random_cover,status) VALUES(?,?,?,?,?,?,1)")
-            .bind(input.web_name).bind(input.web_title).bind(input.notices).bind(input.background_image).bind(input.avatar).bind(input.random_cover)
+        sqlx::query("INSERT INTO web_info(web_name,web_title,notices,background_image,avatar,random_cover,media,status) VALUES(?,?,?,?,?,?,?,1)")
+            .bind(input.web_name).bind(input.web_title).bind(input.notices).bind(input.background_image).bind(input.avatar).bind(input.random_cover).bind(sqlx::types::Json(input.media))
             .execute(&mut *transaction).await.map_err(db_error)?;
     }
     transaction.commit().await.map_err(db_error)?;

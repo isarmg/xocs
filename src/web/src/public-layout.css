@@ -10,10 +10,13 @@
   --public-border: #dde6ea;
   --public-accent: #16796f;
   --public-rose: #a33e60;
+  --public-banner-start: #1f5965;
+  --public-banner-end: #233c4b;
   background: var(--public-soft); color: var(--public-ink);
 }
 .original-public.theme-dark {
   --public-surface: #202e38; --public-soft: #15212a; --public-ink: #edf3f5;
+  --public-banner-start: #183943; --public-banner-end: #142b36;
   --public-muted: #b0c1cc; --public-border: #3a4c59; --public-accent: #7fe0ca; --public-rose: #ffb0c7;
 }
 .original-public :is(button, input, select, textarea) { font: inherit; }
@@ -218,7 +221,7 @@
 /* The owner's home follows the original couple banner and journal layout. */
 .original-public .love-page { --love-surface: #fff; --love-line: #e8edf2; margin: 0; background: repeating-linear-gradient(90deg, var(--love-line) 0 1px, transparent 1px 60px), var(--love-surface); }
 .original-public.theme-dark .love-page { --love-surface: #15212a; --love-line: #23343f; }
-.original-public .love-hero { position: relative; display: grid; place-items: center; min-height: 490px; box-sizing: border-box; padding: 80px var(--public-gutter) 96px; overflow: hidden; background: url('/live/blog-current-love.png') center 48%/cover; color: #fff; }
+.original-public .love-hero { position: relative; display: grid; place-items: center; min-height: 490px; box-sizing: border-box; padding: 80px var(--public-gutter) 96px; overflow: hidden; background:linear-gradient(135deg,var(--public-banner-start,#1f5965),var(--public-banner-end,#233c4b)); color: #fff; }
 .original-public .love-hero::before { content: ''; position: absolute; inset: 0; background: #113c4f38; }
 .original-public .love-hero .love-hero-inner { position: relative; z-index: 1; width: 100%; max-width: 1200px; margin-inline: auto; }
 .original-public .love-pair-card { padding: 38px 56px 28px; border: 0; background: #256f8138; text-align: center; }
@@ -245,7 +248,7 @@
 .original-public .love-timer-empty p { font-size: 1rem; color: var(--public-muted); line-height: 1.8; }
 .original-public .love-countdown { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 8px; margin: 24px 0 0; padding: 0; border: 0; }
 .original-public .love-countdown :is(span, strong) { color: var(--public-ink); font-size: clamp(1rem, 1.6vw, 1.7rem); font-weight: 600; }
-.original-public .love-letter { display: flex; align-items: center; justify-content: flex-start; width: min(430px, 100%); min-height: 160px; box-sizing: border-box; margin: 28px auto 0; padding: 32px 44px; background: linear-gradient(#13384750, #13384750), url('/live/blog-current-jotting.jpg') center/cover; color: #fff; box-shadow: 0 3px 10px #18334120; text-decoration: none; }
+.original-public .love-letter { display: flex; align-items: center; justify-content: flex-start; width: min(430px, 100%); min-height: 160px; box-sizing: border-box; margin: 28px auto 0; padding: 32px 44px; background:linear-gradient(135deg,var(--public-banner-start,#1f5965),var(--public-banner-end,#233c4b)); color: #fff; box-shadow: 0 3px 10px #18334120; text-decoration: none; }
 .original-public .love-letter span { font-size: 2rem; font-weight: 700; }
 .original-public .love-letter:hover { filter: brightness(1.08); }
 .original-public .love-story-card { max-width: 760px; margin: 24px auto 36px; text-align: center; color: var(--public-ink); }
@@ -284,6 +287,32 @@
 .original-public .love-moment-card p { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.9; }
 .original-public .love-wishes { padding: 28px; border: 1px solid var(--public-border); background: var(--public-surface); }
 .original-public .love-wishes .article-comments { margin: 0; padding: 0; border: 0; }
+/* Decorative media is optional; color and text remain complete without uploads. */
+.original-public :is(.hero,.message-hero,.love-hero,.love-letter,.favorite-banner) {
+  background-color: var(--public-banner-end);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.original-public .hero { background-image: linear-gradient(135deg,var(--public-banner-start),var(--public-banner-end)); }
+.original-public .brand { justify-content: flex-start; min-width: 0; overflow: hidden; }
+.original-public .brand > img { display: block; max-width: 100%; max-height: 32px; object-fit: contain; }
+.original-public .brand > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.original-public .aside-avatar-wrap { display: grid; place-items: center; }
+.original-public .aside-avatar > span { font-size: 3.5rem; font-weight: 600; }
+.original-public .message-barrage { background: transparent; }
+.original-public .love-pair .love-heart { color: #ff9eb7; fill: currentColor; }
+.original-public .love-tabs .love-tab-fallback {
+  display: grid; place-items: center;
+  background: var(--public-surface); color: var(--public-accent);
+  border: 1px solid var(--public-border); font-size: clamp(2rem,3vw,3.5rem);
+}
+.original-public .favorite-banner { background-image: linear-gradient(135deg,var(--public-banner-start),var(--public-banner-end)); }
+.original-public .favorite-banner video { position: absolute; inset: 0; }
+.original-public .favorite-banner-overlay { pointer-events: none; }
+.original-public .favorite-banner-overlay button { pointer-events: auto; }
+.original-public .favorite-banner:has(video[controls]) .favorite-banner-overlay { padding-bottom: 76px; }
+
 @media (max-width: 1180px) {
   .original-public .public-header { gap: 12px; }
   .original-public .public-header-controls { margin-left: auto; }

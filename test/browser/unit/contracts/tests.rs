@@ -109,3 +109,23 @@ fn upload_path_and_size() {
     v["size"] = json!(10 * 1024 * 1024 + 1);
     assert!(!upload(&v));
 }
+
+#[test]
+fn video_upload_requires_matching_content_type_path_and_bounded_size() {
+    for (extension, mime) in [("mp4", "video/mp4"), ("webm", "video/webm")] {
+        let mut uploaded = json!({"id":1,"path":format!("/media/{}.{extension}","a".repeat(64)),"mime_type":mime,"size":50*1024*1024});
+        assert!(upload_video(&uploaded));
+        assert!(validate("/api/v1/content/upload-video", "POST", &uploaded));
+        assert!(!upload(&uploaded));
+        uploaded["size"] = json!(50 * 1024 * 1024 + 1);
+        assert!(!upload_video(&uploaded));
+        uploaded["size"] = json!(1);
+        uploaded["mime_type"] = json!("image/png");
+        assert!(!upload_video(&uploaded));
+        uploaded["mime_type"] = json!(mime);
+        uploaded["path"] = json!(format!("/media/{}.png", "a".repeat(64)));
+        assert!(!upload_video(&uploaded));
+    }
+    let image = json!({"id":1,"path":format!("/media/{}.png","a".repeat(64)),"mime_type":"image/jpeg","size":1});
+    assert!(!upload(&image));
+}

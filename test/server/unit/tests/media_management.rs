@@ -612,3 +612,178 @@ async fn removed_public_pages_and_member_management_routes_are_absent() {
         }
     }
 }
+
+async fn upload_video_bytes(
+    app: &Router,
+    session: &(String, String),
+    bytes: Vec<u8>,
+    content_type: &str,
+) -> Response {
+    app.clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/content/upload-video")
+                .header(header::HOST, "127.0.0.1:18881")
+                .header(header::ORIGIN, "http://127.0.0.1:18881")
+                .header("sec-fetch-site", "same-origin")
+                .header(header::COOKIE, &session.0)
+                .header("x-csrf-token", &session.1)
+                .header(header::CONTENT_TYPE, content_type)
+                .header("x-file-name", "background.webm")
+                .body(Body::from(bytes))
+                .unwrap(),
+        )
+        .await
+        .unwrap()
+}
+
+#[tokio::test]
+async fn real_video_upload_range_and_site_references_share_managed_media_lifecycle() {
+    let (directory, app, pool) = setup().await;
+    let session = login(&app).await;
+    let bytes = include_bytes!("../../../browser/fixtures/background.webm");
+    // The request's media declaration does not determine the stored MIME type.
+    let response =
+        upload_video_bytes(&app, &session, bytes.to_vec(), "application/octet-stream").await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let video = body_json(response).await;
+    assert_eq!(video["mime_type"], "video/webm");
+    assert_eq!(video["size"], bytes.len());
+    assert!(video["path"].as_str().unwrap().ends_with(".webm"));
+    let kind: String = sqlx::query_scalar("SELECT type FROM resource WHERE id=?")
+        .bind(video["id"].as_i64().unwrap())
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(kind, "video");
+    let duplicate = upload_video_bytes(&app, &session, bytes.to_vec(), "video/webm").await;
+    assert_eq!(body_json(duplicate).await, video);
+
+    // A video above the image limit remains accepted. Streaming WebM allows
+    // an unknown-length Segment and a trailing Void element for padding.
+    let mut larger = bytes.to_vec();
+    let segment = larger
+        .windows(4)
+        .position(|part| part == [0x18, 0x53, 0x80, 0x67])
+        .unwrap();
+    assert_eq!(larger[segment + 4], 1); // The fixture uses an eight-byte size.
+    larger[segment + 4..segment + 12].copy_from_slice(&[1, 255, 255, 255, 255, 255, 255, 255]);
+    let padding = 11 * 1024 * 1024;
+    larger.push(0xec);
+    larger.extend_from_slice(&(0x1000_0000_u32 | padding).to_be_bytes());
+    larger.resize(larger.len() + padding as usize, 0);
+    let uploaded = upload_video_bytes(&app, &session, larger, "video/webm").await;
+    assert_eq!(uploaded.status(), StatusCode::OK);
+    let larger = body_json(uploaded).await;
+    assert!(larger["size"].as_u64().unwrap() > 10 * 1024 * 1024);
+    assert_eq!(
+        remove(&app, &session, &larger).await.status(),
+        StatusCode::OK
+    );
+
+    let path = video["path"].as_str().unwrap();
+    let range = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri(path)
+                .header(header::RANGE, "bytes=1-8")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(range.status(), StatusCode::PARTIAL_CONTENT);
+    assert_eq!(range.headers()[header::CONTENT_TYPE], "video/webm");
+    assert_eq!(
+        range.headers()[header::CONTENT_RANGE],
+        format!("bytes 1-8/{}", bytes.len())
+    );
+    assert_eq!(
+        to_bytes(range.into_body(), 1024).await.unwrap().as_ref(),
+        &bytes[1..9]
+    );
+    let head = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("HEAD")
+                .uri(path)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(head.status(), StatusCode::OK);
+    assert_eq!(
+        head.headers()[header::CONTENT_LENGTH],
+        bytes.len().to_string()
+    );
+    assert!(to_bytes(head.into_body(), 1024).await.unwrap().is_empty());
+
+    sqlx::query("INSERT INTO web_info(id,media) VALUES(1,?) ON CONFLICT(id) DO UPDATE SET media=excluded.media")
+        .bind(json!({"toolbox_video":path}).to_string()).execute(&pool).await.unwrap();
+    assert_eq!(
+        remove(&app, &session, &video).await.status(),
+        StatusCode::CONFLICT
+    );
+    assert!(image_file(directory.path(), &video).exists());
+    sqlx::query("UPDATE web_info SET media='{}' WHERE id=1")
+        .execute(&pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        remove(&app, &session, &video).await.status(),
+        StatusCode::OK
+    );
+    assert!(!image_file(directory.path(), &video).exists());
+    assert_eq!(get(&app, path).await.status(), StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn video_upload_rejects_documents_images_and_oversized_bodies() {
+    let (_directory, app, pool) = setup().await;
+    let anonymous = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/content/upload-video")
+                .header(header::CONTENT_TYPE, "video/webm")
+                .body(Body::from(
+                    include_bytes!("../../../browser/fixtures/background.webm").as_slice(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(anonymous.status(), StatusCode::UNAUTHORIZED);
+    let session = login(&app).await;
+    for (bytes, mime) in [
+        (b"<html>not video</html>".to_vec(), "video/mp4"),
+        (b"\x89PNG\r\n\x1a\nimage".to_vec(), "video/webm"),
+        (Vec::new(), "video/webm"),
+    ] {
+        assert_eq!(
+            upload_video_bytes(&app, &session, bytes, mime)
+                .await
+                .status(),
+            StatusCode::BAD_REQUEST
+        );
+    }
+    let oversized = vec![0; 50 * 1024 * 1024 + 1];
+    assert_eq!(
+        upload_video_bytes(&app, &session, oversized, "video/mp4")
+            .await
+            .status(),
+        StatusCode::PAYLOAD_TOO_LARGE
+    );
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM resource")
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+        0
+    );
+}

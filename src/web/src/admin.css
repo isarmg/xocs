@@ -75,3 +75,11 @@
 .blog-admin-workspace .inline-form { --blog-server-corner-extent: var(--blog-server-corner-panel, 42px); }
 
 .blog-admin-workspace .badge,.blog-admin-workspace .pager .blog-button { --blog-server-corner-extent: 0px; }
+
+.blog-admin-workspace .site-media-grid { align-items: start; margin-top: 16px; }
+.blog-admin-workspace .site-media-field { display: grid; gap: 12px; min-width: 0; }
+.blog-admin-workspace .site-media-field > .blog-button { justify-self: start; }
+.blog-admin-workspace .site-media-preview { display: block; width: 100%; height: 180px; object-fit: contain; background: var(--blog-bg-page); }
+@media (max-width: 650px) {
+  .blog-admin-workspace .site-media-grid { grid-template-columns: minmax(0, 1fr); }
+}

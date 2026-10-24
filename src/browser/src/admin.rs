@@ -1425,8 +1425,8 @@ fn Moderation(kind: &'static str) -> impl IntoView {
                     "comments" =>
                     t("删除这条评论？如果是顶层评论，会同时删除该楼层的全部回复。",
                     "Delete this comment? If it is a top-level comment, all replies in its thread will also be deleted."),
-                    "resources" => t("确定删除这个文件及其图片数据？",
-                    "Delete this file and its image data?"), _ =>
+                    "resources" => t("确定删除这个文件及其媒体数据？",
+                    "Delete this file and its media data?"), _ =>
                     t("确定删除这条留言？", "Delete this message?") })
                     .unwrap_or(false) { return; } let body = (kind == "resources")
                     .then(| | json!({ "path" : path })); action
@@ -1489,13 +1489,261 @@ fn Moderation(kind: &'static str) -> impl IntoView {
         .class("blog-content-stack"),
 )
 }
+fn media_field_value(form: &Value, key: &str, nested: bool) -> String {
+    text(if nested { &form["media"] } else { form }, key)
+}
+
+fn set_media_field(form: &mut Value, key: &str, nested: bool, value: Option<String>) {
+    if nested {
+        if !form["media"].is_object() {
+            form["media"] = json!({});
+        }
+        form["media"][key] = value.map_or(Value::Null, Value::String);
+    } else {
+        form[key] = value.map_or(Value::Null, Value::String);
+    }
+}
+
+#[component]
+fn SiteMediaField(
+    label: String,
+    key: &'static str,
+    form: RwSignal<Value>,
+    upload: Action,
+    save_busy: RwSignal<bool>,
+    #[prop(default = true)] nested: bool,
+    #[prop(default = false)] video: bool,
+) -> impl IntoView {
+    let value = Signal::derive(move || media_field_value(&form.get(), key, nested));
+    let disabled = Signal::derive(move || upload.busy.get() || save_busy.get());
+    let filename = RwSignal::new(String::new());
+    Effect::new(move |_| {
+        if !upload.busy.get() {
+            filename.set(String::new());
+        }
+    });
+    let preview_label = format!("{}{}", label, t("预览", " preview"));
+    let clear_label = format!("{}{}", t("清除：", "Clear "), label);
+    let picker_label = format!("{}{}", t("上传：", "Upload "), label);
+    View::new(
+        blog_interface::html::section()
+            .class("site-media-field")
+            .child((
+                IntoMaybeErased::into_maybe_erased(component_view(
+                    ControlledField,
+                    component_props_builder(&ControlledField)
+                        .label(label)
+                        .value(value)
+                        .max(2048)
+                        .change(Callback::new(move |next: String| {
+                            if !disabled.get_untracked() {
+                                form.update(|form| set_media_field(form, key, nested, Some(next)));
+                            }
+                        }))
+                        .build(),
+                )),
+                IntoMaybeErased::into_maybe_erased(component_view(
+                    FilePicker,
+                    component_props_builder(&FilePicker)
+                        .label(picker_label)
+                        .disabled(disabled)
+                        .filename(Signal::derive(move || filename.get()))
+                        .accept(
+                            if video {
+                                "video/mp4,video/webm"
+                            } else {
+                                "image/png,image/jpeg,image/gif,image/webp"
+                            }
+                            .into(),
+                        )
+                        .choose(Callback::new(
+                            move |file: blog_interface::thread_bound::SendWrapper<
+                                web_sys::File,
+                            >| {
+                                if disabled.get_untracked() {
+                                    return;
+                                }
+                                let previous = value.get_untracked();
+                                let name = file.name();
+                                let done = move |response: Value| {
+                                    let path = text(&response, "path");
+                                    form.update(|form| {
+                                        if media_field_value(form, key, nested) == previous {
+                                            set_media_field(form, key, nested, Some(path));
+                                        }
+                                    });
+                                    filename.set(String::new());
+                                };
+                                if video {
+                                    upload.upload_video(file, done);
+                                } else {
+                                    upload.upload(file, done);
+                                }
+                                if upload.busy.get_untracked() {
+                                    filename.set(name);
+                                }
+                            },
+                        ))
+                        .build(),
+                )),
+                IntoMaybeErased::into_maybe_erased(
+                    blog_interface::html::button()
+                        .class("blog-button")
+                        .r#type("button")
+                        .child(t("清除", "Clear"))
+                        .aria_label(clear_label)
+                        .disabled(move || disabled.get() || value.get().is_empty())
+                        .on(blog_interface::ev::click, move |_| {
+                            if !disabled.get_untracked() {
+                                form.update(|form| set_media_field(form, key, nested, None));
+                                filename.set(String::new());
+                            }
+                        }),
+                ),
+                IntoMaybeErased::into_maybe_erased(move || {
+                    safe_url(&value.get(), false).map(|url| {
+                        if video {
+                            View::new(
+                                blog_interface::html::video()
+                                    .class("site-media-preview")
+                                    .src(url)
+                                    .controls(true)
+                                    .preload("metadata")
+                                    .aria_label(preview_label.clone()),
+                            )
+                            .into_any()
+                        } else {
+                            View::new(
+                                blog_interface::html::img()
+                                    .class("site-media-preview")
+                                    .src(url)
+                                    .alt(preview_label.clone())
+                                    .loading("lazy"),
+                            )
+                            .into_any()
+                        }
+                    })
+                }),
+            )),
+    )
+}
+
+#[component]
+fn SiteAppearance(
+    form: RwSignal<Value>,
+    upload: Action,
+    save_busy: RwSignal<bool>,
+) -> impl IntoView {
+    let fields = [
+        (
+            "background_image",
+            "背景图片",
+            "Background image",
+            false,
+            false,
+        ),
+        ("avatar", "站长头像", "Site owner avatar", false, false),
+        ("logo", "网站标识", "Site logo", true, false),
+        (
+            "journey_background",
+            "时间轴背景",
+            "Journey background",
+            true,
+            false,
+        ),
+        (
+            "journal_background",
+            "随笔背景",
+            "Journal background",
+            true,
+            false,
+        ),
+        (
+            "guestbook_background",
+            "留言板背景",
+            "Message board background",
+            true,
+            false,
+        ),
+        (
+            "love_letter_background",
+            "恋爱信笺背景",
+            "Love letter background",
+            true,
+            false,
+        ),
+        (
+            "love_moments_cover",
+            "点点滴滴封面",
+            "Love moments cover",
+            true,
+            false,
+        ),
+        (
+            "love_photos_cover",
+            "时光相册封面",
+            "Love photos cover",
+            true,
+            false,
+        ),
+        (
+            "love_wishes_cover",
+            "祝福墙封面",
+            "Love wishes cover",
+            true,
+            false,
+        ),
+        (
+            "toolbox_background",
+            "百宝箱背景图片",
+            "Toolbox background image",
+            true,
+            false,
+        ),
+        (
+            "toolbox_video",
+            "百宝箱背景视频",
+            "Toolbox background video",
+            true,
+            true,
+        ),
+    ];
+    View::new(blog_interface::html::section().class("blog-content-panel").child((
+        IntoMaybeErased::into_maybe_erased(blog_interface::html::h2().child(t("外观媒体", "Appearance media"))),
+        IntoMaybeErased::into_maybe_erased(blog_interface::html::p().class("blog-field-help").child(t(
+            "填写图片或视频地址，或直接上传文件。留空时使用主题配色或文字，不加载默认媒体。恋爱页头图和双方头像在恋爱笔记中设置。图片最大 10 MB，MP4 / WebM 视频最大 50 MB。",
+            "Enter an image or video URL, or upload a file. Leave empty to use theme colors or text, without bundled media. Set the love journal header and couple avatars in Love journal. Images: up to 10 MB; MP4 / WebM videos: up to 50 MB.",
+        ))),
+        IntoMaybeErased::into_maybe_erased(blog_interface::html::div().class("form-grid site-media-grid").child(
+            fields.into_iter().map(move |(key, chinese, english, nested, video)| component_view(
+                SiteMediaField,
+                component_props_builder(&SiteMediaField)
+                    .label(t(chinese, english))
+                    .key(key)
+                    .form(form)
+                    .upload(upload)
+                    .save_busy(save_busy)
+                    .nested(nested)
+                    .video(video)
+                    .build(),
+            )).collect_view(),
+        )),
+        IntoMaybeErased::into_maybe_erased(blog_interface::html::p().role("status").aria_live("polite").child(move || {
+            if upload.busy.get() { t("正在上传媒体…", "Uploading media…") } else { String::new() }
+        })),
+    )))
+}
+
 #[component]
 fn SiteSettings() -> impl IntoView {
     let data = load(Signal::derive(|| "/api/v1/content/site".into()));
     let form = RwSignal::new(Value::Null);
     let save = Action::new();
+    let upload = Action::new();
+    let ready = Memo::new(move |_| !form.get().is_null());
     Effect::new(move |_| {
         if let Some(v) = data.value.get() {
+            upload.abort();
             form.set(v);
         }
     });
@@ -1515,7 +1763,7 @@ fn SiteSettings() -> impl IntoView {
                     component_props_builder(& Feedback)
                     .error(#[allow(unused_braces)] { data.error })
                     .retry(#[allow(unused_braces)] { Some(Callback::new(move | () |
-                    data.reload())) }).build(); props }) }),
+                    { upload.abort(); data.reload(); })) }).build(); props }) }),
                     IntoMaybeErased::into_maybe_erased({
                     #[allow(unreachable_code)] #[allow(unused_mut)]
                     #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
@@ -1525,7 +1773,7 @@ fn SiteSettings() -> impl IntoView {
                     .error(#[allow(unused_braces)] { save.error }).build(); props })
                     }),
                     IntoMaybeErased::into_maybe_erased(IntoRender::into_render({
-                    move | | (! form.get().is_null()).then(| | View::new(
+                    move | | ready.get().then(| | View::new(
     blog_interface::html::form()
         .child(
             (
@@ -1604,32 +1852,10 @@ fn SiteSettings() -> impl IntoView {
                     IntoMaybeErased::into_maybe_erased(blog_interface::html::code()
                     .child(#[allow(unused_braces)] { "推送链接：" })),))),))),))
                     .class("blog-content-panel")),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::section()
-                    .child((IntoMaybeErased::into_maybe_erased(blog_interface::html::h2()
-                    .child(#[allow(unused_braces)] {
-                    IntoRender::into_render({ t("外观",
-                    "Appearance") }) })),
-                    IntoMaybeErased::into_maybe_erased(blog_interface::html::div()
-                    .child((IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & Field, { let mut props =
-                    component_props_builder(& Field)
-                    .label(#[allow(unused_braces)] { t("背景图片",
-                    "Background image") }).key(#[allow(unused_braces)] {
-                    "background_image" }).form(#[allow(unused_braces)] { form })
-                    .build(); props }) }),
-                    IntoMaybeErased::into_maybe_erased({
-                    #[allow(unreachable_code)] #[allow(unused_mut)]
-                    #[allow(clippy::let_and_return, clippy::unit_arg, clippy::let_unit_value)]
-                    component_view(#[allow(clippy::needless_borrows_for_generic_args)]
-                    & Field, { let mut props =
-                    component_props_builder(& Field)
-                    .label(#[allow(unused_braces)] { t("站长头像",
-                    "Site owner avatar") }).key(#[allow(unused_braces)] { "avatar" })
-                    .form(#[allow(unused_braces)] { form }).build(); props }) }),))
-                    .class("form-grid")),)).class("blog-content-panel")),
+                    IntoMaybeErased::into_maybe_erased(component_view(
+                        SiteAppearance,
+                        component_props_builder(&SiteAppearance).form(form).upload(upload).save_busy(save.busy).build(),
+                    )),
                     IntoMaybeErased::into_maybe_erased(blog_interface::html::section()
                     .child((IntoMaybeErased::into_maybe_erased(blog_interface::html::h2()
                     .child(#[allow(unused_braces)] {
@@ -1653,9 +1879,16 @@ fn SiteSettings() -> impl IntoView {
                     .textarea(#[allow(unused_braces)] { true }).build(); props })
                     }),)).class("blog-content-panel")),)).class("blog-fieldset")
                     .disabled(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(move
-                    | | save.busy.get()))
+                    | | save.busy.get() || upload.busy.get()))
                     .aria_label(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(t("网站设置",
                     "Site settings")))),
+                    IntoMaybeErased::into_maybe_erased(component_view(
+                        Feedback, component_props_builder(&Feedback).error(upload.error).build(),
+                    )),
+                    IntoMaybeErased::into_maybe_erased(blog_interface::html::button()
+                        .class("blog-button").r#type("button").child(t("取消上传", "Cancel upload"))
+                        .disabled(move || !upload.busy.get())
+                        .on(blog_interface::ev::click, move |_| upload.abort())),
                     IntoMaybeErased::into_maybe_erased(blog_interface::html::div()
                     .child(#[allow(unused_braces)] {
                     blog_interface::html::button()
@@ -1663,7 +1896,7 @@ fn SiteSettings() -> impl IntoView {
                     IntoRender::into_render({ t("保存设置",
                     "Save settings") }) }).class("blog-button").r#type("submit")
                     .disabled(::blog_interface::prelude::IntoAttributeValue::into_attribute_value(move
-                    | | save.busy.get())) }).class("blog-actions"))
+                    | | save.busy.get() || upload.busy.get())) }).class("blog-actions"))
                 ,),
         )
         .class("blog-settings-form")
@@ -1671,6 +1904,7 @@ fn SiteSettings() -> impl IntoView {
             blog_interface::ev::submit,
             move |ev| {
                 ev.prevent_default();
+                if save.busy.get_untracked() || upload.busy.get_untracked() { return; }
                 let mut f = form.get_untracked();
                 let name = text(&f, "author_name").trim().to_string();
                 let len = name.chars().count();

@@ -230,7 +230,7 @@ async fn admit_request(
         .uri()
         .path()
         .strip_prefix("/media/")
-        .is_some_and(|name| !media::is_image_filename(name))
+        .is_some_and(|name| !media::is_media_filename(name))
     {
         return absent().into_response();
     }
