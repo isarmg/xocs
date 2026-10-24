@@ -62,7 +62,7 @@ fn prepare_creation(
 fn pending_creation(receipt: RwSignal<Option<CreationReceipt>>) -> impl IntoView {
     move || {
         receipt.get().map(|_| {
-            View::new(blog_interface::html::p().role("status").child(t(
+            View::new(blog_interface::html::p().class("blog-row").role("status").child(t(
                 "原提交等待确认；确认后会保留较新的修改。",
                 "The original submission is awaiting confirmation. Your newer edits will be kept.",
             )))
@@ -136,7 +136,7 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                                 .child((
                                     blog_interface::html::label()
                                         .child((
-                                            t("分类", "Category"),
+                                            blog_interface::html::span().class("blog-field-label blog-row").child(t("分类", "Category")),
                                             crate::select::Select(
                                                 component_props_builder(&crate::select::Select)
                                                     .label(Signal::derive(|| t("分类", "Category")))
@@ -174,7 +174,7 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                                         .class("blog-form-field"),
                                     blog_interface::html::label()
                                         .child((
-                                            t("标签", "Tags"),
+                                            blog_interface::html::span().class("blog-field-label blog-row").child(t("标签", "Tags")),
                                             crate::select::Select(
                                                 component_props_builder(&crate::select::Select)
                                                     .label(Signal::derive(|| t("标签", "Tags")))
@@ -242,7 +242,7 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                                 .class("form-grid"),
                             blog_interface::html::label()
                                 .child((
-                                    t("Markdown 正文", "Markdown content"),
+                                    blog_interface::html::span().class("blog-field-label blog-row").child(t("Markdown 正文", "Markdown content")),
                                     blog_interface::html::textarea()
                                         .class("blog-input editor-textarea")
                                         .required(true)
@@ -286,7 +286,7 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                                 preview.get().then(|| {
                                     View::new(
                                         blog_interface::html::div()
-                                            .class("editor-markdown-preview article-markdown")
+                                            .class("editor-markdown-preview blog-frame blog-frame--inset blog-stack")
                                             .inner_html(crate::browser::markdown_html(
                                                 &form.get().article_content,
                                             )),
@@ -313,7 +313,7 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
         .child(
             (
                     blog_interface::html::label()
-                    .child((t("文章访问密码", "Article access password"),
+                    .child((blog_interface::html::span().class("blog-field-label blog-row").child(t("文章访问密码", "Article access password")),
                     blog_interface::html::input()
                     .class("blog-input").r#type("password")
                     .aria_describedby(move
@@ -333,7 +333,7 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                     Some(event_target_value(& ev)))),)).class("blog-form-field"),
                     move | | crate ::dates::password_error(& form.get().password
                     .unwrap_or_default(), existing.get()).map(| e | View::new(
-    blog_interface::html::p()
+    blog_interface::html::p().class("blog-row")
         .child(
 
             e,
@@ -350,7 +350,7 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                                 .class("form-grid"),
                             blog_interface::html::div()
                                 .child((
-                                    blog_interface::html::label().child((
+                                    blog_interface::html::label().class("blog-check blog-row blog-flow").child((
                                         blog_interface::html::input()
                                             .r#type("checkbox")
                                             .prop("checked", move || form.get().view_status)
@@ -411,7 +411,7 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                                                 "显示在文章访问密码输入页。",
                                                 "Displayed on the article access password screen.",
                                             ))
-                                            .class("blog-field-help"),
+                                            .class("blog-field-help blog-row"),
                                     ))
                                 })
                             },
@@ -538,11 +538,11 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
     blog_interface::html::section()
         .child(
             (
-                    blog_interface::html::h1()
+                    blog_interface::html::h1().class("blog-row")
                     .child( move || if id > 0 || created_id.get().is_some() {
                     t("编辑文章", "Edit article") } else { t("新增文章",
                     "Add article") }),
-                    blog_interface::html::p()
+                    blog_interface::html::p().class("blog-row")
                     .child( t("支持 Markdown 正文，发布后可从网站访问。",
                     "Write in Markdown. Published articles are available on the site.")), Feedback(component_props_builder(& Feedback)
                     .error( categories.error)
@@ -564,7 +564,7 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                     Feedback(component_props_builder(& Feedback)
                     .error( upload.error).build()),
                     move | | (! validation.get().is_empty()).then(| | View::new(
-    blog_interface::html::p()
+    blog_interface::html::p().class("blog-row")
         .child(
 
             validation.get(),
@@ -575,7 +575,7 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                     .when( move | | ready.get())
                     .fallback( move | | View::new(
     (
-            blog_interface::html::p()
+            blog_interface::html::p().class("blog-row")
             .child( t("正在加载…",
             "Loading…")).role("status"),
             blog_interface::html::button()
@@ -690,7 +690,7 @@ fn NewsEditor(id: i64) -> impl IntoView {
     blog_interface::html::section()
         .child(
             (
-                    blog_interface::html::h2()
+                    blog_interface::html::h2().class("blog-row")
                     .child( t("最新进展",
                     "Recent updates")),
                     Feedback(component_props_builder(& Feedback)
@@ -703,7 +703,7 @@ fn NewsEditor(id: i64) -> impl IntoView {
                     .error( save.error).build()),
                     pending_creation(receipt),
                     move | | (! validation.get().is_empty()).then(| | View::new(
-    blog_interface::html::p()
+    blog_interface::html::p().class("blog-row")
         .child(
 
             validation.get(),
@@ -712,7 +712,7 @@ fn NewsEditor(id: i64) -> impl IntoView {
 )),
                     blog_interface::html::form()
                     .child( blog_interface::html::fieldset()
-                    .child((blog_interface::html::h3()
+                    .child((blog_interface::html::h3().class("blog-row")
                     .child( move | | if editing.get().is_some() { t("编辑进展",
                     "Edit update") } else { t("新增进展", "Add update") }), Field(component_props_builder(& Field)
                     .label( t("进展内容",
@@ -722,7 +722,7 @@ fn NewsEditor(id: i64) -> impl IntoView {
                     .required( true)
                     .max( 1024).build()),
                     blog_interface::html::label()
-                    .child((t("进展时间（UTC）", "Update time (UTC)"),
+                    .child((blog_interface::html::span().class("blog-field-label blog-row").child(t("进展时间（UTC）", "Update time (UTC)")),
                     blog_interface::html::input()
                     .class("blog-input").r#type("datetime-local").step("1")
                     .prop("value", move | | text(&
@@ -732,7 +732,7 @@ fn NewsEditor(id: i64) -> impl IntoView {
                     ev)))),)).class("blog-form-field"),
                     blog_interface::html::p()
                     .child( t("新增时留空使用当前 UTC；编辑时留空保留原时间。",
-                    "Leave blank to use current UTC for a new update, or keep its existing time when editing.")).class("blog-field-help"),
+                    "Leave blank to use current UTC for a new update, or keep its existing time when editing.")).class("blog-field-help blog-row"),
                     blog_interface::html::div()
                     .child((blog_interface::html::button()
                     .child( move | | if receipt.get().is_some() {
@@ -1035,10 +1035,10 @@ pub fn Notes() -> impl IntoView {
     blog_interface::html::section()
         .child(
             (
-                    blog_interface::html::h1()
+                    blog_interface::html::h1().class("blog-row")
                     .child( t("随笔管理",
                     "Notes")),
-                    blog_interface::html::p()
+                    blog_interface::html::p().class("blog-row")
                     .child( t("维护随笔及恋爱日常中的内容。",
                     "Manage notes shown in the journal and everyday moments.")), Feedback(component_props_builder(& Feedback)
                     .error( data.error)
@@ -1048,7 +1048,7 @@ pub fn Notes() -> impl IntoView {
                     .error( upload.error).build()),
                     pending_creation(receipt),
                     move | | (! validation.get().is_empty()).then(| | View::new(
-    blog_interface::html::p()
+    blog_interface::html::p().class("blog-row")
         .child(
 
             validation.get(),
@@ -1057,7 +1057,7 @@ pub fn Notes() -> impl IntoView {
 )),
                     blog_interface::html::form()
                     .child( blog_interface::html::fieldset()
-                    .child((blog_interface::html::h2()
+                    .child((blog_interface::html::h2().class("blog-row")
                     .child( move | | if editing.get().is_some() { t("编辑随笔",
                     "Edit note") } else { t("新增随笔", "Add note") }),
                     Field(component_props_builder(& Field)

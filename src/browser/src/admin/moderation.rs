@@ -71,7 +71,7 @@ pub(super) fn Moderation(kind: ModerationKind) -> impl IntoView {
             (
                     if kind == ModerationKind::Files { View::new(
     (
-            blog_interface::html::td()
+            blog_interface::html::td().class("blog-title-cell")
             .child( text(& item,
             "original_name")),
             blog_interface::html::td()
@@ -140,7 +140,7 @@ pub(super) fn Moderation(kind: ModerationKind) -> impl IntoView {
             blog_interface::html::td()
             .child( moderation_author(& item,
             true)),
-            blog_interface::html::td()
+            blog_interface::html::td().class("comment-cell")
             .child( { let message = text(& item,
             "message"); if message.is_empty() { t("图片留言", "Image message") }
             else { message } }),
@@ -197,7 +197,7 @@ pub(super) fn Moderation(kind: ModerationKind) -> impl IntoView {
     blog_interface::html::section()
         .child(
             (
-                    blog_interface::html::h1()
+                    blog_interface::html::h1().class("blog-row")
                     .child( title),
                     Feedback(component_props_builder(& Feedback)
                     .error( data.error)
@@ -235,7 +235,7 @@ pub(super) fn Moderation(kind: ModerationKind) -> impl IntoView {
             .disabled(move
             | | upload.busy.get() || action.busy.get()),
             move | | (! uploaded.get().is_empty()).then(| | View::new(
-    blog_interface::html::p()
+    blog_interface::html::p().class("blog-row")
         .child(
             (
                     t("新图片地址：", "New image URL: "),

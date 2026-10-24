@@ -21,6 +21,10 @@
     {
       "date": "2026-10-24",
       "description": "Apply compact administration geometry from isarmg/zxs commit 8c062902a995e23551662bcf1a723f0c78b5cedd while retaining the public stylesheet layout and surface extents; preserve original CSS/font receipts and unchanged licensed font bytes. Curve reference archive: compliance/interface-reference/zxs-interface.snapshot.tar.gz."
+    },
+    {
+      "date": "2026-10-24",
+      "description": "Remove administration rules from the public stylesheet, isolate shared-name public rules, use explicit row/check roles, align populated table actions, Markdown and media previews with shared geometry, and preserve usable native selector fallbacks and authentication feedback."
     }
   ]
 }

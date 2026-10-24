@@ -48,8 +48,8 @@ pub(super) fn HomeSections() -> impl IntoView {
     View::new(
         blog_interface::html::section()
             .child((
-                blog_interface::html::h1().child(t("首页栏目", "Home sections")),
-                blog_interface::html::p().child(t("设置栏目、顺序和展示内容。推荐栏目使用文章的“推荐”状态。", "Set sections, their order, and content. Recommended sections use articles marked as recommended.")),
+                blog_interface::html::h1().class("blog-row").child(t("首页栏目", "Home sections")),
+                blog_interface::html::p().class("blog-row").child(t("设置栏目、顺序和展示内容。推荐栏目使用文章的“推荐”状态。", "Set sections, their order, and content. Recommended sections use articles marked as recommended.")),
                 blog_interface::html::button()
                     .child(t("保存栏目", "Save sections"))
                     .class("blog-button")
@@ -79,7 +79,7 @@ pub(super) fn HomeSections() -> impl IntoView {
                 move || {
                     (!validation.get().is_empty()).then(|| {
                         View::new(
-                            blog_interface::html::p()
+                            blog_interface::html::p().class("blog-row")
                                 .child(validation.get())
                                 .role("alert"),
                         )
@@ -182,17 +182,19 @@ fn HomeRow(id: i64, sections: RwSignal<Vec<Value>>, categories: Data) -> impl In
     View::new(
         blog_interface::html::tr().child((
             blog_interface::html::td().child(move || index.get() + 1),
-            blog_interface::html::td().child(
+            blog_interface::html::td().class("blog-title-cell").child(
                 blog_interface::html::label()
                     .child((
-                        move || {
-                            format!(
-                                "{} {} {}",
-                                t("栏目", "Section"),
-                                index.get() + 1,
-                                t("标题", "title")
-                            )
-                        },
+                        blog_interface::html::span()
+                            .class("blog-field-label blog-row")
+                            .child(move || {
+                                format!(
+                                    "{} {} {}",
+                                    t("栏目", "Section"),
+                                    index.get() + 1,
+                                    t("标题", "title")
+                                )
+                            }),
                         blog_interface::html::input()
                             .class("blog-input")
                             .maxlength("32")
@@ -270,15 +272,17 @@ fn HomeRow(id: i64, sections: RwSignal<Vec<Value>>, categories: Data) -> impl In
                 })
             }),
             blog_interface::html::td().child(
-                blog_interface::html::label().child((
-                    blog_interface::html::input()
-                        .r#type("checkbox")
-                        .prop("checked", move || flag(&current.get(), "enabled"))
-                        .on(blog_interface::ev::change, move |ev| {
-                            change.run(("enabled", json!(event_target_checked(&ev))))
-                        }),
-                    t(" 启用", " Enable"),
-                )),
+                blog_interface::html::label()
+                    .class("blog-check blog-row blog-flow")
+                    .child((
+                        blog_interface::html::input()
+                            .r#type("checkbox")
+                            .prop("checked", move || flag(&current.get(), "enabled"))
+                            .on(blog_interface::ev::change, move |ev| {
+                                change.run(("enabled", json!(event_target_checked(&ev))))
+                            }),
+                        t(" 启用", " Enable"),
+                    )),
             ),
             blog_interface::html::td().child(
                 blog_interface::html::div()

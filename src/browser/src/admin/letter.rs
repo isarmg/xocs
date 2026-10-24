@@ -24,8 +24,10 @@ pub(super) fn LetterSettings() -> impl IntoView {
     View::new(
         blog_interface::html::section()
             .child((
-                blog_interface::html::h1().child(t("信笺管理", "Letter")),
-                blog_interface::html::p().child(t(
+                blog_interface::html::h1()
+                    .class("blog-row")
+                    .child(t("信笺管理", "Letter")),
+                blog_interface::html::p().class("blog-row").child(t(
                     "维护公开信笺的收信人、署名和正文。",
                     "Manage the recipient, sender, and content of the public letter.",
                 )),
@@ -39,6 +41,7 @@ pub(super) fn LetterSettings() -> impl IntoView {
                 move || {
                     (!validation.get().is_empty()).then(|| {
                         blog_interface::html::p()
+                            .class("blog-row")
                             .role("alert")
                             .child(validation.get())
                     })

@@ -47,8 +47,10 @@ pub(super) fn FamilySettings() -> impl IntoView {
     View::new(
         blog_interface::html::section()
             .child((
-                blog_interface::html::h1().child(t("恋爱笔记", "Love journal")),
-                blog_interface::html::p().child(t(
+                blog_interface::html::h1()
+                    .class("blog-row")
+                    .child(t("恋爱笔记", "Love journal")),
+                blog_interface::html::p().class("blog-row").child(t(
                     "这里仅由管理员创建并维护一份家的资料。",
                     "The administrator creates and maintains one home here.",
                 )),
@@ -63,7 +65,7 @@ pub(super) fn FamilySettings() -> impl IntoView {
                     .child(
                         blog_interface::html::form()
                             .child((
-                                blog_interface::html::h2().child(move || {
+                                blog_interface::html::h2().class("blog-row").child(move || {
                                     if editing.get().is_some() {
                                         t("编辑家的资料", "Edit home details")
                                     } else {

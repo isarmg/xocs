@@ -112,8 +112,9 @@ pub(super) fn Taxonomy(labels: bool) -> impl IntoView {
             blog_interface::html::tr().child((
                 labels.then(|| View::new(blog_interface::html::td().child(id))),
                 blog_interface::html::td()
+                    .class("blog-title-cell")
                     .child(text(&item, if labels { "label_name" } else { "sort_name" })),
-                blog_interface::html::td().child(text(
+                blog_interface::html::td().class("comment-cell").child(text(
                     &item,
                     if labels {
                         "label_description"
@@ -199,11 +200,13 @@ pub(super) fn Taxonomy(labels: bool) -> impl IntoView {
     View::new(
         blog_interface::html::section()
             .child((
-                blog_interface::html::h1().child(if labels {
-                    t("标签管理", "Tags")
-                } else {
-                    t("分类管理", "Categories")
-                }),
+                blog_interface::html::h1()
+                    .class("blog-row")
+                    .child(if labels {
+                        t("标签管理", "Tags")
+                    } else {
+                        t("分类管理", "Categories")
+                    }),
                 Feedback(
                     component_props_builder(&Feedback)
                         .error(data.error)
@@ -226,6 +229,7 @@ pub(super) fn Taxonomy(labels: bool) -> impl IntoView {
                 move || {
                     (!validation.get().is_empty()).then(|| {
                         blog_interface::html::p()
+                            .class("blog-row")
                             .role("alert")
                             .child(validation.get())
                     })
@@ -263,7 +267,9 @@ pub(super) fn Taxonomy(labels: bool) -> impl IntoView {
                                     View::new(
                                         blog_interface::html::label()
                                             .child((
-                                                t("分类", "Category"),
+                                                blog_interface::html::span()
+                                                    .class("blog-field-label blog-row")
+                                                    .child(t("分类", "Category")),
                                                 crate::select::Select(
                                                     component_props_builder(&crate::select::Select)
                                                         .label(Signal::derive(|| {
@@ -313,7 +319,7 @@ pub(super) fn Taxonomy(labels: bool) -> impl IntoView {
                                             .class("blog-form-field")
                                             .child((
                                                 blog_interface::html::span()
-                                                    .class("blog-field-label")
+                                                    .class("blog-field-label blog-row")
                                                     .child(t("优先级", "Priority")),
                                                 blog_interface::html::input()
                                                     .class("blog-input")

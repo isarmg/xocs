@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { chromium, firefox, expect } from './dependencies.mjs';
 import { preview } from '../tools/assets/test-preview.mjs';
-import { mockApi } from './browser-fixtures.mjs';
+import { adminSite, fixtureImage, mockApi, pageOf, summary, waitForApplication } from './browser-fixtures.mjs';
+import { paintedSurfaceColor } from './painted-surface.mjs';
 
 const server = await preview({ preview: { host: '127.0.0.1', port: 0, strictPort: true } });
 const base = `http://127.0.0.1:${server.httpServer.address().port}`;
@@ -64,6 +65,244 @@ async function control(locator, height, extent, border) {
   assert.equal(geometry.radius, '0px', 'The shared G4 renderer owns the corner');
 }
 
+async function color(page, property) {
+  return page.evaluate(property => {
+    const probe = document.createElement('span');
+    probe.style.color = `var(${property})`;
+    document.body.append(probe);
+    const result = getComputedStyle(probe).color;
+    probe.remove();
+    return result;
+  }, property);
+}
+
+async function selectFallback(page, trigger, declaration, reason) {
+  const panel = page.locator(`#${await trigger.getAttribute('aria-controls')}`);
+  await panel.evaluate((node, declaration) => Object.assign(node.style, declaration), declaration);
+  await trigger.click();
+  await expect(panel).toHaveAttribute('data-blog-server-corner-state', 'fallback');
+  await expect(panel).toHaveAttribute('data-blog-server-corner-reason', reason);
+  await expect(panel).toBeVisible();
+  await expect(panel.getByRole('option').first()).toBeVisible();
+  // A completed decorator fallback must leave the native popup usable. Exercise
+  // its actual keyboard state, rather than changing the state attributes by hand.
+  await page.keyboard.press('End');
+  await page.keyboard.press('Enter');
+  await expect(panel).not.toBeVisible();
+  await expect(trigger).toBeFocused();
+  await expect(trigger).toContainText('中文分类');
+  await panel.evaluate((node, declaration) => {
+    for (const property of Object.keys(declaration)) node.style[property] = '';
+  }, declaration);
+}
+
+async function row(locator, label) {
+  await expect(locator).toBeVisible();
+  const geometry = await locator.evaluate(node => {
+    const css = getComputedStyle(node);
+    return { height: node.getBoundingClientRect().height, font: parseFloat(css.fontSize), margin: css.marginBlock };
+  });
+  assert.ok(geometry.height >= 35.9, `${label} retains a full 36px row: ${JSON.stringify(geometry)}`);
+  near(geometry.font, 14.4, `${label} uses body typography`);
+  assert.equal(geometry.margin, '0px', `${label} has no inherited public margin`);
+}
+
+async function fixture(page) {
+  const state = { authenticated: true, adminSite: { ...adminSite, media: { ...adminSite.media, logo: fixtureImage } } };
+  await mockApi(page, state);
+  await page.route('**/api/v1/content/articles?*', route => route.fulfill({
+    json: pageOf(Array.from({ length: 21 }, (_, index) => ({ ...summary, id: index + 1,
+      article_title: `${summary.article_title} · Rust service design review` })), new URL(route.request().url())),
+  }));
+  await page.route('**/api/v1/content/tree-hole?*', route => route.fulfill({ json: pageOf([
+    { id: 1, user_id: 1, username: 'User', avatar: null, message: 'A message with a photograph', image_path: fixtureImage, create_time: '2026-10-24' },
+  ], new URL(route.request().url())) }));
+  return state;
+}
+
+async function businessComponents(page, base, dark, state) {
+  // Empty fixtures used to let most of the old component styles escape the
+  // geometry checks. Exercise populated rows, pagination and media as well.
+  await page.goto(`${base}/admin?lang=en#articles`);
+  const articleRow = page.getByRole('row').filter({ hasText: summary.article_title }).first();
+  await control(articleRow.getByRole('button', { name: 'Edit', exact: true }), 36, 18, 0);
+  const remove = articleRow.getByRole('button', { name: 'Delete', exact: true });
+  await control(remove, 36, 18, 0);
+  assert.equal(await remove.evaluate(node => getComputedStyle(node).color), await color(page, '--blog-text-danger'),
+    'Dangerous actions keep their semantic color instead of inheriting ordinary button color');
+  const table = page.locator('.blog-table-scroll').filter({ has: page.getByRole('table', { name: 'Article list', exact: true }) });
+  const readability = await articleRow.evaluate(node => {
+    const title = document.createRange();
+    title.selectNodeContents(node.cells[0].querySelector('strong'));
+    return { width: node.cells[0].getBoundingClientRect().width, height: node.getBoundingClientRect().height,
+      line: parseFloat(getComputedStyle(node.cells[0]).lineHeight),
+      titleLines: new Set([...title.getClientRects()].filter(rect => rect.width > 0).map(rect => Math.round(rect.top))).size };
+  });
+  assert.ok(readability.width >= 139.9, `Article titles keep a readable column: ${JSON.stringify(readability)}`);
+  assert.ok(readability.titleLines <= 4 && readability.height <= readability.line * 5 + 2,
+    `A medium title uses at most four lines plus its separate identifier: ${JSON.stringify(readability)}`);
+  if (page.viewportSize().width <= 768) {
+    const overflow = await table.evaluate(node => ({ content: node.scrollWidth, available: node.clientWidth }));
+    assert.ok(overflow.content > overflow.available, 'Small screens scroll a readable table instead of crushing every column');
+  }
+  await table.evaluate(node => { node.scrollLeft = node.scrollWidth; });
+  const actionPosition = await remove.evaluate(node => {
+    const button = node.getBoundingClientRect(), table = node.closest('.blog-table-scroll').getBoundingClientRect();
+    return { left: button.left, right: button.right, tableLeft: table.left, tableRight: table.right };
+  });
+  assert.ok(actionPosition.left >= actionPosition.tableLeft - 1 && actionPosition.right <= actionPosition.tableRight + 1,
+    `Scrolling reaches table actions: ${JSON.stringify(actionPosition)}`);
+  let confirmed = false;
+  page.once('dialog', async dialog => { confirmed = true; await dialog.dismiss(); });
+  await remove.click();
+  assert.equal(confirmed, true, 'The visible Delete action still opens its real confirmation');
+  await articleRow.getByRole('button', { name: 'Edit', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Edit article', exact: true })).toBeVisible();
+  await page.goto(`${base}/admin?lang=en#articles`);
+  const pager = page.getByRole('navigation', { name: 'Pagination', exact: true });
+  await control(pager.getByRole('button', { name: 'Next page', exact: true }), 36, 18, 0);
+  await pager.getByRole('button', { name: 'Next page', exact: true }).click();
+  await expect(pager).toContainText('Page 2');
+
+  await page.goto(`${base}/admin?lang=en#edit/1`);
+  const markdown = page.getByRole('textbox', { name: 'Markdown content', exact: true });
+  await expect(markdown).toBeVisible();
+  near((await markdown.boundingBox()).height, 308, 'Markdown editor retains a useful seven-row writing surface');
+  const checks = page.locator('.check-row > label');
+  await expect(checks).toHaveCount(3);
+  for (const check of await checks.all()) {
+    await row(check, 'Editor checkbox label');
+    const alignment = await check.evaluate(node => {
+      const input = node.querySelector('input').getBoundingClientRect();
+      const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+      let text;
+      while ((text = walker.nextNode()) && !text.textContent.trim()) {}
+      if (!text) throw new Error('A checkbox requires a visible text label');
+      const range = document.createRange();
+      range.selectNodeContents(text);
+      const first = [...range.getClientRects()].find(rect => rect.width > 0 && rect.height > 0);
+      if (!first) throw new Error('Checkbox text has no visible line box');
+      return { inputRight: input.right, textLeft: first.left };
+    });
+    assert.ok(alignment.textLeft >= alignment.inputRight - .1,
+      `Checkbox and the start of its label stay side by side: ${JSON.stringify(alignment)}`);
+  }
+  const fieldLabels = page.locator('.editor-form .blog-field-label');
+  for (const label of await fieldLabels.all()) await row(label, 'Editor field label');
+  await page.getByRole('button', { name: 'Preview content', exact: true }).click();
+  const rendered = page.locator('.editor-markdown-preview');
+  await expect(rendered).toBeVisible();
+  await expect(rendered).toHaveAttribute('data-blog-server-corner-state', 'clip');
+  const previewGeometry = await rendered.evaluate(node => {
+    const css = getComputedStyle(node);
+    return { topInset: parseFloat(css.paddingTop), leftInset: parseFloat(css.paddingLeft), rightInset: parseFloat(css.paddingRight),
+      margin: css.margin, line: parseFloat(css.lineHeight), font: parseFloat(css.fontSize),
+      border: css.borderTopWidth, extent: parseFloat(css.getPropertyValue('--blog-server-corner-extent')) };
+  });
+  near(previewGeometry.topInset, 0, 'Markdown preview uses natural content rows');
+  near(previewGeometry.leftInset, 9.8, 'Markdown preview retains the shared frame text clearance');
+  near(previewGeometry.rightInset, 9.8, 'Markdown preview retains symmetric text clearance');
+  assert.equal(previewGeometry.margin, '0px');
+  assert.equal(previewGeometry.border, '1px');
+  near(previewGeometry.font, 14.4, 'Markdown preview typography');
+  near(previewGeometry.line, 21.6, 'Markdown preview line height');
+  near(previewGeometry.extent, 18, 'Markdown preview G4 extent');
+  await expect.poll(() => paintedSurfaceColor(rendered)).toBe(await color(page, '--blog-bg-panel'));
+
+  await page.goto(`${base}/admin?lang=en#notes`);
+  const note = page.getByRole('textbox', { name: 'Note content', exact: true });
+  await expect(note).toBeVisible();
+  near((await note.boundingBox()).height, 110, 'Ordinary multiline fields retain the intended writing height');
+  near(await note.evaluate(node => parseFloat(getComputedStyle(node).fontSize)), 17.6, 'Multiline field typography');
+
+  await page.goto(`${base}/admin?lang=en#site`);
+  await row(page.locator('.blog-settings-form summary'), 'Push format disclosure');
+  const logo = page.getByRole('img', { name: 'Site logo preview', exact: true });
+  await expect(logo).toBeVisible();
+  await expect(logo).toHaveAttribute('data-blog-server-corner-state', 'clip');
+  near(await logo.evaluate(node => parseFloat(getComputedStyle(node).getPropertyValue('--blog-server-corner-extent'))), 18,
+    'Configured media preview uses the shared panel contour');
+  const panels = page.locator('.blog-settings-form .blog-content-panel');
+  for (const panel of await panels.all()) {
+    await expect(panel).toHaveAttribute('data-blog-server-corner-state', 'clip');
+    await expect.poll(() => paintedSurfaceColor(panel)).toBe(await color(page, '--blog-bg-panel'));
+  }
+
+  await page.goto(`${base}/admin?lang=en#tree-hole`);
+  const photograph = page.getByRole('button').filter({ has: page.getByRole('img', { name: 'View message image', exact: true }) });
+  await expect(photograph).toBeVisible();
+  near((await photograph.boundingBox()).height, 56, 'Image preview trigger has no inline-image baseline gap');
+  await expect(photograph.getByRole('img')).toHaveAttribute('data-blog-server-corner-state', 'clip');
+  near(await photograph.getByRole('img').evaluate(node => parseFloat(getComputedStyle(node).getPropertyValue('--blog-server-corner-extent'))),
+    18, 'Moderation thumbnail follows the shared panel contour');
+  await photograph.click();
+  const lightbox = page.getByRole('dialog', { name: 'View image', exact: true });
+  await expect(lightbox).toBeVisible();
+  await control(lightbox.getByRole('button', { name: 'Close image', exact: true }), 44, 22, 0);
+  await page.keyboard.press('Escape');
+  await expect(lightbox).toHaveCount(0);
+  await expect(photograph).toBeFocused();
+
+  // Notifications are driven through the same document event used by actual
+  // asynchronous saves, so their portal location and inherited roles are real.
+  await page.evaluate(() => dispatchEvent(new CustomEvent('blog-notify', { detail: 'Component style verification' })));
+  const notification = page.getByRole('status').filter({ hasText: 'Component style verification' });
+  await expect(notification).toBeVisible();
+  await expect(notification).toHaveAttribute('data-blog-server-corner-state', /^(paint|clip)$/);
+  await expect.poll(() => paintedSurfaceColor(notification)).toBe(await color(page, '--blog-bg-panel'));
+  await control(notification.getByRole('button', { name: 'Dismiss notification', exact: true }), 36, 18, 0);
+  await notification.getByRole('button', { name: 'Dismiss notification', exact: true }).click();
+  await expect(notification).toHaveCount(0);
+
+  for (const hash of ['dashboard', 'categories', 'labels', 'letter', 'comments', 'resources', 'links', 'family', 'home']) {
+    await page.goto(`${base}/admin?lang=en#${hash}`);
+    await waitForApplication(page);
+    const labels = page.locator('.blog-admin-workspace .blog-field-label');
+    for (const label of await labels.all()) await row(label, `${hash} field label`);
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${hash} components fit the viewport`);
+  }
+  await expect(page.locator('html')).toHaveAttribute('data-theme', dark ? 'dark' : 'light');
+
+  let pending;
+  await page.route('**/api/v1/content/comments?*', route => { pending = route; });
+  await page.goto(`${base}/admin?lang=en#comments`);
+  const loading = page.locator('.blog-admin-workspace .blog-loading');
+  await expect(loading).toBeVisible();
+  await row(loading, 'Loading state');
+  await expect(loading).toHaveAttribute('data-blog-server-corner-state', /^(paint|clip)$/);
+  await expect.poll(() => paintedSurfaceColor(loading)).toBe(await color(page, '--blog-bg-panel'));
+  await expect.poll(() => Boolean(pending)).toBe(true);
+  await pending.fulfill({ status: 503, json: { code: 'unavailable', retryable: true, request_id: 'style-503' } });
+  const error = page.getByRole('alert');
+  await expect(error).toBeVisible();
+  await row(error, 'Error state');
+  near(await error.evaluate(node => parseFloat(getComputedStyle(node).getPropertyValue('--blog-server-corner-extent'))), 18,
+    'Business error uses the shared notification contour');
+  await expect.poll(() => paintedSurfaceColor(error)).toBe(await color(page, '--blog-bg-panel'));
+  await control(error.getByRole('button', { name: 'Try again', exact: true }), 36, 18, 0);
+
+  state.authenticated = false;
+  await page.route('**/api/v1/auth/login', route => route.fulfill({ status: 401,
+    json: { code: 'unauthorized', retryable: false, request_id: 'style-login-401' } }));
+  await page.goto(`${base}/admin?lang=en`);
+  await page.getByRole('textbox', { name: 'Username', exact: true }).fill('administrator');
+  await page.getByLabel('Password', { exact: true }).fill('incorrect-password');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  const loginError = page.getByRole('alert');
+  await expect(loginError).toContainText('Sign in failed');
+  const loginGeometry = await loginError.evaluate(node => {
+    const css = getComputedStyle(node);
+    return { border: css.borderTopWidth, padding: css.padding, font: css.fontSize,
+      formFont: getComputedStyle(node.closest('form')).fontSize, extent: css.getPropertyValue('--blog-server-corner-extent') };
+  });
+  assert.equal(loginGeometry.border, '0px', 'Authentication errors do not restore the old outlined box');
+  assert.equal(loginGeometry.padding, '0px');
+  assert.equal(loginGeometry.font, loginGeometry.formFont, 'Authentication errors follow the six-row form typography');
+  near(parseFloat(loginGeometry.extent), 0, 'Authentication error stays inside its existing card contour');
+  assert.equal(await paintedSurfaceColor(loginError), await color(page, '--blog-bg-panel'));
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Failed authentication fits the viewport');
+}
+
 try {
   for (const engine of [chromium, firefox]) {
     const browser = await engine.launch();
@@ -73,7 +312,7 @@ try {
         try {
           const page = await context.newPage(), errors = [];
           page.on('pageerror', error => errors.push(error.message));
-          await mockApi(page, { authenticated: true });
+          const state = await fixture(page);
           await page.goto(`${base}/admin?lang=en#categories`);
           const name = page.getByRole('textbox', { name: 'Category name', exact: true });
           await expect(name).toBeVisible();
@@ -98,6 +337,11 @@ try {
           await page.keyboard.press('Escape');
           await expect(category).toBeFocused();
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'The open and closed selector never expands the viewport');
+          await selectFallback(page, category, { maskImage: 'linear-gradient(#000,#000)' }, 'existing-mask');
+          await selectFallback(page, category, { boxShadow: 'inset 0 0 1px #000' }, 'inset-or-unsupported-shadow');
+          await category.click();
+          await expect(page.getByRole('listbox', { name: 'Category', exact: true })).toHaveAttribute('data-blog-server-corner-state', 'clip');
+          await page.keyboard.press('Escape');
 
           await page.goto(`${base}/admin?lang=en#account`);
           const account = page.getByRole('region', { name: 'Account settings', exact: true });
@@ -123,8 +367,9 @@ try {
           assert.equal(editorLayout.maxWidth, 'none', 'The article editor has no inherited public width cap');
           near(editorLayout.left, editorLayout.contentLeft, 'Article editor aligns with the main content');
           near(editorLayout.width, editorLayout.contentWidth, 'Article editor fills the main content width');
+          await businessComponents(page, base, dark, state);
           assert.deepEqual(errors, []);
-          console.log(`${engine.name()} ${width}px ${dark ? 'dark' : 'light'}: admin full-width flow navigation, 16px insets and 36/44px G4 controls passed`);
+          console.log(`${engine.name()} ${width}px ${dark ? 'dark' : 'light'}: full admin navigation, populated tables/pagination, forms/Markdown, media/lightbox, notifications, and decorated/fallback selectors passed`);
         } finally { await context.close(); }
       }
     } finally { await browser.close(); }

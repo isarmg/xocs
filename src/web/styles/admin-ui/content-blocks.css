@@ -39,8 +39,9 @@ html:not([data-blog-appearance]), html[data-blog-appearance="content-blocks"] {
       --blog-block-border: #354047;
     }
   }
-  .blog-button { border: 0; background: transparent; color: var(--blog-text-link); font-weight: 400; }
-  .blog-button:hover { text-decoration: underline; }
+  .blog-button,.blog-admin-shell .image-lightbox-close { border: 0; background: transparent; color: var(--blog-text-link); font-weight: 400; }
+  .blog-admin-shell .blog-danger { color: var(--blog-text-danger); }
+  .blog-button:hover,.blog-admin-shell .image-lightbox-close:hover { text-decoration: underline; }
   .blog-admin-shell .blog-button:disabled:hover { text-decoration: none; }
   .blog-input { border-color: var(--blog-block-border); background: transparent; }
   &:not(:has(.blog-admin-shell, .blog-auth-shell)) :is(.blog-error,.blog-empty,.blog-loading) { border: 0; border-radius: 0; background: var(--blog-bg-panel); margin-block: 1rem; }

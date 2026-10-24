@@ -45,8 +45,10 @@ pub(super) fn Articles() -> impl IntoView {
                         ))
                         .build(),
                 ),
-                blog_interface::html::h1().child(t("文章管理", "Articles")),
-                blog_interface::html::p().child(t(
+                blog_interface::html::h1()
+                    .class("blog-row")
+                    .child(t("文章管理", "Articles")),
+                blog_interface::html::p().class("blog-row").child(t(
                     "管理公开文章与草稿。",
                     "Manage published articles and drafts.",
                 )),
@@ -100,7 +102,7 @@ pub(super) fn Articles() -> impl IntoView {
     blog_interface::html::tr()
         .child(
             (
-                    blog_interface::html::td()
+                    blog_interface::html::td().class("blog-title-cell")
                     .child((blog_interface::html::strong()
                     .child( a.article_title),
                     blog_interface::html::small()

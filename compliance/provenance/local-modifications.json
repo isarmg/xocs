@@ -4416,6 +4416,11 @@
       "directory": "src/browser",
       "reason": "Apply compact geometry roles to administration navigation, forms and selectors while preserving business validation and keyboard behavior; retain the public page layout, sizes, typography and palette while sharing the requested G4 curve profile.",
       "production_behavior_change": true
+    },
+    {
+      "directory": "src/browser",
+      "reason": "Replace implicit administration heading and paragraph styling with explicit geometry roles, align handwritten form labels and checkbox rows, and separate editor Markdown and media presentation from public page typography without changing validation, requests or reactive ownership.",
+      "production_behavior_change": true
     }
   ]
 }

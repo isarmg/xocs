@@ -10,6 +10,7 @@ html:not([data-blog-appearance]), html[data-blog-appearance="content-blocks"] {
    * Grid places their children in the original six rows, including the error row. */
   .blog-auth-shell { padding: 24px; font-size: 1rem; }
   .blog-auth-card { width: min(380px, 100%); border: 0; border-radius: 0; }
+  .blog-auth-shell :is(.blog-error,.blog-empty,.blog-loading) { border: 0; border-radius: 0; background: var(--blog-bg-panel); --blog-server-corner-extent: var(--blog-server-corner-notification); }
   .blog-login-controls { display: flex; align-items: center; gap: 8px; }
   .blog-login-controls > button { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; height: 44px; padding: 0 8px; line-height: 1; }
   .blog-login-controls svg { width: var(--blog-header-icon-size, 1em); height: var(--blog-header-icon-size, 1em); }

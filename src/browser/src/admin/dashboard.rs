@@ -11,8 +11,10 @@ pub(super) fn Dashboard() -> impl IntoView {
         blog_interface::html::section()
             .class("blog-content-stack")
             .child((
-                blog_interface::html::h1().child(t("总览", "Overview")),
-                blog_interface::html::p().child(t(
+                blog_interface::html::h1()
+                    .class("blog-row")
+                    .child(t("总览", "Overview")),
+                blog_interface::html::p().class("blog-row").child(t(
                     "网站内容与社区状态。",
                     "Site content and community status.",
                 )),
@@ -80,7 +82,9 @@ pub(super) fn Dashboard() -> impl IntoView {
                                     blog_interface::html::section()
                                         .class("blog-content-panel")
                                         .child((
-                                            blog_interface::html::h2().child(group.title()),
+                                            blog_interface::html::h2()
+                                                .class("blog-row")
+                                                .child(group.title()),
                                             blog_interface::html::nav()
                                                 .aria_label(group.title())
                                                 .child(
@@ -91,6 +95,7 @@ pub(super) fn Dashboard() -> impl IntoView {
                                                         .map(|page| {
                                                             View::new(
                                                                 blog_interface::html::a()
+                                                                    .class("blog-button")
                                                                     .child(page.label())
                                                                     .href(href(&format!(
                                                                         "/admin#{}",

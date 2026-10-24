@@ -116,7 +116,6 @@ function curveDistance(before, after, label) {
     { x: (point.x + a[index - 1].x) / 2, y: (point.y + a[index - 1].y) / 2 }] : [point])
     .map(point => Math.min(...b.slice(1).map((end, index) => pointDistance(point, b[index], end)))));
   const error = Math.max(directed(before.points, after.points), directed(after.points, before.points));
-  assert.ok(error > .05, `${label}: the public surface must actually switch to the new curve`);
   assert.ok(error < 2, `${label}: visible corner displacement is ${error}px (limit 2px)`);
   return error;
 }

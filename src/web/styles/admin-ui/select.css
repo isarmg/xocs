@@ -1,6 +1,5 @@
 .blog-select { display: block; min-width: 0; width: 100%; --blog-select-row-height: var(--blog-compact-row-height,36px); }
 .blog-select-native { display: none; --blog-server-corner-extent: 0px; }
-.blog-select-label { display: block; color: var(--blog-block-muted); }
 .blog-select-trigger {
   display: flex; align-items: center; justify-content: space-between; gap: .75rem;
   text-align: start; cursor: pointer; min-width: 0;
@@ -22,9 +21,11 @@
   --blog-server-corner-mode: clip;
   --blog-server-corner-foreground: 1;
 }
-/* Reveal open panels only after the current renderer has painted them.
- * Forced-color menus keep their native, unpainted surface visible. */
-.blog-select-panel:popover-open:not([data-blog-server-corner-state=clip]):not([data-blog-server-corner-reason=forced-colors]) { visibility: hidden; }
+/* Wait for a completed contour result. An unsupported decoration keeps its
+ * usable native surface, including forced colors and existing author paint. */
+.blog-select-panel:popover-open:not([data-blog-server-corner-state=clip]):not([data-blog-server-corner-state=fallback]) { visibility: hidden; }
+/* A closed popover was unmeasurable, not a completed visible fallback. */
+.blog-select-panel:popover-open[data-blog-server-corner-state=fallback][data-blog-server-corner-reason=not-visible] { visibility: hidden; }
 .blog-select-option {
   display: flex; align-items: center; justify-content: space-between; gap: .75rem;
   box-sizing: border-box; cursor: pointer; overflow: hidden; white-space: nowrap;
@@ -35,10 +36,7 @@
 .blog-select-option[data-active=true] { background: var(--blog-bg-page, #edf2f7); color: var(--blog-text-primary, #18181b); }
 .blog-select-option[aria-selected=true] { font-weight: 700; }
 .blog-select-option[aria-disabled=true] { opacity: .5; cursor: not-allowed; }
-.blog-select-empty { color: var(--blog-block-muted); }
-.blog-select-group { display: block; padding: .5rem 1.5rem; font-size: .875em; font-weight: 700; color: var(--blog-block-muted, #64748b); }
 .blog-select-error { display: block; margin-block-start: .4rem; color: var(--blog-text-danger, #b91c1c); }
-.blog-input.blog-select-list { --blog-server-corner-extent: var(--blog-server-corner-panel,18px); --blog-server-corner-mode: clip; }
 @media (forced-colors: active) {
   :root .blog-select .blog-select-trigger:focus-visible { outline-color: Highlight; }
   .blog-select-trigger, .blog-select-panel { color: ButtonText; background: Canvas; border: 1px solid ButtonText; }

@@ -36,7 +36,7 @@ html:has(.blog-admin-shell, .blog-auth-shell) { min-width: 320px; font-family: v
 .blog-admin-shell .blog-form-field { gap: 0; margin: 0; min-width: 0; }
 .blog-admin-shell .blog-dialog-heading { gap: 0; }
 .blog-admin-shell .blog-actions { margin-block: 0; }
-.blog-admin-shell .blog-request-id { font-size: inherit; }
+.blog-admin-shell .blog-request-id { margin: 0; font-size: inherit; }
 .blog-admin-shell .blog-toast-stack { margin: 1rem; display: grid; gap: var(--blog-block-gap); min-width: 0; }
 .blog-admin-shell .blog-toast { justify-content: space-between; border: 0; border-radius: 0; background: var(--blog-bg-panel,#fff); overflow-wrap: anywhere; --blog-server-corner-extent: var(--blog-server-corner-notification); }
 .blog-app-shell { min-height: 100dvh; color: var(--blog-text-primary,#18181b); background: var(--blog-bg-page,#fafafa); font-family: var(--blog-font-ui,monospace); font-size: var(--blog-compact-font-size); line-height: var(--blog-line-height-body,1.5); }
@@ -62,7 +62,6 @@ html:has(.blog-admin-shell, .blog-auth-shell) { min-width: 320px; font-family: v
 .blog-admin-shell .blog-table :is(th,td) { box-sizing: border-box; height: var(--blog-compact-row-height); padding: 0 var(--blog-list-content-inset); border-block-end: var(--blog-control-border-width) solid var(--blog-block-border); font: inherit; font-weight: 400; text-align: inherit; vertical-align: middle; }
 .blog-admin-shell .blog-table th { color: var(--blog-block-muted); }
 .blog-admin-shell .blog-table tbody tr:last-child > td { border-block-end: 0; }
-.blog-admin-shell .blog-table tbody .blog-button { min-height: calc(var(--blog-compact-row-height) - 2px); height: auto; padding-block: 0; font-size: inherit; }
 .blog-admin-shell .blog-table .blog-actions { justify-content: flex-start; }
 .blog-admin-shell .blog-table .blog-actions > .blog-button { display: inline-flex; align-items: center; text-align: start; white-space: nowrap; }
 .blog-admin-shell .blog-content-panel > .blog-table-scroll { border: 0; background: transparent; --blog-server-corner-extent: 0px; }

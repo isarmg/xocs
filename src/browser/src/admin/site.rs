@@ -226,9 +226,9 @@ fn SiteAppearance(
         blog_interface::html::section()
             .class("blog-content-panel")
             .child((
-                blog_interface::html::h2().child(t("外观媒体", "Appearance media")),
+                blog_interface::html::h2().class("blog-row").child(t("外观媒体", "Appearance media")),
                 blog_interface::html::p()
-                    .class("blog-field-help")
+                    .class("blog-field-help blog-row")
                     .child(t("填写图片或视频地址，或直接上传文件。留空时使用主题配色或文字，不加载默认媒体。恋爱页头图和双方头像在恋爱笔记中设置。图片最大 10 MB，MP4 / WebM 视频最大 50 MB。", "Enter an image or video URL, or upload a file. Leave empty to use theme colors or text, without bundled media. Set the love journal header and couple avatars in Love journal. Images: up to 10 MB; MP4 / WebM videos: up to 50 MB.")),
                 blog_interface::html::div()
                     .class("form-grid site-media-grid")
@@ -250,7 +250,7 @@ fn SiteAppearance(
                             })
                             .collect_view(),
                     ),
-                blog_interface::html::p()
+                blog_interface::html::p().class("blog-row")
                     .role("status")
                     .aria_live("polite")
                     .child(move || {
@@ -283,7 +283,7 @@ pub(super) fn SiteSettings() -> impl IntoView {
     View::new(
         blog_interface::html::section()
             .child((
-                blog_interface::html::h1().child(t("网站设置", "Site settings")),
+                blog_interface::html::h1().class("blog-row").child(t("网站设置", "Site settings")),
                 Feedback(
                     component_props_builder(&Feedback)
                         .error(data.error)
@@ -296,7 +296,7 @@ pub(super) fn SiteSettings() -> impl IntoView {
                 Feedback(component_props_builder(&Feedback).error(save.error).build()),
                 move || {
                     (!validation.get().is_empty()).then(|| {
-                        blog_interface::html::p().role("alert").child(validation.get())
+                        blog_interface::html::p().class("blog-row").role("alert").child(validation.get())
                     })
                 },
                 move || {
@@ -309,7 +309,7 @@ pub(super) fn SiteSettings() -> impl IntoView {
                                         .child((
                                             blog_interface::html::section()
                                                 .child((
-                                                    blog_interface::html::h2()
+                                                    blog_interface::html::h2().class("blog-row")
                                                         .child(t("基本信息", "Basic information")),
                                                     blog_interface::html::div()
                                                         .child((
@@ -350,7 +350,7 @@ pub(super) fn SiteSettings() -> impl IntoView {
                                                         .class("form-grid"),
                                                     blog_interface::html::p()
                                                         .child(t("用于文章和随笔署名；管理员登录名与密码在右上角头像的账号设置中修改。", "Used as the author of articles and notes. Change administrator sign-in credentials through the account settings avatar."))
-                                                        .class("blog-field-help"),
+                                                        .class("blog-field-help blog-row"),
                                                     Field(
                                                         component_props_builder(&Field)
                                                             .label(t("公告", "Notices"))
@@ -361,13 +361,13 @@ pub(super) fn SiteSettings() -> impl IntoView {
                                                     ),
                                                     blog_interface::html::p()
                                                         .child(t("使用 JSON 字符串数组或每行一条公告。", "Use a JSON string array or one notice per line."))
-                                                        .class("blog-field-help"),
+                                                        .class("blog-field-help blog-row"),
                                                     blog_interface::html::details().child((
-                                                        blog_interface::html::summary().child(t(
+                                                        blog_interface::html::summary().class("blog-row").child(t(
                                                             "推送格式",
                                                             "Promotion format",
                                                         )),
-                                                        blog_interface::html::p().child((
+                                                        blog_interface::html::p().class("blog-row").child((
                                                             blog_interface::html::code()
                                                                 .child("推送标题："),
                                                             " ",
@@ -389,11 +389,11 @@ pub(super) fn SiteSettings() -> impl IntoView {
                                             ),
                                             blog_interface::html::section()
                                                 .child((
-                                                    blog_interface::html::h2()
+                                                    blog_interface::html::h2().class("blog-row")
                                                         .child(t("随机封面", "Random covers")),
                                                     blog_interface::html::p()
                                                         .child(t("使用 JSON 图片地址数组或每行一个图片地址。", "Use a JSON array of image URLs or one image URL per line."))
-                                                        .class("blog-field-help"),
+                                                        .class("blog-field-help blog-row"),
                                                     Field(
                                                         component_props_builder(&Field)
                                                             .label(t("随机封面", "Random covers"))

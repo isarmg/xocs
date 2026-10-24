@@ -97,7 +97,7 @@ pub(crate) fn Field(
                     (!error.get().is_empty()).then(|| {
                         blog_interface::html::span()
                             .role("alert")
-                            .class("blog-row")
+                            .class("blog-row blog-danger")
                             .child(error.get())
                     })
                 },
@@ -153,7 +153,7 @@ pub(crate) fn ControlledField(
                     (!error.get().is_empty()).then(|| {
                         blog_interface::html::span()
                             .role("alert")
-                            .class("blog-row")
+                            .class("blog-row blog-danger")
                             .child(error.get())
                     })
                 },
@@ -170,7 +170,7 @@ pub(crate) fn ControlledCheck(
 ) -> impl IntoView {
     View::new(
         blog_interface::html::label()
-            .class("blog-row blog-flow")
+            .class("blog-row blog-flow blog-check")
             .child((
                 blog_interface::html::input()
                     .r#type("checkbox")
@@ -187,7 +187,7 @@ pub(crate) fn ControlledCheck(
 pub(crate) fn Check(label: String, key: &'static str, form: RwSignal<Value>) -> impl IntoView {
     View::new(
         blog_interface::html::label()
-            .class("blog-row blog-flow")
+            .class("blog-row blog-flow blog-check")
             .child((
                 blog_interface::html::input()
                     .r#type("checkbox")

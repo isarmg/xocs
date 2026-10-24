@@ -27,7 +27,7 @@ npm run test:browser:blog-interface
 
 `test/browser/admin-recovery.mjs` 和 `test/browser/public-recovery.mjs` 覆盖丢失响应、原提交确认、可编辑草稿、并发分页、语言链接及原生弹窗的键盘行为。
 
-`test/browser/style-contract.mjs` 测量后台实际页面边距、控件尺寸、自然换行导航和 G4 轮廓状态。`test/browser/public-style-baseline.mjs` 可通过 `BLOG_PUBLIC_BASELINE_DIST` 指定修改前的独立产物，对照公开页的布局、尺寸、字体、颜色与圆角边缘。
+`test/browser/style-contract.mjs` 在 390px、1280px、2560px 的明暗主题中检查后台全部页面，包括有数据的表格和横向滚动操作、分页、多行字段、Markdown 预览、媒体查看器、通知与认证错误，以及下拉菜单的正常绘制和回退交互。它同时测量实际页面边距、控件尺寸、自然换行导航和 G4 轮廓状态。`test/browser/public-style-baseline.mjs` 可通过 `BLOG_PUBLIC_BASELINE_DIST` 指定修改前的独立产物，对照公开页的布局、尺寸、字体、颜色与圆角边缘。
 
 页面脚本会执行管理写入或创建可丢弃数据，应使用专用测试实例。`test/browser/rust-native-domain.mjs` 使用真实生成资源，API 和剪贴板使用 fixture；持久化与真实数据库行为由后端和安装测试覆盖。
 

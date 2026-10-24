@@ -53,7 +53,9 @@ pub(super) fn Links() -> impl IntoView {
         let edit = item.clone();
         View::new(
             blog_interface::html::tr().child((
-                blog_interface::html::td().child(text(&item, "title")),
+                blog_interface::html::td()
+                    .class("blog-title-cell")
+                    .child(text(&item, "title")),
                 blog_interface::html::td().child(text(&item, "link_type")),
                 blog_interface::html::td().child(if flag(&item, "status") {
                     t("公开", "Public")
@@ -158,8 +160,10 @@ pub(super) fn Links() -> impl IntoView {
     View::new(
         blog_interface::html::section()
             .child((
-                blog_interface::html::h1().child(t("内容资源", "Content resources")),
-                blog_interface::html::p().child(t(
+                blog_interface::html::h1()
+                    .class("blog-row")
+                    .child(t("内容资源", "Content resources")),
+                blog_interface::html::p().class("blog-row").child(t(
                     "维护友链、收藏、照片和音乐条目。",
                     "Manage friend links, favorites, photos, and music.",
                 )),
@@ -179,7 +183,9 @@ pub(super) fn Links() -> impl IntoView {
                     .child((
                         blog_interface::html::label()
                             .child((
-                                t("类型筛选", "Filter by type"),
+                                blog_interface::html::span()
+                                    .class("blog-field-label blog-row")
+                                    .child(t("类型筛选", "Filter by type")),
                                 crate::select::Select(
                                     component_props_builder(&crate::select::Select)
                                         .label(Signal::derive(|| t("类型筛选", "Filter by type")))
@@ -203,7 +209,9 @@ pub(super) fn Links() -> impl IntoView {
                             .class("blog-form-field"),
                         blog_interface::html::label()
                             .child((
-                                t("状态筛选", "Filter by status"),
+                                blog_interface::html::span()
+                                    .class("blog-field-label blog-row")
+                                    .child(t("状态筛选", "Filter by status")),
                                 crate::select::Select(
                                     component_props_builder(&crate::select::Select)
                                         .label(Signal::derive(|| t("状态筛选", "Filter by status")))
@@ -234,18 +242,22 @@ pub(super) fn Links() -> impl IntoView {
                             .child(
                                 blog_interface::html::fieldset()
                                     .child((
-                                        blog_interface::html::h2().child(move || {
-                                            if editing.get().is_some() {
-                                                t("编辑资源", "Edit resource")
-                                            } else {
-                                                t("新增资源", "Add resource")
-                                            }
-                                        }),
+                                        blog_interface::html::h2().class("blog-row").child(
+                                            move || {
+                                                if editing.get().is_some() {
+                                                    t("编辑资源", "Edit resource")
+                                                } else {
+                                                    t("新增资源", "Add resource")
+                                                }
+                                            },
+                                        ),
                                         blog_interface::html::div()
                                             .child((
                                                 blog_interface::html::label()
                                                     .child((
-                                                        t("类型", "Type"),
+                                                        blog_interface::html::span()
+                                                            .class("blog-field-label blog-row")
+                                                            .child(t("类型", "Type")),
                                                         crate::select::Select(
                                                             component_props_builder(
                                                                 &crate::select::Select,

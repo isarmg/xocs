@@ -38,6 +38,7 @@ html:has(.blog-admin-shell, .blog-auth-shell) {
 .blog-app-shell .blog-flow--start { align-items: flex-start; }
 .blog-app-shell .blog-flow--end { align-items: flex-end; }
 .blog-app-shell .blog-flow--stretch { align-items: stretch; }
+.blog-app-shell .blog-check { flex-wrap: nowrap; column-gap: .5em; }
 .blog-app-shell :is(.blog-frame, .blog-content-panel, .blog-table-scroll, .editor-form, .inline-form) {
   --blog-row-border: var(--blog-control-border-width);
   --blog-server-corner-extent: var(--blog-server-corner-panel);
@@ -53,7 +54,7 @@ html:has(.blog-admin-shell, .blog-auth-shell) {
   overflow-wrap: anywhere;
 }
 .blog-app-shell .blog-frame--inset { padding-inline: calc(var(--blog-list-content-inset) - var(--blog-control-border-width)); }
-.blog-app-shell :is(.blog-row, .blog-button, .blog-error, .blog-empty, .blog-loading, :where(.blog-admin-workspace) :where(h1,h2,h3,p), .blog-dashboard-sections :where(a)) {
+.blog-app-shell :is(.blog-row, .blog-button, .image-lightbox-close, .blog-error, .blog-empty, .blog-loading) {
   --blog-control-height: var(--blog-compact-row-height);
   --blog-control-content-size: 1em;
   --blog-control-content-inset: calc((var(--blog-control-height) - var(--blog-control-content-size)) / 2);
@@ -67,7 +68,7 @@ html:has(.blog-admin-shell, .blog-auth-shell) {
   font-size: calc(var(--blog-control-height) * var(--blog-row-font-ratio));
   overflow-wrap: anywhere;
 }
-.blog-app-shell .blog-button {
+.blog-app-shell :is(.blog-button, .image-lightbox-close) {
   --blog-server-corner-extent: calc(var(--blog-control-height) / 2);
   display: inline-flex;
   align-items: center;
@@ -75,6 +76,11 @@ html:has(.blog-admin-shell, .blog-auth-shell) {
   height: auto;
   text-align: start;
   white-space: normal;
+}
+.blog-app-shell .image-lightbox-close {
+  --blog-control-height: var(--blog-input-row-height);
+  min-width: var(--blog-control-height);
+  justify-content: center;
 }
 .blog-app-shell .blog-row--flush { padding: 0; }
 .blog-app-shell .blog-row--center { display: flex; align-items: center; padding-block: 0; }
