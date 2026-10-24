@@ -50,7 +50,7 @@ async function shell(page, rootSelector, headerSelector, mainSelector) {
   }
 }
 
-async function control(locator, height, extent, border) {
+async function control(locator, height, extent, border, font = height * .4) {
   await expect(locator).toBeVisible();
   await expect(locator).toHaveAttribute('data-blog-server-corner-state', /^(paint|clip)$/);
   const geometry = await locator.evaluate(node => {
@@ -59,7 +59,7 @@ async function control(locator, height, extent, border) {
       extent: parseFloat(css.getPropertyValue('--blog-server-corner-extent')), border: parseFloat(css.borderTopWidth) };
   });
   near(geometry.height, height, 'Control height');
-  near(geometry.font, height * .4, 'Control typography follows its row height');
+  near(geometry.font, font, 'Control typography follows its working row');
   near(geometry.extent, extent, 'G4 corner extent');
   near(geometry.border, border, 'Control border');
   assert.equal(geometry.radius, '0px', 'The shared G4 renderer owns the corner');
@@ -230,9 +230,9 @@ async function businessComponents(page, base, dark, state) {
   // geometry checks. Exercise populated rows, pagination and media as well.
   await page.goto(`${base}/admin?lang=en#articles`);
   const articleRow = page.getByRole('row').filter({ hasText: summary.article_title }).first();
-  await control(articleRow.getByRole('button', { name: 'Edit', exact: true }), 36, 18, 0);
+  await control(articleRow.getByRole('button', { name: 'Edit', exact: true }), 34, 18, 0, 14.4);
   const remove = articleRow.getByRole('button', { name: 'Delete', exact: true });
-  await control(remove, 36, 18, 0);
+  await control(remove, 34, 18, 0, 14.4);
   assert.equal(await remove.evaluate(node => getComputedStyle(node).color), await color(page, '--blog-text-danger'),
     'Dangerous actions keep their semantic color instead of inheriting ordinary button color');
   const table = page.locator('.blog-table-scroll').filter({ has: page.getByRole('table', { name: 'Article list', exact: true }) });
@@ -399,7 +399,10 @@ async function businessComponents(page, base, dark, state) {
         page.locator('form.editor-form'), 'Resource filters and editor');
     }
     if (hash === 'family') await expect(page.getByRole('heading', { name: 'Edit home details', exact: true })).toBeVisible();
-    if (hash === 'resources') await separated(page.locator('form.inline-form'), page.locator('.blog-table-scroll'), 'Upload and file list');
+    if (hash === 'resources') {
+      await separated(page.locator('form.inline-form'), page.locator('.blog-table-scroll'), 'Upload and file list');
+      await control(page.getByRole('button', { name: 'Delete', exact: true }), 34, 18, 0, 14.4);
+    }
     if (hash === 'home') {
       const viewport = page.locator('.blog-table-scroll');
       await frameClearance(viewport, 'Editable home table viewport');
@@ -474,11 +477,11 @@ try {
           await expect(name).toBeVisible();
           await theme(page, dark);
           await shell(page, '.blog-admin-shell', '.blog-page-header', '.blog-shell-main');
-          await control(name, 44, 22, 1);
+          await control(name, 36, 18, 1);
           await keyboardFocus(name, 'Category input');
           await control(page.getByRole('button', { name: 'Create category', exact: true }), 36, 18, 0);
           const navigationButtons = page.locator('.blog-header-navigation').getByRole('button');
-          await expect(navigationButtons).toHaveCount(5);
+          await expect(navigationButtons).toHaveCount(13);
           for (const button of await navigationButtons.all()) await control(button, 36, 18, 0);
           const accountButton = page.getByRole('button', { name: 'Account settings', exact: true });
           near((await accountButton.boundingBox()).height, 44, 'Header actions retain comfortable targets');

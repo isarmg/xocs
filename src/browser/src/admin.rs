@@ -113,16 +113,6 @@ impl Group {
         }
     }
 
-    fn label(self) -> String {
-        match self {
-            Self::Overview => t("总览", "Overview"),
-            Self::Content => t("内容", "Content"),
-            Self::Community => t("社区", "Community"),
-            Self::Resources => t("资源", "Resources"),
-            Self::Settings => t("设置", "Settings"),
-        }
-    }
-
     fn title(self) -> String {
         match self {
             Self::Overview => t("总览", "Overview"),
@@ -168,14 +158,6 @@ impl Route {
             Self::NewArticle | Self::EditArticle(_) => Some(Page::Articles),
         }
     }
-
-    fn group(self) -> Option<Group> {
-        self.active_page().and_then(|page| {
-            Group::ALL
-                .into_iter()
-                .find(|group| group.pages().contains(&page))
-        })
-    }
 }
 
 #[component]
@@ -207,16 +189,19 @@ fn Workspace() -> impl IntoView {
                         .children(ToChildren::to_children(move || {
                             Group::ALL
                                 .into_iter()
-                                .map(move |group| {
+                                .flat_map(|group| group.pages().iter().copied())
+                                .map(move |page| {
                                     View::new(
                                         blog_interface::html::button()
                                             .class("blog-button")
-                                            .child(group.label())
-                                            .aria_pressed(move || {
-                                                (route.get().group() == Some(group)).to_string()
+                                            .r#type("button")
+                                            .child(page.label())
+                                            .aria_current(move || {
+                                                (route.get().active_page() == Some(page))
+                                                    .then_some("page")
                                             })
                                             .on(blog_interface::ev::click, move |_| {
-                                                navigate(group.pages()[0].hash())
+                                                navigate(page.hash())
                                             }),
                                     )
                                 })
@@ -249,41 +234,6 @@ fn Workspace() -> impl IntoView {
                         }))
                         .build(),
                 ),
-                move || {
-                    route
-                        .get()
-                        .group()
-                        .filter(|group| group.pages().len() > 1)
-                        .map(|group| {
-                            View::new(
-                                blog_interface::html::nav()
-                                    .class("blog-secondary-navigation blog-flow")
-                                    .aria_label(group.title())
-                                    .child(
-                                        group
-                                            .pages()
-                                            .iter()
-                                            .copied()
-                                            .map(move |page| {
-                                                View::new(
-                                                    blog_interface::html::button()
-                                                        .class("blog-button")
-                                                        .child(page.label())
-                                                        .aria_pressed(move || {
-                                                            (route.get().active_page()
-                                                                == Some(page))
-                                                            .to_string()
-                                                        })
-                                                        .on(blog_interface::ev::click, move |_| {
-                                                            navigate(page.hash())
-                                                        }),
-                                                )
-                                            })
-                                            .collect_view(),
-                                    ),
-                            )
-                        })
-                },
                 move || render_page(route.get()),
             )),
     )

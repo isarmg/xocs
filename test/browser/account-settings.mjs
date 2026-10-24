@@ -47,7 +47,7 @@ try {
           const icon = await trigger.evaluate(node => ({image:node.querySelector('svg').innerHTML,decoration:getComputedStyle(node).textDecorationLine}));
           await trigger.click();
           assert.deepEqual(await trigger.evaluate(node => ({image:node.querySelector('svg').innerHTML,decoration:getComputedStyle(node).textDecorationLine})),icon);
-          await expect(page.locator('.blog-header-navigation [aria-pressed="true"]')).toHaveCount(0);
+          await expect(page.locator('.blog-header-navigation [aria-current="page"]')).toHaveCount(0);
           await expect(page.locator('.blog-secondary-navigation')).toHaveCount(0);
           const dialog = page.getByRole('region', {name: english ? 'Account settings' : '账号设置', exact: true});
           await page.evaluate(() => document.fonts.ready);

@@ -5491,11 +5491,16 @@
         "directory": "src/interface",
         "production_behavior_change": true,
         "reason": "Apply the shared padded-frame role to account settings so compact inputs and keyboard focus stay clear of the surrounding panel border."
+      },
+      {
+        "directory": "src/browser",
+        "production_behavior_change": true,
+        "reason": "Present every administration page in one ZXS-style top navigation using current-page semantics, retain canonical page order and article-editor selection, and remove the superseded navigation-group rendering helpers without changing page routes or domain behavior."
       }
     ],
     "schema": 1
   },
-  "local_modifications_sha256": "aa850b645995993eac0ad1ea9ddc7448040b5c0bcb5ee361ea6f0b88cea8b59f",
+  "local_modifications_sha256": "516b0e84e9dbe2c312a1578ce3291d0e770c383d0b2c1eaff8f5f5f605d7b6d4",
   "lockfiles_sha256": {
     "Cargo.lock": "8f655b4a885008a5f062ddc08d848e25c500a798f5a90ed49ada54f8e5b722c8"
   },
@@ -33318,7 +33323,7 @@
       "directory": "src/browser",
       "files_sha256": {
         "Cargo.toml": "0de83da9eccfa9cf07da0cfdaa9e5d2b7bba9c62ca4647206c5606ce96bc49f6",
-        "src/admin.rs": "64601c4ecb203d7b83792f04a1ef3440e11b328acded8d0adf65326bd1034d35",
+        "src/admin.rs": "0e8d6c8cbe413ff12e742dd2aa1dec6a3c1871b0ee42cd2d1c688bf278430208",
         "src/admin/articles.rs": "24e554138276d885b29d70e5a0c0df195aa9951634a192b12884b0bc9ba7a927",
         "src/admin/dashboard.rs": "8fff1d22d44539036133bd3bc5145648a32c139316b7b5b4195b3cabb2506ea3",
         "src/admin/family.rs": "de6096f646395e679d36be0c66111bfec75c211c9aeeef2266d4343220fed126",
@@ -33363,16 +33368,16 @@
       "origins": [],
       "purpose": "浏览器 CSR 博客界面",
       "tests_sha256": {
-        "test/browser/account-settings.mjs": "92b4364f2b1d436043ce15fb9860c51d39004cf4ea1889468feeb5299a5dbd79",
-        "test/browser/admin-cleanup.mjs": "2abeab7caaf75b42462d3bee3eeabdbb846785c37a668ee0dbb1a935fcf61f52",
-        "test/browser/admin-layout.mjs": "26a0f134c4536dde6349c722a96ae8ba3c44cd01c754640d3d1a2cbe32f2568b",
+        "test/browser/account-settings.mjs": "a835168255b69f4036d56e3fb9fa3bba37fd251070ed628001314506506186ff",
+        "test/browser/admin-cleanup.mjs": "6dcf60478feeb30d6cd4dca159a45fea8ae26458144ab80b6cd56175cca17a33",
+        "test/browser/admin-layout.mjs": "82e40011776154fb6845e7dca7e56313d54cd8674bd9676f372c3ed5cd8fe0f1",
         "test/browser/admin-recovery.mjs": "3c7cc47e2e2974329e9100c85ee2fe7d48d392d17aaac509b03637d04f55b78b",
         "test/browser/anonymous-comments.mjs": "b7b5a25f98a6e6751e8dfa99e8279d1beaee7a84ba09970921f3f3575e6e96f7",
         "test/browser/async-state.mjs": "838d61cb00e3e0453905caa1919f5fea4a5d9c2df176dd2c095bc5015989d567",
         "test/browser/blog-interface-runtime.mjs": "375c6b8eb976663da1d8765d973b85f0b746816bb431aa99286e6f5aa1bca828",
         "test/browser/browser-fixtures.mjs": "b98fd5c28abfef85c0c76042688c5418405280d5eff39b585ae81c26c94af342",
         "test/browser/browser-fixtures.test.mjs": "4b05dd9d25fb85623d085da7e86eeaeb2ac7810fc820a7b528cfbbb5cd7551d8",
-        "test/browser/browser-smoke.mjs": "438e680a49c3f7a1aa04134c2c0ca41195fd23e74b3e9b1602e10f17991333d1",
+        "test/browser/browser-smoke.mjs": "dfc98178392782f8212a689aac81a3cd4dd34e1d886d77de87bba61622691c68",
         "test/browser/configured-media.mjs": "21b40a60e8a4754d68e04e6bb5d2d19f1286792f42dbe6b066cd080b37276a32",
         "test/browser/contract-fixes.mjs": "642358bafee4215fb01906d82854f37f964df1f3440a908225c2876f8f7c9b98",
         "test/browser/dependencies.mjs": "ca2fd74747f5bec8057bffbc4093e3ca26606fc973c812ef20d6e6e18e14dfdb",
@@ -33386,14 +33391,14 @@
         "test/browser/public-footer.mjs": "1da00f8c17505f01f1981d3301a21af3e2bb6bd2d241b7206ccf57be94bc10a0",
         "test/browser/public-layout.mjs": "14e1bbe7ce0a0fc3a9fbd75a2f26b354213de94db23d4c819960d966ab5cf31e",
         "test/browser/public-recovery.mjs": "d6219e65949c97be299d50b82fcd74302a12bf4acdc13585a3dbd8e04a1baddb",
-        "test/browser/public-style-baseline.mjs": "437c8ff62fb7c2e8dbcfab9d4a3c862569c0fd09418badde546ba99f57673ee5",
+        "test/browser/public-style-baseline.mjs": "6095aed2f6366188fd7b435953d610650d4bb1c976beb423d903ee14c84fb57a",
         "test/browser/rust-native-domain.mjs": "b1f841e636115e07f88a67cfd40440655b57983cff4f337d4df5777dfda7cc2b",
         "test/browser/startup-failure.mjs": "5a3b6c775c2c1b542a300bc19cef41cd6d5b9d1ddb422d8d847ac92e5eb6c7c5",
         "test/browser/startup-failures.mjs": "16190c27fdefa4d9e064cf7350d2d843f4724e1d7dbe7be9caf9fb5644441006",
-        "test/browser/style-contract.mjs": "56aee7e7bee0495082a71bbab2245fc97c9f4701907e9529f3334b7a2536693b",
+        "test/browser/style-contract.mjs": "e4064bb7f7b008db823f3176501b1317b0b9e96b9dc47b6617951371ebd5beda",
         "test/browser/toolchain-contract.test.mjs": "3a0e4e7a336ca6de5b0788c26120b7a776da17c2d4a7d2addf76665ed7ae8838",
         "test/browser/transport-lifecycle.mjs": "d8188d72b6819ee86353a356dd9d0c0139e74b9963fd6708bd28ab79227b48df",
-        "test/browser/unit/admin/routes.rs": "ecbc38c1e53301ce47f82cdc213aecb68976a9c70007b13d93b465611a4db064",
+        "test/browser/unit/admin/routes.rs": "c26e375a6ccd7888f36a541628ed9f2bcb20a40f933d53cf0d9084a80ac33514",
         "test/browser/unit/comments/tests.rs": "68527237cb94517ac4d775ade8b5db91543289eac798928dd9b37f759e607ad8",
         "test/browser/unit/contracts/tests.rs": "288e650739a706bd4286cf30938cd3431a1824edef7ad13c111a241faadf9fc4",
         "test/browser/unit/dates/tests.rs": "a89f07b3dc8ac98065f20fe5bf8de10c1b1fb88ae6c3a257163641af1115f401",

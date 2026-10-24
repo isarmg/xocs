@@ -67,6 +67,6 @@ html:has(.blog-admin-shell, .blog-auth-shell) { min-width: 320px; font-family: v
 .blog-admin-shell .blog-table th { color: var(--blog-block-muted); }
 .blog-admin-shell .blog-table tbody tr:last-child > td { border-block-end: 0; }
 .blog-admin-shell .blog-table .blog-actions { justify-content: flex-start; }
-.blog-admin-shell .blog-table .blog-actions > .blog-button { display: inline-flex; align-items: center; text-align: start; white-space: nowrap; }
+.blog-admin-shell .blog-table tbody .blog-button { min-height: calc(var(--blog-compact-row-height) - 2px); height: calc(var(--blog-compact-row-height) - 2px); padding-block: 0; font-size: inherit; white-space: nowrap; }
 .blog-admin-shell .blog-table-scroll:has(> .blog-table[hidden]) { display: none; }
 @media(forced-colors:active) { .blog-admin-shell .blog-frame { border-color: CanvasText; } .blog-admin-shell :is(input,select,textarea,[role=combobox]):not(.blog-input--underline):focus-visible { outline-color: Highlight; } }

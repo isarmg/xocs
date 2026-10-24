@@ -107,8 +107,11 @@ try {
           await page.goto(`${base}/admin?lang=${language}#dashboard`);
           await expect(page.getByRole('heading', { name: english ? 'Overview' : '总览', exact: true })).toBeVisible();
           await expect(page.locator('.blog-dashboard-sections a[href="/admin#users"]')).toHaveCount(0);
-          await page.locator('.blog-header-navigation').getByRole('button', { name: english ? 'Community' : '社区', exact: true }).click();
-          await expect(page.locator('.blog-secondary-navigation').getByRole('button')).toHaveCount(2);
+          const navigation = page.locator('.blog-header-navigation');
+          await expect(navigation.getByRole('button')).toHaveCount(13);
+          await navigation.getByRole('button', { name: english ? 'Comments' : '评论管理', exact: true }).click();
+          await expect(navigation.locator('[aria-current="page"]')).toHaveText(english ? 'Comments' : '评论管理');
+          await expect(page.locator('.blog-secondary-navigation')).toHaveCount(0);
           await expect(page.getByRole('button', { name: english ? 'Users' : '用户管理', exact: true })).toHaveCount(0);
           await page.getByRole('button', { name: english ? 'Account settings' : '账号设置', exact: true }).click();
           await expect(page.getByRole('region', { name: english ? 'Account settings' : '账号设置', exact: true })).toBeVisible();

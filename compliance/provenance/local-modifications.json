@@ -4431,6 +4431,11 @@
       "directory": "src/interface",
       "reason": "Apply the shared padded-frame role to account settings so compact inputs and keyboard focus stay clear of the surrounding panel border.",
       "production_behavior_change": true
+    },
+    {
+      "directory": "src/browser",
+      "reason": "Present every administration page in one ZXS-style top navigation using current-page semantics, retain canonical page order and article-editor selection, and remove the superseded navigation-group rendering helpers without changing page routes or domain behavior.",
+      "production_behavior_change": true
     }
   ]
 }

@@ -29,6 +29,10 @@
     {
       "date": "2026-10-24",
       "description": "Require explicit layout and frame roles, separate nested form and rich-content surfaces with shared 18px clearance, preserve transparent table scrolling and flush text surfaces, and restore administrative keyboard focus indicators and theme-colored action links."
+    },
+    {
+      "date": "2026-10-24",
+      "description": "Use the reference compact 36px working-row geometry for administrative single-line inputs, retaining the shared 18px frame clearance, multiline writing areas and independent authentication/header targets. Match 34px table-row actions with inherited row typography and prevent wrapped action labels from increasing single-line control height."
     }
   ]
 }

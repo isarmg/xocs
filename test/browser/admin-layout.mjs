@@ -2,15 +2,15 @@ import assert from 'node:assert/strict';
 import { chromium, firefox, expect } from './dependencies.mjs';
 import { AxeBuilder } from './dependencies.mjs';
 import { preview } from '../tools/assets/test-preview.mjs';
-import { adminSite, mockApi } from './browser-fixtures.mjs';
+import { adminSite, mockApi, waitForApplication } from './browser-fixtures.mjs';
 import { paintedSurfaceColor } from './painted-surface.mjs';
 
-const groups = [
-  { labels: ['总览', 'Overview'], pages: [['dashboard', '总览', 'Overview']] },
-  { labels: ['内容', 'Content'], pages: [['articles', '文章管理', 'Articles'], ['categories', '分类管理', 'Categories'], ['labels', '标签管理', 'Tags'], ['notes', '随笔管理', 'Notes'], ['letter', '信笺管理', 'Letter']] },
-  { labels: ['社区', 'Community'], pages: [['comments', '评论管理', 'Comments'], ['tree-hole', '留言板管理', 'Message board']] },
-  { labels: ['资源', 'Resources'], pages: [['resources', '文件管理', 'Files'], ['links', '内容资源', 'Content resources'], ['family', '恋爱笔记', 'Love journal']] },
-  { labels: ['设置', 'Settings'], pages: [['site', '网站设置', 'Site settings'], ['home', '首页栏目', 'Home sections']] },
+const pages = [
+  ['dashboard', '总览', 'Overview'], ['articles', '文章管理', 'Articles'], ['categories', '分类管理', 'Categories'],
+  ['labels', '标签管理', 'Tags'], ['notes', '随笔管理', 'Notes'], ['letter', '信笺管理', 'Letter'],
+  ['comments', '评论管理', 'Comments'], ['tree-hole', '留言板管理', 'Message board'], ['resources', '文件管理', 'Files'],
+  ['links', '内容资源', 'Content resources'], ['family', '恋爱笔记', 'Love journal'],
+  ['site', '网站设置', 'Site settings'], ['home', '首页栏目', 'Home sections'],
 ];
 
 async function layout(page) {
@@ -30,6 +30,7 @@ async function accessible(page) {
 }
 
 async function surfaces(page, selector) {
+  await waitForApplication(page);
   await page.locator(selector).first().waitFor({ state: 'visible' });
   const expected = await page.evaluate(() => {
     const probe = document.createElement('span');
@@ -52,42 +53,39 @@ try {
     const browser = await engine.launch();
     try {
       for (const width of [390, 1280]) for (const language of ['zh-CN', 'en']) {
-        const english = language === 'en', labelIndex = english ? 1 : 0;
+        const english = language === 'en';
         const context = await browser.newContext({ locale: language, colorScheme: 'light', viewport: { width, height: 900 } });
         const page = await context.newPage(), errors = [];
         page.on('pageerror', error => errors.push(error.message));
         await mockApi(page, { authenticated: true });
         await page.goto(`${base}/admin?lang=${language}#categories`);
         const primary = page.locator('.blog-header-navigation');
-        const secondary = page.locator('.blog-secondary-navigation');
-        await expect(primary.getByRole('button')).toHaveCount(5);
-        await expect(secondary.getByRole('button', { pressed: true })).toHaveText(english ? 'Categories' : '分类管理');
-        for (const group of groups) {
-          await primary.getByRole('button', { name: group.labels[labelIndex], exact: true }).click();
-          await expect(primary.getByRole('button', { pressed: true })).toHaveText(group.labels[labelIndex]);
-          for (const [id, chinese, englishTitle] of group.pages) {
-            if (group.pages.length > 1) await secondary.getByRole('button', { name: english ? englishTitle : chinese, exact: true }).click();
-            await expect(page).toHaveURL(new RegExp(`#${id}$`));
-            await expect(page.getByRole('heading', { level: 1, name: english ? englishTitle : chinese, exact: true })).toBeVisible();
-            if (group.pages.length > 1) await expect(secondary.getByRole('button', { pressed: true })).toHaveText(english ? englishTitle : chinese);
-            await layout(page);
-          }
+        await expect(primary.getByRole('button')).toHaveCount(pages.length);
+        await expect(primary.locator('[aria-current="page"]')).toHaveText(english ? 'Categories' : '分类管理');
+        await expect(primary.locator('[aria-pressed]')).toHaveCount(0);
+        await expect(page.locator('.blog-secondary-navigation')).toHaveCount(0);
+        for (const [id, chinese, englishTitle] of pages) {
+          await primary.getByRole('button', { name: english ? englishTitle : chinese, exact: true }).click();
+          await expect(page).toHaveURL(new RegExp(`#${id}$`));
+          await expect(page.getByRole('heading', { level: 1, name: english ? englishTitle : chinese, exact: true })).toBeVisible();
+          await expect(primary.locator('[aria-current="page"]')).toHaveText(english ? englishTitle : chinese);
+          await layout(page);
         }
-        await primary.getByRole('button', { name: english ? 'Content' : '内容', exact: true }).click();
+        await primary.getByRole('button', { name: english ? 'Articles' : '文章管理', exact: true }).click();
         await page.getByRole('button', { name: english ? 'Add article' : '新增文章', exact: true }).click();
         await expect(page.getByRole('heading', { name: english ? 'Add article' : '新增文章', exact: true })).toBeVisible();
-        await expect(secondary.getByRole('button', { pressed: true })).toHaveText(english ? 'Articles' : '文章管理');
+        await expect(primary.locator('[aria-current="page"]')).toHaveText(english ? 'Articles' : '文章管理');
         await surfaces(page, '.blog-frame');
         if (english) await accessible(page);
         await page.getByRole('button', { name: english ? 'Cancel' : '取消', exact: true }).click();
         await expect(page).toHaveURL(/#articles$/);
         await page.goBack();
         await expect(page).toHaveURL(/#new$/);
-        await expect(secondary.getByRole('button', { pressed: true })).toHaveText(english ? 'Articles' : '文章管理');
+        await expect(primary.locator('[aria-current="page"]')).toHaveText(english ? 'Articles' : '文章管理');
         await page.goto(`${base}/admin?lang=${language}#edit/1`);
         await page.reload();
         await expect(page.getByRole('heading', { name: english ? 'Edit article' : '编辑文章', exact: true })).toBeVisible();
-        await expect(primary.getByRole('button', { pressed: true })).toHaveText(english ? 'Content' : '内容');
+        await expect(primary.locator('[aria-current="page"]')).toHaveText(english ? 'Articles' : '文章管理');
         await layout(page);
         await primary.getByRole('button', { name: english ? 'Overview' : '总览', exact: true }).click();
         await expect(page.getByRole('table', { name: english ? 'Site statistics' : '网站统计', exact: true })).toBeVisible();
@@ -97,11 +95,11 @@ try {
         await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
         await surfaces(page, '.blog-frame');
         if (english) await accessible(page);
-        await primary.getByRole('button', { name: english ? 'Content' : '内容', exact: true }).click();
-        await secondary.getByRole('button', { name: english ? 'Categories' : '分类管理', exact: true }).click();
+        await primary.getByRole('button', { name: english ? 'Categories' : '分类管理', exact: true }).click();
+        await expect(page.getByRole('textbox', { name: english ? 'Category name' : '分类名称', exact: true })).toBeEnabled();
         await surfaces(page, '.blog-frame');
         if (english) await accessible(page);
-        await primary.getByRole('button', { name: english ? 'Settings' : '设置', exact: true }).click();
+        await primary.getByRole('button', { name: english ? 'Site settings' : '网站设置', exact: true }).click();
         await expect(page.getByLabel(english ? 'Site name' : '网站名称', { exact: true })).toHaveValue('BLOG');
         await surfaces(page, '.blog-settings-form .blog-frame');
         if (english) await accessible(page);

@@ -107,6 +107,9 @@ html:has(.blog-admin-shell, .blog-auth-shell) {
   font-size: calc(var(--blog-control-height) * var(--blog-row-font-ratio));
 }
 .blog-app-shell .blog-input--compact { --blog-control-height: var(--blog-compact-row-height); }
+/* Administration uses the compact working row for single-line fields, just as
+ * the reference's search, inline editors, account fields and selectors do. */
+.blog-app-shell input.blog-input { --blog-control-height: var(--blog-compact-row-height); }
 .blog-app-shell textarea.blog-input {
   height: auto;
   padding-block: max(0px, calc((var(--blog-control-height) - 1lh) / 2 - var(--blog-control-border-width)));

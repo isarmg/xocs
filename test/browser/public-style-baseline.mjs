@@ -151,6 +151,7 @@ try {
               await page.evaluate(() => scrollTo(0, 0));
               if (dark) await expect(page.locator('.original-public')).toHaveClass(/theme-dark/);
               else await expect(page.locator('.original-public')).not.toHaveClass(/theme-dark/);
+              await waitForApplication(page);
             }));
             const samples = await Promise.all(pages.map(page => snapshot(page, [...common, ...selectors])));
             compare(samples[0], samples[1], label);

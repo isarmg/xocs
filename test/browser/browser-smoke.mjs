@@ -144,9 +144,10 @@ try {
     await page.locator('input[name="password"]').fill('TemporaryPassphrase123');
     await page.locator('form button[type="submit"]').click();
     await page.getByRole('heading', { name: '文章管理' }).waitFor();
-    for (const [group, label] of [['总览','总览'], ['设置','首页栏目'], ['内容','分类管理'], ['内容','标签管理'], ['社区','评论管理'], ['内容','随笔管理'], ['社区','留言板管理'], ['资源','文件管理'], ['资源','内容资源'], ['资源','恋爱笔记'], ['设置','网站设置']]) {
-      await page.locator('.blog-header-navigation').getByRole('button', { name: group, exact: true }).click();
-      if (group !== '总览') await page.locator('.blog-secondary-navigation').getByRole('button', { name: label, exact: true }).click();
+    for (const label of ['总览', '首页栏目', '分类管理', '标签管理', '评论管理', '随笔管理', '留言板管理', '文件管理', '内容资源', '恋爱笔记', '网站设置']) {
+      const navigation = page.locator('.blog-header-navigation');
+      await navigation.getByRole('button', { name: label, exact: true }).click();
+      await expect(navigation.locator('[aria-current="page"]')).toHaveText(label);
       await page.getByRole('heading', { name: label }).waitFor();
       if (label === '评论管理') {
         const wish = page.getByRole('row').filter({hasText:'Smoke love wish'});

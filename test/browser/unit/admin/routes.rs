@@ -2,7 +2,7 @@ use super::{Group, Page, Route};
 use std::collections::HashSet;
 
 #[test]
-fn every_navigation_page_has_a_unique_hash_and_round_trips_to_its_group() {
+fn every_navigation_page_has_a_unique_hash_and_round_trips() {
     let mut hashes = HashSet::new();
     for group in Group::ALL {
         assert!(
@@ -18,9 +18,13 @@ fn every_navigation_page_has_a_unique_hash_and_round_trips_to_its_group() {
             let route = Route::parse(page.hash());
             assert!(route == Route::Page(page));
             assert!(route.active_page() == Some(page));
-            assert!(route.group() == Some(group));
         }
     }
+    assert_eq!(
+        hashes.len(),
+        13,
+        "every administration page remains reachable"
+    );
 }
 
 #[test]
@@ -31,14 +35,12 @@ fn article_editor_routes_share_article_navigation_and_keep_the_requested_id() {
     for hash in ["new", "edit/42", "edit/invalid", "", "unknown"] {
         let route = Route::parse(hash);
         assert!(route.active_page() == Some(Page::Articles));
-        assert!(route.group() == Some(Group::Content));
     }
 }
 
 #[test]
-fn account_settings_have_no_selected_content_navigation_group() {
+fn account_settings_have_no_selected_content_navigation_page() {
     let route = Route::parse("account");
     assert!(route == Route::Account);
     assert!(route.active_page().is_none());
-    assert!(route.group().is_none());
 }
