@@ -134,7 +134,7 @@ pub(super) fn Articles() -> impl IntoView {
                     .unwrap_or(false) { action
                     .run(format!("/api/v1/content/articles/{id}"), "DELETE", None,
                     move | _ | { notify(t("文章已删除", "Article deleted"));
-                    data.reload(); }); }),)).class("blog-actions"))
+                    data.reload(); }); }),)).class("blog-actions blog-flow"))
                 ,),
         ),
 )
@@ -145,7 +145,7 @@ pub(super) fn Articles() -> impl IntoView {
                                         .class("blog-table")
                                         .aria_label(t("文章列表", "Article list")),
                                 )
-                                .class("blog-table-scroll")
+                                .class("blog-table-scroll blog-frame")
                                 .tabindex("0")
                                 .role("region")
                                 .aria_label(t("数据表格", "Data table")),
@@ -159,6 +159,6 @@ pub(super) fn Articles() -> impl IntoView {
                         .build(),
                 ),
             ))
-            .class("blog-content-stack"),
+            .class("blog-content-stack blog-stack"),
     )
 }

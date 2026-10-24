@@ -83,6 +83,7 @@ pub(super) fn Moderation(kind: ModerationKind) -> impl IntoView {
             .child( safe_url(& path, false)
             .map(| u | View::new(
     blog_interface::html::a()
+        .class("blog-button")
         .child(
 
             t("打开", "Open"),
@@ -100,6 +101,7 @@ pub(super) fn Moderation(kind: ModerationKind) -> impl IntoView {
             "comment_type").as_str() { "message" => t("留言板", "Message board")
             .into_any(), "love" => View::new(
     blog_interface::html::a()
+        .class("blog-button")
         .child(
 
             t("祝福板", "Wishes"),
@@ -110,6 +112,7 @@ pub(super) fn Moderation(kind: ModerationKind) -> impl IntoView {
 )
             .into_any(), _ => View::new(
     blog_interface::html::a()
+        .class("blog-button")
         .child(
 
             format!(
@@ -206,6 +209,9 @@ pub(super) fn Moderation(kind: ModerationKind) -> impl IntoView {
                     Feedback(component_props_builder(& Feedback)
                     .error( action.error).build()), Feedback(component_props_builder(& Feedback)
                     .error( upload.error).build()),
+                    blog_interface::html::div()
+                    .class("blog-stack blog-stack--spaced")
+                    .child((
                     (kind == ModerationKind::Files).then(| | View::new(
     (
             blog_interface::html::fieldset()
@@ -224,14 +230,14 @@ pub(super) fn Moderation(kind: ModerationKind) -> impl IntoView {
             .child( move | | if upload.busy.get() { t("上传中…", "Uploading…") } else { t("上传", "Upload") }).class("blog-button").r#type("submit")
             .disabled(move
             | | filename.get().is_empty() || upload.busy.get()),))
-            .class("inline-form").on(blog_interface::ev::submit, move | ev
+            .class("inline-form blog-frame blog-frame--padded blog-flow blog-form-flow").on(blog_interface::ev::submit, move | ev
             | { ev.prevent_default(); let file = chosen.with_value(| f | f.as_ref()
             .cloned()); if let Some(file) = file { upload
             .upload(blog_interface::thread_bound::SendWrapper::new(file), move | v | { uploaded
             .set(text(& v, "path")); filename.set(String::new()); chosen
             .set_value(blog_interface::thread_bound::SendWrapper::new(None)); data.reload();
             notify(t("图片已上传", "Image uploaded")); }) } }))
-            .class("blog-fieldset")
+            .class("blog-fieldset blog-stack")
             .disabled(move
             | | upload.busy.get() || action.busy.get()),
             move | | (! uploaded.get().is_empty()).then(| | View::new(
@@ -285,7 +291,7 @@ pub(super) fn Moderation(kind: ModerationKind) -> impl IntoView {
                             },
                     ),
         )
-        .class("blog-table-scroll")
+        .class("blog-table-scroll blog-frame")
         .tabindex("0")
         .role("region")
         .aria_label(
@@ -300,10 +306,11 @@ pub(super) fn Moderation(kind: ModerationKind) -> impl IntoView {
                     Pager(component_props_builder(& Pager)
                     .data( data)
                     .page( page).build()),
+                    )),
                     Lightbox(component_props_builder(& Lightbox)
                     .src( lightbox).build())
                 ,),
         )
-        .class("blog-content-stack"),
+        .class("blog-content-stack blog-stack"),
 )
 }

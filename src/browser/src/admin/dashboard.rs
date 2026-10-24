@@ -9,7 +9,7 @@ pub(super) fn Dashboard() -> impl IntoView {
     let data = load_typed::<AdminStats>(Signal::derive(|| "/api/v1/content/statistics".into()));
     View::new(
         blog_interface::html::section()
-            .class("blog-content-stack")
+            .class("blog-content-stack blog-stack")
             .child((
                 blog_interface::html::h1()
                     .class("blog-row")
@@ -29,7 +29,7 @@ pub(super) fn Dashboard() -> impl IntoView {
                     data.value.get().map(|stats| {
                         View::new(
                             blog_interface::html::div()
-                                .class("blog-table-scroll")
+                                .class("blog-table-scroll blog-frame")
                                 .tabindex("0")
                                 .role("region")
                                 .aria_label(t("数据表格", "Data table"))
@@ -80,7 +80,7 @@ pub(super) fn Dashboard() -> impl IntoView {
                             .map(|group| {
                                 View::new(
                                     blog_interface::html::section()
-                                        .class("blog-content-panel")
+                                        .class("blog-content-panel blog-frame blog-stack")
                                         .child((
                                             blog_interface::html::h2()
                                                 .class("blog-row")

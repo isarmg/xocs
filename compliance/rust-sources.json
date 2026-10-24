@@ -5481,11 +5481,21 @@
         "directory": "src/browser",
         "production_behavior_change": true,
         "reason": "Replace implicit administration heading and paragraph styling with explicit geometry roles, align handwritten form labels and checkbox rows, and separate editor Markdown and media presentation from public page typography without changing validation, requests or reactive ownership."
+      },
+      {
+        "directory": "src/browser",
+        "production_behavior_change": true,
+        "reason": "Separate administrative layout wrappers from explicit painted form and table surfaces, give nested controls and rich previews shared clearance and task-group spacing, and align compact editable cells, action links and local validation roles without changing mutation ownership."
+      },
+      {
+        "directory": "src/interface",
+        "production_behavior_change": true,
+        "reason": "Apply the shared padded-frame role to account settings so compact inputs and keyboard focus stay clear of the surrounding panel border."
       }
     ],
     "schema": 1
   },
-  "local_modifications_sha256": "2aa22afb7ceafd193fd6888ec02d75673b08ee31559cb513ae6d9ab8234dea8c",
+  "local_modifications_sha256": "aa850b645995993eac0ad1ea9ddc7448040b5c0bcb5ee361ea6f0b88cea8b59f",
   "lockfiles_sha256": {
     "Cargo.lock": "8f655b4a885008a5f062ddc08d848e25c500a798f5a90ed49ada54f8e5b722c8"
   },
@@ -33309,15 +33319,15 @@
       "files_sha256": {
         "Cargo.toml": "0de83da9eccfa9cf07da0cfdaa9e5d2b7bba9c62ca4647206c5606ce96bc49f6",
         "src/admin.rs": "64601c4ecb203d7b83792f04a1ef3440e11b328acded8d0adf65326bd1034d35",
-        "src/admin/articles.rs": "a71dffe8c01fef43c6ebe9b1fc78fc54e0167266d73730fc14d93fb2659c3146",
-        "src/admin/dashboard.rs": "3cb91c156e7ce8265d2c22ffd2dd898a3079aad88d28bd338f3cb7342dccd686",
-        "src/admin/family.rs": "6587fb5b8b3d2072866420fb4354d42b1c322c0360cd65369eed3de78739cc02",
-        "src/admin/home.rs": "b8ffc0dd8ce5c2bb300fce90a99a5de0d45c3da89dfc0be9db74cafe5dd69223",
-        "src/admin/letter.rs": "3f7bc00b64428f36006de523f2c8df2d134b29ea6b24b2494d23fe2b162d771a",
-        "src/admin/links.rs": "e206c3f6293cd8484452eefd775b94f229974b8ab53083bba331f231fd88c25a",
-        "src/admin/moderation.rs": "f0e07a3b2ca15868bd99c572cf5e43fcad820c7e8df716c82c2e29a219a97eb4",
-        "src/admin/site.rs": "f025c9ec50e9d4318b9338174cce3c5875e55fd08dd16b51793badca8ad669ff",
-        "src/admin/taxonomy.rs": "64587eb509067d48e6e065410e944da2936cd895fd14cd10c1e60b631177e456",
+        "src/admin/articles.rs": "24e554138276d885b29d70e5a0c0df195aa9951634a192b12884b0bc9ba7a927",
+        "src/admin/dashboard.rs": "8fff1d22d44539036133bd3bc5145648a32c139316b7b5b4195b3cabb2506ea3",
+        "src/admin/family.rs": "de6096f646395e679d36be0c66111bfec75c211c9aeeef2266d4343220fed126",
+        "src/admin/home.rs": "25ada2411352bc61b73b7dc507dc4d97294bfaf4119efdb80dd31979ad4b8b2a",
+        "src/admin/letter.rs": "74877d2776e4c5cbe7820fc83db335f7e45145816a11bf822035cd6f6c22f433",
+        "src/admin/links.rs": "15633fc4f72ba675b9dc94803b175df3f34dd8eb292a5b7fbc2790749bfe8904",
+        "src/admin/moderation.rs": "ffdfe904b07dd42f071515002412a0d7a0aad23f85d03990f77dcabec605af94",
+        "src/admin/site.rs": "38ebce01762c2cc78470b08f16228120f92b236fbb5c8cfd2add3df5aa028317",
+        "src/admin/taxonomy.rs": "b9359f6e2f2793cc66c54f515619a79fa3f77a8e71fea5b09cdd89a56cf2d16e",
         "src/browser.rs": "bf9606596b78ee08526eb650e3097d6289292ccd9d5f882b5c081a6638ca15dd",
         "src/comments.rs": "43753883f6cce3697d07f27088c105ef9ac8890c342205643714d2bc7d1048de",
         "src/common/action.rs": "c438b318168447c6f9c6080c6614a0819fc8e3a62e68d6e3360e6613eedd6ad7",
@@ -33331,7 +33341,7 @@
         "src/common/request.rs": "87be49ca67357eb00f1e9f31a4e42eaf08c15f7a38ffadde09dd72fd2f736e51",
         "src/contracts.rs": "003ec846bb8e27cf2fd412042e05da4ca3df6c423739407def23b74d66c8ce4c",
         "src/dates.rs": "2beb8be9eac2c01eb17b9e5f2fc151564c69e9c36fbe2e8da8d16d60570d655c",
-        "src/editor.rs": "81c2404834df1759559dee0b27cfd0536b205980966f1c97391ee27681d87a43",
+        "src/editor.rs": "b7276847b8ce26a2ca4718dca5115051fcfa90ccf8b657063f4593da5a4c8cbc",
         "src/lib.rs": "ae772f2c49c8465d169546704bb5a2c27f0d5f5c59e31aaf231f4b0249d14631",
         "src/markdown.rs": "8b114b47884e879b1c55744e1eab6df19786626fe538d263c075466e9eff2ade",
         "src/models.rs": "abdfcf2f12b521f4f7276455019b1ae1a6861376695857661a4fa7ae5cc552f7",
@@ -33355,7 +33365,7 @@
       "tests_sha256": {
         "test/browser/account-settings.mjs": "92b4364f2b1d436043ce15fb9860c51d39004cf4ea1889468feeb5299a5dbd79",
         "test/browser/admin-cleanup.mjs": "2abeab7caaf75b42462d3bee3eeabdbb846785c37a668ee0dbb1a935fcf61f52",
-        "test/browser/admin-layout.mjs": "5f2fc6e1c445f00badb151f18ff1eb3acf6cea3bc70904af5e81d971b2493c32",
+        "test/browser/admin-layout.mjs": "26a0f134c4536dde6349c722a96ae8ba3c44cd01c754640d3d1a2cbe32f2568b",
         "test/browser/admin-recovery.mjs": "3c7cc47e2e2974329e9100c85ee2fe7d48d392d17aaac509b03637d04f55b78b",
         "test/browser/anonymous-comments.mjs": "b7b5a25f98a6e6751e8dfa99e8279d1beaee7a84ba09970921f3f3575e6e96f7",
         "test/browser/async-state.mjs": "838d61cb00e3e0453905caa1919f5fea4a5d9c2df176dd2c095bc5015989d567",
@@ -33380,7 +33390,7 @@
         "test/browser/rust-native-domain.mjs": "b1f841e636115e07f88a67cfd40440655b57983cff4f337d4df5777dfda7cc2b",
         "test/browser/startup-failure.mjs": "5a3b6c775c2c1b542a300bc19cef41cd6d5b9d1ddb422d8d847ac92e5eb6c7c5",
         "test/browser/startup-failures.mjs": "16190c27fdefa4d9e064cf7350d2d843f4724e1d7dbe7be9caf9fb5644441006",
-        "test/browser/style-contract.mjs": "f2768b9d2fb927d23899597a17b5e20cf9e8bdc68ac30e6613d257dba5412cc4",
+        "test/browser/style-contract.mjs": "56aee7e7bee0495082a71bbab2245fc97c9f4701907e9529f3334b7a2536693b",
         "test/browser/toolchain-contract.test.mjs": "3a0e4e7a336ca6de5b0788c26120b7a776da17c2d4a7d2addf76665ed7ae8838",
         "test/browser/transport-lifecycle.mjs": "d8188d72b6819ee86353a356dd9d0c0139e74b9963fd6708bd28ab79227b48df",
         "test/browser/unit/admin/routes.rs": "ecbc38c1e53301ce47f82cdc213aecb68976a9c70007b13d93b465611a4db064",
@@ -49074,7 +49084,7 @@
         "ORIGIN.json": "bde0d55effc2c7042927f9302813c52aae0f80b65d2170808a9c8f20ab664150",
         "README.md": "b4926c681d00fc3d4c5b4f0c0298daf7dd7c65598fcc6cf9efc87f3eb1065fa6",
         "src/api.rs": "b2ea0e5e5a73477e19944822894eca97f817b8e48338b48b6562af0ee0f03418",
-        "src/components.rs": "35fe6fe42a5ab4174173e6a3f0bf51c92b390dcfb340f90d7d08f3d5e969a33b",
+        "src/components.rs": "e5971a066b1ebbd31ccb6141dadbeab0ab031a9beeb190597f3327a2326add6e",
         "src/contracts.rs": "45efc1ec3ad0fe5ab8abf07d98681f59830ff0ecd5663c80bf00a8f380b57286",
         "src/i18n.rs": "4d69ca1ae345aa5c349fad12819644f6d3464cc33dbec0a2f07b24f123e2035e",
         "src/lib.rs": "0308afb52d756a9de43e9054b3aac4a185f337f3d0900087db62320aa8f27302",

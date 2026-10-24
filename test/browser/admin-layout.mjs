@@ -39,7 +39,7 @@ async function surfaces(page, selector) {
     probe.remove();
     return expected;
   });
-  const elements = page.locator(selector), count = await elements.count();
+  const elements = page.locator(selector).filter({ visible: true }), count = await elements.count();
   assert.ok(count > 0, `No surfaces found: ${selector}`);
   await expect.poll(() => Promise.all(Array.from({ length: count }, (_, index) =>
     paintedSurfaceColor(elements.nth(index))))).toEqual(Array(count).fill(expected));
@@ -77,7 +77,7 @@ try {
         await page.getByRole('button', { name: english ? 'Add article' : '新增文章', exact: true }).click();
         await expect(page.getByRole('heading', { name: english ? 'Add article' : '新增文章', exact: true })).toBeVisible();
         await expect(secondary.getByRole('button', { pressed: true })).toHaveText(english ? 'Articles' : '文章管理');
-        await surfaces(page, '.editor-form');
+        await surfaces(page, '.blog-frame');
         if (english) await accessible(page);
         await page.getByRole('button', { name: english ? 'Cancel' : '取消', exact: true }).click();
         await expect(page).toHaveURL(/#articles$/);
@@ -91,19 +91,19 @@ try {
         await layout(page);
         await primary.getByRole('button', { name: english ? 'Overview' : '总览', exact: true }).click();
         await expect(page.getByRole('table', { name: english ? 'Site statistics' : '网站统计', exact: true })).toBeVisible();
-        await surfaces(page, '.blog-table-scroll, .blog-dashboard-sections > section');
+        await surfaces(page, '.blog-frame');
         if (english) await accessible(page);
         await page.getByRole('button', { name: english ? 'Switch to dark mode' : '切换到深色模式', exact: true }).click();
         await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-        await surfaces(page, '.blog-table-scroll, .blog-dashboard-sections > section');
+        await surfaces(page, '.blog-frame');
         if (english) await accessible(page);
         await primary.getByRole('button', { name: english ? 'Content' : '内容', exact: true }).click();
         await secondary.getByRole('button', { name: english ? 'Categories' : '分类管理', exact: true }).click();
-        await surfaces(page, '.inline-form');
+        await surfaces(page, '.blog-frame');
         if (english) await accessible(page);
         await primary.getByRole('button', { name: english ? 'Settings' : '设置', exact: true }).click();
         await expect(page.getByLabel(english ? 'Site name' : '网站名称', { exact: true })).toHaveValue('BLOG');
-        await surfaces(page, '.blog-settings-form .blog-content-panel');
+        await surfaces(page, '.blog-settings-form .blog-frame');
         if (english) await accessible(page);
         await layout(page);
         await page.getByRole('button', { name: english ? 'Switch to Chinese' : '切换为英文', exact: true }).click();

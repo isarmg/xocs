@@ -41,7 +41,7 @@ pub(super) fn LetterSettings() -> impl IntoView {
                 move || {
                     (!validation.get().is_empty()).then(|| {
                         blog_interface::html::p()
-                            .class("blog-row")
+                            .class("blog-row blog-danger")
                             .role("alert")
                             .child(validation.get())
                     })
@@ -110,6 +110,7 @@ pub(super) fn LetterSettings() -> impl IntoView {
                                                             validation.set(String::new());
                                                         }),
                                                     blog_interface::html::a()
+                                                        .class("blog-button")
                                                         .child(t(
                                                             "查看公开页面",
                                                             "View public page",
@@ -118,12 +119,12 @@ pub(super) fn LetterSettings() -> impl IntoView {
                                                         .target("_blank")
                                                         .rel("noopener noreferrer"),
                                                 ))
-                                                .class("blog-actions"),
+                                                .class("blog-actions blog-flow"),
                                         ))
-                                        .class("blog-fieldset")
+                                        .class("blog-fieldset blog-stack")
                                         .disabled(move || save.busy.get()),
                                 )
-                                .class("editor-form")
+                                .class("editor-form blog-frame blog-frame--padded blog-stack")
                                 .on(blog_interface::ev::input, move |_| {
                                     validation.set(String::new())
                                 })
@@ -181,6 +182,6 @@ pub(super) fn LetterSettings() -> impl IntoView {
                     })
                 },
             ))
-            .class("blog-content-stack"),
+            .class("blog-content-stack blog-stack"),
     )
 }

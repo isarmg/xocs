@@ -34,6 +34,10 @@
 /* Administration owns the compact design; public documents keep their root scale. */
 html:has(.blog-admin-shell, .blog-auth-shell) { min-width: 320px; font-family: var(--blog-font-ui); font-size: 14px; color: var(--blog-text-primary); background: var(--blog-bg-page); }
 .blog-admin-shell .blog-form-field { gap: 0; margin: 0; min-width: 0; }
+/* Public fields retain their existing focus treatment. Administration restores
+ * a visible keyboard indicator above the old shared :focus reset. */
+.blog-admin-shell :is(input,select,textarea,[role=combobox]):not(.blog-input--underline):focus-visible { outline: 2px solid var(--blog-focus); outline-offset: 3px; }
+.blog-admin-shell a,.blog-admin-shell a:visited { color: var(--blog-text-link); }
 .blog-admin-shell .blog-dialog-heading { gap: 0; }
 .blog-admin-shell .blog-actions { margin-block: 0; }
 .blog-admin-shell .blog-request-id { margin: 0; font-size: inherit; }
@@ -54,7 +58,7 @@ html:has(.blog-admin-shell, .blog-auth-shell) { min-width: 320px; font-family: v
 .blog-app-shell :where(h1,h2,h3) { font-size: inherit; font-weight: 400; }
 .blog-app-shell :where(code,pre) { font-family: var(--blog-font-mono); overflow-wrap: anywhere; font-size: inherit; }
 .blog-app-shell pre { max-width: 100%; max-height: 30rem; overflow: auto; line-height: 1.65; white-space: pre-wrap; }
-.blog-admin-shell .blog-fieldset { margin: 0; padding: 0; border: 0; }
+.blog-admin-shell :where(.blog-fieldset) { margin: 0; padding: 0; border: 0; }
 .blog-admin-shell .blog-instance-link,.blog-admin-shell .blog-instance-link:visited { color: inherit; text-decoration: none; }
 .blog-admin-shell .blog-instance-link:hover,.blog-admin-shell .blog-instance-link:focus-visible { text-decoration: underline; }
 .blog-admin-shell .blog-table-scroll { max-width: 100%; overflow: auto; }
@@ -64,6 +68,5 @@ html:has(.blog-admin-shell, .blog-auth-shell) { min-width: 320px; font-family: v
 .blog-admin-shell .blog-table tbody tr:last-child > td { border-block-end: 0; }
 .blog-admin-shell .blog-table .blog-actions { justify-content: flex-start; }
 .blog-admin-shell .blog-table .blog-actions > .blog-button { display: inline-flex; align-items: center; text-align: start; white-space: nowrap; }
-.blog-admin-shell .blog-content-panel > .blog-table-scroll { border: 0; background: transparent; --blog-server-corner-extent: 0px; }
 .blog-admin-shell .blog-table-scroll:has(> .blog-table[hidden]) { display: none; }
-@media(forced-colors:active) { .blog-admin-shell .blog-frame { border-color: CanvasText; } }
+@media(forced-colors:active) { .blog-admin-shell .blog-frame { border-color: CanvasText; } .blog-admin-shell :is(input,select,textarea,[role=combobox]):not(.blog-input--underline):focus-visible { outline-color: Highlight; } }

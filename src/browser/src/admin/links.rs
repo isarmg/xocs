@@ -152,7 +152,7 @@ pub(super) fn Links() -> impl IntoView {
                                     }
                                 }),
                         ))
-                        .class("blog-actions"),
+                        .class("blog-actions blog-flow"),
                 ),
             )),
         )
@@ -180,176 +180,201 @@ pub(super) fn Links() -> impl IntoView {
                         .build(),
                 ),
                 blog_interface::html::div()
+                    .class("blog-stack blog-stack--spaced")
                     .child((
-                        blog_interface::html::label()
+                        blog_interface::html::div()
                             .child((
-                                blog_interface::html::span()
-                                    .class("blog-field-label blog-row")
-                                    .child(t("类型筛选", "Filter by type")),
-                                crate::select::Select(
-                                    component_props_builder(&crate::select::Select)
-                                        .label(Signal::derive(|| t("类型筛选", "Filter by type")))
-                                        .value(Signal::derive(move || kind.get()))
-                                        .options(Signal::derive(move || {
-                                            std::iter::once((String::new(), t("全部", "All")))
-                                                .chain(
-                                                    options()
-                                                        .into_iter()
-                                                        .map(|(k, l)| (k.to_string(), l)),
-                                                )
-                                                .collect()
-                                        }))
-                                        .change(Callback::new(move |v: String| {
-                                            kind.set(v);
-                                            page.set(1);
-                                        }))
-                                        .build(),
-                                ),
-                            ))
-                            .class("blog-form-field"),
-                        blog_interface::html::label()
-                            .child((
-                                blog_interface::html::span()
-                                    .class("blog-field-label blog-row")
-                                    .child(t("状态筛选", "Filter by status")),
-                                crate::select::Select(
-                                    component_props_builder(&crate::select::Select)
-                                        .label(Signal::derive(|| t("状态筛选", "Filter by status")))
-                                        .value(Signal::derive(move || status.get().to_string()))
-                                        .options(Signal::derive(|| {
-                                            vec![
-                                                ("-1".into(), t("全部", "All")),
-                                                (
-                                                    "0".into(),
-                                                    t("待审核/隐藏", "Pending review / hidden"),
-                                                ),
-                                                ("1".into(), t("已公开", "Published")),
-                                            ]
-                                        }))
-                                        .change(Callback::new(move |v: String| {
-                                            status.set(v.parse().unwrap_or(-1));
-                                            page.set(1);
-                                        }))
-                                        .build(),
-                                ),
-                            ))
-                            .class("blog-form-field"),
-                    ))
-                    .class("inline-form"),
-                blog_interface::html::fieldset()
-                    .child((
-                        blog_interface::html::form()
-                            .child(
-                                blog_interface::html::fieldset()
+                                blog_interface::html::label()
                                     .child((
-                                        blog_interface::html::h2().class("blog-row").child(
-                                            move || {
-                                                if editing.get().is_some() {
-                                                    t("编辑资源", "Edit resource")
-                                                } else {
-                                                    t("新增资源", "Add resource")
-                                                }
-                                            },
+                                        blog_interface::html::span()
+                                            .class("blog-field-label blog-row")
+                                            .child(t("类型筛选", "Filter by type")),
+                                        crate::select::Select(
+                                            component_props_builder(&crate::select::Select)
+                                                .label(Signal::derive(|| {
+                                                    t("类型筛选", "Filter by type")
+                                                }))
+                                                .value(Signal::derive(move || kind.get()))
+                                                .options(Signal::derive(move || {
+                                                    std::iter::once((
+                                                        String::new(),
+                                                        t("全部", "All"),
+                                                    ))
+                                                    .chain(
+                                                        options()
+                                                            .into_iter()
+                                                            .map(|(k, l)| (k.to_string(), l)),
+                                                    )
+                                                    .collect()
+                                                }))
+                                                .change(Callback::new(move |v: String| {
+                                                    kind.set(v);
+                                                    page.set(1);
+                                                }))
+                                                .build(),
                                         ),
-                                        blog_interface::html::div()
+                                    ))
+                                    .class("blog-form-field blog-stack"),
+                                blog_interface::html::label()
+                                    .child((
+                                        blog_interface::html::span()
+                                            .class("blog-field-label blog-row")
+                                            .child(t("状态筛选", "Filter by status")),
+                                        crate::select::Select(
+                                            component_props_builder(&crate::select::Select)
+                                                .label(Signal::derive(|| {
+                                                    t("状态筛选", "Filter by status")
+                                                }))
+                                                .value(Signal::derive(move || {
+                                                    status.get().to_string()
+                                                }))
+                                                .options(Signal::derive(|| {
+                                                    vec![
+                                                        ("-1".into(), t("全部", "All")),
+                                                        (
+                                                            "0".into(),
+                                                            t(
+                                                                "待审核/隐藏",
+                                                                "Pending review / hidden",
+                                                            ),
+                                                        ),
+                                                        ("1".into(), t("已公开", "Published")),
+                                                    ]
+                                                }))
+                                                .change(Callback::new(move |v: String| {
+                                                    status.set(v.parse().unwrap_or(-1));
+                                                    page.set(1);
+                                                }))
+                                                .build(),
+                                        ),
+                                    ))
+                                    .class("blog-form-field blog-stack"),
+                            ))
+                            .class("inline-form blog-flow blog-form-flow"),
+                        blog_interface::html::fieldset()
+                            .child((
+                                blog_interface::html::form()
+                                    .child(
+                                        blog_interface::html::fieldset()
                                             .child((
-                                                blog_interface::html::label()
+                                                blog_interface::html::h2().class("blog-row").child(
+                                                    move || {
+                                                        if editing.get().is_some() {
+                                                            t("编辑资源", "Edit resource")
+                                                        } else {
+                                                            t("新增资源", "Add resource")
+                                                        }
+                                                    },
+                                                ),
+                                                blog_interface::html::div()
                                                     .child((
-                                                        blog_interface::html::span()
-                                                            .class("blog-field-label blog-row")
-                                                            .child(t("类型", "Type")),
-                                                        crate::select::Select(
-                                                            component_props_builder(
-                                                                &crate::select::Select,
-                                                            )
-                                                            .label(Signal::derive(|| {
-                                                                t("类型", "Type")
-                                                            }))
-                                                            .value(Signal::derive(move || {
-                                                                text(&form.get(), "link_type")
-                                                            }))
-                                                            .options(Signal::derive(move || {
-                                                                options()
+                                                        blog_interface::html::label()
+                                                            .child((
+                                                                blog_interface::html::span()
+                                                                    .class(
+                                                                        "blog-field-label blog-row",
+                                                                    )
+                                                                    .child(t("类型", "Type")),
+                                                                crate::select::Select(
+                                                                    component_props_builder(
+                                                                        &crate::select::Select,
+                                                                    )
+                                                                    .label(Signal::derive(|| {
+                                                                        t("类型", "Type")
+                                                                    }))
+                                                                    .value(Signal::derive(
+                                                                        move || {
+                                                                            text(
+                                                                                &form.get(),
+                                                                                "link_type",
+                                                                            )
+                                                                        },
+                                                                    ))
+                                                                    .options(Signal::derive(
+                                                                        move || {
+                                                                            options()
                                                                     .into_iter()
                                                                     .map(|(k, l)| {
                                                                         (k.to_string(), l)
                                                                     })
                                                                     .collect()
-                                                            }))
-                                                            .change(Callback::new(
-                                                                move |v: String| {
-                                                                    form.update(|f| {
-                                                                        f["link_type"] = json!(v)
-                                                                    })
-                                                                },
+                                                                        },
+                                                                    ))
+                                                                    .change(Callback::new(
+                                                                        move |v: String| {
+                                                                            form.update(|f| {
+                                                                                f["link_type"] =
+                                                                                    json!(v)
+                                                                            })
+                                                                        },
+                                                                    ))
+                                                                    .build(),
+                                                                ),
                                                             ))
-                                                            .build(),
+                                                            .class("blog-form-field blog-stack"),
+                                                        Field(
+                                                            component_props_builder(&Field)
+                                                                .label(t("分类", "Category"))
+                                                                .key("classify")
+                                                                .form(form)
+                                                                .max(32)
+                                                                .build(),
                                                         ),
                                                     ))
-                                                    .class("blog-form-field"),
+                                                    .class("form-grid"),
                                                 Field(
                                                     component_props_builder(&Field)
-                                                        .label(t("分类", "Category"))
-                                                        .key("classify")
+                                                        .label(t("标题", "Title"))
+                                                        .key("title")
                                                         .form(form)
-                                                        .max(32)
+                                                        .required(true)
+                                                        .max(64)
                                                         .build(),
                                                 ),
-                                            ))
-                                            .class("form-grid"),
-                                        Field(
-                                            component_props_builder(&Field)
-                                                .label(t("标题", "Title"))
-                                                .key("title")
-                                                .form(form)
-                                                .required(true)
-                                                .max(64)
-                                                .build(),
-                                        ),
-                                        Field(
-                                            component_props_builder(&Field)
-                                                .label(t("图片地址", "Image URL"))
-                                                .key("cover")
-                                                .form(form)
-                                                .build(),
-                                        ),
-                                        Field(
-                                            component_props_builder(&Field)
-                                                .label(t("目标地址", "Target URL"))
-                                                .key("url")
-                                                .form(form)
-                                                .build(),
-                                        ),
-                                        Field(
-                                            component_props_builder(&Field)
-                                                .label(t("简介", "Introduction"))
-                                                .key("introduction")
-                                                .form(form)
-                                                .build(),
-                                        ),
-                                        Check(
-                                            component_props_builder(&Check)
-                                                .label(t(" 公开显示", " Show publicly"))
-                                                .key("status")
-                                                .form(form)
-                                                .build(),
-                                        ),
-                                        blog_interface::html::div()
-                                            .child((
-                                                blog_interface::html::button()
-                                                    .child(move || {
-                                                        if editing.get().is_some() {
-                                                            t("保存修改", "Save changes")
-                                                        } else {
-                                                            t("新增资源", "Add resource")
-                                                        }
-                                                    })
-                                                    .class("blog-button")
-                                                    .r#type("submit")
-                                                    .disabled(move || remove.busy.get()),
-                                                move || {
-                                                    editing.get().map(|_| {
-                                                        View::new(
+                                                Field(
+                                                    component_props_builder(&Field)
+                                                        .label(t("图片地址", "Image URL"))
+                                                        .key("cover")
+                                                        .form(form)
+                                                        .build(),
+                                                ),
+                                                Field(
+                                                    component_props_builder(&Field)
+                                                        .label(t("目标地址", "Target URL"))
+                                                        .key("url")
+                                                        .form(form)
+                                                        .build(),
+                                                ),
+                                                Field(
+                                                    component_props_builder(&Field)
+                                                        .label(t("简介", "Introduction"))
+                                                        .key("introduction")
+                                                        .form(form)
+                                                        .build(),
+                                                ),
+                                                Check(
+                                                    component_props_builder(&Check)
+                                                        .label(t(" 公开显示", " Show publicly"))
+                                                        .key("status")
+                                                        .form(form)
+                                                        .build(),
+                                                ),
+                                                blog_interface::html::div()
+                                                    .child((
+                                                        blog_interface::html::button()
+                                                            .child(move || {
+                                                                if editing.get().is_some() {
+                                                                    t("保存修改", "Save changes")
+                                                                } else {
+                                                                    t("新增资源", "Add resource")
+                                                                }
+                                                            })
+                                                            .class("blog-button")
+                                                            .r#type("submit")
+                                                            .disabled(move || remove.busy.get()),
+                                                        move || {
+                                                            editing.get().map(|_| {
+                                                                View::new(
                                                             blog_interface::html::button()
                                                                 .child(t(
                                                                     "取消编辑",
@@ -362,102 +387,106 @@ pub(super) fn Links() -> impl IntoView {
                                                                     move |_| reset.run(()),
                                                                 ),
                                                         )
-                                                    })
-                                                },
+                                                            })
+                                                        },
+                                                    ))
+                                                    .class("blog-actions blog-flow"),
                                             ))
-                                            .class("blog-actions"),
-                                    ))
-                                    .class("blog-fieldset")
-                                    .disabled(move || {
-                                        remove.busy.get() && removing.get() == editing.get()
+                                            .class("blog-fieldset blog-stack")
+                                            .disabled(move || {
+                                                remove.busy.get() && removing.get() == editing.get()
+                                            }),
+                                    )
+                                    .class("editor-form blog-frame blog-frame--padded blog-stack")
+                                    .on(blog_interface::ev::submit, move |ev| {
+                                        ev.prevent_default();
+                                        if save.busy.get_untracked() || remove.busy.get_untracked()
+                                        {
+                                            return;
+                                        }
+                                        let mut f = form.get_untracked();
+                                        for k in ["classify", "cover", "url", "introduction"] {
+                                            if text(&f, k).is_empty() {
+                                                f[k] = Value::Null;
+                                            }
+                                        }
+                                        let path = editing
+                                            .get_untracked()
+                                            .map(|id| format!("/api/v1/content/links/{id}"))
+                                            .unwrap_or("/api/v1/content/links".into());
+                                        save.run(
+                                            path,
+                                            if editing.get_untracked().is_some() {
+                                                "PUT"
+                                            } else {
+                                                "POST"
+                                            },
+                                            Some(f),
+                                            move |_| {
+                                                reset.run(());
+                                                data.reload();
+                                                notify(t("资源已保存", "Resource saved"));
+                                            },
+                                        );
                                     }),
-                            )
-                            .class("editor-form")
-                            .on(blog_interface::ev::submit, move |ev| {
-                                ev.prevent_default();
-                                if save.busy.get_untracked() || remove.busy.get_untracked() {
-                                    return;
-                                }
-                                let mut f = form.get_untracked();
-                                for k in ["classify", "cover", "url", "introduction"] {
-                                    if text(&f, k).is_empty() {
-                                        f[k] = Value::Null;
-                                    }
-                                }
-                                let path = editing
-                                    .get_untracked()
-                                    .map(|id| format!("/api/v1/content/links/{id}"))
-                                    .unwrap_or("/api/v1/content/links".into());
-                                save.run(
-                                    path,
-                                    if editing.get_untracked().is_some() {
-                                        "PUT"
-                                    } else {
-                                        "POST"
-                                    },
-                                    Some(f),
-                                    move |_| {
-                                        reset.run(());
-                                        data.reload();
-                                        notify(t("资源已保存", "Resource saved"));
-                                    },
-                                );
-                            }),
-                        move || {
-                            data.value.get().map(|v| {
-                                View::new(
-                                    blog_interface::html::div()
-                                        .child(
-                                            blog_interface::html::table()
-                                                .child((
-                                                    blog_interface::html::thead().child(
-                                                        blog_interface::html::tr().child((
-                                                            blog_interface::html::th()
-                                                                .child(t("标题", "Title")),
-                                                            blog_interface::html::th()
-                                                                .child(t("类型", "Type")),
-                                                            blog_interface::html::th()
-                                                                .child(t("状态", "Status")),
-                                                            blog_interface::html::th()
-                                                                .child(t("操作", "Actions")),
+                                move || {
+                                    data.value.get().map(|v| {
+                                        View::new(
+                                            blog_interface::html::div()
+                                                .child(
+                                                    blog_interface::html::table()
+                                                        .child((
+                                                            blog_interface::html::thead().child(
+                                                                blog_interface::html::tr().child((
+                                                                    blog_interface::html::th()
+                                                                        .child(t("标题", "Title")),
+                                                                    blog_interface::html::th()
+                                                                        .child(t("类型", "Type")),
+                                                                    blog_interface::html::th()
+                                                                        .child(t("状态", "Status")),
+                                                                    blog_interface::html::th()
+                                                                        .child(t(
+                                                                            "操作", "Actions",
+                                                                        )),
+                                                                )),
+                                                            ),
+                                                            blog_interface::html::tbody().child(
+                                                                rows(&v, "items")
+                                                                    .into_iter()
+                                                                    .map(render_row)
+                                                                    .collect_view(),
+                                                            ),
+                                                        ))
+                                                        .class("blog-table")
+                                                        .aria_label(t(
+                                                            "内容资源列表",
+                                                            "Content resource list",
                                                         )),
-                                                    ),
-                                                    blog_interface::html::tbody().child(
-                                                        rows(&v, "items")
-                                                            .into_iter()
-                                                            .map(render_row)
-                                                            .collect_view(),
-                                                    ),
-                                                ))
-                                                .class("blog-table")
-                                                .aria_label(t(
-                                                    "内容资源列表",
-                                                    "Content resource list",
-                                                )),
+                                                )
+                                                .class("blog-table-scroll blog-frame")
+                                                .tabindex("0")
+                                                .role("region")
+                                                .aria_label(t("数据表格", "Data table")),
                                         )
-                                        .class("blog-table-scroll")
-                                        .tabindex("0")
-                                        .role("region")
-                                        .aria_label(t("数据表格", "Data table")),
-                                )
-                            })
-                        },
-                        ListState(
-                            component_props_builder(&ListState)
-                                .data(data)
-                                .empty(t("暂无内容资源", "No content resources yet"))
-                                .build(),
-                        ),
-                        Pager(
-                            component_props_builder(&Pager)
-                                .data(data)
-                                .page(page)
-                                .build(),
-                        ),
-                    ))
-                    .class("blog-fieldset")
-                    .disabled(move || save.busy.get()),
+                                    })
+                                },
+                                ListState(
+                                    component_props_builder(&ListState)
+                                        .data(data)
+                                        .empty(t("暂无内容资源", "No content resources yet"))
+                                        .build(),
+                                ),
+                                Pager(
+                                    component_props_builder(&Pager)
+                                        .data(data)
+                                        .page(page)
+                                        .build(),
+                                ),
+                            ))
+                            .class("blog-fieldset blog-stack blog-stack--spaced")
+                            .disabled(move || save.busy.get()),
+                    )),
             ))
-            .class("blog-content-stack"),
+            .class("blog-content-stack blog-stack"),
     )
 }

@@ -224,7 +224,7 @@ fn SiteAppearance(
     ];
     View::new(
         blog_interface::html::section()
-            .class("blog-content-panel")
+            .class("blog-content-panel blog-frame blog-frame--padded blog-stack")
             .child((
                 blog_interface::html::h2().class("blog-row").child(t("外观媒体", "Appearance media")),
                 blog_interface::html::p()
@@ -296,7 +296,7 @@ pub(super) fn SiteSettings() -> impl IntoView {
                 Feedback(component_props_builder(&Feedback).error(save.error).build()),
                 move || {
                     (!validation.get().is_empty()).then(|| {
-                        blog_interface::html::p().class("blog-row").role("alert").child(validation.get())
+                        blog_interface::html::p().class("blog-row blog-danger").role("alert").child(validation.get())
                     })
                 },
                 move || {
@@ -379,7 +379,7 @@ pub(super) fn SiteSettings() -> impl IntoView {
                                                         )),
                                                     )),
                                                 ))
-                                                .class("blog-content-panel"),
+                                                .class("blog-content-panel blog-frame blog-frame--padded blog-stack"),
                                             SiteAppearance(
                                                 component_props_builder(&SiteAppearance)
                                                     .form(form)
@@ -403,9 +403,9 @@ pub(super) fn SiteSettings() -> impl IntoView {
                                                             .build(),
                                                     ),
                                                 ))
-                                                .class("blog-content-panel"),
+                                                .class("blog-content-panel blog-frame blog-frame--padded blog-stack"),
                                         ))
-                                        .class("blog-fieldset")
+                                        .class("blog-fieldset blog-stack blog-stack--spaced")
                                         .disabled(move || save.busy.get() || upload.busy.get())
                                         .aria_label(t("网站设置", "Site settings")),
                                     Feedback(
@@ -429,9 +429,9 @@ pub(super) fn SiteSettings() -> impl IntoView {
                                                     save.busy.get() || upload.busy.get()
                                                 }),
                                         )
-                                        .class("blog-actions"),
+                                        .class("blog-actions blog-flow"),
                                 ))
-                                .class("blog-settings-form")
+                                .class("blog-settings-form blog-stack")
                                 .on(blog_interface::ev::input, move |_| validation.set(String::new()))
                                 .on(blog_interface::ev::submit, move |ev| {
                                     ev.prevent_default();
@@ -470,6 +470,6 @@ pub(super) fn SiteSettings() -> impl IntoView {
                     })
                 },
             ))
-            .class("blog-content-stack"),
+            .class("blog-content-stack blog-stack"),
     )
 }

@@ -192,7 +192,7 @@ pub(super) fn Taxonomy(labels: bool) -> impl IntoView {
                                     );
                                 }),
                         ))
-                        .class("blog-actions"),
+                        .class("blog-actions blog-flow"),
                 ),
             )),
         )
@@ -229,7 +229,7 @@ pub(super) fn Taxonomy(labels: bool) -> impl IntoView {
                 move || {
                     (!validation.get().is_empty()).then(|| {
                         blog_interface::html::p()
-                            .class("blog-row")
+                            .class("blog-row blog-danger")
                             .role("alert")
                             .child(validation.get())
                     })
@@ -310,13 +310,13 @@ pub(super) fn Taxonomy(labels: bool) -> impl IntoView {
                                                         .build(),
                                                 ),
                                             ))
-                                            .class("blog-form-field"),
+                                            .class("blog-form-field blog-stack"),
                                     )
                                     .into_any()
                                 } else {
                                     View::new(
                                         blog_interface::html::label()
-                                            .class("blog-form-field")
+                                            .class("blog-form-field blog-stack")
                                             .child((
                                                 blog_interface::html::span()
                                                     .class("blog-field-label blog-row")
@@ -369,7 +369,7 @@ pub(super) fn Taxonomy(labels: bool) -> impl IntoView {
                                     })
                                 },
                             ))
-                            .class("inline-form")
+                            .class("inline-form blog-frame blog-frame--padded blog-flow blog-form-flow")
                             .on(blog_interface::ev::submit, submit),
                         move || {
                             data.value.get().or_else(|| data.previous.get()).map(|v| {
@@ -422,7 +422,7 @@ pub(super) fn Taxonomy(labels: bool) -> impl IntoView {
                                                     t("分类列表", "Category list")
                                                 }),
                                         )
-                                        .class("blog-table-scroll")
+                                        .class("blog-table-scroll blog-frame")
                                         .tabindex("0")
                                         .role("region")
                                         .aria_label(t("数据表格", "Data table")),
@@ -430,9 +430,9 @@ pub(super) fn Taxonomy(labels: bool) -> impl IntoView {
                             })
                         },
                     ))
-                    .class("blog-fieldset")
+                    .class("blog-fieldset blog-stack blog-stack--spaced")
                     .disabled(move || save.busy.get()),
             ))
-            .class("blog-content-stack"),
+            .class("blog-content-stack blog-stack"),
     )
 }

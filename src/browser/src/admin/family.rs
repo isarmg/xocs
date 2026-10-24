@@ -200,9 +200,9 @@ pub(super) fn FamilySettings() -> impl IntoView {
                                             })
                                         },
                                     ))
-                                    .class("blog-actions"),
+                                    .class("blog-actions blog-flow"),
                             ))
-                            .class("editor-form")
+                            .class("editor-form blog-frame blog-frame--padded blog-stack")
                             .on(blog_interface::ev::submit, move |ev| {
                                 ev.prevent_default();
                                 if data.value.get_untracked().is_none() {
@@ -244,9 +244,9 @@ pub(super) fn FamilySettings() -> impl IntoView {
                                 );
                             }),
                     )
-                    .class("blog-fieldset")
+                    .class("blog-fieldset blog-stack")
                     .disabled(move || save.busy.get() || data.value.get().is_none()),
             ))
-            .class("blog-content-stack"),
+            .class("blog-content-stack blog-stack"),
     )
 }

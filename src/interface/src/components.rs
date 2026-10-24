@@ -1456,7 +1456,7 @@ pub fn AccountPage() -> impl IntoView {
                                 )
                         },
                     )
-                    .class("blog-content-panel blog-frame blog-stack")
+                    .class("blog-content-panel blog-frame blog-frame--padded blog-stack")
             },
         )
         .class("blog-content-stack blog-account-page blog-stack")

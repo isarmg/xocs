@@ -63,6 +63,93 @@ async function control(locator, height, extent, border) {
   near(geometry.extent, extent, 'G4 corner extent');
   near(geometry.border, border, 'Control border');
   assert.equal(geometry.radius, '0px', 'The shared G4 renderer owns the corner');
+  if (await locator.evaluate(node => node.matches('.blog-input') && !node.closest('table,[popover]'))) {
+    await frameClearance(locator, 'Framed control');
+  }
+}
+
+// Inspect the painted ancestor, rather than assuming a domain/layout class owns
+// a surface. Transparent fieldsets and wrappers must not hide a flush child.
+function measureFrames(nodes) {
+  const styles = new Map(), boxes = new Map();
+  const style = node => { if (!styles.has(node)) styles.set(node, getComputedStyle(node)); return styles.get(node); };
+  const box = node => { if (!boxes.has(node)) boxes.set(node, node.getBoundingClientRect()); return boxes.get(node); };
+  return nodes.filter(node => node.getClientRects().length && style(node).visibility !== 'hidden'
+    && !node.closest('table,[popover]')).map(node => {
+    const label = node.getAttribute('aria-label') || node.getAttribute('name') || node.className;
+    for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+      const css = style(parent), borders = ['Top', 'Right', 'Bottom', 'Left'].map(side => parseFloat(css[`border${side}Width`]));
+      if (!/^(paint|clip)$/.test(parent.getAttribute('data-blog-server-corner-state') ?? '')
+        || !borders.every(width => width > 0) || parseFloat(css.getPropertyValue('--blog-server-corner-extent')) <= 0) continue;
+      const child = box(node), frame = box(parent);
+      return { label, frame: `${parent.tagName}.${parent.className}`, clearances: {
+        left: child.left - frame.left - borders[3], right: frame.right - child.right - borders[1],
+        top: child.top - frame.top - borders[0], bottom: frame.bottom - child.bottom - borders[2],
+      } };
+    }
+    return { label, frame: null };
+  });
+}
+
+function assertClearance(actual, label) {
+  for (const [side, distance] of Object.entries(actual.clearances)) {
+    assert.ok(distance >= 17.8, `${label}: ${side} leaves at least 18px inside its frame: ${JSON.stringify(actual)}`);
+  }
+}
+
+async function frameClearance(locator, label) {
+  await expect(locator).toBeVisible();
+  let actual;
+  await expect.poll(async () => {
+    actual = (await locator.evaluateAll(measureFrames))[0];
+    return actual?.frame ?? null;
+  }, { message: `${label} has a real painted frame` }).not.toBeNull();
+  assertClearance(actual, label);
+}
+
+async function framedFields(page, label) {
+  // One browser snapshot checks every field without serial locator queries and
+  // repeated style/layout flushes. Editable table viewports are checked below.
+  let fields;
+  await expect.poll(async () => {
+    fields = await page.locator('.blog-shell-main .blog-frame .blog-input').evaluateAll(measureFrames);
+    return fields.every(field => field.frame !== null);
+  }, { message: `${label} fields have painted frames` }).toBe(true);
+  for (const field of fields) assertClearance(field, `${label} field ${field.label}`);
+}
+
+async function separated(before, after, label) {
+  await expect(before).toBeVisible(); await expect(after).toBeVisible();
+  const boundary = locator => locator.evaluate(node => {
+    const painted = candidate => {
+      const css = getComputedStyle(candidate);
+      return /^(paint|clip)$/.test(candidate.getAttribute('data-blog-server-corner-state') ?? '')
+        && parseFloat(css.getPropertyValue('--blog-server-corner-extent')) > 0
+        && ['Top', 'Right', 'Bottom', 'Left'].every(side => parseFloat(css[`border${side}Width`]) > 0);
+    };
+    let surface = painted(node) ? node : [...node.querySelectorAll('.blog-frame')].find(painted);
+    for (let parent = node.parentElement; !surface && parent; parent = parent.parentElement) {
+      if (painted(parent)) surface = parent;
+    }
+    if (!surface) throw new Error('The measured boundary has no painted surface');
+    const box = surface.getBoundingClientRect(); return { top: box.top, bottom: box.bottom };
+  });
+  const first = await boundary(before), second = await boundary(after);
+  assert.ok(second.top - first.bottom >= 17.8,
+    `${label} keeps an 18px gap between visible surfaces: ${JSON.stringify({ first, second })}`);
+}
+
+async function keyboardFocus(locator, label) {
+  await locator.focus();
+  await locator.page().keyboard.press('Tab'); await locator.page().keyboard.press('Shift+Tab');
+  await expect(locator).toBeFocused();
+  // Gecko may expose the pre-focus outline until its next rendering frame.
+  // Wait for the actual outline; a permanent missing or clipped ring still fails.
+  await expect.poll(() => locator.evaluate(node => {
+    const css = getComputedStyle(node), visible = node.matches(':focus-visible'), style = css.outlineStyle;
+    const width = parseFloat(css.outlineWidth), offset = parseFloat(css.outlineOffset);
+    return { visible, style, width, offset, valid: visible && style !== 'none' && width >= 2 && offset >= 3 };
+  }), { message: `${label} retains its visible keyboard outline` }).toMatchObject({ valid: true });
 }
 
 async function color(page, property) {
@@ -117,6 +204,24 @@ async function fixture(page) {
   await page.route('**/api/v1/content/tree-hole?*', route => route.fulfill({ json: pageOf([
     { id: 1, user_id: 1, username: 'User', avatar: null, message: 'A message with a photograph', image_path: fixtureImage, create_time: '2026-10-24' },
   ], new URL(route.request().url())) }));
+  const data = {
+    '/api/v1/content/family': [{ id: 1, bg_cover: null, man_cover: null, woman_cover: null, man_name: 'Lin', woman_name: 'Yu',
+      timing: '2026-10-01', countdown_title: 'A special day', countdown_time: '2026-12-31', family_info: 'A maintained home.', status: 1 }],
+    '/api/v1/content/notes': [{ id: 1, user_id: 1, username: 'Site owner', content: 'A note to edit.', is_public: 1,
+      image_path: fixtureImage, create_time: '2026-10-24' }],
+    '/api/v1/content/links': [{ id: 1, status: 1, title: 'A useful resource', classify: 'Reading', cover: fixtureImage,
+      url: 'https://example.com/', introduction: 'A resource description.', link_type: 'favorites', create_time: '2026-10-24' }],
+    '/api/v1/content/resources': [{ id: 1, size: 12345, status: 1, original_name: 'A maintained media file.png',
+      path: `/media/${'a'.repeat(64)}.png`, resource_type: 'image/png', create_time: '2026-10-24' }],
+    '/api/v1/content/articles/1/news': [{ id: 1, content: 'An update to edit.', create_time: '2026-10-24' }],
+  };
+  await page.route('**/api/v1/**', route => {
+    const url = new URL(route.request().url()), items = data[url.pathname];
+    if (route.request().method() !== 'GET' || !items) return route.fallback();
+    return route.fulfill({ json: url.pathname.endsWith('/family') ? items : pageOf(items, url) });
+  });
+  await page.route('**/__test-media/nested-surface.svg', route => route.fulfill({ contentType: 'image/svg+xml',
+    body: '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160"><rect width="240" height="160" fill="#497fa0"/></svg>' }));
   return state;
 }
 
@@ -187,6 +292,7 @@ async function businessComponents(page, base, dark, state) {
     assert.ok(alignment.textLeft >= alignment.inputRight - .1,
       `Checkbox and the start of its label stay side by side: ${JSON.stringify(alignment)}`);
   }
+  await keyboardFocus(checks.first().getByRole('checkbox'), 'Editor checkbox');
   const fieldLabels = page.locator('.editor-form .blog-field-label');
   for (const label of await fieldLabels.all()) await row(label, 'Editor field label');
   await page.getByRole('button', { name: 'Preview content', exact: true }).click();
@@ -199,33 +305,60 @@ async function businessComponents(page, base, dark, state) {
       margin: css.margin, line: parseFloat(css.lineHeight), font: parseFloat(css.fontSize),
       border: css.borderTopWidth, extent: parseFloat(css.getPropertyValue('--blog-server-corner-extent')) };
   });
-  near(previewGeometry.topInset, 0, 'Markdown preview uses natural content rows');
-  near(previewGeometry.leftInset, 9.8, 'Markdown preview retains the shared frame text clearance');
-  near(previewGeometry.rightInset, 9.8, 'Markdown preview retains symmetric text clearance');
-  assert.equal(previewGeometry.margin, '0px');
+  near(previewGeometry.topInset, 18, 'Markdown preview protects its first content block');
+  near(previewGeometry.leftInset, 18, 'Markdown preview retains nested surface clearance');
+  near(previewGeometry.rightInset, 18, 'Markdown preview retains symmetric surface clearance');
   assert.equal(previewGeometry.border, '1px');
   near(previewGeometry.font, 14.4, 'Markdown preview typography');
   near(previewGeometry.line, 21.6, 'Markdown preview line height');
   near(previewGeometry.extent, 18, 'Markdown preview G4 extent');
   await expect.poll(() => paintedSurfaceColor(rendered)).toBe(await color(page, '--blog-bg-panel'));
+  await frameClearance(rendered, 'Markdown preview');
+  // The first block must also clear the frame. A heading before a code block
+  // used to conceal the same top/bottom collision at the third surface level.
+  await markdown.fill('```rust\nfn main() {}\n```');
+  await frameClearance(rendered.locator('pre'), 'Code-first Markdown block');
+  await markdown.fill('![Nested photograph](/__test-media/nested-surface.svg)');
+  await frameClearance(rendered.getByRole('img', { name: 'Nested photograph', exact: true }), 'Image-first Markdown block');
+  const updates = page.getByRole('table', { name: 'Article updates', exact: true });
+  await updates.getByRole('button', { name: 'Edit', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Edit update', exact: true })).toBeVisible();
+  await framedFields(page, 'Article and update editor');
 
   await page.goto(`${base}/admin?lang=en#notes`);
   const note = page.getByRole('textbox', { name: 'Note content', exact: true });
   await expect(note).toBeVisible();
   near((await note.boundingBox()).height, 110, 'Ordinary multiline fields retain the intended writing height');
   near(await note.evaluate(node => parseFloat(getComputedStyle(node).fontSize)), 17.6, 'Multiline field typography');
+  await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await expect(note).toHaveValue('A note to edit.');
+  await framedFields(page, 'Note editor');
 
   await page.goto(`${base}/admin?lang=en#site`);
   await row(page.locator('.blog-settings-form summary'), 'Push format disclosure');
+  await page.locator('.blog-settings-form summary').click();
+  await expect(page.locator('.blog-settings-form details')).toHaveAttribute('open', '');
   const logo = page.getByRole('img', { name: 'Site logo preview', exact: true });
   await expect(logo).toBeVisible();
   await expect(logo).toHaveAttribute('data-blog-server-corner-state', 'clip');
   near(await logo.evaluate(node => parseFloat(getComputedStyle(node).getPropertyValue('--blog-server-corner-extent'))), 18,
     'Configured media preview uses the shared panel contour');
+  await frameClearance(logo, 'Configured media preview');
+  await framedFields(page, 'Site settings');
   const panels = page.locator('.blog-settings-form .blog-content-panel');
   for (const panel of await panels.all()) {
     await expect(panel).toHaveAttribute('data-blog-server-corner-state', 'clip');
     await expect.poll(() => paintedSurfaceColor(panel)).toBe(await color(page, '--blog-bg-panel'));
+  }
+  for (let index = 1; index < await panels.count(); index++) {
+    await separated(panels.nth(index - 1), panels.nth(index), 'Settings sections');
+  }
+  const mediaRows = await page.locator('.site-media-field').evaluateAll(nodes => nodes.map(node => {
+    const box = node.getBoundingClientRect(); return { left: box.left, top: box.top, bottom: box.bottom };
+  }));
+  for (let index = 0; index < mediaRows.length; index++) {
+    const previous = mediaRows.slice(0, index).filter(box => Math.abs(box.left - mediaRows[index].left) < 1).at(-1);
+    if (previous) assert.ok(mediaRows[index].top - previous.bottom >= 17.8, 'Media task rows keep an 18px separation');
   }
 
   await page.goto(`${base}/admin?lang=en#tree-hole`);
@@ -259,6 +392,27 @@ async function businessComponents(page, base, dark, state) {
     await waitForApplication(page);
     const labels = page.locator('.blog-admin-workspace .blog-field-label');
     for (const label of await labels.all()) await row(label, `${hash} field label`);
+    if (hash === 'links') {
+      await page.getByRole('button', { name: 'Edit', exact: true }).click();
+      await expect(page.getByRole('heading', { name: 'Edit resource', exact: true })).toBeVisible();
+      await separated(page.getByRole('combobox', { name: 'Filter by status', exact: true }),
+        page.locator('form.editor-form'), 'Resource filters and editor');
+    }
+    if (hash === 'family') await expect(page.getByRole('heading', { name: 'Edit home details', exact: true })).toBeVisible();
+    if (hash === 'resources') await separated(page.locator('form.inline-form'), page.locator('.blog-table-scroll'), 'Upload and file list');
+    if (hash === 'home') {
+      const viewport = page.locator('.blog-table-scroll');
+      await frameClearance(viewport, 'Editable home table viewport');
+      const title = page.getByRole('textbox', { name: 'Section 1 title', exact: true });
+      await title.scrollIntoViewIfNeeded(); await title.click(); await expect(title).toBeFocused();
+      const source = page.getByRole('combobox', { name: 'Section 1 content source', exact: true });
+      await source.scrollIntoViewIfNeeded(); await source.click();
+      await page.getByRole('option', { name: 'Selected category', exact: true }).click();
+      await expect(page.getByRole('combobox', { name: 'Section 1 category', exact: true })).toBeVisible();
+      assert.ok(await viewport.evaluate(node => node.scrollWidth > node.clientWidth) || page.viewportSize().width > 768,
+        'The editable table keeps its own small-screen scroll area');
+    }
+    await framedFields(page, hash);
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${hash} components fit the viewport`);
   }
   await expect(page.locator('html')).toHaveAttribute('data-theme', dark ? 'dark' : 'light');
@@ -304,7 +458,9 @@ async function businessComponents(page, base, dark, state) {
 }
 
 try {
-  for (const engine of [chromium, firefox]) {
+  // Engines use isolated contexts and fixture state. Run two engines together;
+  // keep the six view/theme combinations serial within each browser.
+  const results = await Promise.allSettled([chromium, firefox].map(async engine => {
     const browser = await engine.launch();
     try {
       for (const width of [390, 1280, 2560]) for (const dark of [false, true]) {
@@ -319,6 +475,7 @@ try {
           await theme(page, dark);
           await shell(page, '.blog-admin-shell', '.blog-page-header', '.blog-shell-main');
           await control(name, 44, 22, 1);
+          await keyboardFocus(name, 'Category input');
           await control(page.getByRole('button', { name: 'Create category', exact: true }), 36, 18, 0);
           const navigationButtons = page.locator('.blog-header-navigation').getByRole('button');
           await expect(navigationButtons).toHaveCount(5);
@@ -353,6 +510,7 @@ try {
           }));
           near(accountLayout.width, Math.min(accountLayout.available, 504), 'Account form remains a compact task surface');
           assert.equal(accountLayout.columns, width <= 768 ? 1 : 2, 'Account labels stack on small screens');
+          await framedFields(page, 'Account settings');
 
           await page.goto(`${base}/admin?lang=en#new`);
           const editor = page.locator('.blog-admin-workspace form.editor-form').first();
@@ -373,5 +531,7 @@ try {
         } finally { await context.close(); }
       }
     } finally { await browser.close(); }
-  }
+  }));
+  const failures = results.filter(result => result.status === 'rejected');
+  if (failures.length) throw new AggregateError(failures.map(result => result.reason), 'Administration component matrix failed');
 } finally { await new Promise(resolve => server.httpServer.close(resolve)); }

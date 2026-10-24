@@ -171,7 +171,7 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                                                     .build(),
                                             ),
                                         ))
-                                        .class("blog-form-field"),
+                                        .class("blog-form-field blog-stack"),
                                     blog_interface::html::label()
                                         .child((
                                             blog_interface::html::span().class("blog-field-label blog-row").child(t("标签", "Tags")),
@@ -211,7 +211,7 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                                                     .build(),
                                             ),
                                         ))
-                                        .class("blog-form-field"),
+                                        .class("blog-form-field blog-stack"),
                                 ))
                                 .class("form-grid"),
                             blog_interface::html::div()
@@ -253,7 +253,7 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                                             })
                                         }),
                                 ))
-                                .class("blog-form-field"),
+                                .class("blog-form-field blog-stack"),
                             blog_interface::html::div()
                                 .child((
                                     blog_interface::html::button()
@@ -281,12 +281,12 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                                             .build(),
                                     ),
                                 ))
-                                .class("blog-actions"),
+                                .class("blog-actions blog-flow"),
                             move || {
                                 preview.get().then(|| {
                                     View::new(
                                         blog_interface::html::div()
-                                            .class("editor-markdown-preview blog-frame blog-frame--inset blog-stack")
+                                            .class("editor-markdown-preview blog-frame blog-frame--padded blog-stack blog-stack--spaced")
                                             .inner_html(crate::browser::markdown_html(
                                                 &form.get().article_content,
                                             )),
@@ -330,10 +330,10 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                     move | | form.get().password
                     .unwrap_or_default()).on(blog_interface::ev::input,
                     move | ev | form.update(| f | f.password =
-                    Some(event_target_value(& ev)))),)).class("blog-form-field"),
+                    Some(event_target_value(& ev)))),)).class("blog-form-field blog-stack"),
                     move | | crate ::dates::password_error(& form.get().password
                     .unwrap_or_default(), existing.get()).map(| e | View::new(
-    blog_interface::html::p().class("blog-row")
+    blog_interface::html::p().class("blog-row blog-danger")
         .child(
 
             e,
@@ -391,7 +391,7 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                                             .build(),
                                     ),
                                 ))
-                                .class("check-row"),
+                                .class("check-row blog-flow"),
                             move || {
                                 (!form.get().view_status).then(|| {
                                     View::new((
@@ -443,12 +443,12 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                                         .formnovalidate(move || creation.get().is_some())
                                         .disabled(move || save.busy.get() || upload.busy.get()),
                                 ))
-                                .class("blog-actions"),
+                                .class("blog-actions blog-flow"),
                         ))
-                        .class("blog-fieldset")
+                        .class("blog-fieldset blog-stack")
                         .disabled(move || save.busy.get()),
                 )
-                .class("editor-form")
+                .class("editor-form blog-frame blog-frame--padded blog-stack")
                 .on(blog_interface::ev::submit, move |ev| {
                     ev.prevent_default();
                     if save.busy.get_untracked()
@@ -564,7 +564,7 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                     Feedback(component_props_builder(& Feedback)
                     .error( upload.error).build()),
                     move | | (! validation.get().is_empty()).then(| | View::new(
-    blog_interface::html::p().class("blog-row")
+    blog_interface::html::p().class("blog-row blog-danger")
         .child(
 
             validation.get(),
@@ -588,7 +588,7 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                     .build())
                 ,),
         )
-        .class("blog-content-stack"),
+        .class("blog-content-stack blog-stack"),
 )
 }
 #[component]
@@ -681,7 +681,7 @@ fn NewsEditor(id: i64) -> impl IntoView {
                                     }
                                 }),
                         ))
-                        .class("blog-actions"),
+                        .class("blog-actions blog-flow"),
                 ),
             )),
         )
@@ -703,7 +703,7 @@ fn NewsEditor(id: i64) -> impl IntoView {
                     .error( save.error).build()),
                     pending_creation(receipt),
                     move | | (! validation.get().is_empty()).then(| | View::new(
-    blog_interface::html::p().class("blog-row")
+    blog_interface::html::p().class("blog-row blog-danger")
         .child(
 
             validation.get(),
@@ -729,7 +729,7 @@ fn NewsEditor(id: i64) -> impl IntoView {
                     form.get(), "create_time"))
                     .on(blog_interface::ev::input, move | ev | form
                     .update(| f | f["create_time"] = json!(event_target_value(&
-                    ev)))),)).class("blog-form-field"),
+                    ev)))),)).class("blog-form-field blog-stack"),
                     blog_interface::html::p()
                     .child( t("新增时留空使用当前 UTC；编辑时留空保留原时间。",
                     "Leave blank to use current UTC for a new update, or keep its existing time when editing.")).class("blog-field-help blog-row"),
@@ -766,11 +766,11 @@ fn NewsEditor(id: i64) -> impl IntoView {
                     reset.run(())
                 },
         ),
-)),)).class("blog-actions"),))
-                    .class("blog-fieldset")
+)),)).class("blog-actions blog-flow"),))
+                    .class("blog-fieldset blog-stack")
                     .disabled(move
                     | | save.busy.get() || data.value.get().is_none()))
-                    .class("editor-form").on(blog_interface::ev::submit,
+                    .class("editor-form blog-frame blog-frame--padded blog-stack").on(blog_interface::ev::submit,
                     move |ev| {
                         ev.prevent_default();
                         if save.busy.get_untracked() {
@@ -843,7 +843,7 @@ fn NewsEditor(id: i64) -> impl IntoView {
                         t("文章进展", "Article updates"),
                     ),
         )
-        .class("blog-table-scroll")
+        .class("blog-table-scroll blog-frame")
         .tabindex("0")
         .role("region")
         .aria_label(
@@ -857,7 +857,7 @@ fn NewsEditor(id: i64) -> impl IntoView {
                     "Update pages")).build())
                 ,),
         )
-        .class("editor-form"),
+        .class("blog-content-stack blog-stack blog-stack--spaced"),
 )
 }
 fn empty_note() -> Value {
@@ -1026,7 +1026,7 @@ pub fn Notes() -> impl IntoView {
                                     }
                                 }),
                         ))
-                        .class("blog-actions"),
+                        .class("blog-actions blog-flow"),
                 ),
             )),
         )
@@ -1048,7 +1048,7 @@ pub fn Notes() -> impl IntoView {
                     .error( upload.error).build()),
                     pending_creation(receipt),
                     move | | (! validation.get().is_empty()).then(| | View::new(
-    blog_interface::html::p().class("blog-row")
+    blog_interface::html::p().class("blog-row blog-danger")
         .child(
 
             validation.get(),
@@ -1141,10 +1141,10 @@ pub fn Notes() -> impl IntoView {
                     reset.run(())
                 },
         ),
-)),)).class("blog-actions"),))
-                    .class("blog-fieldset")
+)),)).class("blog-actions blog-flow"),))
+                    .class("blog-fieldset blog-stack")
                     .disabled(move
-                    | | save.busy.get())).class("editor-form")
+                    | | save.busy.get())).class("editor-form blog-frame blog-frame--padded blog-stack")
                     .on(blog_interface::ev::submit, move |ev| {
                         ev.prevent_default();
                         if save.busy.get_untracked() || upload.busy.get_untracked() {
@@ -1217,7 +1217,7 @@ pub fn Notes() -> impl IntoView {
                         t("随笔列表", "Note list"),
                     ),
         )
-        .class("blog-table-scroll")
+        .class("blog-table-scroll blog-frame")
         .tabindex("0")
         .role("region")
         .aria_label(
@@ -1235,6 +1235,6 @@ pub fn Notes() -> impl IntoView {
                     .src( lightbox).build())
                 ,),
         )
-        .class("blog-content-stack"),
+        .class("blog-content-stack blog-stack"),
 )
 }

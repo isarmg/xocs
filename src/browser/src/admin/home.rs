@@ -79,7 +79,7 @@ pub(super) fn HomeSections() -> impl IntoView {
                 move || {
                     (!validation.get().is_empty()).then(|| {
                         View::new(
-                            blog_interface::html::p().class("blog-row")
+                            blog_interface::html::p().class("blog-row blog-danger")
                                 .child(validation.get())
                                 .role("alert"),
                         )
@@ -103,7 +103,7 @@ pub(super) fn HomeSections() -> impl IntoView {
                                         })
                                     }),
                             )
-                            .class("blog-actions"),
+                            .class("blog-actions blog-flow"),
                         blog_interface::html::div()
                             .child(
                                 blog_interface::html::table()
@@ -149,10 +149,10 @@ pub(super) fn HomeSections() -> impl IntoView {
                             .role("region")
                             .aria_label(t("数据表格", "Data table")),
                     ))
-                    .class("blog-fieldset")
+                    .class("blog-fieldset blog-frame blog-frame--padded blog-stack")
                     .disabled(move || save.busy.get() || !loaded.get()),
             ))
-            .class("blog-content-stack"),
+            .class("blog-content-stack blog-stack"),
     )
 }
 
@@ -186,7 +186,7 @@ fn HomeRow(id: i64, sections: RwSignal<Vec<Value>>, categories: Data) -> impl In
                 blog_interface::html::label()
                     .child((
                         blog_interface::html::span()
-                            .class("blog-field-label blog-row")
+                            .class("blog-visually-hidden")
                             .child(move || {
                                 format!(
                                     "{} {} {}",
@@ -196,14 +196,22 @@ fn HomeRow(id: i64, sections: RwSignal<Vec<Value>>, categories: Data) -> impl In
                                 )
                             }),
                         blog_interface::html::input()
-                            .class("blog-input")
+                            .class("blog-input blog-input--compact")
+                            .aria_label(move || {
+                                format!(
+                                    "{} {} {}",
+                                    t("栏目", "Section"),
+                                    index.get() + 1,
+                                    t("标题", "title")
+                                )
+                            })
                             .maxlength("32")
                             .prop("value", move || text(&current.get(), "title"))
                             .on(blog_interface::ev::input, move |ev| {
                                 change.run(("title", json!(event_target_value(&ev))))
                             }),
                     ))
-                    .class("blog-form-field"),
+                    .class("blog-form-field blog-stack"),
             ),
             blog_interface::html::td().child(crate::select::Select(
                 component_props_builder(&crate::select::Select)
@@ -328,7 +336,7 @@ fn HomeRow(id: i64, sections: RwSignal<Vec<Value>>, categories: Data) -> impl In
                                 sections.update(|r| r.retain(|v| num(v, "id") != id))
                             }),
                     ))
-                    .class("blog-actions"),
+                    .class("blog-actions blog-flow"),
             ),
         )),
     )

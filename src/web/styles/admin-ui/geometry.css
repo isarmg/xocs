@@ -16,16 +16,17 @@ html:has(.blog-admin-shell, .blog-auth-shell) {
   --blog-server-corner-dialog: var(--blog-server-corner-control);
   --blog-server-corner-text-inset: 26px;
 }
-.blog-app-shell :is(.blog-stack, .blog-content-stack, .blog-fieldset, .blog-settings-form, .editor-form) {
+.blog-app-shell .blog-stack {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   align-content: start;
   min-width: 0;
   gap: 0;
 }
-.blog-app-shell :is(.blog-stack, .blog-content-stack, .blog-fieldset, .blog-settings-form, .editor-form) > * { min-width: 0; margin-block: 0; }
+.blog-app-shell .blog-stack > * { min-width: 0; margin-block: 0; }
 .blog-app-shell .blog-stack--flush { gap: 0; }
-.blog-app-shell :is(.blog-flow, .blog-actions, .inline-form, .blog-file-picker, .check-row) {
+.blog-app-shell .blog-stack--spaced { gap: var(--blog-block-gap); }
+.blog-app-shell .blog-flow {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -38,8 +39,9 @@ html:has(.blog-admin-shell, .blog-auth-shell) {
 .blog-app-shell .blog-flow--start { align-items: flex-start; }
 .blog-app-shell .blog-flow--end { align-items: flex-end; }
 .blog-app-shell .blog-flow--stretch { align-items: stretch; }
+.blog-app-shell .blog-form-flow { column-gap: var(--blog-block-gap); }
 .blog-app-shell .blog-check { flex-wrap: nowrap; column-gap: .5em; }
-.blog-app-shell :is(.blog-frame, .blog-content-panel, .blog-table-scroll, .editor-form, .inline-form) {
+.blog-app-shell .blog-frame {
   --blog-row-border: var(--blog-control-border-width);
   --blog-server-corner-extent: var(--blog-server-corner-panel);
   --blog-server-corner-mode: clip;
@@ -54,6 +56,12 @@ html:has(.blog-admin-shell, .blog-auth-shell) {
   overflow-wrap: anywhere;
 }
 .blog-app-shell .blog-frame--inset { padding-inline: calc(var(--blog-list-content-inset) - var(--blog-control-border-width)); }
+/* A frame containing controls or another painted surface owns its clearance.
+ * Layout wrappers stay transparent; a nested row does not touch this border. */
+.blog-app-shell .blog-frame--padded {
+  --blog-row-border: 0px;
+  padding: var(--blog-block-gap);
+}
 .blog-app-shell :is(.blog-row, .blog-button, .image-lightbox-close, .blog-error, .blog-empty, .blog-loading) {
   --blog-control-height: var(--blog-compact-row-height);
   --blog-control-content-size: 1em;
@@ -121,9 +129,8 @@ html:has(.blog-admin-shell, .blog-auth-shell) {
   line-height: 1;
   white-space: nowrap;
 }
-/* Rows already provide their own text clearance. Only two directly adjacent
- * painted surfaces need separation; labels or explanatory rows break the pair.
- * Surface roles describe a transparent wrapper's painted start/end boundary. */
-:where(.blog-app-shell :is(.blog-stack, .blog-content-stack, .blog-fieldset, .blog-settings-form, .editor-form)) > :is(.blog-frame, .blog-content-panel, .blog-table-scroll, .editor-form, .inline-form, .blog-surface, .blog-surface-end) + :is(.blog-frame, .blog-content-panel, .blog-table-scroll, .editor-form, .inline-form, .blog-surface, .blog-surface-start) {
+/* A surface group owns its gap even across transparent wrappers. Flush stacks
+ * separate only adjacent painted surfaces; text rows already supply clearance. */
+:where(.blog-app-shell .blog-stack:not(.blog-stack--spaced)) > :is(.blog-frame, .blog-error, .blog-empty, .blog-loading) + :is(.blog-frame, .blog-error, .blog-empty, .blog-loading) {
   margin-block-start: var(--blog-block-gap);
 }

@@ -4421,6 +4421,16 @@
       "directory": "src/browser",
       "reason": "Replace implicit administration heading and paragraph styling with explicit geometry roles, align handwritten form labels and checkbox rows, and separate editor Markdown and media presentation from public page typography without changing validation, requests or reactive ownership.",
       "production_behavior_change": true
+    },
+    {
+      "directory": "src/browser",
+      "reason": "Separate administrative layout wrappers from explicit painted form and table surfaces, give nested controls and rich previews shared clearance and task-group spacing, and align compact editable cells, action links and local validation roles without changing mutation ownership.",
+      "production_behavior_change": true
+    },
+    {
+      "directory": "src/interface",
+      "reason": "Apply the shared padded-frame role to account settings so compact inputs and keyboard focus stay clear of the surrounding panel border.",
+      "production_behavior_change": true
     }
   ]
 }

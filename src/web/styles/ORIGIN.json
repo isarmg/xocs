@@ -25,6 +25,10 @@
     {
       "date": "2026-10-24",
       "description": "Remove administration rules from the public stylesheet, isolate shared-name public rules, use explicit row/check roles, align populated table actions, Markdown and media previews with shared geometry, and preserve usable native selector fallbacks and authentication feedback."
+    },
+    {
+      "date": "2026-10-24",
+      "description": "Require explicit layout and frame roles, separate nested form and rich-content surfaces with shared 18px clearance, preserve transparent table scrolling and flush text surfaces, and restore administrative keyboard focus indicators and theme-colored action links."
     }
   ]
 }
