@@ -2,8 +2,8 @@
 use super::shell::Chrome;
 use crate::comments::Comments;
 use crate::common::{
-    Action, BrowsePager, Feedback, Lightbox, Sliding, browse, enc, load_typed, page_number, param,
-    safe_url, search_signal, t,
+    Action, BrowsePager, Feedback, Lightbox, Sliding, browse, enc, href, load_typed, page_number,
+    param, safe_url, search_signal, t,
 };
 use crate::models::{
     Article as ArticleModel, ArticleAccess, ArticleSummary, Category, Label, News as NewsModel,
@@ -13,6 +13,7 @@ use blog_interface::children::ToChildren;
 use blog_interface::component::component_props_builder;
 use blog_interface::ev;
 use blog_interface::html;
+use blog_interface::modal::ModalSurface;
 use blog_interface::prelude::*;
 use blog_interface::thread_bound::SendWrapper;
 use serde_json::json;
@@ -152,7 +153,7 @@ pub(super) fn Card(item: ArticleSummary, #[prop(default = false)] compact: bool)
             } else {
                 "article-card"
             })
-            .href(format!("/article/{}", item.id)),
+            .href(href(&format!("/article/{}", item.id))),
     )
 }
 
@@ -160,7 +161,7 @@ pub(super) fn Card(item: ArticleSummary, #[prop(default = false)] compact: bool)
 pub(super) fn Article(id: i64) -> impl IntoView {
     let data = load_typed::<ArticleModel>(Signal::derive(move || format!("/api/v1/articles/{id}")));
     let access = load_typed::<ArticleAccess>(Signal::derive(move || {
-        if data.error.get().is_some() {
+        if data.error.get().is_some_and(|error| error.status == 404) {
             format!("/api/v1/articles/{id}/access")
         } else {
             String::new()
@@ -170,6 +171,7 @@ pub(super) fn Article(id: i64) -> impl IntoView {
     let current = Signal::derive(move || unlocked.get().or(data.value.get()));
     let password = RwSignal::new(String::new());
     let action = Action::new();
+    let retry = Callback::new(move |()| data.reload());
     View::new(Chrome(
         component_props_builder(&Chrome)
             .title(Signal::derive(move || {
@@ -181,7 +183,7 @@ pub(super) fn Article(id: i64) -> impl IntoView {
             .cover(Signal::derive(move || {
                 current
                     .get()
-                    .map(|v| v.article_cover.clone().unwrap_or_default())
+                    .and_then(|v| v.article_cover.clone())
                     .unwrap_or_default()
             }))
             .metadata(current)
@@ -191,83 +193,132 @@ pub(super) fn Article(id: i64) -> impl IntoView {
                         .each(move || current.get().into_iter().collect::<Vec<_>>())
                         .key(|a| (a.id, a.article_content.clone()))
                         .children(move |article| {
-                            View::new(Reading(
-                                component_props_builder(&Reading).article(article).build(),
-                            ))
+                            Reading(component_props_builder(&Reading).article(article).build())
                         })
                         .build()),
                     move || {
-                        if current.get().is_none() {
-                            if access.value.get().is_some_and(|v| v.password_required) {
+                        if current.get().is_some() {
+                            return ().into_any();
+                        }
+                        if data.busy.get() || access.busy.get() || data.error.get().is_none() {
+                            return View::new(
+                                html::p()
+                                    .child(t("正在加载文章…", "Loading article…"))
+                                    .role("status"),
+                            )
+                            .into_any();
+                        }
+                        if data.error.get().is_some_and(|error| error.status != 404) {
+                            return Feedback(
+                                component_props_builder(&Feedback)
+                                    .error(data.error)
+                                    .public(true)
+                                    .retry(Some(retry))
+                                    .fallback(t("文章加载失败", "Unable to load the article"))
+                                    .build(),
+                            )
+                            .into_any();
+                        }
+                        if let Some(error) = access.error.get() {
+                            return if error.status == 404 {
                                 View::new(
-                                    html::form()
-                                        .child((
-                                            html::h2().child(t(
-                                                "这篇文章需要访问密码",
-                                                "This article requires an access password",
-                                            )),
-                                            html::p().child(
-                                                access
-                                                    .value
-                                                    .get()
-                                                    .map(|v| v.tips.clone().unwrap_or_default())
-                                                    .unwrap_or_default(),
-                                            ),
-                                            Feedback(
-                                                component_props_builder(&Feedback)
-                                                    .error(action.error)
-                                                    .public(true)
-                                                    .fallback(t(
-                                                        "访问密码错误或文章不可用",
-                                                        "Incorrect password or article unavailable",
-                                                    ))
-                                                    .build(),
-                                            ),
-                                            html::label().child((
-                                                t("访问密码", "Access password"),
-                                                html::input()
-                                                    .r#type("password")
-                                                    .required(true)
-                                                    .prop("value", move || password.get())
-                                                    .on(ev::input, move |ev| {
-                                                        password.set(event_target_value(&ev))
-                                                    }),
-                                            )),
-                                            html::button()
-                                                .child(t("阅读文章", "Read article"))
-                                                .r#type("submit")
-                                                .disabled(move || action.busy.get()),
-                                        ))
-                                        .class("reading-card password-form")
-                                        .on(ev::submit, move |ev| {
-                                            ev.prevent_default();
-                                            action
-                    .run_typed(
-                        format!("/api/v1/articles/{id}/unlock"),
-                        "POST",
-                        Some(json!({ "password" : password.get_untracked() })),
-                        move |v| {
-                            unlocked.set(Some(v));
-                            password.set(String::new());
-                        },
-                    );
-                                        }),
-                                )
-                                .into_any()
-                            } else if access.error.get().is_some() {
-                                View::new(
-                                    html::p()
-                                        .child(t("文章不存在", "Article not found"))
-                                        .role("alert"),
+                                    html::section().role("alert").child((
+                                        html::p().child(t("文章不存在", "Article not found")),
+                                        html::button()
+                                            .r#type("button")
+                                            .child(t("重试", "Try again"))
+                                            .on(ev::click, move |_| retry.run(())),
+                                    )),
                                 )
                                 .into_any()
                             } else {
-                                View::new(html::p().child(t("正在加载文章…", "Loading article…")))
-                                    .into_any()
-                            }
-                        } else {
-                            ().into_any()
+                                Feedback(
+                                    component_props_builder(&Feedback)
+                                        .error(access.error)
+                                        .public(true)
+                                        .retry(Some(Callback::new(move |()| access.reload())))
+                                        .fallback(t(
+                                            "文章访问状态加载失败",
+                                            "Unable to check article access",
+                                        ))
+                                        .build(),
+                                )
+                                .into_any()
+                            };
                         }
+                        let Some(info) = access.value.get() else {
+                            return View::new(
+                                html::p()
+                                    .child(t("正在加载文章…", "Loading article…"))
+                                    .role("status"),
+                            )
+                            .into_any();
+                        };
+                        if !info.password_required {
+                            // Visibility may have changed between the detail and access
+                            // requests. Retry the detail; a completed probe is never loading.
+                            return View::new(
+                                html::section().role("alert").child((
+                                    html::p().child(t(
+                                        "文章加载失败，请重试。",
+                                        "Unable to load the article. Please try again.",
+                                    )),
+                                    html::button()
+                                        .r#type("button")
+                                        .child(t("重试", "Try again"))
+                                        .on(ev::click, move |_| retry.run(())),
+                                )),
+                            )
+                            .into_any();
+                        }
+                        View::new(
+                            html::form()
+                                .class("reading-card password-form")
+                                .child((
+                                    html::h2().child(t(
+                                        "这篇文章需要访问密码",
+                                        "This article requires an access password",
+                                    )),
+                                    html::p().child(info.tips.unwrap_or_default()),
+                                    Feedback(
+                                        component_props_builder(&Feedback)
+                                            .error(action.error)
+                                            .public(true)
+                                            .fallback(t(
+                                                "访问密码错误或文章不可用",
+                                                "Incorrect password or article unavailable",
+                                            ))
+                                            .build(),
+                                    ),
+                                    html::label().child((
+                                        t("访问密码", "Access password"),
+                                        html::input()
+                                            .r#type("password")
+                                            .required(true)
+                                            .prop("value", move || password.get())
+                                            .on(ev::input, move |ev| {
+                                                password.set(event_target_value(&ev))
+                                            }),
+                                    )),
+                                    html::button()
+                                        .r#type("submit")
+                                        .child(t("阅读文章", "Read article"))
+                                        .disabled(move || action.busy.get()),
+                                ))
+                                .on(ev::submit, move |ev| {
+                                    ev.prevent_default();
+                                    action.run_typed(
+                                        format!("/api/v1/articles/{id}/unlock"),
+                                        "POST",
+                                        Some(json!({ "password": password.get_untracked() })),
+                                        move |value| {
+                                            unlocked.set(Some(value));
+                                            password.set(String::new());
+                                        },
+                                    );
+                                }),
+                        )
+                        .into_any()
                     },
                 )
             }))
@@ -419,7 +470,7 @@ fn Reading(article: ArticleModel) -> impl IntoView {
                         .child((
                             html::a()
                                 .child(t("← 返回文章", "← Back to articles"))
-                                .href("/"),
+                                .href(href("/")),
                             safe_url(&article.video_url.clone().unwrap_or_default(), false).map(
                                 |u| {
                                     View::new(
@@ -494,10 +545,10 @@ fn Reading(article: ArticleModel) -> impl IntoView {
                                             article.sort_name.clone().unwrap_or_default(),
                                             article.label_name.clone().unwrap_or_default()
                                         ))
-                                        .href(format!(
+                                        .href(href(&format!(
                                             "/sort?sort_id={}&label_id={}",
                                             article.sort_id, article.label_id
-                                        )),
+                                        ))),
                                     html::blockquote().child((
                                         t("作者：", "Author: "),
                                         article.username.clone().unwrap_or_default(),
@@ -543,45 +594,43 @@ fn Reading(article: ArticleModel) -> impl IntoView {
                 .class("reading-layout"),
         ),
         IntoMaybeErased::into_maybe_erased(move || {
-            copyright.get().then(| | View::new(
-    html::div()
-        .child(
-
-            html::section()
-                    .child(
-                        (
+            copyright.get().then(|| {
+                let close = Callback::new(move |()| copyright.set(false));
+                html::div()
+                    .class("article-copyright-backdrop")
+                    .role("presentation")
+                    .child(ModalSurface(
+                        component_props_builder(&ModalSurface)
+                            .class("article-copyright-dialog")
+                            .label(t("版权声明", "Copyright notice"))
+                            .close(close)
+                            .dismiss_on_backdrop(true)
+                            .children(ToChildren::to_children(move || (
                                 html::button()
-                                .child( "×").r#type("button")
-                                .aria_label(t("关闭版权声明",
-                                "Close copyright notice"))
-                                .on(ev::click, move | _ |
-                                copyright.set(false)),
-                                html::h2()
-                                .child( t("版权声明", "Copyright notice")),
-                                html::p()
-                                .child( t("文章、图片和视频的著作权归各自原作者所有。转载或使用内容时，请遵守原作者的许可要求；本站原创内容采用署名－非商业性使用－相同方式共享 4.0 国际许可协议。",
-                                "Articles, images, and videos belong to their respective authors. Follow their license terms when using or republishing content. Original content on this site is licensed under CC BY-NC-SA 4.0 International.")),
-                                html::p()
-                                .child( html::a()
-                                .child( t("查看许可协议", "View license"))
-                                .href("https://creativecommons.org/licenses/by-nc-sa/4.0/")
-                                .target("_blank").rel("noopener noreferrer"))
-                            ,),
-                    )
-                    .role("dialog")
-                    .aria_modal("true")
-                    .aria_label(
-                        t("版权声明", "Copyright notice"),
-                    )
-                    .on(
-                        ev::click,
-                        move |ev| ev.stop_propagation(),
-                    ),
-        )
-        .class("article-copyright-backdrop")
-        .role("presentation")
-        .on(ev::click, move |_| copyright.set(false)),
-))
+                                    .child("×")
+                                    .r#type("button")
+                                    .attr("data-blog-initial-focus", "")
+                                    .aria_label(t("关闭版权声明", "Close copyright notice"))
+                                    .on(ev::click, move |_| close.run(())),
+                                html::h2().child(t("版权声明", "Copyright notice")),
+                                html::p().child(t(
+                                    "文章、图片和视频的著作权归各自原作者所有。转载或使用内容时，请遵守原作者的许可要求；本站原创内容采用署名－非商业性使用－相同方式共享 4.0 国际许可协议。",
+                                    "Articles, images, and videos belong to their respective authors. Follow their license terms when using or republishing content. Original content on this site is licensed under CC BY-NC-SA 4.0 International.",
+                                )),
+                                html::p().child(html::a()
+                                    .child(t("查看许可协议", "View license"))
+                                    .href("https://creativecommons.org/licenses/by-nc-sa/4.0/")
+                                    .target("_blank")
+                                    .rel("noopener noreferrer")),
+                            )))
+                            .build(),
+                    ))
+                    .on(ev::click, move |event| {
+                        if event.target() == event.current_target() {
+                            close.run(());
+                        }
+                    })
+            })
         }),
         IntoMaybeErased::into_maybe_erased(Lightbox(
             component_props_builder(&Lightbox).src(lightbox).build(),
@@ -958,9 +1007,7 @@ pub(super) fn Browse(search: bool) -> impl IntoView {
                 ,),
         )
         .class("original-list-card")
-        .href(
-            format!("/article/{}", item.id),
-        ),
+        .href(href(&format!("/article/{}", item.id))),
 )
                             .into_any() } else { View::new(Card(component_props_builder(&Card)
                 .item( item)
@@ -992,7 +1039,7 @@ pub(super) fn Browse(search: bool) -> impl IntoView {
                     .child((t("浏览全部文章", "Browse all articles"),
                     html::span()
                     .child( "↗").aria_hidden("true"),))
-                    .href("/sort")
+                    .href(href("/sort"))
                 ,),
         )
         .class("public-empty-state search-empty-state"),

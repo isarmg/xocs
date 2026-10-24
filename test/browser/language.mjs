@@ -100,7 +100,7 @@ try {
       const restrictedPage = await restricted.newPage(), restrictedState = { authenticated: false };
       await mockApi(restrictedPage, restrictedState);
       await restrictedPage.goto(base + '/?lang=zh-CN');
-      await restrictedPage.locator('.public-header nav > a[href="/sort"]').click();
+      await restrictedPage.locator('.public-header nav > a[href="/sort?lang=zh-CN"]').click();
       await expect(restrictedPage).toHaveURL(/\/sort\?lang=zh-CN/);
       await expect(restrictedPage.getByRole('heading', { name: '文章分类', exact: true })).toBeVisible();
       await restrictedPage.goto(base + '/admin?lang=zh-CN');

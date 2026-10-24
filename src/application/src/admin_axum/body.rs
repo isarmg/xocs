@@ -10,7 +10,7 @@ use axum::{
 use bytes::Bytes;
 use std::{
     error::Error,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, OnceLock},
 };
 
 #[derive(Default)]
@@ -18,8 +18,15 @@ struct Readers {
     total: usize,
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub(super) struct BodyAdmission(Arc<Mutex<Readers>>);
+
+impl Default for BodyAdmission {
+    fn default() -> Self {
+        static READERS: OnceLock<Arc<Mutex<Readers>>> = OnceLock::new();
+        Self(READERS.get_or_init(Arc::default).clone())
+    }
+}
 
 struct Permit {
     admission: BodyAdmission,
@@ -62,6 +69,11 @@ impl Scope {
 }
 
 impl BodyAdmission {
+    #[cfg(test)]
+    pub(super) fn isolated() -> Self {
+        Self(Arc::default())
+    }
+
     fn acquire(&self, id: Option<&RequestId>) -> Result<Permit, Box<Response>> {
         let mut readers = self.0.lock().map_err(|_| {
             Box::new(error(

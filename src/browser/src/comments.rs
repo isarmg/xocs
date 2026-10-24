@@ -243,7 +243,7 @@ pub fn Comments(
                             })
                             .aria_label(t("写下你的想法", "Write your thoughts"))
                             .required(true)
-                            .maxlength("1024")
+                            .maxlength("2048")
                             .prop("value", move || draft.get())
                             .on(blog_interface::ev::input, move |ev| {
                                 draft.set(event_target_value(&ev))
@@ -327,6 +327,13 @@ pub fn Comments(
                             v
                         });
                         if text(&submission, "content").is_empty() {
+                            return;
+                        }
+                        if !retry && text(&submission, "content").chars().count() > 1024 {
+                            failure.set(t(
+                                "评论正文须为 1–1024 个字符",
+                                "Comment content must contain 1–1024 characters",
+                            ));
                             return;
                         }
                         if storage()
@@ -462,6 +469,11 @@ fn Replies(
     });
     let data = load(path);
     let items = RwSignal::new(Vec::<Value>::new());
+    let expandable = Memo::new(move |_| {
+        data.previous
+            .get()
+            .is_some_and(|value| num(&value, "total") > num(&value, "size"))
+    });
     Effect::new(move |_| {
         if let Some(v) = data.value.get() {
             let next = rows(&v, "items");
@@ -503,26 +515,46 @@ fn Replies(
                         .collect_view()
                 },
                 move || {
-                    data.value
-                        .get()
-                        .filter(|v| (items.get().len() as i64) < num(v, "total"))
-                        .map(|v| {
-                            View::new(
-                                blog_interface::html::button()
-                                    .child(format!(
-                                        "{} {} {}",
-                                        t("展开剩余", "Show"),
-                                        num(&v, "total") - items.get().len() as i64,
-                                        t("条回复", "more replies")
-                                    ))
-                                    .class("comment-more")
-                                    .r#type("button")
-                                    .disabled(move || data.busy.get())
-                                    .on(blog_interface::ev::click, move |_| {
+                    expandable.get().then(|| {
+                        View::new(
+                            blog_interface::html::button()
+                                .child(move || {
+                                    let total =
+                                        data.previous.get().map(|v| num(&v, "total")).unwrap_or(0);
+                                    let remaining = (total - items.get().len() as i64).max(0);
+                                    if remaining == 0 {
+                                        t("已展开全部回复", "All replies shown")
+                                    } else {
+                                        format!(
+                                            "{} {} {}",
+                                            t("展开剩余", "Show"),
+                                            remaining,
+                                            t("条回复", "more replies")
+                                        )
+                                    }
+                                })
+                                .class("comment-more")
+                                .r#type("button")
+                                .aria_disabled(move || {
+                                    (data.busy.get()
+                                        || data.value.get().is_none()
+                                        || data.previous.get().is_none_or(|v| {
+                                            items.get().len() as i64 >= num(&v, "total")
+                                        }))
+                                    .to_string()
+                                })
+                                .on(blog_interface::ev::click, move |_| {
+                                    if !data.busy.get_untracked()
+                                        && data.value.get_untracked().is_some()
+                                        && data.previous.get_untracked().is_some_and(|v| {
+                                            (items.get_untracked().len() as i64) < num(&v, "total")
+                                        })
+                                    {
                                         page.update(|p| *p += 1)
-                                    }),
-                            )
-                        })
+                                    }
+                                }),
+                        )
+                    })
                 },
             ))
             .class("comment-replies"),

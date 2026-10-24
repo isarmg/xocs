@@ -1042,3 +1042,318 @@ async fn news_publish_retries_preserve_identity_and_deliberate_repeats() {
         "Live and deleted receipts survive database reopen"
     );
 }
+
+async fn create_note_with_key(
+    app: &Router,
+    session: &(String, String),
+    key: &str,
+    value: Value,
+) -> Response {
+    app.clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/content/notes")
+                .header(header::HOST, "127.0.0.1:18881")
+                .header(header::ORIGIN, "http://127.0.0.1:18881")
+                .header("sec-fetch-site", "same-origin")
+                .header(header::COOKIE, &session.0)
+                .header("x-csrf-token", &session.1)
+                .header(header::CONTENT_TYPE, "application/json")
+                .header("Idempotency-Key", key)
+                .body(Body::from(value.to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap()
+}
+
+#[tokio::test]
+async fn note_creation_receipts_recover_lost_responses_without_overwriting_later_edits() {
+    let (_directory, app, pool) = setup_with_pool_limit(1).await;
+    let auth = session(&app).await;
+    let image = uploaded_image(&app, &auth).await;
+    let original = note("  One intended note  ", Some(&image), true);
+    let first = create_note_with_key(&app, &auth, "original-note", original.clone()).await;
+    assert_eq!(first.status(), StatusCode::OK);
+    drop(first); // The row committed, but the response never reached the editor.
+    let recovered = create_note_with_key(&app, &auth, "original-note", original.clone()).await;
+    assert_eq!(recovered.status(), StatusCode::OK);
+    let recovered = body_json(recovered).await;
+    let id = recovered["id"].as_i64().unwrap();
+    assert_eq!(recovered["content"], "One intended note");
+    let normalized = note("One intended note", Some(&image), true);
+    let replay = create_note_with_key(&app, &auth, "original-note", normalized).await;
+    assert_eq!(body_json(replay).await["id"], id);
+    assert_eq!(
+        admin(
+            &app,
+            &auth,
+            "PUT",
+            &format!("/api/v1/content/notes/{id}"),
+            note("Edited and hidden", None, false),
+        )
+        .await
+        .status(),
+        StatusCode::OK
+    );
+    let resource: i64 = sqlx::query_scalar("SELECT id FROM resource WHERE path=?")
+        .bind(&image)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        admin(
+            &app,
+            &auth,
+            "DELETE",
+            &format!("/api/v1/content/resources/{resource}"),
+            json!({"path":image}),
+        )
+        .await
+        .status(),
+        StatusCode::OK
+    );
+    let replay = create_note_with_key(&app, &auth, "original-note", original.clone()).await;
+    assert_eq!(replay.status(), StatusCode::OK);
+    let replay = body_json(replay).await;
+    assert_eq!(replay["id"], id);
+    assert_eq!(replay["content"], "Edited and hidden");
+    assert_eq!(replay["is_public"], 0);
+    assert!(replay["image_path"].is_null());
+    for changed in [
+        note("Different draft", Some(&image), true),
+        note("One intended note", None, true),
+        note("One intended note", Some(&image), false),
+    ] {
+        assert_eq!(
+            create_note_with_key(&app, &auth, "original-note", changed)
+                .await
+                .status(),
+            StatusCode::CONFLICT
+        );
+    }
+    let parallel = note("Concurrent note", None, true);
+    let (first, second) = tokio::time::timeout(std::time::Duration::from_secs(10), async {
+        tokio::join!(
+            create_note_with_key(&app, &auth, "parallel-note", parallel.clone()),
+            create_note_with_key(&app, &auth, "parallel-note", parallel.clone()),
+        )
+    })
+    .await
+    .expect("note receipts must not nest pool checkout");
+    assert_eq!(first.status(), StatusCode::OK);
+    assert_eq!(second.status(), StatusCode::OK);
+    assert_eq!(body_json(first).await["id"], body_json(second).await["id"]);
+    for _ in 0..2 {
+        assert_eq!(
+            admin(
+                &app,
+                &auth,
+                "POST",
+                "/api/v1/content/notes",
+                parallel.clone()
+            )
+            .await
+            .status(),
+            StatusCode::OK,
+            "unkeyed posts remain deliberate independent creations"
+        );
+    }
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM wei_yan WHERE type='friend'")
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+        4
+    );
+    assert_eq!(
+        admin(
+            &app,
+            &auth,
+            "DELETE",
+            &format!("/api/v1/content/notes/{id}"),
+            Value::Null,
+        )
+        .await
+        .status(),
+        StatusCode::OK
+    );
+    let deleted_receipt: Option<i64> =
+        sqlx::query_scalar("SELECT note_id FROM note_submission WHERE request_id='original-note'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert!(deleted_receipt.is_none());
+    assert_eq!(
+        create_note_with_key(&app, &auth, "original-note", original)
+            .await
+            .status(),
+        StatusCode::CONFLICT
+    );
+}
+
+#[tokio::test]
+async fn note_receipts_validate_keys_and_commit_atomically_then_survive_database_reopen() {
+    let (directory, app, pool) = setup().await;
+    let auth = session(&app).await;
+    let draft = note("Durable note", None, true);
+    for key in ["".to_owned(), "has space".to_owned(), "x".repeat(129)] {
+        assert_eq!(
+            create_note_with_key(&app, &auth, &key, draft.clone())
+                .await
+                .status(),
+            StatusCode::BAD_REQUEST
+        );
+    }
+    let invalid_image = format!("/media/{}.png", "0".repeat(64));
+    assert_eq!(
+        create_note_with_key(
+            &app,
+            &auth,
+            "durable-note",
+            note("Durable note", Some(&invalid_image), true),
+        )
+        .await
+        .status(),
+        StatusCode::BAD_REQUEST
+    );
+    for table in ["note_submission", "wei_yan"] {
+        assert_eq!(
+            sqlx::query_scalar::<_, i64>(sqlx::AssertSqlSafe(format!(
+                "SELECT COUNT(*) FROM {table}"
+            )))
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+            0,
+            "failed creation must not leave a row or consume its receipt key"
+        );
+    }
+    let response = create_note_with_key(&app, &auth, "durable-note", draft.clone()).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let saved = body_json(response).await;
+    close_fixture_pool(&pool).await;
+    let pool = open_database(&directory.path().join("site.sqlite"), false)
+        .await
+        .unwrap();
+    let app = router(
+        AppState {
+            scope: blog_application::server_runtime::WorkScope::new(),
+            pool: pool.clone(),
+            admin: Arc::new(AdministratorService::new(SqliteAdministratorStore::new(
+                pool.clone(),
+            ))),
+            origin: AdministratorOriginMode::LoopbackDevelopmentHttp,
+            media: directory.path().to_path_buf(),
+            media_operations: Arc::new(tokio::sync::Mutex::new(())),
+            public_mutations: Arc::new(crate::app::PublicMutationCapacity::default()),
+            password_slots: Arc::new(tokio::sync::Semaphore::new(2)),
+        },
+        None,
+    )
+    .unwrap();
+    let replay = create_note_with_key(&app, &auth, "durable-note", draft).await;
+    assert_eq!(replay.status(), StatusCode::OK);
+    assert_eq!(body_json(replay).await, saved);
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM wei_yan WHERE type='friend'")
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+        1
+    );
+}
+
+#[tokio::test]
+async fn paginated_content_keeps_counts_items_and_source_reads_in_one_snapshot() {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    for (path, expected_total) in [
+        ("/api/v1/articles", 1),
+        ("/api/v1/content/articles", 1),
+        ("/api/v1/content/articles/1/news", 1),
+        ("/api/v1/notes/page", 1),
+        ("/api/v1/content/notes", 1),
+        ("/api/v1/links/page?kind=lovePhoto", 1),
+        ("/api/v1/content/links", 1),
+        ("/api/v1/content/tree-hole", 1),
+        ("/api/v1/content/resources", 1),
+        ("/api/v1/message-comments", 1),
+        ("/api/v1/message-comments/3/replies", 1),
+        ("/api/v1/love-comments", 1),
+        ("/api/v1/love-comments/5/replies", 1),
+        ("/api/v1/content/comments", 6),
+    ] {
+        let (directory, app, fixture_pool) = setup().await;
+        let auth = session(&app).await;
+        sqlx::raw_sql(
+            "INSERT INTO article(id,user_id,sort_id,label_id,article_title,article_content) VALUES(1,1,1,1,'Before edit','Body');
+             INSERT INTO wei_yan(id,user_id,type,content,is_public,source) VALUES(1,1,'friend','Before edit',1,NULL),(2,1,'news','Before edit',1,1);
+             INSERT INTO resource_path(id,title,type,status) VALUES(1,'Before edit','lovePhoto',1);
+             INSERT INTO tree_hole(id,message) VALUES(1,'Before edit');
+             INSERT INTO resource(id,type,path,status) VALUES(1,'image','/media/fixture.png',1);
+             INSERT INTO comment(id,source,type,parent_comment_id,floor_comment_id,comment_content) VALUES
+                (1,1,'article',0,NULL,'Article root'),(2,1,'article',1,1,'Article reply'),
+                (3,0,'message',0,NULL,'Message root'),(4,0,'message',3,3,'Message reply'),
+                (5,1,'love',0,NULL,'Love root'),(6,1,'love',5,5,'Love reply');",
+        )
+        .execute(&fixture_pool)
+        .await
+        .unwrap();
+        let changed = Arc::new(AtomicBool::new(false));
+        let observed = changed.clone();
+        // Authentication uses the fixture pool. On the content pool, release of
+        // the first source/count read commits a concurrent edit deterministically.
+        // A transaction retains that connection until its whole page is assembled.
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .after_release(move |connection, _| {
+                let observed = observed.clone();
+                Box::pin(async move {
+                    if !observed.swap(true, Ordering::SeqCst) {
+                        sqlx::raw_sql("BEGIN IMMEDIATE; UPDATE article SET deleted=1; DELETE FROM comment; DELETE FROM wei_yan; DELETE FROM resource_path; DELETE FROM tree_hole; DELETE FROM resource; COMMIT;")
+                            .execute(connection).await?;
+                    }
+                    Ok(true)
+                })
+            })
+            .connect_lazy_with((*fixture_pool.connect_options()).clone());
+        let app = router(
+            AppState {
+                scope: blog_application::server_runtime::WorkScope::new(),
+                pool: pool.clone(),
+                admin: Arc::new(AdministratorService::new(SqliteAdministratorStore::new(
+                    fixture_pool.clone(),
+                ))),
+                origin: AdministratorOriginMode::LoopbackDevelopmentHttp,
+                media: directory.path().to_path_buf(),
+                media_operations: Arc::new(tokio::sync::Mutex::new(())),
+                public_mutations: Arc::new(crate::app::PublicMutationCapacity::default()),
+                password_slots: Arc::new(tokio::sync::Semaphore::new(2)),
+            },
+            None,
+        )
+        .unwrap();
+        let response = admin(&app, &auth, "GET", path, Value::Null).await;
+        assert_eq!(response.status(), StatusCode::OK, "{path}");
+        let body = body_json(response).await;
+        assert_eq!(body["total"], expected_total, "{path}");
+        assert_eq!(
+            body["items"].as_array().unwrap().len(),
+            expected_total as usize,
+            "{path}"
+        );
+        // Pool return hooks run asynchronously. A subsequent checkout waits for
+        // the edit to commit; closing immediately can skip that return hook.
+        let mut connection = pool.acquire().await.unwrap();
+        assert!(
+            changed.load(Ordering::SeqCst),
+            "concurrent edit did not run: {path}"
+        );
+        let remaining: i64 = sqlx::query_scalar("SELECT (SELECT COUNT(*) FROM article WHERE deleted=0)+(SELECT COUNT(*) FROM comment)+(SELECT COUNT(*) FROM wei_yan)+(SELECT COUNT(*) FROM resource_path)+(SELECT COUNT(*) FROM tree_hole)+(SELECT COUNT(*) FROM resource)")
+            .fetch_one(&mut *connection).await.unwrap();
+        assert_eq!(remaining, 0, "concurrent edit did not commit: {path}");
+        connection.close().await.unwrap();
+        pool.close().await;
+    }
+}

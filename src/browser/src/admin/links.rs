@@ -35,6 +35,7 @@ pub(super) fn Links() -> impl IntoView {
     let editing = RwSignal::new(None::<i64>);
     let save = Action::new();
     let remove = Action::new();
+    let removing = RwSignal::new(None::<i64>);
     let reset = Callback::new(move |()| {
         form.set(empty_link());
         editing.set(None)
@@ -65,7 +66,14 @@ pub(super) fn Links() -> impl IntoView {
                             blog_interface::html::button()
                                 .child(t("编辑", "Edit"))
                                 .class("blog-button")
+                                .disabled(move || remove.busy.get() && removing.get() == Some(id))
                                 .on(blog_interface::ev::click, move |_| {
+                                    if save.busy.get_untracked()
+                                        || remove.busy.get_untracked()
+                                            && removing.get_untracked() == Some(id)
+                                    {
+                                        return;
+                                    }
                                     editing.set(Some(id));
                                     let mut f = empty_link();
                                     for k in [
@@ -87,12 +95,26 @@ pub(super) fn Links() -> impl IntoView {
                                         blog_interface::html::button()
                                             .child(t("审核通过", "Approve"))
                                             .class("blog-button")
+                                            .disabled(move || remove.busy.get())
                                             .on(blog_interface::ev::click, move |_| {
+                                                if save.busy.get_untracked()
+                                                    || remove.busy.get_untracked()
+                                                {
+                                                    return;
+                                                }
+                                                removing.set(Some(id));
                                                 remove.run(
                                                     format!("/api/v1/content/links/{id}/status"),
                                                     "PUT",
                                                     Some(json!({ "active" : true })),
-                                                    move |_| data.reload(),
+                                                    move |_| {
+                                                        if editing.get_untracked() == Some(id) {
+                                                            form.update(|form| {
+                                                                form["status"] = json!(true)
+                                                            });
+                                                        }
+                                                        data.reload();
+                                                    },
                                                 )
                                             }),
                                     )
@@ -100,7 +122,11 @@ pub(super) fn Links() -> impl IntoView {
                             blog_interface::html::button()
                                 .child(t("删除", "Delete"))
                                 .class("blog-button blog-danger")
+                                .disabled(move || remove.busy.get())
                                 .on(blog_interface::ev::click, move |_| {
+                                    if save.busy.get_untracked() || remove.busy.get_untracked() {
+                                        return;
+                                    }
                                     if web_sys::window()
                                         .unwrap()
                                         .confirm_with_message(&t(
@@ -109,11 +135,17 @@ pub(super) fn Links() -> impl IntoView {
                                         ))
                                         .unwrap_or(false)
                                     {
+                                        removing.set(Some(id));
                                         remove.run(
                                             format!("/api/v1/content/links/{id}"),
                                             "DELETE",
                                             None,
-                                            move |_| data.reload(),
+                                            move |_| {
+                                                if editing.get_untracked() == Some(id) {
+                                                    reset.run(());
+                                                }
+                                                data.reload();
+                                            },
                                         );
                                     }
                                 }),
@@ -199,118 +231,141 @@ pub(super) fn Links() -> impl IntoView {
                 blog_interface::html::fieldset()
                     .child((
                         blog_interface::html::form()
-                            .child((
-                                blog_interface::html::h2().child(move || {
-                                    if editing.get().is_some() {
-                                        t("编辑资源", "Edit resource")
-                                    } else {
-                                        t("新增资源", "Add resource")
-                                    }
-                                }),
-                                blog_interface::html::div()
+                            .child(
+                                blog_interface::html::fieldset()
                                     .child((
-                                        blog_interface::html::label()
+                                        blog_interface::html::h2().child(move || {
+                                            if editing.get().is_some() {
+                                                t("编辑资源", "Edit resource")
+                                            } else {
+                                                t("新增资源", "Add resource")
+                                            }
+                                        }),
+                                        blog_interface::html::div()
                                             .child((
-                                                t("类型", "Type"),
-                                                crate::select::Select(
-                                                    component_props_builder(&crate::select::Select)
-                                                        .label(Signal::derive(|| t("类型", "Type")))
-                                                        .value(Signal::derive(move || {
-                                                            text(&form.get(), "link_type")
-                                                        }))
-                                                        .options(Signal::derive(move || {
-                                                            options()
-                                                                .into_iter()
-                                                                .map(|(k, l)| (k.to_string(), l))
-                                                                .collect()
-                                                        }))
-                                                        .change(Callback::new(move |v: String| {
-                                                            form.update(|f| {
-                                                                f["link_type"] = json!(v)
-                                                            })
-                                                        }))
+                                                blog_interface::html::label()
+                                                    .child((
+                                                        t("类型", "Type"),
+                                                        crate::select::Select(
+                                                            component_props_builder(
+                                                                &crate::select::Select,
+                                                            )
+                                                            .label(Signal::derive(|| {
+                                                                t("类型", "Type")
+                                                            }))
+                                                            .value(Signal::derive(move || {
+                                                                text(&form.get(), "link_type")
+                                                            }))
+                                                            .options(Signal::derive(move || {
+                                                                options()
+                                                                    .into_iter()
+                                                                    .map(|(k, l)| {
+                                                                        (k.to_string(), l)
+                                                                    })
+                                                                    .collect()
+                                                            }))
+                                                            .change(Callback::new(
+                                                                move |v: String| {
+                                                                    form.update(|f| {
+                                                                        f["link_type"] = json!(v)
+                                                                    })
+                                                                },
+                                                            ))
+                                                            .build(),
+                                                        ),
+                                                    ))
+                                                    .class("blog-form-field"),
+                                                Field(
+                                                    component_props_builder(&Field)
+                                                        .label(t("分类", "Category"))
+                                                        .key("classify")
+                                                        .form(form)
+                                                        .max(32)
                                                         .build(),
                                                 ),
                                             ))
-                                            .class("blog-form-field"),
+                                            .class("form-grid"),
                                         Field(
                                             component_props_builder(&Field)
-                                                .label(t("分类", "Category"))
-                                                .key("classify")
+                                                .label(t("标题", "Title"))
+                                                .key("title")
                                                 .form(form)
-                                                .max(32)
+                                                .required(true)
+                                                .max(64)
                                                 .build(),
                                         ),
+                                        Field(
+                                            component_props_builder(&Field)
+                                                .label(t("图片地址", "Image URL"))
+                                                .key("cover")
+                                                .form(form)
+                                                .build(),
+                                        ),
+                                        Field(
+                                            component_props_builder(&Field)
+                                                .label(t("目标地址", "Target URL"))
+                                                .key("url")
+                                                .form(form)
+                                                .build(),
+                                        ),
+                                        Field(
+                                            component_props_builder(&Field)
+                                                .label(t("简介", "Introduction"))
+                                                .key("introduction")
+                                                .form(form)
+                                                .build(),
+                                        ),
+                                        Check(
+                                            component_props_builder(&Check)
+                                                .label(t(" 公开显示", " Show publicly"))
+                                                .key("status")
+                                                .form(form)
+                                                .build(),
+                                        ),
+                                        blog_interface::html::div()
+                                            .child((
+                                                blog_interface::html::button()
+                                                    .child(move || {
+                                                        if editing.get().is_some() {
+                                                            t("保存修改", "Save changes")
+                                                        } else {
+                                                            t("新增资源", "Add resource")
+                                                        }
+                                                    })
+                                                    .class("blog-button")
+                                                    .r#type("submit")
+                                                    .disabled(move || remove.busy.get()),
+                                                move || {
+                                                    editing.get().map(|_| {
+                                                        View::new(
+                                                            blog_interface::html::button()
+                                                                .child(t(
+                                                                    "取消编辑",
+                                                                    "Cancel editing",
+                                                                ))
+                                                                .class("blog-button")
+                                                                .r#type("button")
+                                                                .on(
+                                                                    blog_interface::ev::click,
+                                                                    move |_| reset.run(()),
+                                                                ),
+                                                        )
+                                                    })
+                                                },
+                                            ))
+                                            .class("blog-actions"),
                                     ))
-                                    .class("form-grid"),
-                                Field(
-                                    component_props_builder(&Field)
-                                        .label(t("标题", "Title"))
-                                        .key("title")
-                                        .form(form)
-                                        .required(true)
-                                        .max(64)
-                                        .build(),
-                                ),
-                                Field(
-                                    component_props_builder(&Field)
-                                        .label(t("图片地址", "Image URL"))
-                                        .key("cover")
-                                        .form(form)
-                                        .build(),
-                                ),
-                                Field(
-                                    component_props_builder(&Field)
-                                        .label(t("目标地址", "Target URL"))
-                                        .key("url")
-                                        .form(form)
-                                        .build(),
-                                ),
-                                Field(
-                                    component_props_builder(&Field)
-                                        .label(t("简介", "Introduction"))
-                                        .key("introduction")
-                                        .form(form)
-                                        .build(),
-                                ),
-                                Check(
-                                    component_props_builder(&Check)
-                                        .label(t(" 公开显示", " Show publicly"))
-                                        .key("status")
-                                        .form(form)
-                                        .build(),
-                                ),
-                                blog_interface::html::div()
-                                    .child((
-                                        blog_interface::html::button()
-                                            .child(move || {
-                                                if editing.get().is_some() {
-                                                    t("保存修改", "Save changes")
-                                                } else {
-                                                    t("新增资源", "Add resource")
-                                                }
-                                            })
-                                            .class("blog-button")
-                                            .r#type("submit"),
-                                        move || {
-                                            editing.get().map(|_| {
-                                                View::new(
-                                                    blog_interface::html::button()
-                                                        .child(t("取消编辑", "Cancel editing"))
-                                                        .class("blog-button")
-                                                        .r#type("button")
-                                                        .on(blog_interface::ev::click, move |_| {
-                                                            reset.run(())
-                                                        }),
-                                                )
-                                            })
-                                        },
-                                    ))
-                                    .class("blog-actions"),
-                            ))
+                                    .class("blog-fieldset")
+                                    .disabled(move || {
+                                        remove.busy.get() && removing.get() == editing.get()
+                                    }),
+                            )
                             .class("editor-form")
                             .on(blog_interface::ev::submit, move |ev| {
                                 ev.prevent_default();
+                                if save.busy.get_untracked() || remove.busy.get_untracked() {
+                                    return;
+                                }
                                 let mut f = form.get_untracked();
                                 for k in ["classify", "cover", "url", "introduction"] {
                                     if text(&f, k).is_empty() {

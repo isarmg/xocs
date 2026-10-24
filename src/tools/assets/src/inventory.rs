@@ -298,16 +298,8 @@ pub fn snapshot(root: &Path) -> Result<Value> {
     }
     validate_vendors(&web.join("vendor"))?;
     let mut assets = Files::new();
-    for entry in fs::read_dir(&web)? {
-        let path = entry?.path();
-        if path.is_file() {
-            assets.insert(relative(path.strip_prefix(&web)?)?, hashes.hash(&path)?);
-        }
-    }
-    for name in layout::WEB_INPUT_DIRECTORIES {
-        for path in walk(&web.join(name))? {
-            assets.insert(relative(path.strip_prefix(&web)?)?, hashes.hash(&path)?);
-        }
+    for path in source_inputs::web_paths(&web, &web)? {
+        assets.insert(relative(path.strip_prefix(&web)?)?, hashes.hash(&path)?);
     }
     if web.join("styles/ORIGIN.json").exists() {
         maintained_source(root, &web.join("styles"))?;
@@ -420,15 +412,7 @@ pub fn signature(root: &Path) -> Result<String> {
     let web = root.join(layout::WEB);
     let mut result = String::new();
     let mut paths = Vec::new();
-    for entry in fs::read_dir(&web)? {
-        let path = entry?.path();
-        if path.is_file() {
-            paths.push(path);
-        }
-    }
-    for name in layout::WEB_INPUT_DIRECTORIES {
-        paths.extend(walk(&web.join(name))?);
-    }
+    paths.extend(source_inputs::web_paths(&web, &web)?);
     for name in [layout::BROWSER, layout::INTERFACE, layout::BUILDER] {
         paths.extend(walk(&root.join(name))?);
     }

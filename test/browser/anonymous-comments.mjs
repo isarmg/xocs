@@ -7,7 +7,7 @@ import { mockApi, pageOf } from './browser-fixtures.mjs';
 async function checkHeaderScrolling(page, width, english) {
   const articleUrl = page.url();
   const header = page.locator('.public-header');
-  const homeLink = header.locator('nav > a[href="/"]');
+  const homeLink = header.locator(`nav > a[href="/?lang=${english ? 'en' : 'zh-CN'}"]`);
   await expect(page.locator('.comment-form textarea')).toBeVisible();
   await expect(header).toBeVisible();
   await page.evaluate(() => scrollTo(0, 180));
@@ -36,7 +36,7 @@ async function checkHeaderScrolling(page, width, english) {
   }
   await homeLink.hover();
   assert.equal(await homeLink.getAttribute('aria-expanded'), null);
-  await expect(header.locator('nav > a[href="/sort"]')).toBeVisible();
+  await expect(header.locator(`nav > a[href="/sort?lang=${english ? 'en' : 'zh-CN'}"]`)).toBeVisible();
   await homeLink.click();
   await expect.poll(()=>{const url=new URL(page.url());return url.pathname==='/'&&url.searchParams.get('lang')===(english?'en':'zh-CN');}).toBe(true);
   await expect(page.getByRole('heading', { name: english ? 'Believe in the power of stories' : '相信记录的力量', exact: true })).toBeVisible();
@@ -45,7 +45,7 @@ async function checkHeaderScrolling(page, width, english) {
   if (width === 390) await page.getByRole('button', { name: english ? 'Open navigation' : '打开导航', exact: true }).click();
   await homeLink.focus();
   await page.keyboard.press('Tab');
-  await expect(header.locator('nav > a[href="/love"]')).toBeFocused();
+  await expect(header.locator(`nav > a[href="/love?lang=${english ? 'en' : 'zh-CN'}"]`)).toBeFocused();
   if (width === 390) await page.getByRole('button', { name: english ? 'Close navigation' : '关闭导航', exact: true }).click();
   await page.locator('.public-header .brand').focus();
   await page.keyboard.press('Tab');

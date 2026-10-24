@@ -39,3 +39,21 @@ async fn genuine_v3_schema_is_rejected_without_changing_any_database_bytes() {
         .ok())
     );
 }
+
+#[tokio::test]
+async fn future_v5_identity_is_rejected_even_when_its_ddl_matches_current() {
+    let (directory, _app, pool) = setup().await;
+    sqlx::query("UPDATE product_metadata SET application_version='blog-db-v5',schema_revision=5")
+        .execute(&pool)
+        .await
+        .unwrap();
+    close_fixture_pool(&pool).await;
+    let database = directory.path().join("site.sqlite");
+    let before = std::fs::read(&database).unwrap();
+    assert!(
+        validate_existing_database(&database, database.parent().unwrap())
+            .await
+            .is_err()
+    );
+    assert_eq!(std::fs::read(database).unwrap(), before);
+}

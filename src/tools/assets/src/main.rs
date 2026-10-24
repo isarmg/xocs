@@ -1,11 +1,41 @@
 use anyhow::{Context, Result, bail};
 use std::{collections::BTreeMap, env, path::PathBuf};
 
-fn main() {
-    if let Err(error) = run() {
-        eprintln!("blog-assets: {error:#}");
-        std::process::exit(1);
+#[tokio::main(flavor = "current_thread")]
+async fn main() {
+    let status = match run_cli().await {
+        Ok(status) => status,
+        Err(error) => {
+            eprintln!("blog-assets: {error:#}");
+            1
+        }
+    };
+    if status != 0 {
+        std::process::exit(status);
     }
+}
+
+async fn run_cli() -> Result<i32> {
+    use tokio::signal::unix::{SignalKind, signal};
+
+    // Register before starting synchronous work. Owned child process groups do
+    // not receive terminal signals sent to this executable's foreground group.
+    let mut interrupt = signal(SignalKind::interrupt())?;
+    let mut terminate = signal(SignalKind::terminate())?;
+    let mut operation = tokio::task::spawn_blocking(run);
+    let status = tokio::select! {
+        _ = interrupt.recv() => 130,
+        _ = terminate.recv() => 143,
+        result = &mut operation => {
+            result.context("Asset command task failed")??;
+            return Ok(0);
+        }
+    };
+    blog_assets::request_cancellation();
+    // Await Drop/cleanup in the blocking command, including all pipe readers,
+    // before exiting rather than abandoning its separately owned child group.
+    let _ = operation.await;
+    Ok(status)
 }
 
 fn run() -> Result<()> {

@@ -1,6 +1,6 @@
 //! Public navigation, theme state, site context and shared page chrome.
 use super::appearance::{background_style, site_media_url, site_name};
-use crate::common::{Data, pathname, safe_url, t};
+use crate::common::{Data, href, pathname, safe_url, t};
 use crate::models::{Article as ArticleModel, Site};
 use blog_interface::ev;
 use blog_interface::html;
@@ -127,7 +127,7 @@ pub(super) fn Chrome(
                         Some(url) => View::new(html::img().src(url).alt(site_name(site))).into_any(),
                         None => View::new(html::span().child(site_name(site))).into_any(),
                     }).class("brand")
-                    .href("/")
+                    .href(href("/"))
                     .aria_label(t("blog 首页",
                     "blog home")),
                     html::nav()
@@ -145,9 +145,7 @@ pub(super) fn Chrome(
                     label
                 ,),
         )
-        .href(
-            (path).to_string(),
-        )
+        .href(href(path))
         .aria_current(
             (pathname() == path).then_some("page"),
         ),

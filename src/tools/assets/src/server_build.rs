@@ -1,13 +1,13 @@
 //! Source-bound native server builds without a JavaScript launcher.
-use crate::layout;
-use anyhow::{Context, Result, bail, ensure};
+use crate::{layout, process};
+use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::BTreeSet,
     fs,
     io::Read,
     path::{Path, PathBuf},
-    process::{Command, Stdio},
+    process::Command,
 };
 
 const TARGET: &str = "x86_64-unknown-linux-gnu";
@@ -148,32 +148,11 @@ fn private_receipt_directory() -> Result<tempfile::TempDir> {
     Ok(builder.tempdir()?)
 }
 
-pub(crate) fn capture(command: &mut Command, maximum: usize) -> Result<Vec<u8>> {
-    let mut child = command
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::inherit())
-        .spawn()?;
-    let mut bytes = Vec::new();
-    child
-        .stdout
-        .take()
-        .context("Child stdout")?
-        .take(maximum as u64 + 1)
-        .read_to_end(&mut bytes)?;
-    if bytes.len() > maximum {
-        let _ = child.kill();
-        let _ = child.wait();
-        bail!("Build command exceeded its output budget");
-    }
-    ensure!(child.wait()?.success(), "Build command failed");
-    Ok(bytes)
-}
-
 fn git(root: &Path, args: &[&str]) -> Result<String> {
-    Ok(String::from_utf8(capture(
+    Ok(String::from_utf8(process::run(
         Command::new("git").args(args).current_dir(root),
-        4 * 1024 * 1024,
+        process::Policy::git(4 * 1024 * 1024),
+        "Query local Git identity",
     )?)?
     .trim()
     .to_owned())
@@ -270,7 +249,7 @@ pub fn source_stamp(root: &Path) -> Result<SourceStamp> {
     );
     let current = git(root, &["rev-parse", "HEAD"])?;
     ensure!(revision(&current), "Source HEAD must be a full revision");
-    let output = capture(
+    let output = process::run(
         Command::new("git")
             .args([
                 "ls-files",
@@ -280,7 +259,8 @@ pub fn source_stamp(root: &Path) -> Result<SourceStamp> {
                 "-z",
             ])
             .current_dir(root),
-        64 * 1024 * 1024,
+        process::Policy::git(64 * 1024 * 1024),
+        "List local Git source inputs",
     )?;
     let generated_prefixes = [
         "target/".to_owned(),
@@ -400,6 +380,7 @@ pub fn build(
         "Invalid native build mode"
     );
     let root = &options.root;
+    let owner = crate::BuildLock::acquire(root)?;
     let config_file = path(root, config_path.unwrap_or("blog-assets.json"))?;
     let config: Config = serde_json::from_slice(&read(&config_file, 64 * 1024)?)?;
     ensure!(
@@ -441,7 +422,7 @@ pub fn build(
         "unbound".into()
     };
     if !rust_only {
-        crate::build(&selected)?;
+        crate::build_locked(&selected, &owner)?;
     }
     if web_only {
         return Ok(dist);
@@ -478,7 +459,11 @@ pub fn build(
     if std::env::var_os("CARGO_PROFILE_DEV_DEBUG").is_none() {
         command.env("CARGO_PROFILE_DEV_DEBUG", "0");
     }
-    let output = capture(&mut command, 64 * 1024 * 1024)?;
+    let output = process::run(
+        &mut command,
+        process::Policy::build(64 * 1024 * 1024),
+        "Build native server",
+    )?;
     let mut binaries = BTreeSet::new();
     for line in output
         .split(|b| *b == b'\n')

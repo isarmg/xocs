@@ -125,6 +125,7 @@ jobs:
               node ../../test/browser/admin-cleanup.mjs
               node ../../test/browser/management.mjs
               node ../../test/browser/contract-fixes.mjs
+              node ../../test/browser/admin-recovery.mjs
               node ../../test/browser/blog-interface-runtime.mjs
               node ../../test/browser/async-state.mjs
               node ../../test/browser/transport-lifecycle.mjs
@@ -134,6 +135,7 @@ jobs:
             public)
               node ../../test/browser/public-footer.mjs
               node ../../test/browser/public-layout.mjs
+              node ../../test/browser/public-recovery.mjs
               node ../../test/browser/anonymous-comments.mjs
               ;;
             *) exit 1 ;;

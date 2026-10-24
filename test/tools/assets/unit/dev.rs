@@ -25,6 +25,93 @@ fn proxy_accepts_both_loopback_address_families() {
 }
 
 #[tokio::test]
+async fn edits_during_a_blocked_attempt_schedule_another_build_without_a_third_edit() -> Result<()>
+{
+    let repository = tempfile::tempdir()?;
+    let source = repository.path().join("src/web/custom/entry.js");
+    std::fs::create_dir_all(source.parent().unwrap())?;
+    std::fs::write(&source, "first")?;
+    let root = repository.path().to_owned();
+    let mut watcher = WatchState::new(source_signature(root.clone()).await);
+    let now = std::time::Instant::now();
+    std::fs::write(&source, "second")?;
+    let second = source_signature(root.clone()).await;
+    assert!(!watcher.observe(second.clone(), now));
+    assert!(watcher.observe(second, now + Duration::from_millis(400)));
+    let (started, entered) = tokio::sync::oneshot::channel();
+    let (resume, resumed) = tokio::sync::oneshot::channel();
+    let attempt = tokio::spawn(async move {
+        started.send(()).unwrap();
+        resumed.await.unwrap();
+        // Source-drift failure is settled; the changed signature itself must
+        // cause the next attempt, independently of the error's wording.
+        BuildOutcome::Settled
+    });
+    entered.await?;
+    std::fs::write(&source, "third")?;
+    let third = source_signature(root).await;
+    resume.send(()).unwrap();
+    watcher.finished(
+        third.clone(),
+        attempt.await?,
+        now + Duration::from_millis(500),
+    );
+    assert!(watcher.observe(third.clone(), now + Duration::from_millis(900)));
+    watcher.finished(
+        third.clone(),
+        BuildOutcome::Settled,
+        now + Duration::from_millis(1000),
+    );
+    assert!(!watcher.observe(third, now + Duration::from_secs(2)));
+    Ok(())
+}
+
+#[tokio::test]
+async fn lock_contention_is_retryable_even_when_the_source_is_unchanged() -> Result<()> {
+    let repository = tempfile::tempdir()?;
+    let owner = crate::BuildLock::acquire(repository.path())?;
+    let options = Options {
+        root: repository.path().into(),
+        offline: true,
+        debug: true,
+        dist: None,
+    };
+    let status = Arc::new(RwLock::new(
+        json!({"building":false,"generation":0,"last_error":null}),
+    ));
+    let outcome = rebuild(options, status.clone()).await;
+    assert!(outcome == BuildOutcome::Retry);
+    assert_eq!(status.read().await["generation"], 0);
+    assert!(
+        status.read().await["last_error"]
+            .as_str()
+            .unwrap()
+            .contains("Another asset build owns")
+    );
+    let now = std::time::Instant::now();
+    let mut watcher = WatchState::new(Ok("unchanged".into()));
+    watcher.finished(Ok("unchanged".into()), outcome, now);
+    drop(owner);
+    assert!(watcher.observe(Ok("unchanged".into()), now + Duration::from_millis(400)));
+    Ok(())
+}
+
+#[test]
+fn startup_edits_are_not_adopted_as_already_built() {
+    let now = std::time::Instant::now();
+    let mut watcher = WatchState::new(Ok("before initial build".into()));
+    watcher.finished(
+        Ok("edited during initial build".into()),
+        BuildOutcome::Settled,
+        now,
+    );
+    assert!(watcher.observe(
+        Ok("edited during initial build".into()),
+        now + Duration::from_millis(400)
+    ));
+}
+
+#[tokio::test]
 async fn static_head_etag_and_traversal() -> Result<()> {
     use tower::ServiceExt;
     let dir = tempfile::tempdir()?;

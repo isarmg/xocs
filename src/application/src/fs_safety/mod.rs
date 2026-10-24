@@ -1,6 +1,6 @@
 //! Filesystem operations whose names encode their durability and link-safety guarantees.
 
-#[cfg(any(not(unix), test))]
+#[cfg(test)]
 use std::fs;
 use std::{
     ffi::OsStr,
@@ -8,10 +8,6 @@ use std::{
     io,
     path::{Component, Path, PathBuf},
 };
-#[cfg(not(unix))]
-use std::{fs::OpenOptions, io::Write};
-
-#[cfg(unix)]
 mod unix;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -71,131 +67,40 @@ impl RelativePath {
 pub struct PrivateDirectory {
     path: PathBuf,
     directory: File,
-    #[cfg(unix)]
     administration_owner: Option<(u32, u32)>,
 }
 
 impl PrivateDirectory {
     /// Open an existing service-owned private directory for authorized offline
-    /// administration. Unix requires effective uid 0 or the actual owner and
+    /// administration. Requires effective uid 0 or the actual owner and
     /// exact 0700 permissions. Newly created files keep that owner's uid/gid;
     /// existing files and directories are never repaired. Runtime callers must
     /// use [`Self::open_existing`].
-    #[cfg(unix)]
     pub fn open_for_administration(path: impl AsRef<Path>) -> Result<Self, Error> {
         unix::open_administrative_directory(path.as_ref())
     }
     /// Create or validate a direct child of this held private directory.
     pub fn create_child(&self, name: &EntryName) -> Result<Self, Error> {
-        #[cfg(unix)]
-        {
-            unix::create_private_child(self, name)
-        }
-        #[cfg(not(unix))]
-        {
-            Self::create(self.path.join(name.as_path()))
-        }
+        unix::create_private_child(self, name)
     }
 
     /// Open an existing private directory without creating or changing anything.
     pub fn open_existing(path: impl AsRef<Path>) -> Result<Self, Error> {
-        let path = path.as_ref();
-        #[cfg(unix)]
-        {
-            unix::open_private_directory(path)
-        }
-        #[cfg(not(unix))]
-        {
-            if !path.is_absolute() {
-                return Err(Error::AbsolutePathRequired(path.to_path_buf()));
-            }
-            let metadata = fs::symlink_metadata(path)?;
-            if metadata.file_type().is_symlink() || !metadata.is_dir() {
-                return Err(Error::UnsafeFileType(path.to_path_buf()));
-            }
-            Ok(Self {
-                path: path.to_path_buf(),
-                directory: File::open(path)?,
-            })
-        }
+        unix::open_private_directory(path.as_ref())
     }
 
     /// Enumerate only regular, single-linked children with hard entry/byte budgets.
     pub fn files(&self, limits: InventoryLimits) -> Result<Vec<FileEntry>, Error> {
-        #[cfg(unix)]
-        {
-            unix::files(self, limits)
-        }
-        #[cfg(not(unix))]
-        {
-            portable_files(self, limits)
-        }
+        unix::files(self, limits)
     }
     pub fn read_bounded(&self, name: &EntryName, max_bytes: usize) -> Result<Vec<u8>, Error> {
-        #[cfg(unix)]
-        {
-            unix::read_bounded(self, name, max_bytes)
-        }
-        #[cfg(not(unix))]
-        {
-            use std::io::Read;
-            let path = self.path.join(name.as_path());
-            let metadata = fs::symlink_metadata(&path)?;
-            if !metadata.is_file() || metadata.file_type().is_symlink() {
-                return Err(Error::UnsafeFileType(path));
-            }
-            let mut bytes = Vec::new();
-            File::open(&path)?
-                .take((max_bytes as u64).saturating_add(1))
-                .read_to_end(&mut bytes)?;
-            if bytes.len() > max_bytes {
-                return Err(Error::BudgetExceeded);
-            }
-            Ok(bytes)
-        }
+        unix::read_bounded(self, name, max_bytes)
     }
     pub fn remove_file(&self, name: &EntryName) -> Result<(), Error> {
-        #[cfg(unix)]
-        {
-            unix::remove_file(self, name)
-        }
-        #[cfg(not(unix))]
-        {
-            let path = self.path.join(name.as_path());
-            let metadata = fs::symlink_metadata(&path)?;
-            if !metadata.is_file() || metadata.file_type().is_symlink() {
-                return Err(Error::UnsafeFileType(path));
-            }
-            fs::remove_file(path)?;
-            self.sync()
-        }
+        unix::remove_file(self, name)
     }
     pub fn create(path: impl AsRef<Path>) -> Result<Self, Error> {
-        let path = path.as_ref();
-        #[cfg(unix)]
-        {
-            unix::create_private_directory(path)
-        }
-        #[cfg(not(unix))]
-        {
-            if !path.is_absolute() {
-                return Err(Error::AbsolutePathRequired(path.to_path_buf()));
-            }
-            match fs::create_dir(path) {
-                Ok(()) => {}
-                Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {}
-                Err(source) => return Err(Error::Io(source)),
-            }
-            let metadata = fs::symlink_metadata(path)?;
-            if metadata.file_type().is_symlink() || !metadata.is_dir() {
-                return Err(Error::UnsafeFileType(path.to_path_buf()));
-            }
-            let directory = File::open(path)?;
-            Ok(Self {
-                path: path.to_path_buf(),
-                directory,
-            })
-        }
+        unix::create_private_directory(path.as_ref())
     }
     pub fn path(&self) -> &Path {
         &self.path
@@ -207,21 +112,16 @@ impl PrivateDirectory {
         if !named.is_dir() || named.file_type().is_symlink() {
             return Err(Error::UnsafeFileType(self.path.clone()));
         }
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::MetadataExt;
-            if named.dev() != held.dev() || named.ino() != held.ino() {
-                return Err(Error::UnsafeFileType(self.path.clone()));
-            }
-            let owner = self
-                .administration_owner
-                .map_or_else(|| rustix::process::geteuid().as_raw(), |(uid, _)| uid);
-            if named.uid() != owner || named.mode() & 0o7777 != 0o700 {
-                return Err(Error::UnsafePermissions(self.path.clone()));
-            }
+        use std::os::unix::fs::MetadataExt;
+        if named.dev() != held.dev() || named.ino() != held.ino() {
+            return Err(Error::UnsafeFileType(self.path.clone()));
         }
-        #[cfg(not(unix))]
-        let _ = held;
+        let owner = self
+            .administration_owner
+            .map_or_else(|| rustix::process::geteuid().as_raw(), |(uid, _)| uid);
+        if named.uid() != owner || named.mode() & 0o7777 != 0o700 {
+            return Err(Error::UnsafePermissions(self.path.clone()));
+        }
         Ok(())
     }
     pub fn resolve(&self, relative: &RelativePath) -> PathBuf {
@@ -235,51 +135,13 @@ impl PrivateDirectory {
 
 pub struct AtomicFile;
 
-#[cfg(not(unix))]
-fn portable_files(
-    directory: &PrivateDirectory,
-    limits: InventoryLimits,
-) -> Result<Vec<FileEntry>, Error> {
-    let mut result = Vec::new();
-    let mut total_bytes = 0u64;
-    for entry in fs::read_dir(directory.path())? {
-        let entry = entry?;
-        if result.len() >= limits.max_entries {
-            return Err(Error::BudgetExceeded);
-        }
-        let metadata = fs::symlink_metadata(entry.path())?;
-        if !metadata.is_file() || metadata.file_type().is_symlink() {
-            return Err(Error::UnsafeFileType(entry.path()));
-        }
-        total_bytes = total_bytes
-            .checked_add(metadata.len())
-            .ok_or(Error::BudgetExceeded)?;
-        if total_bytes > limits.max_total_bytes {
-            return Err(Error::BudgetExceeded);
-        }
-        result.push(FileEntry {
-            name: EntryName::new(entry.file_name())?,
-            bytes: metadata.len(),
-        });
-    }
-    Ok(result)
-}
 impl AtomicFile {
     pub fn create(
         directory: &PrivateDirectory,
         destination: &EntryName,
         bytes: &[u8],
     ) -> Result<(), Error> {
-        #[cfg(unix)]
-        {
-            unix::atomic_create(directory, destination, bytes)
-        }
-        #[cfg(not(unix))]
-        {
-            let temporary = RelativePath::new(temporary_name()?)?;
-            Self::replace(directory, &temporary, bytes)?;
-            NoClobberPublish::publish(directory, &temporary, &destination.as_relative())
-        }
+        unix::atomic_create(directory, destination, bytes)
     }
 
     pub fn is_temporary_name(name: &EntryName) -> bool {
@@ -299,36 +161,7 @@ impl AtomicFile {
         destination: &RelativePath,
         bytes: &[u8],
     ) -> Result<(), Error> {
-        #[cfg(unix)]
-        {
-            unix::atomic_replace(directory, destination, bytes)
-        }
-        #[cfg(not(unix))]
-        {
-            let destination_path = directory.resolve(destination);
-            let parent = destination_path
-                .parent()
-                .ok_or_else(|| Error::UnsafeRelativePath(destination.as_path().to_path_buf()))?;
-            if parent != directory.path() {
-                fs::create_dir_all(parent)?;
-            }
-            let temporary = parent.join(temporary_name()?);
-            let result = (|| {
-                let mut file = OpenOptions::new()
-                    .write(true)
-                    .create_new(true)
-                    .open(&temporary)?;
-                file.write_all(bytes)?;
-                file.sync_all()?;
-                fs::rename(&temporary, &destination_path)?;
-                sync_directory(parent)?;
-                Ok(())
-            })();
-            if result.is_err() {
-                let _ = fs::remove_file(&temporary);
-            }
-            result
-        }
+        unix::atomic_replace(directory, destination, bytes)
     }
 }
 
@@ -347,29 +180,7 @@ impl NoClobberPublish {
                 destination.as_path().to_path_buf(),
             ));
         }
-        #[cfg(unix)]
-        {
-            unix::no_clobber_publish(directory, source, destination)
-        }
-        #[cfg(not(unix))]
-        {
-            let source = directory.resolve(source);
-            let destination = directory.resolve(destination);
-            if destination.exists() {
-                return Err(Error::DestinationExists(destination.to_path_buf()));
-            }
-            fs::hard_link(&source, &destination).map_err(Error::Io)?;
-            let file = File::open(&destination)?;
-            file.sync_all()?;
-            sync_directory(
-                destination
-                    .parent()
-                    .ok_or_else(|| Error::UnsafeRelativePath(destination.to_path_buf()))?,
-            )?;
-            fs::remove_file(source)?;
-            directory.sync()?;
-            Ok(())
-        }
+        unix::no_clobber_publish(directory, source, destination)
     }
 }
 
@@ -382,39 +193,7 @@ pub struct AdvisoryLock {
 
 impl AdvisoryLock {
     pub fn acquire(directory: &PrivateDirectory, name: &RelativePath) -> Result<Self, Error> {
-        #[cfg(unix)]
-        {
-            unix::advisory_lock(directory, name)
-        }
-        #[cfg(not(unix))]
-        {
-            let path = directory.resolve(name);
-            if path.parent() != Some(directory.path()) {
-                return Err(Error::UnsafeRelativePath(path));
-            }
-            if let Ok(metadata) = fs::symlink_metadata(&path)
-                && metadata.file_type().is_symlink()
-            {
-                return Err(Error::UnsafeFileType(path));
-            }
-            let file = OpenOptions::new()
-                .read(true)
-                .write(true)
-                .create(true)
-                .truncate(false)
-                .open(&path)?;
-            let metadata = file.metadata()?;
-            if !metadata.is_file() {
-                return Err(Error::UnsafeFileType(path));
-            }
-            file.try_lock().map_err(|source| match source {
-                std::fs::TryLockError::WouldBlock => Error::AlreadyLocked(path.clone()),
-                std::fs::TryLockError::Error(source) => Error::Io(source),
-            })?;
-            file.sync_all()?;
-            directory.sync()?;
-            Ok(Self { _file: file })
-        }
+        unix::advisory_lock(directory, name)
     }
 }
 
@@ -433,72 +212,14 @@ pub fn bounded_directory_inventory(
     path: &Path,
     limits: InventoryLimits,
 ) -> Result<DirectoryInventory, Error> {
-    #[cfg(unix)]
-    {
-        unix::bounded_inventory(path, limits)
-    }
-    #[cfg(not(unix))]
-    {
-        inventory_path(path, limits)
-    }
-}
-
-#[cfg(not(unix))]
-fn inventory_path(path: &Path, limits: InventoryLimits) -> Result<DirectoryInventory, Error> {
-    let mut pending = vec![path.to_path_buf()];
-    let mut result = DirectoryInventory {
-        entries: 0,
-        total_bytes: 0,
-    };
-    while let Some(directory) = pending.pop() {
-        for entry in fs::read_dir(directory)? {
-            let entry = entry?;
-            let metadata = fs::symlink_metadata(entry.path())?;
-            if metadata.file_type().is_symlink() {
-                return Err(Error::UnsafeFileType(entry.path()));
-            }
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::MetadataExt;
-                if metadata.is_file() && metadata.nlink() != 1 {
-                    return Err(Error::MultipleLinks(entry.path()));
-                }
-            }
-            result.entries = result.entries.checked_add(1).ok_or(Error::BudgetExceeded)?;
-            result.total_bytes = result
-                .total_bytes
-                .checked_add(metadata.len())
-                .ok_or(Error::BudgetExceeded)?;
-            if result.entries > limits.max_entries || result.total_bytes > limits.max_total_bytes {
-                return Err(Error::BudgetExceeded);
-            }
-            if metadata.is_dir() {
-                pending.push(entry.path());
-            }
-        }
-    }
-    Ok(result)
+    unix::bounded_inventory(path, limits)
 }
 
 pub fn sync_file_and_parent(path: &Path) -> Result<(), Error> {
-    #[cfg(unix)]
-    {
-        unix::sync_file_and_parent(path)
-    }
-    #[cfg(not(unix))]
-    {
-        File::open(path)?.sync_all()?;
-        sync_directory(
-            path.parent()
-                .ok_or_else(|| Error::UnsafeRelativePath(path.to_path_buf()))?,
-        )
-    }
+    unix::sync_file_and_parent(path)
 }
 pub fn sync_directory(path: &Path) -> Result<(), Error> {
-    #[cfg(unix)]
     unix::open_directory(path)?.sync_all()?;
-    #[cfg(not(unix))]
-    File::open(path)?.sync_all()?;
     Ok(())
 }
 fn temporary_name() -> Result<String, Error> {
@@ -507,9 +228,6 @@ fn temporary_name() -> Result<String, Error> {
     let nonce: String = bytes.iter().map(|byte| format!("{byte:02x}")).collect();
     Ok(format!(".state-atomic-{nonce}.tmp"))
 }
-
-#[cfg(target_os = "linux")]
-pub mod linux;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {

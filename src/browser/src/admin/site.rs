@@ -5,6 +5,7 @@ use blog_interface::component::component_props_builder;
 use blog_interface::components::notify;
 use blog_interface::prelude::*;
 use serde_json::{Value, json};
+use wasm_bindgen::JsCast;
 
 fn media_field_value(form: &Value, key: &str, nested: bool) -> String {
     text(if nested { &form["media"] } else { form }, key)
@@ -269,10 +270,13 @@ pub(super) fn SiteSettings() -> impl IntoView {
     let form = RwSignal::new(Value::Null);
     let save = Action::new();
     let upload = Action::new();
+    let form_node = NodeRef::<blog_interface::html::Form>::new();
+    let validation = RwSignal::new(String::new());
     let ready = Memo::new(move |_| !form.get().is_null());
     Effect::new(move |_| {
         if let Some(v) = data.value.get() {
             upload.abort();
+            validation.set(String::new());
             form.set(v);
         }
     });
@@ -291,9 +295,15 @@ pub(super) fn SiteSettings() -> impl IntoView {
                 ),
                 Feedback(component_props_builder(&Feedback).error(save.error).build()),
                 move || {
+                    (!validation.get().is_empty()).then(|| {
+                        blog_interface::html::p().role("alert").child(validation.get())
+                    })
+                },
+                move || {
                     ready.get().then(|| {
                         View::new(
                             blog_interface::html::form()
+                                .node_ref(form_node)
                                 .child((
                                     blog_interface::html::fieldset()
                                         .child((
@@ -333,7 +343,7 @@ pub(super) fn SiteSettings() -> impl IntoView {
                                                                     .key("author_name")
                                                                     .form(form)
                                                                     .required(true)
-                                                                    .max(200)
+                                                                    .max(100)
                                                                     .build(),
                                                             ),
                                                         ))
@@ -422,6 +432,7 @@ pub(super) fn SiteSettings() -> impl IntoView {
                                         .class("blog-actions"),
                                 ))
                                 .class("blog-settings-form")
+                                .on(blog_interface::ev::input, move |_| validation.set(String::new()))
                                 .on(blog_interface::ev::submit, move |ev| {
                                     ev.prevent_default();
                                     if save.busy.get_untracked() || upload.busy.get_untracked() {
@@ -431,8 +442,19 @@ pub(super) fn SiteSettings() -> impl IntoView {
                                     let name = text(&f, "author_name").trim().to_string();
                                     let len = name.chars().count();
                                     if !(1..=100).contains(&len) {
+                                        validation.set(t(
+                                            "站长显示名须包含 1–100 个字符。",
+                                            "Site owner display name must contain 1–100 characters.",
+                                        ));
+                                        if let Some(field) = form_node.get_untracked()
+                                            .and_then(|node| node.query_selector("[name=author_name]").ok().flatten())
+                                            .and_then(|node| node.dyn_into::<web_sys::HtmlElement>().ok())
+                                        {
+                                            let _ = field.focus();
+                                        }
                                         return;
                                     }
+                                    validation.set(String::new());
                                     f["author_name"] = json!(name);
                                     save.run(
                                         "/api/v1/content/site".into(),

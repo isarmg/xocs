@@ -20,7 +20,7 @@
 | --- | --- | --- | --- |
 | application | 1 | native, workspace-tests | crypto, diagnostics, encoding, filesystem, format, network, platform, runtime, storage, syntax |
 | assets | 5 | domain-tests, host-tools, native, web-release, workspace-tests | collections, diagnostics, encoding, format, javascript, lookup, math, memory, network, platform, sync, syntax, text |
-| build | 1 | host-tools, workspace-tests | assets, crypto, diagnostics, encoding, filesystem, format, network, runtime, text, wasm |
+| build | 1 | host-tools, workspace-tests | assets, crypto, diagnostics, encoding, filesystem, format, network, platform, runtime, text, wasm |
 | checksum | 1 | host-tools, workspace-tests | native |
 | cli | 4 | host-tools, native, workspace-tests | assets, collections, encoding, format, syntax, text |
 | collections | 14 | domain-tests, host-tools, native, web-release, workspace-tests | encoding, format, memory, native, platform, runtime, storage, sync, syntax, unicode |
@@ -288,7 +288,7 @@
 | blog-platform-processor-features (`src/foundation/platform/processor-features`) | processor features | native, host-tools, workspace-tests | src/foundation/crypto/secure-hash | cpufeatures@0.3.1 |
 | blog-platform-socket-options (`src/foundation/platform/socket-options`) | socket options | native, host-tools, workspace-tests | src/application, src/foundation/network/http-transport, src/foundation/runtime/task-scheduler | socket2@0.6.5 |
 | blog-platform-system-abi (`src/foundation/platform/system-abi`) | system abi | native, host-tools, workspace-tests | src/application, src/foundation/assets/compiler, src/foundation/math/lookup-random-generator, src/foundation/native/c-compiler, src/foundation/network/http-transport, src/foundation/platform/error-code, src/foundation/platform/password-processor-features, src/foundation/platform/processor-features, src/foundation/platform/socket-options, src/foundation/platform/system-entropy, src/foundation/runtime/io-poller, src/foundation/runtime/scheduled-io, src/foundation/runtime/signal-registry, src/foundation/runtime/task-scheduler, src/foundation/sync/mutex | libc@0.2.190, libc@0.2.191 |
-| blog-platform-system-calls (`src/foundation/platform/system-calls`) | system calls | native, host-tools, workspace-tests | src/application, src/foundation/filesystem/temporary-storage | rustix@1.1.5 |
+| blog-platform-system-calls (`src/foundation/platform/system-calls`) | system calls | native, host-tools, workspace-tests | src/application, src/foundation/filesystem/temporary-storage, src/tools/assets | rustix@1.1.5 |
 | blog-platform-system-entropy (`src/foundation/platform/system-entropy`) | system entropy | native, host-tools, workspace-tests | src/application, src/foundation/collections/keyed-hash, src/foundation/filesystem/temporary-storage, src/foundation/math/fast-random, src/foundation/math/password-random-traits | getrandom@0.4.3 |
 
 ## product

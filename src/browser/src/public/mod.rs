@@ -10,7 +10,7 @@ mod photos;
 mod shell;
 mod toolbox;
 
-use crate::common::{load_typed, pathname, t};
+use crate::common::{href, load_typed, pathname, t};
 use crate::models::Site;
 use blog_interface::children::ToChildren;
 use blog_interface::prelude::*;
@@ -51,7 +51,9 @@ fn not_found() -> impl IntoView {
             .children(ToChildren::to_children(move || {
                 html::section().class("public-empty-state").child((
                     html::h2().child(t("页面不存在", "Page not found")),
-                    html::a().child(t("返回首页", "Back to home")).href("/"),
+                    html::a()
+                        .child(t("返回首页", "Back to home"))
+                        .href(href("/")),
                 ))
             }))
             .build(),

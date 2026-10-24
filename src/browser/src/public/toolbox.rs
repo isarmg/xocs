@@ -322,7 +322,8 @@ fn FavoriteGroup(name: String, items: Vec<Value>) -> impl IntoView {
                         items
                             .into_iter()
                             .map(|item| {
-                                let href = safe_url(&text(&item, "url"), false);
+                                let href = safe_url(&text(&item, "url"), false)
+                                    .map(|url| crate::common::href(&url));
                                 View::new(
                                     html::a()
                                         .child((

@@ -84,6 +84,7 @@ dependencies = [
  "blog-network-request-pipeline",
  "blog-network-request-router",
  "blog-network-web-address",
+ "blog-platform-system-calls",
  "blog-runtime-task-scheduler",
  "blog-text-pattern-search",
  "blog-wasm-browser-module",

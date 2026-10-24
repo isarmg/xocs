@@ -116,11 +116,14 @@ pub(crate) fn invalid(message: &'static str) -> AppError {
 pub(crate) fn absent() -> AppError {
     AppError(StatusCode::NOT_FOUND, "内容不存在")
 }
-pub(crate) async fn site_author_id(pool: &SqlitePool) -> Result<i64, AppError> {
+pub(crate) async fn site_author_id<'executor, E>(executor: E) -> Result<i64, AppError>
+where
+    E: sqlx::Executor<'executor, Database = sqlx::Sqlite>,
+{
     sqlx::query_scalar(
         "SELECT id FROM user WHERE user_type=0 AND deleted=0 AND user_status=1 ORDER BY id LIMIT 1",
     )
-    .fetch_optional(pool)
+    .fetch_optional(executor)
     .await
     .map_err(db_error)?
     .ok_or(AppError(StatusCode::CONFLICT, "缺少站点作者账号"))

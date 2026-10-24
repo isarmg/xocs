@@ -309,3 +309,77 @@ fn complete_source_receipts_are_compact_in_public_assets_and_bind_every_file() -
     );
     Ok(())
 }
+
+#[test]
+fn accepted_custom_web_sources_are_bound_to_snapshots_and_watcher_signatures() -> Result<()> {
+    let repository = tempfile::tempdir()?;
+    let root = repository.path();
+    let web = root.join("src/web");
+    for directory in [
+        web.join("src"),
+        web.join("pkg"),
+        web.join("custom"),
+        root.join("src/browser/src"),
+    ] {
+        fs::create_dir_all(directory)?;
+    }
+    fs::write(
+        root.join("Cargo.toml"),
+        "[workspace]\nmembers=['src/browser']\nresolver='3'\n",
+    )?;
+    fs::write(
+        root.join("Cargo.lock"),
+        "version=4\n[[package]]\nname='browser-fixture'\nversion='1.0.0'\n",
+    )?;
+    fs::write(
+        root.join("src/browser/Cargo.toml"),
+        "[package]\nname='browser-fixture'\nversion='1.0.0'\nedition='2024'\n",
+    )?;
+    fs::write(root.join("src/browser/src/lib.rs"), "")?;
+    fs::write(
+        web.join("src/main.js"),
+        "export {value} from '../custom/module.js';export default function init(){return new URL('../pkg/app.wasm',import.meta.url)}",
+    )?;
+    fs::write(web.join("pkg/app.wasm"), b"\0asm\x01\0\0\0")?;
+    fs::write(web.join("custom/module.js"), "export const value='first';")?;
+    fs::write(web.join("custom/notice.txt"), "Custom notice")?;
+    fs::write(web.join("custom/static.txt"), "Custom static data")?;
+    fs::write(
+        web.join("index.html"),
+        "<html><head></head><body><script type=\"module\" src=\"/src/main.js\"></script></body></html>",
+    )?;
+    fs::write(
+        web.join("rust-web.toml"),
+        "[web]\nentry='src/main.js'\nlicenses=['custom/notice.txt']\n[web.copies]\n'assets/static.txt'='custom/static.txt'\n",
+    )?;
+    let before = snapshot(root)?;
+    for name in ["custom/module.js", "custom/notice.txt", "custom/static.txt"] {
+        assert!(before["asset_inputs"][name].is_string(), "{name}");
+    }
+    let first_signature = signature(root)?;
+    fs::write(web.join("custom/module.js"), "export const value='second';")?;
+    let after = snapshot(root)?;
+    assert_ne!(
+        before["asset_inputs"]["custom/module.js"],
+        after["asset_inputs"]["custom/module.js"]
+    );
+    assert_ne!(first_signature, signature(root)?);
+    let config = crate::assets::Config::read(&web)?;
+    let (outputs, _) = crate::assets::Linker::new(&web, &web.join("pkg"), config).finish(b"{}")?;
+    assert!(
+        outputs
+            .values()
+            .any(|bytes| String::from_utf8_lossy(bytes).contains("second"))
+    );
+    assert_eq!(outputs["assets/notice.txt"], b"Custom notice");
+    assert_eq!(outputs["assets/static.txt"], b"Custom static data");
+    let bound = snapshot(root)?;
+    fs::write(web.join("pkg/generated-cache"), "Generated package data")?;
+    fs::create_dir_all(web.join("dist"))?;
+    fs::write(
+        web.join("dist/generated-cache"),
+        "Generated distribution data",
+    )?;
+    assert_eq!(bound, snapshot(root)?);
+    Ok(())
+}

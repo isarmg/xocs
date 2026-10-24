@@ -2,7 +2,7 @@
 //! Metadata may include features from conditional edges that the current host
 //! compilation does not activate. This policy guard is not a compiled-unit
 //! inventory; host proc-macros are never counted as browser WASM code.
-use crate::{Options, inventory, layout};
+use crate::{Options, inventory, layout, process};
 use anyhow::{Context, Result, ensure};
 use serde_json::{Value, json};
 use std::{
@@ -87,19 +87,11 @@ pub fn runtime(options: &Options, inputs: &Value) -> Result<Value> {
             .arg(&manifest)
             .args(["--locked", "--offline"])
             .current_dir(&options.root);
-        let output = command
-            .output()
-            .context("Query browser runtime Cargo graph")?;
-        ensure!(
-            output.status.success(),
-            "Browser runtime graph failed: {}",
-            String::from_utf8_lossy(&output.stderr)
-        );
-        ensure!(
-            output.stdout.len() <= 32 * 1024 * 1024,
-            "Browser runtime graph exceeds byte bound"
-        );
-        Ok(output.stdout)
+        process::run(
+            &mut command,
+            process::Policy::query(32 * 1024 * 1024),
+            "Query browser runtime Cargo graph",
+        )
     };
     let metadata: Value = serde_json::from_slice(&run(&[
         "metadata",
@@ -310,19 +302,12 @@ pub fn resolve(options: &Options) -> Result<Value> {
         .arg(options.root.join("Cargo.toml"))
         .current_dir(&options.root);
     command.arg("--offline");
-    let output = command
-        .output()
-        .context("Inspect selected CSR dependency graph")?;
-    ensure!(
-        output.status.success(),
-        "Cargo metadata failed: {}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    ensure!(
-        output.stdout.len() <= 32 * 1024 * 1024,
-        "Cargo metadata exceeds byte bound"
-    );
-    validate(&serde_json::from_slice(&output.stdout)?, &frontend)
+    let output = process::run(
+        &mut command,
+        process::Policy::query(32 * 1024 * 1024),
+        "Inspect selected CSR dependency graph",
+    )?;
+    validate(&serde_json::from_slice(&output)?, &frontend)
 }
 
 pub fn validate(metadata: &Value, frontend: &Path) -> Result<Value> {

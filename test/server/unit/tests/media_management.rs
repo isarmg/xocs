@@ -787,3 +787,85 @@ async fn video_upload_rejects_documents_images_and_oversized_bodies() {
         0
     );
 }
+
+#[tokio::test]
+async fn browser_normalized_media_aliases_in_saved_settings_and_markdown_block_deletion() {
+    let (directory, app, pool) = setup().await;
+    let session = login(&app).await;
+    let image = upload(&app, &session, "normalized aliases").await;
+    let path = image["path"].as_str().unwrap();
+    let response = admin(&app, &session, "GET", "/api/v1/content/site", json!({})).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let mut site = body_json(response).await;
+    site["web_name"] = "Alias fixture".into();
+    for alias in [
+        path.replace("/media/", "/media/./"),
+        path.replace("/media/", "/media/nested/../"),
+        path.replace("/media/", "/media/%2e/"),
+        path.replace("/media/", "/media/nested/%2E%2e/"),
+    ] {
+        for field in ["avatar", "media", "random_cover"] {
+            match field {
+                "media" => site["media"]["logo"] = json!(alias),
+                "random_cover" => site[field] = json!(json!([alias]).to_string()),
+                _ => site[field] = json!(alias),
+            }
+            let response = admin(&app, &session, "PUT", "/api/v1/content/site", site.clone()).await;
+            assert_eq!(response.status(), StatusCode::OK, "{field}: {alias}");
+            assert_eq!(
+                remove(&app, &session, &image).await.status(),
+                StatusCode::CONFLICT,
+                "saved {field}: {alias}"
+            );
+            assert!(image_file(directory.path(), &image).exists());
+            match field {
+                "media" => site["media"]["logo"] = Value::Null,
+                _ => site[field] = Value::Null,
+            }
+            assert_eq!(
+                admin(&app, &session, "PUT", "/api/v1/content/site", site.clone())
+                    .await
+                    .status(),
+                StatusCode::OK
+            );
+        }
+    }
+    sqlx::raw_sql("INSERT INTO sort(id,sort_name) VALUES(1,'Aliases'); INSERT INTO label(id,sort_id,label_name) VALUES(1,1,'Aliases');")
+        .execute(&pool).await.unwrap();
+    for alias in [
+        path.replace("/media/", "/media/./"),
+        path.replace("/media/", "/media/nested/../"),
+        path.replace("/media/", "/media/%2e/"),
+        path.replace("/media/", "/media/nested/%2E%2e/"),
+    ] {
+        let response = admin(&app, &session, "POST", "/api/v1/content/articles", json!({
+            "article_title":"Alias", "article_content":format!("![saved][upload]\n\n[upload]: {alias}"),
+            "sort_id":1,"label_id":1,"view_status":true,"recommend_status":false,"comment_status":true
+        })).await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let article = body_json(response).await;
+        assert_eq!(
+            remove(&app, &session, &image).await.status(),
+            StatusCode::CONFLICT,
+            "saved Markdown: {alias}"
+        );
+        assert_eq!(
+            admin(
+                &app,
+                &session,
+                "DELETE",
+                &format!("/api/v1/content/articles/{}", article["id"]),
+                Value::Null
+            )
+            .await
+            .status(),
+            StatusCode::OK
+        );
+    }
+    assert_eq!(
+        remove(&app, &session, &image).await.status(),
+        StatusCode::OK
+    );
+    assert!(!image_file(directory.path(), &image).exists());
+    assert_eq!(get(&app, path).await.status(), StatusCode::NOT_FOUND);
+}

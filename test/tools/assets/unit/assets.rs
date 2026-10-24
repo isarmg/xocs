@@ -183,10 +183,9 @@ fn registered_public_media_enforce_four_mib_files_and_eight_mib_total() -> Resul
     )?;
     public_manifest(web, &mut config)?;
     let mut linker = Linker::new(web, &web.join("pkg"), config.clone());
-    linker.copy_public()?;
     assert!(
         linker
-            .budgets()
+            .copy_public()
             .unwrap_err()
             .to_string()
             .contains("Public media hero.svg exceeds 4194304-byte budget")
@@ -201,10 +200,9 @@ fn registered_public_media_enforce_four_mib_files_and_eight_mib_total() -> Resul
     )?;
     public_manifest(web, &mut config)?;
     let mut linker = Linker::new(web, &web.join("pkg"), config);
-    linker.copy_public()?;
     assert!(
         linker
-            .budgets()
+            .copy_public()
             .unwrap_err()
             .to_string()
             .contains("Public media exceed 8388608-byte total budget")
@@ -250,7 +248,9 @@ fn media_inventory_does_not_relax_bundle_total_or_reclassify_text_and_fonts() ->
     }
     public_manifest(web, &mut config)?;
     config.web.max_total_bytes = 1;
-    let mut linker = Linker::new(web, &web.join("pkg"), config.clone());
+    let mut classification = config.clone();
+    classification.web.max_total_bytes = 16 * 1024 * 1024;
+    let mut linker = Linker::new(web, &web.join("pkg"), classification);
     linker.copy_public()?;
     for name in ["README.md", "app.js", "app.css", "font.woff2"] {
         assert!(!linker.public_media.contains(name));
@@ -477,11 +477,18 @@ fn public_fallback_rejects_symlinks_instead_of_reading_outside() -> Result<()> {
     let error = linker
         .resolve(&web.join("src/main.js"), "/escape.svg")
         .unwrap_err();
+    let diagnostic = format!("{error:#}");
     assert!(
-        error
-            .to_string()
-            .contains("Symlink input/output is forbidden")
+        diagnostic.contains("Symlink input/output is forbidden"),
+        "{diagnostic}"
     );
+    assert!(linker.outputs.is_empty());
+    assert!(
+        fs::symlink_metadata(web.join("public/escape.svg"))?
+            .file_type()
+            .is_symlink()
+    );
+    assert_eq!(fs::read(outside.path().join("outside.svg"))?, b"<svg/>");
     Ok(())
 }
 
@@ -544,7 +551,7 @@ fn css_imports_preserve_repeated_cascade_positions() -> Result<()> {
     linker.module(&web.join("main.js"))?;
     // CSS imports repeat at their authored cascade positions; the ESM
     // module itself still evaluates a side-effect stylesheet only once.
-    assert_eq!(linker.css, [".x{color:red}.x{color:#00f}.x{color:red}"]);
+    assert_eq!(linker.css, ".x{color:red}.x{color:#00f}.x{color:red}");
     Ok(())
 }
 
@@ -729,5 +736,124 @@ fn embedded_entries_keep_templates_fixed_fonts_and_same_origin_svg() -> Result<(
         fs::read_to_string(web.join("index.html"))?,
         "__ASSETS_PREFIX__ __INDEX_DATA__ __WASM_PRELOAD__"
     );
+    Ok(())
+}
+
+#[test]
+fn configured_licenses_and_copies_stay_in_authored_web_sources() -> Result<()> {
+    let (dir, mut config) = public_fixture()?;
+    let web = dir.path();
+    for invalid in [
+        "/tmp/external-license",
+        "../external-license",
+        "dist/license.txt",
+        "node_modules/license.txt",
+    ] {
+        fs::write(
+            web.join("rust-web.toml"),
+            format!("[web]\nlicenses=[{invalid:?}]\n"),
+        )?;
+        assert!(Config::read(web).is_err(), "{invalid}");
+        config.web.licenses = vec![invalid.into()];
+        assert!(
+            Linker::new(web, &web.join("pkg"), config.clone())
+                .finish(b"{}")
+                .is_err(),
+            "{invalid}"
+        );
+    }
+    fs::create_dir_all(web.join("custom"))?;
+    fs::write(web.join("custom/notice.txt"), "Reviewed custom notice")?;
+    fs::write(web.join("custom/static.txt"), "Reviewed custom copy")?;
+    config.web.licenses = vec!["custom/notice.txt".into()];
+    config
+        .web
+        .copies
+        .insert("assets/static.txt".into(), "custom/static.txt".into());
+    let (outputs, _) = Linker::new(web, &web.join("pkg"), config).finish(b"{}")?;
+    assert_eq!(outputs["assets/notice.txt"], b"Reviewed custom notice");
+    assert_eq!(outputs["assets/static.txt"], b"Reviewed custom copy");
+    Ok(())
+}
+
+#[cfg(unix)]
+#[test]
+fn configured_license_symlink_cannot_publish_external_bytes() -> Result<()> {
+    let (dir, mut config) = public_fixture()?;
+    let external = tempfile::NamedTempFile::new()?;
+    fs::write(external.path(), "External bytes must remain private")?;
+    fs::create_dir(dir.path().join("custom"))?;
+    std::os::unix::fs::symlink(external.path(), dir.path().join("custom/license.txt"))?;
+    config.web.licenses = vec!["custom/license.txt".into()];
+    let error = Linker::new(dir.path(), &dir.path().join("pkg"), config)
+        .finish(b"{}")
+        .unwrap_err();
+    assert!(format!("{error:#}").contains("Symlink input/output is forbidden"));
+    Ok(())
+}
+
+#[test]
+fn generated_web_trees_cannot_be_linker_sources() -> Result<()> {
+    let (dir, config) = public_fixture()?;
+    let web = dir.path();
+    for generated in [
+        "dist/previous.js",
+        "node_modules/package/entry.js",
+        "custom/node_modules/package/entry.js",
+    ] {
+        let path = web.join(generated);
+        fs::create_dir_all(path.parent().unwrap())?;
+        fs::write(&path, "export const value=1;")?;
+        fs::write(web.join("src/main.js"), format!("import '../{generated}';"))?;
+        let error = Linker::new(web, &web.join("pkg"), config.clone())
+            .finish(b"{}")
+            .unwrap_err();
+        assert!(
+            format!("{error:#}").contains("Generated or ignored Web paths"),
+            "{generated}: {error:#}"
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn output_admission_is_incremental_and_duplicate_outputs_are_not_counted_twice() -> Result<()> {
+    let directory = tempfile::tempdir()?;
+    let mut config = Config::default();
+    config.web.max_asset_bytes = 5;
+    config.web.max_total_bytes = 5;
+    let mut linker = Linker::new(directory.path(), directory.path(), config);
+    linker.generated_output("a.js".into(), b"aaa".to_vec())?;
+    linker.generated_output("a.js".into(), b"aaa".to_vec())?;
+    assert!(
+        linker
+            .generated_output("b.js".into(), b"bbb".to_vec())
+            .is_err()
+    );
+    assert!(!linker.outputs.contains_key("b.js"));
+    linker.generated_output("b.js".into(), b"bb".to_vec())?;
+    linker.budgets()?;
+    assert_eq!(linker.outputs.values().map(Vec::len).sum::<usize>(), 5);
+    Ok(())
+}
+
+#[test]
+fn oversized_public_output_fails_before_reading_later_files() -> Result<()> {
+    let (directory, config) = public_fixture()?;
+    fs::write(
+        directory.path().join("public/a.txt"),
+        vec![b'x'; 512 * 1024 + 1],
+    )?;
+    fs::File::create(directory.path().join("public/z-too-large.txt"))?
+        .set_len(inventory::MAX_FILE + 1)?;
+    let mut linker = Linker::new(directory.path(), &directory.path().join("pkg"), config);
+    let error = linker.copy_public().unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("Asset a.txt exceeds 524288-byte budget")
+    );
+    assert!(!linker.outputs.contains_key("a.txt"));
+    assert!(linker.outputs.is_empty());
     Ok(())
 }

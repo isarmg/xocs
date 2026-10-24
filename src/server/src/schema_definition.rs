@@ -5,5 +5,5 @@ pub fn identity(
     blog_application::schema_identity::SchemaIdentity,
     blog_application::schema_identity::Error,
 > {
-    blog_application::schema_identity::SchemaIdentity::new("blog", "blog-db-v2", 2, sha256)
+    blog_application::schema_identity::SchemaIdentity::new("blog", "blog-db-v4", 4, sha256)
 }

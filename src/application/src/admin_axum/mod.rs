@@ -70,13 +70,25 @@ pub fn administrator_router<Store>(
 where
     Store: AdministratorStore + 'static,
 {
+    administrator_router_with_admission(product_id, mode, service, body::BodyAdmission::default())
+}
+
+fn administrator_router_with_admission<Store>(
+    product_id: impl Into<String>,
+    mode: AdministratorOriginMode,
+    service: Arc<AdministratorService<Store>>,
+    body_admission: body::BodyAdmission,
+) -> Result<Router, crate::admin_core::Error>
+where
+    Store: AdministratorStore + 'static,
+{
     let product_id = product_id.into();
     crate::admin_core::session_cookie_name(&product_id, mode)?;
     let state = AdapterState {
         product_id,
         mode,
         service,
-        body_admission: body::BodyAdmission::default(),
+        body_admission,
     };
     let router = Router::new()
         .route(ADMIN_LOGIN_PATH, post(login::<Store>))

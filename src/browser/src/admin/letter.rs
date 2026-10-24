@@ -3,6 +3,7 @@ use blog_interface::component::component_props_builder;
 use blog_interface::components::notify;
 use blog_interface::prelude::*;
 use serde_json::Value;
+use wasm_bindgen::JsCast;
 
 #[component]
 pub(super) fn LetterSettings() -> impl IntoView {
@@ -10,10 +11,14 @@ pub(super) fn LetterSettings() -> impl IntoView {
     let form = RwSignal::new(Value::Null);
     let original = RwSignal::new(Value::Null);
     let save = Action::new();
+    let form_node = NodeRef::<blog_interface::html::Form>::new();
+    let validation = RwSignal::new(String::new());
+    let ready = Memo::new(move |_| !form.get().is_null());
     Effect::new(move |_| {
         if let Some(v) = data.value.get() {
             form.set(v.clone());
             original.set(v);
+            validation.set(String::new());
         }
     });
     View::new(
@@ -32,9 +37,17 @@ pub(super) fn LetterSettings() -> impl IntoView {
                 ),
                 Feedback(component_props_builder(&Feedback).error(save.error).build()),
                 move || {
-                    (!form.get().is_null()).then(|| {
+                    (!validation.get().is_empty()).then(|| {
+                        blog_interface::html::p()
+                            .role("alert")
+                            .child(validation.get())
+                    })
+                },
+                move || {
+                    ready.get().then(|| {
                         View::new(
                             blog_interface::html::form()
+                                .node_ref(form_node)
                                 .child(
                                     blog_interface::html::fieldset()
                                         .child((
@@ -44,7 +57,7 @@ pub(super) fn LetterSettings() -> impl IntoView {
                                                     .key("recipient")
                                                     .form(form)
                                                     .required(true)
-                                                    .max(200)
+                                                    .max(100)
                                                     .build(),
                                             ),
                                             Field(
@@ -53,7 +66,7 @@ pub(super) fn LetterSettings() -> impl IntoView {
                                                     .key("sender")
                                                     .form(form)
                                                     .required(true)
-                                                    .max(200)
+                                                    .max(100)
                                                     .build(),
                                             ),
                                             Field(
@@ -63,7 +76,7 @@ pub(super) fn LetterSettings() -> impl IntoView {
                                                     .form(form)
                                                     .required(true)
                                                     .textarea(true)
-                                                    .max(32768)
+                                                    .max(16384)
                                                     .build(),
                                             ),
                                             Check(
@@ -91,6 +104,7 @@ pub(super) fn LetterSettings() -> impl IntoView {
                                                         .on(blog_interface::ev::click, move |_| {
                                                             form.set(original.get_untracked());
                                                             save.error.set(None);
+                                                            validation.set(String::new());
                                                         }),
                                                     blog_interface::html::a()
                                                         .child(t(
@@ -107,17 +121,47 @@ pub(super) fn LetterSettings() -> impl IntoView {
                                         .disabled(move || save.busy.get()),
                                 )
                                 .class("editor-form")
+                                .on(blog_interface::ev::input, move |_| {
+                                    validation.set(String::new())
+                                })
                                 .on(blog_interface::ev::submit, move |ev| {
                                     ev.prevent_default();
+                                    if save.busy.get_untracked() {
+                                        return;
+                                    }
                                     let f = form.get_untracked();
-                                    let valid =
-                                        [("recipient", 100), ("sender", 100), ("content", 16384)]
-                                            .iter()
-                                            .all(|(k, max)| {
-                                                let n = text(&f, k).trim().chars().count();
-                                                n >= 1 && n <= *max
-                                            });
-                                    if valid {
+                                    let invalid = [
+                                        ("recipient", 100, t("收信人", "Recipient")),
+                                        ("sender", 100, t("署名", "Sender")),
+                                        ("content", 16384, t("信笺正文", "Letter content")),
+                                    ]
+                                    .iter()
+                                    .find(|(k, max, _)| {
+                                        let n = text(&f, k).trim().chars().count();
+                                        n == 0 || n > *max
+                                    })
+                                    .cloned();
+                                    if let Some((key, max, label)) = invalid {
+                                        validation.set(crate::common::tr(
+                                            "{0}须包含 1–{1} 个字符。",
+                                            "{0} must contain 1–{1} characters.",
+                                            &[label, max.to_string()],
+                                        ));
+                                        if let Some(field) = form_node
+                                            .get_untracked()
+                                            .and_then(|node| {
+                                                node.query_selector(&format!("[name={key}]"))
+                                                    .ok()
+                                                    .flatten()
+                                            })
+                                            .and_then(|node| {
+                                                node.dyn_into::<web_sys::HtmlElement>().ok()
+                                            })
+                                        {
+                                            let _ = field.focus();
+                                        }
+                                    } else {
+                                        validation.set(String::new());
                                         save.run(
                                             "/api/v1/content/letter".into(),
                                             "PUT",

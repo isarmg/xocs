@@ -20,10 +20,12 @@ npm run test:browser:blog-interface
 | --- | --- | --- |
 | `npm run test:unit` | 工具链合同、Rust 域测试、浏览器 fixture 单测 | 本地测试输入 |
 | `npm run test:browser:blog-interface` | WASM 运行、异步状态、流取消、阅读交互和页面冒烟 | 脚本指定的 API fixture 或独立原生服务 |
-| `npm run test:admin` | 管理布局和账号设置 | API fixture |
-| `npm run test:public` | 公开布局和匿名评论行为 | API fixture |
+| `npm run test:admin` | 管理布局、账号设置、幂等提交确认与表单恢复 | API fixture |
+| `npm run test:public` | 公开布局、读取错误恢复、分页、语言、弹窗和匿名评论行为 | API fixture |
 | `bash test/operations/smoke.sh`（根目录） | 真实 HTTP、SQLite、登录、公开页面与重启持久化 | 独立可丢弃 ROOT |
 | CI `installed_candidate` | 候选包完整性、安装、凭据、权限与实例隔离 | 独立安装和真实后端 |
+
+`test/browser/admin-recovery.mjs` 和 `test/browser/public-recovery.mjs` 覆盖丢失响应、原提交确认、可编辑草稿、并发分页、语言链接及原生弹窗的键盘行为。
 
 页面脚本会执行管理写入或创建可丢弃数据，应使用专用测试实例。`test/browser/rust-native-domain.mjs` 使用真实生成资源，API 和剪贴板使用 fixture；持久化与真实数据库行为由后端和安装测试覆盖。
 

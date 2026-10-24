@@ -145,6 +145,7 @@ pub(super) fn Collection(love: bool, active: Signal<bool>) -> impl IntoView {
     let selected = RwSignal::new(String::new());
     let page = RwSignal::new(1u64);
     let loaded = RwSignal::new(0u64);
+    let has_more = RwSignal::new(false);
     let items = RwSignal::new(Vec::<Value>::new());
     let total = RwSignal::new(None::<i64>);
     let all_total = RwSignal::new(None::<i64>);
@@ -156,7 +157,7 @@ pub(super) fn Collection(love: bool, active: Signal<bool>) -> impl IntoView {
                 .and_then(|a| a.first())
                 .map(|v| text(v, "classify"))
                 .unwrap_or_default();
-            if selected.get_untracked().is_empty() {
+            if selected.get_untracked().is_empty() && !first.is_empty() {
                 selected.set(first)
             }
         }
@@ -165,6 +166,7 @@ pub(super) fn Collection(love: bool, active: Signal<bool>) -> impl IntoView {
         selected.get();
         page.set(1);
         loaded.set(0);
+        has_more.set(false);
         items.set(vec![]);
         total.set(None);
     });
@@ -190,9 +192,18 @@ pub(super) fn Collection(love: bool, active: Signal<bool>) -> impl IntoView {
             if selected.get_untracked().is_empty() {
                 all_total.set(Some(num(&v, "total")));
             }
-            loaded.set(page.get_untracked());
+            let response_page = num(&v, "page") as u64;
+            let response_size = num(&v, "size");
+            // Offset pages can overlap when photos are published while browsing.
+            // Display deduplication must not determine whether another page exists.
+            has_more.set(
+                response_page < 100_000
+                    && next.len() as i64 == response_size
+                    && response_page as i64 * response_size < num(&v, "total"),
+            );
+            loaded.set(response_page);
             items.update(|items| {
-                if page.get_untracked() == 1 {
+                if response_page == 1 {
                     *items = next
                 } else {
                     for n in next {
@@ -349,8 +360,8 @@ pub(super) fn Collection(love: bool, active: Signal<bool>) -> impl IntoView {
                         .build(),
                 ),
                 move || {
-                    total.get().map(|total| {
-                        if (items.get().len() as i64) < total {
+                    total.get().map(|_| {
+                        if has_more.get() {
                             View::new(
                                 html::button()
                                     .child(if love {

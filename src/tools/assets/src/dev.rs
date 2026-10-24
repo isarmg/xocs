@@ -21,6 +21,8 @@ use tokio::sync::RwLock;
 
 mod proxy;
 
+const SHUTDOWN_GRACE: Duration = Duration::from_secs(2);
+
 #[derive(Clone)]
 struct App {
     dist: PathBuf,
@@ -208,11 +210,72 @@ async fn respond(app: App, request: Request) -> Result<Response> {
     )
 }
 
-async fn rebuild(options: Options, status: Arc<RwLock<Value>>) {
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum BuildOutcome {
+    Settled,
+    Retry,
+}
+
+struct WatchState {
+    previous: Result<String, String>,
+    pending: Option<std::time::Instant>,
+}
+
+impl WatchState {
+    fn new(previous: Result<String, String>) -> Self {
+        Self {
+            previous,
+            pending: None,
+        }
+    }
+
+    fn observe(&mut self, current: Result<String, String>, now: std::time::Instant) -> bool {
+        if current != self.previous {
+            self.previous = current;
+            self.pending = Some(now);
+            false
+        } else if self
+            .pending
+            .is_some_and(|time| now.duration_since(time) >= Duration::from_millis(300))
+        {
+            self.pending = None;
+            true
+        } else {
+            false
+        }
+    }
+
+    fn finished(
+        &mut self,
+        current: Result<String, String>,
+        outcome: BuildOutcome,
+        now: std::time::Instant,
+    ) {
+        if current != self.previous || outcome == BuildOutcome::Retry {
+            self.previous = current;
+            self.pending = Some(now);
+        }
+    }
+}
+
+async fn source_signature(root: PathBuf) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || {
+        inventory::signature(&root).map_err(|error| format!("{error:#}"))
+    })
+    .await
+    .unwrap_or_else(|error| Err(error.to_string()))
+}
+
+async fn rebuild(options: Options, status: Arc<RwLock<Value>>) -> BuildOutcome {
     {
         status.write().await["building"] = json!(true);
     }
     let result = tokio::task::spawn_blocking(move || crate::build(&options)).await;
+    let outcome = if matches!(&result, Ok(Err(error)) if error.is::<crate::BuildBusy>()) {
+        BuildOutcome::Retry
+    } else {
+        BuildOutcome::Settled
+    };
     let mut status = status.write().await;
     status["building"] = json!(false);
     match result {
@@ -226,6 +289,7 @@ async fn rebuild(options: Options, status: Arc<RwLock<Value>>) {
             status["last_error"] = json!(message);
         }
     }
+    outcome
 }
 
 fn validate_proxy_target(target: &str) -> Result<()> {
@@ -282,30 +346,43 @@ pub async fn serve(
         json!({"building":false,"generation":0,"last_error":null}),
     ));
     let dist = crate::distribution(&options)?;
+    let mut watcher = if watch {
+        Some(WatchState::new(
+            source_signature(options.root.clone()).await,
+        ))
+    } else {
+        None
+    };
     if !skip_build {
-        rebuild(options.clone(), status.clone()).await;
+        let outcome = rebuild(options.clone(), status.clone()).await;
+        if let Some(watcher) = &mut watcher {
+            watcher.finished(
+                source_signature(options.root.clone()).await,
+                outcome,
+                std::time::Instant::now(),
+            );
+        }
     }
-    if watch {
+    if let Some(mut watcher) = watcher {
         let status = status.clone();
         let options = options.clone();
         tokio::spawn(async move {
-            let mut previous = inventory::signature(&options.root).map_err(|e| format!("{e:#}"));
-            let mut pending = None;
             loop {
+                if crate::process::cancelled() {
+                    break;
+                }
                 tokio::time::sleep(Duration::from_millis(400)).await;
-                let root = options.root.clone();
-                let current = tokio::task::spawn_blocking(move || {
-                    inventory::signature(&root).map_err(|e| format!("{e:#}"))
-                })
-                .await
-                .unwrap_or_else(|e| Err(e.to_string()));
-                if current != previous {
-                    previous = current;
-                    pending = Some(std::time::Instant::now());
-                } else if pending.is_some_and(|time| time.elapsed() >= Duration::from_millis(300)) {
-                    pending = None;
-                    rebuild(options.clone(), status.clone()).await;
-                    previous = inventory::signature(&options.root).map_err(|e| format!("{e:#}"));
+                if crate::process::cancelled() {
+                    break;
+                }
+                let current = source_signature(options.root.clone()).await;
+                if watcher.observe(current, std::time::Instant::now()) {
+                    let outcome = rebuild(options.clone(), status.clone()).await;
+                    watcher.finished(
+                        source_signature(options.root.clone()).await,
+                        outcome,
+                        std::time::Instant::now(),
+                    );
                 }
             }
         });
@@ -322,11 +399,22 @@ pub async fn serve(
         "{}",
         json!({"event":"listening","address":format!("http://{}",listener.local_addr()?),"status":"/__rust_web/status"})
     );
-    axum::serve(listener, Router::new().fallback(handler).with_state(app))
-        .with_graceful_shutdown(async {
-            let _ = tokio::signal::ctrl_c().await;
-        })
-        .await?;
+    let serving = async {
+        axum::serve(listener, Router::new().fallback(handler).with_state(app))
+            .with_graceful_shutdown(crate::process::cancellation())
+            .await
+    };
+    tokio::pin!(serving);
+    tokio::select! {
+        result = &mut serving => result?,
+        _ = crate::process::cancellation() => {
+            if let Ok(result) = tokio::time::timeout(SHUTDOWN_GRACE, &mut serving).await {
+                result?;
+            }
+            // The CLI drops its owned runtime after this return, closing any
+            // remaining connections while still awaiting blocking work cleanup.
+        }
+    }
     Ok(())
 }
 

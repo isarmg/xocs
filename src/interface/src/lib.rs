@@ -3,6 +3,7 @@ pub mod api;
 pub mod components;
 pub mod contracts;
 pub mod i18n;
+pub mod modal;
 pub mod server_corners;
 pub mod theme;
 

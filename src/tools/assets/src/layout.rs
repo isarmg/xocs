@@ -6,5 +6,4 @@ pub(crate) const INTERFACE: &str = "src/interface";
 pub(crate) const BUILDER: &str = "src/tools/assets";
 pub(crate) const FOUNDATION: &str = "src/foundation";
 
-pub(crate) const WEB_INPUT_DIRECTORIES: [&str; 6] =
-    ["src", "runtime", "vendor", "styles", "public", "licenses"];
+pub(crate) const WEB_GENERATED_DIRECTORIES: [&str; 3] = ["pkg", "dist", "node_modules"];

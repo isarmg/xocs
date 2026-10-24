@@ -1,7 +1,7 @@
 //! Chronological articles and short journal notes.
 use super::shell::{Chrome, site_data};
 use crate::common::{
-    BrowsePager, Feedback, Lightbox, Petals, Sliding, load, num, page_number, rows, safe_url,
+    BrowsePager, Feedback, Lightbox, Petals, Sliding, href, load, num, page_number, rows, safe_url,
     search_signal, t, text,
 };
 use blog_interface::children::ToChildren;
@@ -137,10 +137,10 @@ pub(super) fn Journey() -> impl IntoView {
                                                         } else {
                                                             "journey-item"
                                                         })
-                                                        .href(format!(
+                                                        .href(href(&format!(
                                                             "/article/{}",
                                                             num(&item, "id")
-                                                        )),
+                                                        ))),
                                                 )
                                             })
                                             .collect_view()

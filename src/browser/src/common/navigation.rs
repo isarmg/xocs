@@ -2,6 +2,8 @@
 use blog_interface::prelude::*;
 use blog_interface::thread_bound::SendWrapper;
 
+pub(super) const MAX_PAGE: u64 = 100_000;
+
 pub(crate) fn enc(s: &str) -> String {
     js_sys::encode_uri_component(s)
         .as_string()
@@ -102,6 +104,14 @@ pub(crate) fn search_signal() -> RwSignal<String> {
 }
 
 pub(crate) fn browse(s: RwSignal<String>, changes: &[(&str, Option<String>)]) {
+    update_search(s, changes, false);
+}
+
+pub(super) fn replace_browse(s: RwSignal<String>, changes: &[(&str, Option<String>)]) {
+    update_search(s, changes, true);
+}
+
+fn update_search(s: RwSignal<String>, changes: &[(&str, Option<String>)], replace: bool) {
     let url = web_sys::Url::new(
         &web_sys::window()
             .unwrap()
@@ -119,11 +129,19 @@ pub(crate) fn browse(s: RwSignal<String>, changes: &[(&str, Option<String>)]) {
         }
     }
     let relative = format!("{}{}{}", url.pathname(), url.search(), url.hash());
-    let _ = web_sys::window()
-        .unwrap()
-        .history()
-        .unwrap()
-        .push_state_with_url(&wasm_bindgen::JsValue::NULL, "", Some(&relative));
+    let history = web_sys::window().unwrap().history().unwrap();
+    let result = if replace {
+        history.replace_state_with_url(
+            &history.state().unwrap_or(wasm_bindgen::JsValue::NULL),
+            "",
+            Some(&relative),
+        )
+    } else {
+        history.push_state_with_url(&wasm_bindgen::JsValue::NULL, "", Some(&relative))
+    };
+    if result.is_err() {
+        return;
+    }
     s.set(url.search());
 }
 
@@ -140,7 +158,7 @@ pub(crate) fn page_number(s: RwSignal<String>) -> u64 {
         .ok()
         .filter(|p| *p > 0)
         .unwrap_or(1)
-        .min(100_000)
+        .min(MAX_PAGE)
 }
 
 pub(crate) fn safe_url(s: &str, blob: bool) -> Option<String> {

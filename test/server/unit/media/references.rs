@@ -48,3 +48,48 @@ fn commonmark_reference_detection_preserves_escape_context() {
         &path
     ));
 }
+
+#[test]
+fn browser_normalized_url_paths_retain_media_across_document_containers() {
+    let path = format!("/media/{}.png", "a".repeat(64));
+    for alias in [
+        path.replace("/media/", "/media/./"),
+        path.replace("/media/", "/media/nested/../"),
+        path.replace("/media/", "/media/%2e/"),
+        path.replace("/media/", "/media/nested/%2E%2e/"),
+        format!(
+            "https://site.example{}",
+            path.replace("/media/", "/media/./")
+        ),
+    ] {
+        for document in [
+            alias.clone(),
+            format!("![saved]({alias})"),
+            format!("![saved][upload]\n\n[upload]: {alias}"),
+            serde_json::to_string(&serde_json::json!({"logo":alias})).unwrap(),
+        ] {
+            assert!(contains_reference(&document, &path), "{document}");
+            assert!(
+                contains_reference(&format!("unrelated\0{document}\0another field"), &path),
+                "SQL field boundaries: {document}"
+            );
+        }
+    }
+    let alias = path.replace("/media/", "/media/./");
+    assert!(contains_reference(
+        &format!("Visit https://site.example{alias} today"),
+        &path
+    ));
+    assert!(contains_reference(
+        &format!("Visit site.example{alias}?next=https://other.example today"),
+        &path
+    ));
+    assert!(!contains_reference(
+        &format!("/elsewhere/{}.png", "a".repeat(64)),
+        &path
+    ));
+    assert!(!contains_reference(
+        &format!("![not resolved][upload]\0[upload]: {alias}"),
+        &path
+    ));
+}

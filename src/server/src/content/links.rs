@@ -40,12 +40,14 @@ pub(super) async fn link_page(
     }
     let page = query.page.unwrap_or(1).clamp(1, 100_000);
     let size = query.size.unwrap_or(12).clamp(1, 100);
+    let mut transaction = state.pool.begin().await.map_err(db_error)?;
     let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM resource_path WHERE type=? AND status=1 AND (? IS NULL OR classify=?)")
         .bind(&query.kind).bind(&query.classify).bind(&query.classify)
-        .fetch_one(&state.pool).await.map_err(db_error)?;
+        .fetch_one(&mut *transaction).await.map_err(db_error)?;
     let items=sqlx::query_as::<_,Link>("SELECT id,title,classify,cover,url,introduction,type AS link_type,create_time FROM resource_path WHERE type=? AND status=1 AND (? IS NULL OR classify=?) ORDER BY id DESC LIMIT ? OFFSET ?")
         .bind(&query.kind).bind(&query.classify).bind(&query.classify).bind(size).bind((page-1)*size)
-        .fetch_all(&state.pool).await.map_err(db_error)?;
+        .fetch_all(&mut *transaction).await.map_err(db_error)?;
+    transaction.commit().await.map_err(db_error)?;
     Ok(Json(PageResult {
         items,
         total,
@@ -111,6 +113,7 @@ pub(super) async fn content_links(
     if query.status.is_some_and(|status| !matches!(status, 0 | 1)) {
         return Err(invalid("资源状态无效"));
     }
+    let mut transaction = state.pool.begin().await.map_err(db_error)?;
     let total: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM resource_path WHERE (?='' OR type=?) AND (? IS NULL OR status=?)",
     )
@@ -118,11 +121,12 @@ pub(super) async fn content_links(
     .bind(&kind)
     .bind(query.status)
     .bind(query.status)
-    .fetch_one(&state.pool)
+    .fetch_one(&mut *transaction)
     .await
     .map_err(db_error)?;
     let items = sqlx::query_as::<_, AdminLink>("SELECT id,title,classify,cover,url,introduction,type AS link_type,status,create_time FROM resource_path WHERE (?='' OR type=?) AND (? IS NULL OR status=?) ORDER BY id DESC LIMIT ? OFFSET ?")
-        .bind(&kind).bind(&kind).bind(query.status).bind(query.status).bind(size).bind((page-1)*size).fetch_all(&state.pool).await.map_err(db_error)?;
+        .bind(&kind).bind(&kind).bind(query.status).bind(query.status).bind(size).bind((page-1)*size).fetch_all(&mut *transaction).await.map_err(db_error)?;
+    transaction.commit().await.map_err(db_error)?;
     Ok(Json(PageResult {
         items,
         total,

@@ -5,6 +5,7 @@ pub mod graph;
 pub mod inventory;
 pub mod javascript;
 mod layout;
+mod process;
 pub mod server_build;
 mod source_inputs;
 
@@ -19,6 +20,12 @@ use std::{
 pub const RUST: &str = "1.99.0";
 pub const BRIDGE_ABI: &str = "blog-browser-bridge/1";
 pub const TARGET: &str = "wasm32-unknown-unknown";
+
+/// Latch CLI cancellation, stop owned commands and close local preview servers.
+/// Signal handlers belong to the executable; calling this installs none.
+pub fn request_cancellation() {
+    process::cancel();
+}
 
 /// Bind the conservative compiled implementation basis to this executable.
 /// Full source verification snapshots retain the same input categories.
@@ -53,6 +60,88 @@ pub struct Options {
     pub offline: bool,
     pub debug: bool,
     pub dist: Option<PathBuf>,
+}
+
+#[derive(Debug)]
+pub(crate) struct BuildBusy(PathBuf);
+
+impl std::fmt::Display for BuildBusy {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            formatter,
+            "Another asset build owns {}; retry after it finishes",
+            self.0.display()
+        )
+    }
+}
+
+impl std::error::Error for BuildBusy {}
+
+/// A stable product lock covers compilation, linking and paired publication.
+/// Its file is never renamed, removed or repaired by a competing producer.
+pub(crate) struct BuildLock {
+    root: PathBuf,
+    _file: fs::File,
+}
+
+impl BuildLock {
+    pub(crate) fn acquire(root: &Path) -> Result<Self> {
+        inventory::physical(root)?;
+        let root = root.canonicalize()?;
+        let directory = root.join("target/.blog-assets");
+        let ancestor = directory
+            .ancestors()
+            .find(|path| path.exists())
+            .context("Build lock ancestor")?;
+        inventory::physical(ancestor)?;
+        fs::create_dir_all(&directory)?;
+        inventory::physical(&directory)?;
+        let path = directory.join("build.lock");
+        let mut options = fs::OpenOptions::new();
+        options.read(true).write(true).create(true).truncate(false);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.custom_flags(
+                (rustix::fs::OFlags::NOFOLLOW | rustix::fs::OFlags::NONBLOCK).bits() as i32,
+            );
+        }
+        let file = options
+            .open(&path)
+            .context("Open product asset build lock")?;
+        inventory::physical(&path)?;
+        let opened = file.metadata()?;
+        let current = fs::symlink_metadata(&path)?;
+        ensure!(
+            opened.is_file() && current.is_file(),
+            "Asset build lock must be a physical regular file"
+        );
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::MetadataExt;
+            ensure!(
+                opened.nlink() == 1
+                    && current.nlink() == 1
+                    && opened.dev() == current.dev()
+                    && opened.ino() == current.ino(),
+                "Asset build lock identity changed or is hard linked"
+            );
+        }
+        match file.try_lock() {
+            Ok(()) => Ok(Self { root, _file: file }),
+            Err(fs::TryLockError::WouldBlock) => Err(BuildBusy(root).into()),
+            Err(fs::TryLockError::Error(error)) => Err(error).context("Lock product asset build"),
+        }
+    }
+
+    fn validate(&self, root: &Path) -> Result<()> {
+        inventory::physical(root)?;
+        ensure!(
+            self.root == root.canonicalize()?,
+            "Asset build lock belongs to another product root"
+        );
+        Ok(())
+    }
 }
 
 fn validate_distribution(root: &Path, output: &Path) -> Result<()> {
@@ -125,13 +214,11 @@ pub fn cargo_action(options: &Options, action: &str) -> Result<()> {
     if env::var_os("CARGO_PROFILE_TEST_DEBUG").is_none() {
         command.env("CARGO_PROFILE_TEST_DEBUG", "0");
     }
-    ensure!(
-        command
-            .status()
-            .context("Run Cargo browser build")?
-            .success(),
-        "Browser cargo {action} failed"
-    );
+    process::run(
+        &mut command,
+        process::Policy::build(64 * 1024 * 1024).live_stdout(),
+        "Run Cargo browser action",
+    )?;
     Ok(())
 }
 
@@ -191,6 +278,7 @@ fn receipt_destination(path: &Path, pkg: &Path, dist: &Path) -> Result<PathBuf> 
 }
 
 fn replace_pair(
+    owner: &BuildLock,
     pkg: &Path,
     stage_pkg: &Path,
     dist: &Path,
@@ -198,6 +286,7 @@ fn replace_pair(
     backup: &Path,
     receipt: Option<(&Path, &[u8])>,
 ) -> Result<()> {
+    owner.validate(&owner.root)?;
     validate_generated(pkg)?;
     validate_generated(dist)?;
     let receipt = receipt
@@ -266,6 +355,12 @@ fn replace_pair(
 }
 
 pub fn build(options: &Options) -> Result<Value> {
+    let owner = BuildLock::acquire(&options.root)?;
+    build_locked(options, &owner)
+}
+
+pub(crate) fn build_locked(options: &Options, owner: &BuildLock) -> Result<Value> {
+    owner.validate(&options.root)?;
     inventory::physical(&options.root)?;
     let web = options.root.join(layout::WEB);
     let manifest = options.root.join(layout::BROWSER).join("Cargo.toml");
@@ -369,6 +464,7 @@ pub fn build(options: &Options) -> Result<Value> {
     // Metadata is staged with the output and published as a create-new file only
     // after every source/hash/license/budget gate has passed.
     replace_pair(
+        owner,
         &web.join("pkg"),
         &stage_pkg,
         &dist,

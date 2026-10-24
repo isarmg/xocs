@@ -161,7 +161,7 @@ try {
         await expect(page.locator('.love-clock [data-unit=years] strong')).toHaveText('0');
         await expect(page.locator('.love-wave')).toBeVisible();
         await expect(page.locator('.love-tab-icon')).toHaveCount(3);
-        await expect(page.getByRole('link', { name: 'A letter for you', exact: true })).toHaveAttribute('href', '/letter');
+        await expect(page.getByRole('link', { name: 'A letter for you', exact: true })).toHaveAttribute('href', '/letter?lang=en');
         await expect(page.locator('.love-countdown')).toContainText('Today is the day');
         await expect(page.locator('.love-story-card')).toContainText(families[0].family_info);
         await expect(page.locator('.travel-photo-card')).toHaveCount(12);

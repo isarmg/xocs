@@ -5,6 +5,14 @@ use axum::http::{Method, Request as HttpRequest};
 use std::net::SocketAddr;
 use tower::ServiceExt;
 
+fn isolated_router<Store: AdministratorStore + 'static>(
+    product_id: impl Into<String>,
+    mode: AdministratorOriginMode,
+    service: Arc<AdministratorService<Store>>,
+) -> Result<Router, crate::admin_core::Error> {
+    administrator_router_with_admission(product_id, mode, service, body::BodyAdmission::isolated())
+}
+
 fn request(method: Method, path: &str, body: &str) -> HttpRequest<axum::body::Body> {
     let mut request = HttpRequest::builder()
         .method(method)
@@ -23,7 +31,7 @@ fn request(method: Method, path: &str, body: &str) -> HttpRequest<axum::body::Bo
 
 async fn router() -> Router {
     let store = crate::testkit::administrator_fixture("admin", "correct horse battery").await;
-    administrator_router(
+    isolated_router(
         "example-product",
         AdministratorOriginMode::LoopbackDevelopmentHttp,
         Arc::new(AdministratorService::with_isolated_test_budget(store)),
@@ -37,7 +45,7 @@ async fn login_attempts_return_429_and_recover_without_success_reset() {
     let store = crate::testkit::administrator_fixture("admin", "correct horse battery").await;
     let state = store.authentication_state().await.unwrap();
     let service = Arc::new(AdministratorService::with_isolated_test_budget(store));
-    let router = administrator_router(
+    let router = isolated_router(
         "example-product",
         AdministratorOriginMode::LoopbackDevelopmentHttp,
         service,
@@ -199,7 +207,7 @@ async fn shared_persistent_management_contract() {
         1,
     )
     .await;
-    let router = administrator_router(
+    let router = isolated_router(
         "example-product",
         AdministratorOriginMode::LoopbackDevelopmentHttp,
         service,

@@ -13,6 +13,7 @@ anyhow = { path = "../../foundation/diagnostics/error-context",package = "blog-d
 memchr = { path = "../../foundation/encoding/byte-search",package = "blog-encoding-byte-search"}
 mime_guess = { path = "../../foundation/network/media-detection",package = "blog-network-media-detection"}
 regex = { path = "../../foundation/text/pattern-search",package = "blog-text-pattern-search",features = ["matcher"]}
+rustix = { path = "../../foundation/platform/system-calls", package = "blog-platform-system-calls", features = ["fs", "process"] }
 hyper = { default-features = false, features = ["client-legacy", "http1", "tokio"], path = "../../foundation/network/http-transport", package = "blog-network-http-transport" }
 serde = {  features = ["derive"], path = "../../foundation/format/data-model",package = "blog-format-data-model"}
 serde_json = { path = "../../foundation/format/json",package = "blog-format-json"}
@@ -70,3 +71,7 @@ path = "../../foundation/assets/style-compiler"
 [[test]]
 name = "configuration_contracts"
 path = "../../../test/tools/assets/integration/configuration_contracts.rs"
+
+[[test]]
+name = "process_lifecycle"
+path = "../../../test/tools/assets/integration/process_lifecycle.rs"

@@ -1,4 +1,5 @@
 //! Pagination controls preserve the caller's page and read-state policy.
+use super::navigation::{MAX_PAGE, replace_browse};
 use super::{Data, browse, num, page_number, t, tr};
 use blog_interface::prelude::*;
 use blog_interface::{ev, html};
@@ -27,6 +28,11 @@ impl<T> PageMetadata for crate::models::Page<T> {
     }
 }
 
+fn last_page(total: i64, size: i64) -> u64 {
+    let size = size.max(1);
+    (((total.max(0) + size - 1) / size).max(1) as u64).min(MAX_PAGE)
+}
+
 #[component]
 pub(crate) fn Pager<T: PageMetadata + Clone + Send + Sync + 'static>(
     data: Data<T>,
@@ -38,8 +44,7 @@ pub(crate) fn Pager<T: PageMetadata + Clone + Send + Sync + 'static>(
 ) -> impl IntoView {
     Effect::new(move |_| {
         if let Some(v) = data.value.get() {
-            let size = v.size().max(1);
-            let last = ((v.total() + size - 1) / size).max(1) as u64;
+            let last = last_page(v.total(), v.size());
             if page.get_untracked() > last {
                 page.set(last);
             }
@@ -78,7 +83,7 @@ pub(crate) fn Pager<T: PageMetadata + Clone + Send + Sync + 'static>(
                                 .disabled(move || {
                                     locked.get()
                                         || (!preserve && data.busy.get())
-                                        || (page.get() as i64 * v.size()) >= v.total()
+                                        || page.get() >= last_page(v.total(), v.size())
                                 })
                                 .on(blog_interface::ev::click, move |_| page.update(|p| *p += 1)),
                         ))
@@ -98,6 +103,14 @@ pub(crate) fn BrowsePager<T: PageMetadata + Clone + Send + Sync + 'static>(
     #[prop(default = false)] always: bool,
     #[prop(default = false)] empty: bool,
 ) -> impl IntoView {
+    Effect::new(move |_| {
+        if let Some(value) = data.value.get() {
+            let last = last_page(value.total(), value.size());
+            if untrack(move || page_number(state)) > last {
+                replace_browse(state, &[("page", (last > 1).then(|| last.to_string()))]);
+            }
+        }
+    });
     move || {
         data.value
             .get()
@@ -105,7 +118,7 @@ pub(crate) fn BrowsePager<T: PageMetadata + Clone + Send + Sync + 'static>(
                 empty || v.total() > if always { 0 } else { size } || page_number(state) > 1
             })
             .map(|v| {
-                let total = v.total();
+                let last = last_page(v.total(), v.size());
                 View::new(
                     html::nav()
                         .child((
@@ -128,9 +141,7 @@ pub(crate) fn BrowsePager<T: PageMetadata + Clone + Send + Sync + 'static>(
                             html::button()
                                 .child(t("下一页", "Next page"))
                                 .r#type("button")
-                                .disabled(move || {
-                                    data.busy.get() || (page_number(state) as i64 * size) >= total
-                                })
+                                .disabled(move || data.busy.get() || page_number(state) >= last)
                                 .on(ev::click, move |_| {
                                     browse(
                                         state,

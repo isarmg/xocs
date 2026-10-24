@@ -4,7 +4,7 @@ use super::journal::NoteCard;
 use super::photos::Collection;
 use super::shell::{Chrome, site_data};
 use crate::comments::Comments;
-use crate::common::{Feedback, Lightbox, Pager, Petals, list, load, rows, safe_url, t, text};
+use crate::common::{Feedback, Lightbox, Pager, Petals, href, list, load, rows, safe_url, t, text};
 use blog_interface::children::ToChildren;
 use blog_interface::component::component_props_builder;
 use blog_interface::ev;
@@ -308,7 +308,7 @@ pub(super) fn Love() -> impl IntoView {
                             .child( t("飞车传信", "A letter for you")))
                             .class("love-letter")
                             .style(move || background_style(site_media_url(site, |site| site.media.love_letter_background.as_deref())))
-                            .href("/letter"),
+                            .href(href("/letter")),
                             html::details()
                             .child((html::summary()
                             .child( t("我们的故事", "Our story")),
@@ -323,7 +323,7 @@ pub(super) fn Love() -> impl IntoView {
                             html::span()
                             .child( "↗")
                             .aria_hidden("true"),))
-                            .href("/jotting"),))
+                            .href(href("/jotting")),))
                             .class("love-story-card"),
                             html::div()
                             .child((html::nav()
@@ -389,7 +389,7 @@ pub(super) fn Love() -> impl IntoView {
                             html::span()
                             .child( "↗")
                             .aria_hidden("true"),))
-                            .href("/jotting"),))
+                            .href(href("/jotting")),))
                             .class("love-section-heading"),
                             Feedback(component_props_builder(& Feedback)
                             .error( notes.error)

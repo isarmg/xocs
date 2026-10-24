@@ -262,10 +262,12 @@ pub(super) async fn message_comments(
 ) -> ApiResult<PageResult<Comment>> {
     let page = query.page.unwrap_or(1).clamp(1, 100_000);
     let size = query.size.unwrap_or(10).clamp(1, 50);
+    let mut transaction = state.pool.begin().await.map_err(db_error)?;
     let total:i64=sqlx::query_scalar("SELECT COUNT(*) FROM comment WHERE source=0 AND type='message' AND (parent_comment_id IS NULL OR parent_comment_id=0)")
-        .fetch_one(&state.pool).await.map_err(db_error)?;
+        .fetch_one(&mut *transaction).await.map_err(db_error)?;
     let items=sqlx::query_as::<_,Comment>(sqlx::AssertSqlSafe(format!("{COMMENT_SQL} WHERE c.source=0 AND c.type='message' AND (c.parent_comment_id IS NULL OR c.parent_comment_id=0) ORDER BY c.create_time DESC,c.id DESC LIMIT ? OFFSET ?")))
-        .bind(size).bind((page-1)*size).fetch_all(&state.pool).await.map_err(db_error)?;
+        .bind(size).bind((page-1)*size).fetch_all(&mut *transaction).await.map_err(db_error)?;
+    transaction.commit().await.map_err(db_error)?;
     Ok(Json(PageResult {
         items,
         total,
@@ -278,8 +280,9 @@ pub(super) async fn message_comment_replies(
     Path(id): Path<i64>,
     Query(query): Query<RepliesQuery>,
 ) -> ApiResult<PageResult<Comment>> {
+    let mut transaction = state.pool.begin().await.map_err(db_error)?;
     let root:Option<i64>=sqlx::query_scalar("SELECT id FROM comment WHERE id=? AND source=0 AND type='message' AND (parent_comment_id IS NULL OR parent_comment_id=0)")
-        .bind(id).fetch_optional(&state.pool).await.map_err(db_error)?;
+        .bind(id).fetch_optional(&mut *transaction).await.map_err(db_error)?;
     if root.is_none() {
         return Err(absent());
     }
@@ -289,11 +292,12 @@ pub(super) async fn message_comment_replies(
         "SELECT COUNT(*) FROM comment WHERE floor_comment_id=? AND source=0 AND type='message'",
     )
     .bind(id)
-    .fetch_one(&state.pool)
+    .fetch_one(&mut *transaction)
     .await
     .map_err(db_error)?;
     let items=sqlx::query_as::<_,Comment>(sqlx::AssertSqlSafe(format!("{COMMENT_SQL} WHERE c.floor_comment_id=? AND c.source=0 AND c.type='message' ORDER BY c.create_time,c.id LIMIT ? OFFSET ?")))
-        .bind(id).bind(size).bind((page-1)*size).fetch_all(&state.pool).await.map_err(db_error)?;
+        .bind(id).bind(size).bind((page-1)*size).fetch_all(&mut *transaction).await.map_err(db_error)?;
+    transaction.commit().await.map_err(db_error)?;
     Ok(Json(PageResult {
         items,
         total,
@@ -305,13 +309,15 @@ pub(super) async fn love_comments(
     State(state): State<AppState>,
     Query(query): Query<RepliesQuery>,
 ) -> ApiResult<PageResult<Comment>> {
-    let source = crate::site_author_id(&state.pool).await?;
+    let mut transaction = state.pool.begin().await.map_err(db_error)?;
+    let source = crate::site_author_id(&mut *transaction).await?;
     let page = query.page.unwrap_or(1).clamp(1, 100_000);
     let size = query.size.unwrap_or(10).clamp(1, 50);
     let total:i64=sqlx::query_scalar("SELECT COUNT(*) FROM comment WHERE source=? AND type='love' AND (parent_comment_id IS NULL OR parent_comment_id=0)")
-        .bind(source).fetch_one(&state.pool).await.map_err(db_error)?;
+        .bind(source).fetch_one(&mut *transaction).await.map_err(db_error)?;
     let items=sqlx::query_as::<_,Comment>(sqlx::AssertSqlSafe(format!("{COMMENT_SQL} WHERE c.source=? AND c.type='love' AND (c.parent_comment_id IS NULL OR c.parent_comment_id=0) ORDER BY c.create_time DESC,c.id DESC LIMIT ? OFFSET ?")))
-        .bind(source).bind(size).bind((page-1)*size).fetch_all(&state.pool).await.map_err(db_error)?;
+        .bind(source).bind(size).bind((page-1)*size).fetch_all(&mut *transaction).await.map_err(db_error)?;
+    transaction.commit().await.map_err(db_error)?;
     Ok(Json(PageResult {
         items,
         total,
@@ -324,9 +330,10 @@ pub(super) async fn love_comment_replies(
     Path(id): Path<i64>,
     Query(query): Query<RepliesQuery>,
 ) -> ApiResult<PageResult<Comment>> {
-    let source = crate::site_author_id(&state.pool).await?;
+    let mut transaction = state.pool.begin().await.map_err(db_error)?;
+    let source = crate::site_author_id(&mut *transaction).await?;
     let root:Option<i64>=sqlx::query_scalar("SELECT id FROM comment WHERE id=? AND source=? AND type='love' AND (parent_comment_id IS NULL OR parent_comment_id=0)")
-        .bind(id).bind(source).fetch_optional(&state.pool).await.map_err(db_error)?;
+        .bind(id).bind(source).fetch_optional(&mut *transaction).await.map_err(db_error)?;
     if root.is_none() {
         return Err(absent());
     }
@@ -337,11 +344,12 @@ pub(super) async fn love_comment_replies(
     )
     .bind(id)
     .bind(source)
-    .fetch_one(&state.pool)
+    .fetch_one(&mut *transaction)
     .await
     .map_err(db_error)?;
     let items=sqlx::query_as::<_,Comment>(sqlx::AssertSqlSafe(format!("{COMMENT_SQL} WHERE c.floor_comment_id=? AND c.source=? AND c.type='love' ORDER BY c.create_time,c.id LIMIT ? OFFSET ?")))
-        .bind(id).bind(source).bind(size).bind((page-1)*size).fetch_all(&state.pool).await.map_err(db_error)?;
+        .bind(id).bind(source).bind(size).bind((page-1)*size).fetch_all(&mut *transaction).await.map_err(db_error)?;
+    transaction.commit().await.map_err(db_error)?;
     Ok(Json(PageResult {
         items,
         total,
@@ -365,12 +373,14 @@ pub(super) async fn admin_comments(
     Query(query): Query<AdminPageQuery>,
 ) -> ApiResult<PageResult<AdminComment>> {
     let (page, size) = query.bounds();
+    let mut transaction = state.pool.begin().await.map_err(db_error)?;
     let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM comment")
-        .fetch_one(&state.pool)
+        .fetch_one(&mut *transaction)
         .await
         .map_err(db_error)?;
     let items=sqlx::query_as::<_,AdminComment>("SELECT c.id,c.source,c.type AS comment_type,c.user_id,u.username,c.comment_content,c.create_time FROM comment c LEFT JOIN user u ON u.id=c.user_id ORDER BY c.id DESC LIMIT ? OFFSET ?")
-        .bind(size).bind((page-1)*size).fetch_all(&state.pool).await.map_err(db_error)?;
+        .bind(size).bind((page-1)*size).fetch_all(&mut *transaction).await.map_err(db_error)?;
+    transaction.commit().await.map_err(db_error)?;
     Ok(Json(PageResult {
         items,
         total,

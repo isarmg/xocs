@@ -178,25 +178,6 @@ pub(crate) async fn initialize(
 
 pub(crate) async fn validate_database(pool: &SqlitePool) -> anyhow::Result<()> {
     schema::validate(pool).await?;
-    let names: Vec<String> =
-        sqlx::query_scalar("SELECT name FROM sqlite_schema WHERE type='table'")
-            .fetch_all(pool)
-            .await?;
-    for table in [
-        "user",
-        "article",
-        "comment",
-        "comment_submission",
-        "sort",
-        "label",
-        "resource",
-        "_common_administrators",
-        "_common_admin_sessions",
-    ] {
-        if !names.iter().any(|name| name == table) {
-            bail!("missing required table: {table}");
-        }
-    }
     let violations: Vec<(String, Option<i64>, String, i64)> =
         sqlx::query_as("PRAGMA foreign_key_check")
             .fetch_all(pool)

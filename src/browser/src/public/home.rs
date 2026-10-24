@@ -2,7 +2,7 @@
 use super::appearance::{Avatar, site_name};
 use super::articles::Card;
 use super::shell::{Chrome, notices, site_data};
-use crate::common::{Feedback, list, load, load_typed, query, safe_url, t, text};
+use crate::common::{Feedback, href, list, load, load_typed, query, safe_url, t, text};
 use crate::models::{
     ArticleSummary, Category, HomeKind, HomeSection as HomeSectionModel, Label, Page, SiteStats,
 };
@@ -10,6 +10,7 @@ use blog_interface::children::ToChildren;
 use blog_interface::component::component_props_builder;
 use blog_interface::ev;
 use blog_interface::html;
+use blog_interface::modal::ModalSurface;
 use blog_interface::prelude::*;
 use serde_json::{Value, json};
 
@@ -205,9 +206,7 @@ pub(super) fn Home() -> impl IntoView {
                     .clone())
                 ,),
         )
-        .href(
-            format!("/article/{}", a.id),
-        ),
+        .href(href(&format!("/article/{}", a.id))),
 )
                                                                 })
                                                                 .collect_view(),
@@ -241,9 +240,7 @@ pub(super) fn Home() -> impl IntoView {
                     .unwrap_or_default()))),))
                 ,),
         )
-        .href(
-            format!("/article/{}", a.id),
-        ),
+        .href(href(&format!("/article/{}", a.id))),
 )
                                                                 })
                                                                 .collect_view(),
@@ -267,10 +264,10 @@ pub(super) fn Home() -> impl IntoView {
                                                         View::new(
                                                             html::a()
                                                                 .child(l.label_name.clone())
-                                                                .href(format!(
+                                                                .href(href(&format!(
                                                                     "/sort?sort_id={}&label_id={}",
                                                                     l.sort_id, l.id
-                                                                )),
+                                                                ))),
                                                         )
                                                     })
                                                     .collect_view()
@@ -325,9 +322,7 @@ pub(super) fn Home() -> impl IntoView {
                 "linear-gradient(110deg,#8c72e9,#d3a4f4)"] [i % 4]
             ),
         )
-        .href(
-            format!("/sort?sort_id={}", c.id),
-        ),
+        .href(href(&format!("/sort?sort_id={}", c.id))),
 )
                                                 })
                                                 .collect_view()
@@ -383,49 +378,59 @@ pub(super) fn Home() -> impl IntoView {
                         ))
                         .class("home-layout"),
                     move || {
-                        push.get().map(|p| {
-                            View::new(
-                                html::div()
-                                    .child(
-                                        html::section()
-                                            .child((
+                        push.get().map(|recommendation| {
+                            let close = Callback::new(move |()| push.set(None));
+                            html::div()
+                                .class("push-backdrop")
+                                .role("presentation")
+                                .child(ModalSurface(
+                                    component_props_builder(&ModalSurface)
+                                        .class("push-dialog")
+                                        .label(t("每日推荐", "Daily recommendation"))
+                                        .close(close)
+                                        .dismiss_on_backdrop(true)
+                                        .children(ToChildren::to_children(move || {
+                                            (
                                                 html::button()
                                                     .child("×")
                                                     .class("push-close")
                                                     .r#type("button")
+                                                    .attr("data-blog-initial-focus", "")
                                                     .aria_label(t(
                                                         "关闭每日推荐",
                                                         "Close daily recommendation",
                                                     ))
-                                                    .on(ev::click, move |_| push.set(None)),
+                                                    .on(ev::click, move |_| close.run(())),
                                                 html::h2()
                                                     .child(t("每日推荐", "Daily recommendation")),
-                                                html::h3().child(text(&p, "title")),
-                                                safe_url(&text(&p, "cover"), false).map(|u| {
-                                                    View::new(
-                                                        html::img().src(u).alt(t(
-                                                            "推荐封面",
-                                                            "Recommended cover",
-                                                        )),
-                                                    )
-                                                }),
+                                                html::h3().child(text(&recommendation, "title")),
+                                                safe_url(&text(&recommendation, "cover"), false)
+                                                    .map(|url| {
+                                                        html::img()
+                                                            .src(url)
+                                                            .alt(t("推荐封面", "Recommended cover"))
+                                                    }),
                                                 html::a()
                                                     .child(t("立即前往 →", "Visit now →"))
-                                                    .href(safe_url(&text(&p, "link"), false))
+                                                    .href(
+                                                        safe_url(
+                                                            &text(&recommendation, "link"),
+                                                            false,
+                                                        )
+                                                        .map(|url| href(&url)),
+                                                    )
                                                     .target("_blank")
                                                     .rel("noopener noreferrer")
-                                                    .on(ev::click, move |_| push.set(None)),
-                                            ))
-                                            .class("push-dialog")
-                                            .role("dialog")
-                                            .aria_modal("true")
-                                            .aria_label(t("每日推荐", "Daily recommendation"))
-                                            .on(ev::click, move |ev| ev.stop_propagation()),
-                                    )
-                                    .class("push-backdrop")
-                                    .role("presentation")
-                                    .on(ev::click, move |_| push.set(None)),
-                            )
+                                                    .on(ev::click, move |_| close.run(())),
+                                            )
+                                        }))
+                                        .build(),
+                                ))
+                                .on(ev::click, move |event| {
+                                    if event.target() == event.current_target() {
+                                        close.run(());
+                                    }
+                                })
                         })
                     },
                 )
@@ -467,7 +472,7 @@ fn HomeSection(section: HomeSectionModel) -> impl IntoView {
                                 " ",
                                 t("更多", "More"),
                             ))
-                            .href(more),
+                            .href(href(&more)),
                     ))
                     .class("section-heading"),
                 Feedback(
@@ -509,12 +514,12 @@ fn HomeSection(section: HomeSectionModel) -> impl IntoView {
                     .child((t("浏览文章", "Browse articles"),
                     html::span()
                     .child( "↗").aria_hidden("true"),))
-                    .href("/sort"),
+                    .href(href("/sort")),
                     html::a()
                     .child((t("给我留言", "Leave a message"),
                     html::span()
                     .child( "↗").aria_hidden("true"),))
-                    .href("/message"),))
+                    .href(href("/message")),))
                 ,),
         )
         .class("public-empty-state home-empty-section"),

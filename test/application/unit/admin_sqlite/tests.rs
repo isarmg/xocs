@@ -116,3 +116,64 @@ async fn mutations_and_audit_are_atomic() -> Result<(), Box<dyn std::error::Erro
     assert_eq!(audit_count, 3);
     Ok(())
 }
+
+#[tokio::test]
+async fn out_of_order_login_commits_preserve_latest_activity_and_both_sessions_and_audits()
+-> Result<(), Box<dyn std::error::Error>> {
+    let store = crate::testkit::administrator_fixture("admin", "correct horse battery").await;
+    let administrator = store.administrator_by_username("admin").await?.unwrap();
+    assert_eq!(administrator.last_login_at_micros, None);
+    let mut committed = Vec::new();
+    for (time, name, byte) in [(20, "newer", 21), (10, "older", 11)] {
+        let mut record = session(&administrator.administrator_id, name, byte);
+        record.created_at_micros = time;
+        record.last_seen_at_micros = time;
+        let mut created = event(
+            &format!("{name}-created"),
+            SecurityAction::SessionCreated,
+            &administrator.administrator_id,
+        );
+        created.occurred_at_micros = time;
+        let mut succeeded = event(
+            &format!("{name}-succeeded"),
+            SecurityAction::LoginSucceeded,
+            &administrator.administrator_id,
+        );
+        succeeded.occurred_at_micros = time;
+        store
+            .commit_login_success(LoginSuccess {
+                session: record.clone(),
+                session_created_event: created,
+                login_succeeded_event: succeeded,
+            })
+            .await?;
+        committed.push(record);
+        let current = store.administrator_by_username("admin").await?.unwrap();
+        assert_eq!(current.last_login_at_micros, Some(20));
+        assert_eq!(current.updated_at_micros, 20);
+    }
+    for record in committed {
+        assert_eq!(
+            store
+                .session_by_token_hash(record.token_hash)
+                .await?
+                .unwrap()
+                .session,
+            record
+        );
+    }
+    let audit: Vec<(String, i64)> = sqlx::query_as(
+        "SELECT action,occurred_at_micros FROM _common_security_audit_events ORDER BY occurred_at_micros,action",
+    ).fetch_all(store.pool()).await?;
+    assert_eq!(
+        audit,
+        [
+            ("login.succeeded".into(), 10),
+            ("session.created".into(), 10),
+            ("login.succeeded".into(), 20),
+            ("session.created".into(), 20),
+        ]
+    );
+    store.pool().close().await;
+    Ok(())
+}

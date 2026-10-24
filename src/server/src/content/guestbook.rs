@@ -58,8 +58,9 @@ pub(super) async fn content_tree_hole(
     Query(query): Query<AdminPageQuery>,
 ) -> ApiResult<PageResult<TreeHole>> {
     let (page, size) = query.bounds();
+    let mut transaction = state.pool.begin().await.map_err(db_error)?;
     let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM tree_hole")
-        .fetch_one(&state.pool)
+        .fetch_one(&mut *transaction)
         .await
         .map_err(db_error)?;
     let items = sqlx::query_as::<_, TreeHole>(
@@ -67,9 +68,10 @@ pub(super) async fn content_tree_hole(
     )
     .bind(size)
     .bind((page - 1) * size)
-    .fetch_all(&state.pool)
+    .fetch_all(&mut *transaction)
     .await
     .map_err(db_error)?;
+    transaction.commit().await.map_err(db_error)?;
     Ok(Json(PageResult {
         items,
         total,

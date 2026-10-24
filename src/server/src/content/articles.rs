@@ -126,6 +126,7 @@ async fn list_articles(
         )
     };
     let (count_sql, list_sql) = article_page_sql(&filter, &filters, public, !search.is_empty());
+    let mut transaction = pool.begin().await.map_err(db_error)?;
     let total: i64 = sqlx::query_scalar(sqlx::AssertSqlSafe(count_sql))
         .bind(query.sort_id)
         .bind(&search)
@@ -133,7 +134,7 @@ async fn list_articles(
         .bind(recommended)
         .bind(&phrase)
         .bind(query.label_id)
-        .fetch_one(pool)
+        .fetch_one(&mut *transaction)
         .await
         .map_err(db_error)?;
     let items = sqlx::query_as::<_, ArticleSummary>(sqlx::AssertSqlSafe(list_sql))
@@ -145,9 +146,10 @@ async fn list_articles(
         .bind(query.label_id)
         .bind(size)
         .bind((page - 1) * size)
-        .fetch_all(pool)
+        .fetch_all(&mut *transaction)
         .await
         .map_err(db_error)?;
+    transaction.commit().await.map_err(db_error)?;
     Ok(PageResult {
         items,
         total,
@@ -222,7 +224,10 @@ pub(super) async fn admin_articles(
     Ok(Json(list_articles(&state.pool, query, false).await?))
 }
 
-async fn load_article(pool: &SqlitePool, id: i64, admin: bool) -> Result<Article, AppError> {
+async fn load_article<'executor, E>(executor: E, id: i64, admin: bool) -> Result<Article, AppError>
+where
+    E: sqlx::Executor<'executor, Database = sqlx::Sqlite>,
+{
     let condition = if admin {
         "id=? AND deleted=0"
     } else {
@@ -232,7 +237,7 @@ async fn load_article(pool: &SqlitePool, id: i64, admin: bool) -> Result<Article
         "{ARTICLE_SQL} WHERE {condition}"
     )))
     .bind(id)
-    .fetch_optional(pool)
+    .fetch_optional(executor)
     .await
     .map_err(db_error)?
     .ok_or_else(absent)
@@ -290,10 +295,10 @@ pub(super) async fn admin_article_news(
     Path(id): Path<i64>,
     Query(query): Query<ArticleNewsQuery>,
 ) -> ApiResult<PageResult<ArticleNews>> {
-    load_article(&state.pool, id, true).await?;
     let page = query.page.unwrap_or(1).clamp(1, 100_000);
     let size = query.size.unwrap_or(20).clamp(1, 100);
     let mut transaction = state.pool.begin().await.map_err(db_error)?;
+    load_article(&mut *transaction, id, true).await?;
     let total: i64 =
         sqlx::query_scalar("SELECT COUNT(*) FROM wei_yan WHERE type='news' AND source=?")
             .bind(id)
@@ -364,7 +369,7 @@ pub(super) async fn admin_update_article_news(
 ) -> ApiResult<ArticleNews> {
     load_article(&state.pool, article_id, true).await?;
     validate_news_content(&input.content)?;
-    let time = normalize_news_time(&state, input.create_time).await?;
+    let time = normalize_news_time(input.create_time)?;
     let changed = sqlx::query("UPDATE wei_yan SET content=?,create_time=COALESCE(?,create_time) WHERE id=? AND source=? AND type='news'")
         .bind(input.content.trim()).bind(time).bind(news_id).bind(article_id)
         .execute(&state.pool).await.map_err(db_error)?;
@@ -390,23 +395,36 @@ fn validate_news_content(content: &str) -> Result<(), AppError> {
     Ok(())
 }
 
-async fn normalize_news_time(
-    state: &AppState,
-    raw: Option<String>,
-) -> Result<Option<String>, AppError> {
-    if let Some(raw) = raw.filter(|value| !value.trim().is_empty()) {
-        if raw.len() > 64 {
-            return Err(invalid("日期时间无效"));
-        }
-        let parsed: Option<String> = sqlx::query_scalar("SELECT datetime(?)")
-            .bind(raw)
-            .fetch_one(&state.pool)
-            .await
-            .map_err(db_error)?;
-        Ok(Some(parsed.ok_or_else(|| invalid("日期时间无效"))?))
-    } else {
-        Ok(None)
+fn normalize_news_time(raw: Option<String>) -> Result<Option<String>, AppError> {
+    use chrono::{DateTime, Datelike, NaiveDate, NaiveDateTime, Timelike, Utc};
+
+    let Some(raw) = raw.filter(|value| !value.trim().is_empty()) else {
+        return Ok(None);
+    };
+    if raw.len() > 64 {
+        return Err(invalid("日期时间无效"));
     }
+    let value = raw.trim().replacen(' ', "T", 1);
+    // Only absolute calendar input is admitted. SQLite's datetime() also accepts
+    // relative values such as "now", which make the same retry hash differently.
+    let parsed = DateTime::parse_from_rfc3339(&value)
+        .ok()
+        .map(|value| value.with_timezone(&Utc))
+        .or_else(|| {
+            ["%Y-%m-%dT%H:%M:%S%.f", "%Y-%m-%dT%H:%M"]
+                .into_iter()
+                .find_map(|format| NaiveDateTime::parse_from_str(&value, format).ok())
+                .map(|value| value.and_utc())
+        })
+        .or_else(|| {
+            NaiveDate::parse_from_str(&value, "%Y-%m-%d")
+                .ok()
+                .and_then(|value| value.and_hms_opt(0, 0, 0))
+                .map(|value| value.and_utc())
+        })
+        .filter(|value| (0..=9999).contains(&value.year()) && value.nanosecond() < 1_000_000_000)
+        .ok_or_else(|| invalid("日期时间无效"))?;
+    Ok(Some(parsed.format("%Y-%m-%d %H:%M:%S").to_string()))
 }
 
 async fn insert_article_news(
@@ -417,7 +435,7 @@ async fn insert_article_news(
 ) -> Result<ArticleNews, AppError> {
     validate_news_content(&input.content)?;
     let content = input.content.trim();
-    let time = normalize_news_time(state, input.create_time).await?;
+    let time = normalize_news_time(input.create_time)?;
     use sha2::{Digest, Sha256};
     // Bind the key to its article and normalized original draft, including time.
     let request_hash = Sha256::digest(
@@ -647,7 +665,6 @@ pub(super) async fn create_article(
     let request_hash =
         Sha256::digest(serde_json::to_vec(&input).map_err(|_| invalid("文章内容无效"))?).to_vec();
     let password = hash_article_password(&state, input.password.as_deref()).await?;
-    let author = crate::site_author_id(&state.pool).await?;
     let mut transaction = state
         .pool
         .begin_with("BEGIN IMMEDIATE")
@@ -664,6 +681,7 @@ pub(super) async fn create_article(
             return Ok(Json(load_article(&state.pool, id, true).await?));
         }
     }
+    let author = crate::site_author_id(&mut *transaction).await?;
     validate_article_taxonomy(&mut transaction, &input).await?;
     let id = sqlx::query("INSERT INTO article(user_id,sort_id,label_id,article_cover,article_title,article_content,video_url,view_status,recommend_status,comment_status,password,tips) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)")
         .bind(author)

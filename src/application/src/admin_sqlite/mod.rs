@@ -297,7 +297,9 @@ impl AdministratorStore for SqliteAdministratorStore {
             login.session.created_at_micros,
         )
         .await?;
-        sqlx::query("UPDATE _common_administrators SET last_login_at_micros=?, updated_at_micros=? WHERE administrator_id=?")
+        // Password work and writer admission may finish out of request order.
+        // Login activity must never move an existing account timestamp backward.
+        sqlx::query("UPDATE _common_administrators SET last_login_at_micros=MAX(COALESCE(last_login_at_micros,0),?), updated_at_micros=MAX(updated_at_micros,?) WHERE administrator_id=?")
             .bind(to_i64(login.session.created_at_micros)?)
             .bind(to_i64(login.session.created_at_micros)?)
             .bind(login.session.administrator_id.as_str())

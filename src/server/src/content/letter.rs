@@ -134,13 +134,7 @@ pub(super) async fn save_letter(
         .begin_with("BEGIN IMMEDIATE")
         .await
         .map_err(db_error)?;
-    let author: i64 = sqlx::query_scalar(
-        "SELECT id FROM user WHERE user_type=0 AND deleted=0 AND user_status=1 ORDER BY id LIMIT 1",
-    )
-    .fetch_optional(&mut *transaction)
-    .await
-    .map_err(db_error)?
-    .ok_or(AppError(StatusCode::CONFLICT, "缺少站点作者账号"))?;
+    let author = crate::site_author_id(&mut *transaction).await?;
     if let Some(stored) = load_stored_letter(&mut transaction, author).await? {
         stored_content(&stored)?;
         sqlx::query(

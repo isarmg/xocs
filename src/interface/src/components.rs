@@ -74,127 +74,33 @@ pub fn ErrorState(
     )
 }
 
-/// Native modal semantics retain focus containment and background inertness.
+/// A titled modal with the shared native focus and teardown policy.
 #[component]
 pub fn Dialog(title: String, close: Callback<()>, children: ChildrenFn) -> impl IntoView {
-    let dialog = NodeRef::<blog_interface::html::Dialog>::new();
-    let previous = blog_dom::thread_bound::SendWrapper::new(
-        web_sys::window()
-            .and_then(|w| w.document())
-            .and_then(|d| d.active_element())
-            .and_then(|e| e.dyn_into::<web_sys::HtmlElement>().ok()),
-    );
-    Effect::new(move |_| {
-        if let Some(dialog) = dialog.get() {
-            let _ = dialog.show_modal();
-            if let Ok(Some(element)) = dialog.query_selector("[data-blog-initial-focus]")
-                && let Ok(element) = element.dyn_into::<web_sys::HtmlElement>()
-            {
-                let _ = element.focus();
-            }
-        }
-    });
-    on_cleanup(move || {
-        if let Some(dialog) = dialog.get_untracked() {
-            dialog.close();
-        }
-        if let Some(previous) = previous.as_ref()
-            && previous.is_connected()
-        {
-            let _ = previous.focus();
-        }
-    });
-    View::new(
-        blog_interface::html::dialog()
-            .child((
-                blog_interface::html::div()
-                    .child((
-                        blog_interface::html::h2().child(
-                            #[allow(unused_braces)]
-                            {
-                                IntoRender::into_render({ title.clone() })
-                            },
-                        ),
-                        blog_interface::html::button()
-                            .child(
-                                #[allow(unused_braces)]
-                                {
-                                    "×"
-                                },
-                            )
-                            .class("blog-button")
-                            .r#type("button")
-                            .aria_label(
-                                ::blog_interface::prelude::IntoAttributeValue::into_attribute_value(
-                                    t("关闭对话框", "Close dialog"),
-                                ),
-                            )
-                            .on(blog_interface::ev::click, move |_| close.run(())),
-                    ))
-                    .class("blog-dialog-heading"),
-                IntoRender::into_render(children()),
-            ))
+    crate::modal::ModalSurface(
+        component_props_builder(&crate::modal::ModalSurface)
+            .label(title.clone())
             .class("blog-dialog")
-            .node_ref(dialog)
-            .aria_label(
-                ::blog_interface::prelude::IntoAttributeValue::into_attribute_value(title.clone()),
-            )
-            .tabindex("-1")
-            .on(
-                blog_interface::ev::Custom::new("cancel"),
-                move |event: web_sys::Event| {
-                    event.prevent_default();
-                    close.run(());
+            .close(close)
+            .children(blog_interface::children::ToChildren::to_children(
+                move || {
+                    (
+                        blog_interface::html::div()
+                            .class("blog-dialog-heading")
+                            .child((
+                                blog_interface::html::h2().child(title.clone()),
+                                blog_interface::html::button()
+                                    .class("blog-button")
+                                    .r#type("button")
+                                    .aria_label(t("关闭对话框", "Close dialog"))
+                                    .child("×")
+                                    .on(blog_interface::ev::click, move |_| close.run(())),
+                            )),
+                        children(),
+                    )
                 },
-            )
-            .on(blog_interface::ev::keydown, move |event| {
-                if event.key() != "Tab" {
-                    return;
-                }
-                let Some(dialog) = dialog.get_untracked() else {
-                    return;
-                };
-                if dialog
-                    .query_selector("video[controls],audio[controls]")
-                    .ok()
-                    .flatten()
-                    .is_some()
-                {
-                    return;
-                }
-                let Ok(nodes) =
-                    dialog.query_selector_all("button,input,select,textarea,a[href],[tabindex]")
-                else {
-                    return;
-                };
-                let focusable: Vec<_> = (0..nodes.length())
-                    .filter_map(|i| nodes.item(i))
-                    .filter_map(|n| n.dyn_into::<web_sys::HtmlElement>().ok())
-                    .filter(|e| {
-                        e.tab_index() >= 0
-                            && !e.matches(":disabled,[hidden]").unwrap_or(true)
-                            && e.get_client_rects().length() > 0
-                    })
-                    .collect();
-                let active = web_sys::window()
-                    .and_then(|w| w.document())
-                    .and_then(|d| d.active_element());
-                if let (Some(first), Some(last)) = (focusable.first(), focusable.last()) {
-                    if event.shift_key()
-                        && (active.as_ref() == Some(first.as_ref())
-                            || active.as_ref() == Some(dialog.as_ref()))
-                    {
-                        event.prevent_default();
-                        let _ = last.focus();
-                    } else if !event.shift_key() && active.as_ref() == Some(last.as_ref()) {
-                        event.prevent_default();
-                        let _ = first.focus();
-                    }
-                } else {
-                    event.prevent_default();
-                    let _ = dialog.focus();
-                }
-            }),
+            ))
+            .build(),
     )
 }
 

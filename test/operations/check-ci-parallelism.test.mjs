@@ -38,7 +38,7 @@ test('server and browser groups are independent and preserve every gate', () => 
   ]) assert.ok(server.includes(command), `missing server check: ${command}`);
   const expected = [
     'language', 'admin-layout', 'configured-media', 'account-settings', 'admin-cleanup',
-    'management', 'contract-fixes', 'blog-interface-runtime', 'async-state', 'transport-lifecycle', 'startup-failure', 'rust-native-domain', 'public-footer', 'public-layout', 'anonymous-comments',
+    'management', 'contract-fixes', 'admin-recovery', 'blog-interface-runtime', 'async-state', 'transport-lifecycle', 'startup-failure', 'rust-native-domain', 'public-footer', 'public-layout', 'public-recovery', 'anonymous-comments',
   ];
   const actual = [...browser.matchAll(/node \.\.\/\.\.\/test\/browser\/([a-z-]+)\.mjs/g)].map(match => match[1]);
   assert.deepEqual(actual.sort(), expected.sort());
@@ -77,7 +77,7 @@ test('the old required check fails closed for all server and matrix outcomes', (
   }
 });
 
-test('both matrix branches execute every original UI script exactly once', () => {
+test('both matrix branches execute every UI script exactly once', () => {
   const run = browser.match(/        run: \|\n(          set -euo pipefail\n(?:          .*\n)+)/)?.[1];
   assert.ok(run, 'missing browser matrix shell');
   const directory = mkdtempSync(join(tmpdir(), 'blog-ci-dispatch-'));
@@ -101,8 +101,8 @@ test('both matrix branches execute every original UI script exactly once', () =>
       'run test:unit', '../../test/browser/language.mjs', '../../test/browser/admin-layout.mjs',
       '../../test/browser/configured-media.mjs',
       '../../test/browser/account-settings.mjs', '../../test/browser/admin-cleanup.mjs', '../../test/browser/management.mjs',
-      '../../test/browser/contract-fixes.mjs', '../../test/browser/blog-interface-runtime.mjs', '../../test/browser/async-state.mjs', '../../test/browser/transport-lifecycle.mjs', '../../test/browser/startup-failure.mjs', '../../test/browser/rust-native-domain.mjs',
-      '../../test/browser/public-footer.mjs', '../../test/browser/public-layout.mjs', '../../test/browser/anonymous-comments.mjs',
+      '../../test/browser/contract-fixes.mjs', '../../test/browser/admin-recovery.mjs', '../../test/browser/blog-interface-runtime.mjs', '../../test/browser/async-state.mjs', '../../test/browser/transport-lifecycle.mjs', '../../test/browser/startup-failure.mjs', '../../test/browser/rust-native-domain.mjs',
+      '../../test/browser/public-footer.mjs', '../../test/browser/public-layout.mjs', '../../test/browser/public-recovery.mjs', '../../test/browser/anonymous-comments.mjs',
     ].sort());
     const unknown = spawnSync('bash', ['-c', run], {
       encoding: 'utf8',
@@ -111,11 +111,11 @@ test('both matrix branches execute every original UI script exactly once', () =>
     assert.equal(unknown.status, 1);
     assert.equal(unknown.stdout, '');
     // Every new Rust/WASM regression gate must propagate failures.
-    for (const script of ['rust-native-domain', 'startup-failure', 'async-state', 'configured-media']) {
+    for (const script of ['rust-native-domain', 'startup-failure', 'async-state', 'configured-media', 'admin-recovery', 'public-recovery']) {
       writeFileSync(join(directory, 'node'), `#!/bin/sh\nif [ "$*" = "../../test/browser/${script}.mjs" ]; then exit 9; fi\nprintf "%s\\n" "$*"\n`);
       const failed = spawnSync('bash', ['-c', run], {
         encoding: 'utf8',
-        env: {...process.env, PATH: `${directory}:${process.env.PATH}`, TEST_GROUP: 'admin'},
+        env: {...process.env, PATH: `${directory}:${process.env.PATH}`, TEST_GROUP: script === 'public-recovery' ? 'public' : 'admin'},
       });
       assert.ifError(failed.error);
       assert.equal(failed.status, 9, script);

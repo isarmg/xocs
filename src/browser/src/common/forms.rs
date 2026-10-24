@@ -1,8 +1,20 @@
 //! Shared form inputs and file selection; mutation ownership stays with the page.
-use super::{flag, t, text};
+use super::{flag, t, text, tr};
 use blog_interface::prelude::*;
 use blog_interface::thread_bound::SendWrapper;
 use serde_json::Value;
+
+fn scalar_error(value: &str, max: u32) -> String {
+    if value.chars().count() > max as usize {
+        tr(
+            "最多可输入 {0} 个字符。",
+            "Use no more than {0} characters.",
+            &[max.to_string()],
+        )
+    } else {
+        String::new()
+    }
+}
 
 #[component]
 pub(crate) fn Field(
@@ -11,54 +23,82 @@ pub(crate) fn Field(
     form: RwSignal<Value>,
     #[prop(default = false)] textarea: bool,
     #[prop(default = false)] required: bool,
-    #[prop(default = "text")] kind: &'static str,
-    #[prop(default = 32768)] max: u32,
+    /// Maximum Unicode scalar count; native maxlength uses a UTF-16 budget.
+    #[prop(default = 32768)]
+    max: u32,
 ) -> impl IntoView {
+    let input = NodeRef::<blog_interface::html::Input>::new();
+    let area = NodeRef::<blog_interface::html::Textarea>::new();
+    let error = Memo::new(move |_| scalar_error(&text(&form.get(), key), max));
+    Effect::new(move |_| {
+        let message = error.get();
+        if let Some(input) = input.get() {
+            input.set_custom_validity(&message);
+        }
+        if let Some(area) = area.get() {
+            area.set_custom_validity(&message);
+        }
+    });
     View::new(
         blog_interface::html::label()
             .child((
                 blog_interface::html::span()
-                    .child(label)
+                    .child(label.clone())
                     .class("blog-field-label"),
                 if textarea {
                     View::new(
                         blog_interface::html::textarea()
+                            .node_ref(area)
+                            .aria_label(label.clone())
                             .class("blog-input")
+                            .name(key)
                             .required(required)
-                            .maxlength(max)
+                            .maxlength(max.saturating_mul(2))
+                            .aria_invalid(move || (!error.get().is_empty()).to_string())
                             .prop("value", move || text(&form.get(), key))
+                            .on(blog_interface::ev::change, move |ev| {
+                                let node = event_target::<web_sys::HtmlTextAreaElement>(&ev);
+                                node.set_custom_validity(&scalar_error(&node.value(), max));
+                            })
                             .on(blog_interface::ev::input, move |ev| {
-                                form.update(|f| f[key] = Value::String(event_target_value(&ev)))
+                                let value = event_target_value(&ev);
+                                event_target::<web_sys::HtmlTextAreaElement>(&ev)
+                                    .set_custom_validity(&scalar_error(&value, max));
+                                form.update(|f| f[key] = Value::String(value))
                             }),
                     )
                     .into_any()
                 } else {
                     View::new(
                         blog_interface::html::input()
+                            .node_ref(input)
+                            .aria_label(label.clone())
                             .class("blog-input")
-                            .r#type(kind)
+                            .name(key)
+                            .r#type("text")
                             .required(required)
-                            .maxlength(max)
-                            .prop("value", move || {
-                                let f = form.get();
-                                if kind == "number" {
-                                    f[key].as_i64().map(|v| v.to_string()).unwrap_or_default()
-                                } else {
-                                    text(&f, key)
-                                }
+                            .maxlength(max.saturating_mul(2))
+                            .aria_invalid(move || (!error.get().is_empty()).to_string())
+                            .prop("value", move || text(&form.get(), key))
+                            .on(blog_interface::ev::change, move |ev| {
+                                let node = event_target::<web_sys::HtmlInputElement>(&ev);
+                                node.set_custom_validity(&scalar_error(&node.value(), max));
                             })
                             .on(blog_interface::ev::input, move |ev| {
-                                let v = event_target_value(&ev);
-                                form.update(|f| {
-                                    f[key] = if kind == "number" {
-                                        Value::from(v.parse::<i64>().unwrap_or(0))
-                                    } else {
-                                        Value::String(v)
-                                    };
-                                })
+                                let value = event_target_value(&ev);
+                                event_target::<web_sys::HtmlInputElement>(&ev)
+                                    .set_custom_validity(&scalar_error(&value, max));
+                                form.update(|f| f[key] = Value::String(value))
                             }),
                     )
                     .into_any()
+                },
+                move || {
+                    (!error.get().is_empty()).then(|| {
+                        blog_interface::html::span()
+                            .role("alert")
+                            .child(error.get())
+                    })
                 },
             ))
             .class("blog-form-field"),
@@ -71,23 +111,50 @@ pub(crate) fn ControlledField(
     value: Signal<String>,
     change: Callback<String>,
     #[prop(default = false)] required: bool,
-    #[prop(default = 32768)] max: u32,
+    /// Maximum Unicode scalar count; native maxlength uses a UTF-16 budget.
+    #[prop(default = 32768)]
+    max: u32,
 ) -> impl IntoView {
+    let input = NodeRef::<blog_interface::html::Input>::new();
+    let error = Memo::new(move |_| scalar_error(&value.get(), max));
+    Effect::new(move |_| {
+        let message = error.get();
+        if let Some(input) = input.get() {
+            input.set_custom_validity(&message);
+        }
+    });
     View::new(
         blog_interface::html::label()
             .child((
                 blog_interface::html::span()
-                    .child(label)
+                    .child(label.clone())
                     .class("blog-field-label"),
                 blog_interface::html::input()
+                    .node_ref(input)
+                    .aria_label(label)
                     .class("blog-input")
                     .r#type("text")
                     .required(required)
-                    .maxlength(max)
+                    .maxlength(max.saturating_mul(2))
+                    .aria_invalid(move || (!error.get().is_empty()).to_string())
                     .prop("value", move || value.get())
+                    .on(blog_interface::ev::change, move |ev| {
+                        let node = event_target::<web_sys::HtmlInputElement>(&ev);
+                        node.set_custom_validity(&scalar_error(&node.value(), max));
+                    })
                     .on(blog_interface::ev::input, move |ev| {
-                        change.run(event_target_value(&ev))
+                        let value = event_target_value(&ev);
+                        event_target::<web_sys::HtmlInputElement>(&ev)
+                            .set_custom_validity(&scalar_error(&value, max));
+                        change.run(value)
                     }),
+                move || {
+                    (!error.get().is_empty()).then(|| {
+                        blog_interface::html::span()
+                            .role("alert")
+                            .child(error.get())
+                    })
+                },
             ))
             .class("blog-form-field"),
     )

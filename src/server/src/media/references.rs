@@ -1,6 +1,10 @@
 //! References in saved content that retain managed media, including drafts.
-use pulldown_cmark::{Event, Options, Parser, Tag};
+use pulldown_cmark::{
+    Event, Options, Parser, Tag, TagEnd,
+    autolink::{LinkFinder, LinkKind},
+};
 use sqlx::{Row, SqliteConnection};
+use url_encoding::address::Url;
 
 use crate::{AppError, db_error};
 
@@ -59,27 +63,69 @@ fn decoded_reference(value: &str) -> String {
 }
 
 fn text_contains_reference(value: &str, path: &str) -> bool {
-    if value.contains(path) || decoded_reference(value).contains(path) {
+    if value.contains(path) {
+        return true;
+    }
+    let decoded = decoded_reference(value);
+    if decoded.contains(path) || url_references(value, path) || url_references(&decoded, path) {
         return true;
     }
     // The browser uses this same tokenizer: backslash escapes depend on the
     // Markdown context and must never be stripped from arbitrary stored text.
     // Its destinations have already decoded CommonMark escapes and entities;
     // only URL percent decoding remains, not another HTML-entity pass.
-    value.contains('\\')
-        && Parser::new_ext(
-            value,
-            Options::ENABLE_TABLES | Options::ENABLE_STRIKETHROUGH,
-        )
-        .any(|event| match event {
-            Event::Start(Tag::Image { dest_url, .. } | Tag::Link { dest_url, .. }) => {
-                dest_url.contains(path)
-                    || url_encoding::percent::percent_decode_str(&dest_url)
-                        .decode_utf8_lossy()
-                        .contains(path)
+    let mut finder = LinkFinder::new();
+    finder.url_must_have_scheme(false);
+    let mut code = false;
+    Parser::new_ext(
+        value,
+        Options::ENABLE_TABLES | Options::ENABLE_STRIKETHROUGH,
+    )
+    .any(|event| match event {
+        Event::Start(Tag::CodeBlock(_)) => {
+            code = true;
+            false
+        }
+        Event::End(TagEnd::CodeBlock) => {
+            code = false;
+            false
+        }
+        Event::Start(Tag::Image { dest_url, .. } | Tag::Link { dest_url, .. }) => {
+            dest_url.contains(path)
+                || url_encoding::percent::percent_decode_str(&dest_url)
+                    .decode_utf8_lossy()
+                    .contains(path)
+                || url_references(&dest_url, path)
+        }
+        Event::Text(text) if !code => finder.links(&text).any(|link| {
+            if link.kind() != &LinkKind::Url {
+                return false;
             }
-            _ => false,
-        })
+            let value = link.as_str();
+            if value.split_once("://").is_some_and(|(scheme, _)| {
+                scheme
+                    .as_bytes()
+                    .first()
+                    .is_some_and(u8::is_ascii_alphabetic)
+                    && scheme
+                        .bytes()
+                        .all(|byte| byte.is_ascii_alphanumeric() || b"+.-".contains(&byte))
+            }) {
+                url_references(value, path)
+            } else {
+                url_references(&format!("http://{value}"), path)
+            }
+        }),
+        _ => false,
+    })
+}
+
+fn url_references(value: &str, path: &str) -> bool {
+    let base = Url::parse("https://media.invalid/").expect("static media reference base");
+    base.join(value.trim()).is_ok_and(|url| {
+        matches!(url.scheme(), "http" | "https")
+            && url_encoding::percent::percent_decode_str(url.path()).decode_utf8_lossy() == path
+    })
 }
 
 fn contains_reference(value: &str, path: &str) -> bool {
@@ -121,14 +167,16 @@ pub(super) async fn referenced(
         "SELECT id,coalesce(comment_content,'')||char(0)||coalesce(comment_info,'') AS value FROM comment",
     ];
     for query in QUERIES {
-        // SQL filters the usual unencoded case without materializing every
-        // article. Encoded references are checked in bounded individual rows.
+        // Every browser-normalized alias retains the uploaded filename, unless
+        // it is encoded. Match that filename before checking URL destinations;
+        // matching only the canonical path would miss /media/./ and ../ aliases.
+        // Encoded references are checked in bounded individual rows.
         // The article feed indexes order by date, so using them here would sort
         // the remaining corpus on every batch. Walk its rowid range instead.
         let mut after = i64::MIN;
         loop {
             let rows = sqlx::query(sqlx::AssertSqlSafe(format!("SELECT id,value FROM ({query}) WHERE id>? AND (instr(value,?)>0 OR instr(value,'%')>0 OR instr(value,'&')>0 OR instr(value,char(92))>0) ORDER BY id LIMIT 8")))
-                .bind(after).bind(path).fetch_all(&mut *connection).await.map_err(db_error)?;
+                .bind(after).bind(path.rsplit('/').next().unwrap_or(path)).fetch_all(&mut *connection).await.map_err(db_error)?;
             if rows.is_empty() {
                 break;
             }

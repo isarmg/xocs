@@ -137,7 +137,45 @@ pub(crate) fn read(path: &Path) -> io::Result<Vec<u8>> {
     Ok(bytes)
 }
 
-fn append_paths(root: &Path, paths: &mut Vec<PathBuf>, maximum: usize) -> io::Result<()> {
+fn ignored_name(name: &std::ffi::OsStr) -> bool {
+    matches!(
+        name.to_str(),
+        Some(".git" | "__pycache__" | ".pytest_cache")
+    )
+}
+
+fn generated_web_path(path: &Path, allow_package: bool) -> bool {
+    let first = path.components().next().map(|part| part.as_os_str());
+    first.is_some_and(|name| {
+        layout::WEB_GENERATED_DIRECTORIES
+            .iter()
+            .any(|excluded| name == *excluded && !(allow_package && *excluded == "pkg"))
+            || name.to_str().is_some_and(|name| {
+                name.starts_with(".rust-web-stage-") || name.starts_with(".previous-")
+            })
+    }) || path
+        .components()
+        .any(|part| ignored_name(part.as_os_str()) || part.as_os_str() == "node_modules")
+}
+
+/// All authored Web directories share one policy. Only import resolution may
+/// admit logical pkg/ paths, which must be redirected to the current stage.
+pub(crate) fn web_relative(path: &Path, allow_package: bool) -> io::Result<String> {
+    let name = relative(path)?;
+    if generated_web_path(path, allow_package) {
+        return Err(invalid(format!(
+            "Generated or ignored Web paths cannot be source inputs: {name}"
+        )));
+    }
+    Ok(name)
+}
+
+fn append_paths(
+    root: &Path,
+    paths: &mut Vec<PathBuf>,
+    maximum: usize,
+    web: Option<&Path>,
+) -> io::Result<()> {
     match fs::symlink_metadata(root) {
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
         Err(error) => return Err(error),
@@ -147,14 +185,15 @@ fn append_paths(root: &Path, paths: &mut Vec<PathBuf>, maximum: usize) -> io::Re
     entries.sort_by_key(|entry| entry.file_name());
     for entry in entries {
         let name = entry.file_name();
-        if matches!(
-            name.to_str(),
-            Some(".git" | "__pycache__" | ".pytest_cache")
-        ) || name == "target" && root.join("Cargo.toml").is_file()
+        let path = entry.path();
+        if ignored_name(&name)
+            || web.is_none() && name == "target" && root.join("Cargo.toml").is_file()
+            || web.is_some_and(|web| {
+                generated_web_path(path.strip_prefix(web).expect("Web traversal root"), false)
+            })
         {
             continue;
         }
-        let path = entry.path();
         let kind = entry.file_type()?;
         if kind.is_symlink() {
             return Err(invalid(format!(
@@ -163,7 +202,7 @@ fn append_paths(root: &Path, paths: &mut Vec<PathBuf>, maximum: usize) -> io::Re
             )));
         }
         if kind.is_dir() {
-            append_paths(&path, paths, maximum)?;
+            append_paths(&path, paths, maximum, web)?;
         } else if kind.is_file() {
             paths.push(path);
         } else {
@@ -181,14 +220,34 @@ fn append_paths(root: &Path, paths: &mut Vec<PathBuf>, maximum: usize) -> io::Re
 
 pub(crate) fn walk(root: &Path, maximum: usize) -> io::Result<Vec<PathBuf>> {
     let mut paths = Vec::new();
-    append_paths(root, &mut paths, maximum)?;
+    append_paths(root, &mut paths, maximum, None)?;
+    Ok(paths)
+}
+
+pub(crate) fn web_paths(web: &Path, subtree: &Path) -> io::Result<Vec<PathBuf>> {
+    physical(web)?;
+    if subtree != web {
+        web_relative(
+            subtree
+                .strip_prefix(web)
+                .map_err(|_| invalid("Web input subtree escapes source root"))?,
+            false,
+        )?;
+    }
+    let mut paths = Vec::new();
+    append_paths(subtree, &mut paths, MAX_PACKAGE_FILES, Some(web))?;
     Ok(paths)
 }
 
 pub(crate) fn verification_paths(repository: &Path) -> io::Result<Vec<PathBuf>> {
     let mut paths = Vec::new();
     for name in VERIFICATION_ROOTS {
-        append_paths(&repository.join(name), &mut paths, MAX_VERIFICATION_FILES)?;
+        append_paths(
+            &repository.join(name),
+            &mut paths,
+            MAX_VERIFICATION_FILES,
+            None,
+        )?;
     }
     Ok(paths)
 }

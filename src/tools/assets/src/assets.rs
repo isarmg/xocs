@@ -2,6 +2,7 @@
 //! Only static ESM imports, CSS imports and literal import.meta.url assets are accepted.
 use crate::inventory::{self, Files};
 use crate::layout;
+use crate::source_inputs;
 use anyhow::{Context, Result, bail, ensure};
 use compression::streams::{Compression, GzBuilder};
 use regex::Regex;
@@ -15,6 +16,56 @@ use std::{
 
 const MAX_PUBLIC_MEDIA_BYTES: usize = 4 * 1024 * 1024;
 const MAX_PUBLIC_MEDIA_TOTAL_BYTES: usize = 8 * 1024 * 1024;
+
+#[derive(Default)]
+struct OutputBudget {
+    bundle: usize,
+    media: usize,
+}
+
+impl OutputBudget {
+    fn add(&mut self, config: &Web, name: &str, size: usize, public_media: bool) -> Result<()> {
+        ensure!(!name.ends_with(".map"), "Source maps cannot be published");
+        if public_media {
+            ensure!(
+                size <= MAX_PUBLIC_MEDIA_BYTES,
+                "Public media {name} exceeds {MAX_PUBLIC_MEDIA_BYTES}-byte budget ({size} bytes)"
+            );
+            let total = self
+                .media
+                .checked_add(size)
+                .context("Public media byte count overflow")?;
+            ensure!(
+                total <= MAX_PUBLIC_MEDIA_TOTAL_BYTES,
+                "Public media exceed {MAX_PUBLIC_MEDIA_TOTAL_BYTES}-byte total budget ({total} bytes)"
+            );
+            self.media = total;
+        } else {
+            let limit = if name.ends_with(".woff") || name.ends_with(".woff2") {
+                config.max_font_bytes
+            } else if name.ends_with(".wasm") || name.ends_with(".wasm.gz") {
+                config.max_wasm_bytes
+            } else {
+                config.max_asset_bytes
+            };
+            ensure!(
+                size <= limit,
+                "Asset {name} exceeds {limit}-byte budget ({size} bytes)"
+            );
+            let total = self
+                .bundle
+                .checked_add(size)
+                .context("Web bundle byte count overflow")?;
+            ensure!(
+                total <= config.max_total_bytes,
+                "Web bundle exceeds {}-byte total budget ({total} bytes)",
+                config.max_total_bytes
+            );
+            self.bundle = total;
+        }
+        Ok(())
+    }
+}
 
 #[derive(serde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -138,7 +189,7 @@ impl Config {
             }
             .into();
         }
-        inventory::relative(Path::new(&config.web.entry))?;
+        source_inputs::web_relative(Path::new(&config.web.entry), false)?;
         ensure!(
             matches!(config.web.kind.as_str(), "spa" | "embedded"),
             "web.kind must be spa or embedded"
@@ -155,7 +206,10 @@ impl Config {
         }
         for (output, source) in config.web.entries.iter().chain(config.web.copies.iter()) {
             inventory::relative(Path::new(output))?;
-            inventory::relative(Path::new(source))?;
+            source_inputs::web_relative(Path::new(source), false)?;
+        }
+        for license in &config.web.licenses {
+            source_inputs::web_relative(Path::new(license), false)?;
         }
         if !config.web.css_output.is_empty() {
             inventory::relative(Path::new(&config.web.css_output))?;
@@ -194,7 +248,7 @@ impl Config {
             "Configuration may tighten but cannot relax asset budgets"
         );
         for destination in config.aliases.values() {
-            inventory::relative(Path::new(destination.trim_end_matches('/')))?;
+            source_inputs::web_relative(Path::new(destination.trim_end_matches('/')), true)?;
         }
         Ok(config)
     }
@@ -215,6 +269,7 @@ pub struct Linker {
     pub outputs: BTreeMap<String, Vec<u8>>,
     public_outputs: BTreeSet<String>,
     public_media: BTreeSet<String>,
+    budget: OutputBudget,
     modules: BTreeMap<PathBuf, Module>,
     visiting: BTreeSet<PathBuf>,
     assets: BTreeMap<PathBuf, String>,
@@ -224,7 +279,7 @@ pub struct Linker {
     css_cache: BTreeMap<PathBuf, String>,
     css_cache_bytes: usize,
     css_stack: BTreeSet<PathBuf>,
-    css: Vec<String>,
+    css: String,
 }
 
 struct CssUrls<'a> {
@@ -278,6 +333,7 @@ impl Linker {
             outputs: BTreeMap::new(),
             public_outputs: BTreeSet::new(),
             public_media: BTreeSet::new(),
+            budget: OutputBudget::default(),
             modules: BTreeMap::new(),
             visiting: BTreeSet::new(),
             assets: BTreeMap::new(),
@@ -285,8 +341,38 @@ impl Linker {
             css_cache: BTreeMap::new(),
             css_cache_bytes: 0,
             css_stack: BTreeSet::new(),
-            css: Vec::new(),
+            css: String::new(),
         }
+    }
+
+    fn checked_source(&self, source: &Path) -> Result<PathBuf> {
+        let source = source
+            .strip_prefix(self.web.join("pkg"))
+            .map(|relative| self.pkg.join(relative))
+            .unwrap_or_else(|_| source.to_owned());
+        let staged = self.pkg != self.web && source.starts_with(&self.pkg);
+        if staged {
+            inventory::relative(source.strip_prefix(&self.pkg)?)?;
+        } else {
+            source_inputs::web_relative(
+                source
+                    .strip_prefix(&self.web)
+                    .context("Source escapes the Web workspace")?,
+                false,
+            )?;
+        }
+        inventory::physical(&source)?;
+        let source = source.canonicalize()?;
+        ensure!(
+            source.starts_with(if staged { &self.pkg } else { &self.web }) && source.is_file(),
+            "Source must be a physical file inside its Web source root"
+        );
+        Ok(source)
+    }
+
+    fn authored_source(&self, name: &str) -> Result<PathBuf> {
+        source_inputs::web_relative(Path::new(name), false)?;
+        self.checked_source(&self.web.join(name))
     }
 
     fn resolve(&self, parent: &Path, specifier: &str) -> Result<PathBuf> {
@@ -388,16 +474,8 @@ impl Linker {
         if !path.exists() && path.extension().is_none() {
             path.set_extension("js");
         }
-        inventory::physical(&path)?;
-        let path = path
-            .canonicalize()
-            .with_context(|| format!("Resolve {specifier:?} in {}", parent.display()))?;
-        ensure!(
-            path.starts_with(&self.web) || path.starts_with(&self.pkg),
-            "Import escapes the Web source workspace"
-        );
-        ensure!(path.is_file(), "Import must refer to a physical file");
-        Ok(path)
+        self.checked_source(&path)
+            .with_context(|| format!("Resolve {specifier:?} in {}", parent.display()))
     }
 
     fn generated_output(&mut self, name: String, bytes: Vec<u8>) -> Result<()> {
@@ -408,6 +486,8 @@ impl Linker {
         if let Some(previous) = self.outputs.get(&name) {
             ensure!(previous == &bytes, "Conflicting generated output: {name}");
         } else {
+            self.budget
+                .add(&self.config.web, &name, bytes.len(), false)?;
             self.outputs.insert(name, bytes);
         }
         Ok(())
@@ -425,6 +505,12 @@ impl Linker {
                 "Public asset shadows a generated resource: {name}"
             );
         } else {
+            self.budget.add(
+                &self.config.web,
+                &name,
+                bytes.len(),
+                self.public_media.contains(&name),
+            )?;
             self.outputs.insert(name.clone(), bytes);
             self.public_outputs.insert(name.clone());
         }
@@ -433,16 +519,9 @@ impl Linker {
 
     fn copy_public(&mut self) -> Result<()> {
         self.public_media.clear();
-        let mut actual = Files::new();
-        for path in inventory::walk(&self.web.join("public"))? {
-            let bytes = inventory::read(&path)?;
-            let digest = inventory::sha(&bytes);
-            let name = self
-                .public_output(&path, bytes)?
-                .context("Public source path")?;
-            actual.insert(name, digest);
-        }
-        if !self.config.web.public_assets_manifest.is_empty() {
+        let expected = if self.config.web.public_assets_manifest.is_empty() {
+            None
+        } else {
             let path = public_manifest_path(&self.web, &self.config.web.public_assets_manifest)?;
             let expected: PublicAssetsManifest = serde_json::from_slice(&inventory::read(&path)?)?;
             ensure!(
@@ -456,13 +535,9 @@ impl Linker {
                     "Invalid public asset SHA-256: {name}"
                 );
             }
-            ensure!(
-                actual == expected.files,
-                "Public assets differ from source inventory: {}",
-                path.display()
-            );
-            self.public_media = actual
-                .into_keys()
+            self.public_media = expected
+                .files
+                .keys()
                 .filter(|name| {
                     matches!(
                         mime_guess::from_path(name)
@@ -472,8 +547,31 @@ impl Linker {
                         "image" | "video" | "audio"
                     )
                 })
+                .cloned()
                 .collect();
+            Some(expected.files)
+        };
+        let mut actual = Files::new();
+        for path in source_inputs::web_paths(&self.web, &self.web.join("public"))? {
+            let bytes = inventory::read(&path)?;
+            let digest = inventory::sha(&bytes);
+            let name = inventory::relative(path.strip_prefix(self.web.join("public"))?)?;
+            if let Some(expected) = &expected {
+                ensure!(
+                    expected.get(&name) == Some(&digest),
+                    "Public assets differ from source inventory: {}",
+                    self.config.web.public_assets_manifest
+                );
+            }
+            self.public_output(&path, bytes)?
+                .context("Public source path")?;
+            actual.insert(name, digest);
         }
+        ensure!(
+            expected.is_none_or(|expected| actual == expected),
+            "Public assets differ from source inventory: {}",
+            self.config.web.public_assets_manifest
+        );
         Ok(())
     }
 
@@ -526,6 +624,8 @@ impl Linker {
     }
 
     fn asset(&mut self, source: &Path) -> Result<String> {
+        let checked = self.checked_source(source)?;
+        let source = checked.as_path();
         if let Some(name) = self.assets.get(source) {
             return Ok(name.clone());
         }
@@ -575,6 +675,8 @@ impl Linker {
             stylesheet::{ParserOptions, PrinterOptions, StyleSheet},
             visitor::Visit,
         };
+        let checked = self.checked_source(source)?;
+        let source = checked.as_path();
         ensure!(
             !self.css_stack.contains(source),
             "Circular CSS @import: {}",
@@ -607,7 +709,7 @@ impl Linker {
                     .as_str(),
                 )?;
                 let css = self.stylesheet(&path)?;
-                self.append_css(&mut imported, &css)?;
+                Self::append_css(&mut imported, &css, self.config.web.max_asset_bytes)?;
             }
         }
         sheet
@@ -628,7 +730,7 @@ impl Linker {
             })
             .map_err(|e| anyhow::anyhow!("CSS print error: {e}"))?
             .code;
-        self.append_css(&mut imported, &code)?;
+        Self::append_css(&mut imported, &code, self.config.web.max_asset_bytes)?;
         self.css_stack.remove(source);
         // The cache is an optimization: a long import-only chain can have a
         // tiny final output but repeat the same expansion in every cache entry.
@@ -642,21 +744,21 @@ impl Linker {
         Ok(imported)
     }
 
-    fn append_css(&self, output: &mut String, css: &str) -> Result<()> {
+    fn append_css(output: &mut String, css: &str, limit: usize) -> Result<()> {
         ensure!(
             output
                 .len()
                 .checked_add(css.len())
-                .is_some_and(|size| { size <= self.config.web.max_asset_bytes }),
+                .is_some_and(|size| size <= limit),
             "Expanded CSS exceeds {}-byte asset budget",
-            self.config.web.max_asset_bytes
+            limit
         );
         output.push_str(css);
         Ok(())
     }
 
     pub fn module(&mut self, source: &Path) -> Result<String> {
-        let source = source.canonicalize()?;
+        let source = self.checked_source(source)?;
         if let Some(module) = self.modules.get(&source) {
             return Ok(module.output.clone());
         }
@@ -680,7 +782,10 @@ impl Linker {
                 );
                 if self.css_entries.insert(child.clone()) {
                     let css = self.stylesheet(&child)?;
-                    self.css.push(css);
+                    if !self.css.is_empty() {
+                        Self::append_css(&mut self.css, "\n", self.config.web.max_asset_bytes)?;
+                    }
+                    Self::append_css(&mut self.css, &css, self.config.web.max_asset_bytes)?;
                 }
                 let (start, end) = crate::javascript::range(import.statement);
                 replacements.push((start, end, String::new()));
@@ -789,7 +894,7 @@ impl Linker {
         let mut script = String::new();
         if self.config.web.kind == "embedded" {
             for (facade, input) in self.config.web.entries.clone() {
-                let source = self.web.join(input).canonicalize()?;
+                let source = self.authored_source(&input)?;
                 let output = self.module(&source)?;
                 let depth = Path::new(&facade)
                     .parent()
@@ -819,7 +924,7 @@ impl Linker {
             self.outputs.keys().any(|name| name.ends_with(".wasm")),
             "No independent WASM output was linked"
         );
-        let css_bytes = self.css.join("\n").into_bytes();
+        let css_bytes = std::mem::take(&mut self.css).into_bytes();
         let css = if self.config.web.css_output.is_empty() {
             self.output("style", "css", css_bytes)?
         } else {
@@ -828,12 +933,12 @@ impl Linker {
             name
         };
         for (output, input) in self.config.web.copies.clone() {
-            let source = self.web.join(input);
+            let source = self.authored_source(&input)?;
             let bytes = inventory::read(&source)?;
             self.generated_output(output, bytes)?;
         }
         for license in self.config.web.licenses.clone() {
-            let path = self.web.join(&license);
+            let path = self.authored_source(&license)?;
             let name = path
                 .file_name()
                 .and_then(|v| v.to_str())
@@ -956,42 +1061,15 @@ impl Linker {
     }
 
     fn budgets(&self) -> Result<()> {
-        let mut bundle = 0;
-        let mut media = 0;
+        let mut budget = OutputBudget::default();
         for (name, bytes) in &self.outputs {
-            ensure!(!name.ends_with(".map"), "Source maps cannot be published");
-            if self.public_media.contains(name) {
-                ensure!(
-                    bytes.len() <= MAX_PUBLIC_MEDIA_BYTES,
-                    "Public media {name} exceeds {MAX_PUBLIC_MEDIA_BYTES}-byte budget ({} bytes)",
-                    bytes.len()
-                );
-                media += bytes.len();
-                continue;
-            }
-            let limit = if name.ends_with(".woff") || name.ends_with(".woff2") {
-                self.config.web.max_font_bytes
-            } else if name.ends_with(".wasm") || name.ends_with(".wasm.gz") {
-                self.config.web.max_wasm_bytes
-            } else {
-                self.config.web.max_asset_bytes
-            };
-            ensure!(
-                bytes.len() <= limit,
-                "Asset {name} exceeds {limit}-byte budget ({} bytes)",
-                bytes.len()
-            );
-            bundle += bytes.len();
+            budget.add(
+                &self.config.web,
+                name,
+                bytes.len(),
+                self.public_media.contains(name),
+            )?;
         }
-        ensure!(
-            bundle <= self.config.web.max_total_bytes,
-            "Web bundle exceeds {}-byte total budget ({bundle} bytes)",
-            self.config.web.max_total_bytes
-        );
-        ensure!(
-            media <= MAX_PUBLIC_MEDIA_TOTAL_BYTES,
-            "Public media exceed {MAX_PUBLIC_MEDIA_TOTAL_BYTES}-byte total budget ({media} bytes)"
-        );
         Ok(())
     }
 }

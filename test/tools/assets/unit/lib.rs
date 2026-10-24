@@ -34,7 +34,9 @@ fn failed_publish_preserves_previous_pair() -> Result<()> {
     fs::write(dir.path().join("pkg/blog-assets.json"), "{}")?;
     fs::write(dir.path().join("dist/blog-assets.json"), "{}")?;
     let receipt = dir.path().join("receipt.json");
+    let owner = BuildLock::acquire(dir.path())?;
     let result = replace_pair(
+        &owner,
         &dir.path().join("pkg"),
         &dir.path().join("stage-pkg"),
         &dir.path().join("dist"),
@@ -49,7 +51,7 @@ fn failed_publish_preserves_previous_pair() -> Result<()> {
     );
     assert_eq!(fs::read_to_string(dir.path().join("dist/old"))?, "old dist");
     assert!(!receipt.exists());
-    assert_eq!(fs::read_dir(dir.path())?.count(), 4);
+    assert_eq!(fs::read_dir(dir.path())?.count(), 5);
     Ok(())
 }
 
@@ -74,7 +76,9 @@ fn receipt_collision_rolls_back_both_outputs_and_preserves_existing_receipt() ->
     // This models another producer creating the receipt after the build's
     // early check but before the final create-new publication.
     fs::write(&receipt, "another producer's receipt")?;
+    let owner = BuildLock::acquire(root)?;
     let result = replace_pair(
+        &owner,
         &root.join("pkg"),
         &root.join("stage-pkg"),
         &root.join("dist"),
@@ -88,7 +92,7 @@ fn receipt_collision_rolls_back_both_outputs_and_preserves_existing_receipt() ->
     }
     assert_eq!(fs::read_to_string(&receipt)?, "another producer's receipt");
     drop(result);
-    assert_eq!(fs::read_dir(root)?.count(), 6);
+    assert_eq!(fs::read_dir(root)?.count(), 7);
     Ok(())
 }
 
@@ -97,7 +101,9 @@ fn successful_publication_includes_complete_private_receipt() -> Result<()> {
     let dir = publication_fixture()?;
     let root = dir.path();
     let receipt = root.join("receipt.json");
+    let owner = BuildLock::acquire(root)?;
     replace_pair(
+        &owner,
         &root.join("pkg"),
         &root.join("stage-pkg"),
         &root.join("dist"),
@@ -141,5 +147,105 @@ fn receipt_cannot_overlap_output_directories_through_path_aliases() -> Result<()
         assert_eq!(fs::read_to_string(root.join("pkg/contents"))?, "pkg");
         assert_eq!(fs::read_to_string(root.join("dist/contents"))?, "dist");
     }
+    Ok(())
+}
+
+#[test]
+fn a_competing_producer_cannot_enter_build_or_replace_an_owned_pair() -> Result<()> {
+    use std::sync::mpsc;
+
+    let fixture = publication_fixture()?;
+    let root = fixture.path();
+    for output in ["pkg", "dist"] {
+        fs::write(root.join(output).join("contents"), "old generation")?;
+    }
+    for output in ["stage-pkg", "stage-dist"] {
+        fs::write(root.join(output).join("contents"), "new generation")?;
+    }
+    let (entered, ready) = mpsc::channel();
+    let (resume, resumed) = mpsc::channel();
+    let product = root.to_owned();
+    let first = std::thread::spawn(move || -> Result<()> {
+        let owner = BuildLock::acquire(&product)?;
+        entered.send(())?;
+        resumed.recv()?;
+        replace_pair(
+            &owner,
+            &product.join("pkg"),
+            &product.join("stage-pkg"),
+            &product.join("dist"),
+            &product.join("stage-dist"),
+            &product.join("backups"),
+            None,
+        )
+    });
+    ready.recv_timeout(std::time::Duration::from_secs(5))?;
+    let options = Options {
+        root: root.into(),
+        offline: true,
+        debug: true,
+        dist: None,
+    };
+    let competing = build(&options).unwrap_err();
+    assert!(competing.is::<BuildBusy>(), "{competing:#}");
+    for output in ["pkg", "dist"] {
+        assert_eq!(
+            fs::read_to_string(root.join(output).join("contents"))?,
+            "old generation"
+        );
+    }
+    resume.send(())?;
+    first.join().expect("first producer panicked")?;
+    for output in ["pkg", "dist"] {
+        assert_eq!(
+            fs::read_to_string(root.join(output).join("contents"))?,
+            "new generation"
+        );
+    }
+    assert!(root.join("target/.blog-assets/build.lock").is_file());
+    let next = BuildLock::acquire(root)?;
+    next.validate(root)?;
+    Ok(())
+}
+
+#[test]
+fn build_ownership_cannot_be_used_for_another_product_root() -> Result<()> {
+    let first = tempfile::tempdir()?;
+    let other = tempfile::tempdir()?;
+    let owner = BuildLock::acquire(first.path())?;
+    let options = Options {
+        root: other.path().into(),
+        offline: true,
+        debug: true,
+        dist: None,
+    };
+    let error = build_locked(&options, &owner).unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("lock belongs to another product root")
+    );
+    Ok(())
+}
+
+#[cfg(unix)]
+#[test]
+fn unsafe_lock_files_are_rejected_without_repair_or_mutation() -> Result<()> {
+    use std::os::unix::fs::{MetadataExt, symlink};
+    let repository = tempfile::tempdir()?;
+    let external = tempfile::NamedTempFile::new()?;
+    fs::write(external.path(), "unrelated bytes")?;
+    let directory = repository.path().join("target/.blog-assets");
+    fs::create_dir_all(&directory)?;
+    let lock = directory.join("build.lock");
+    symlink(external.path(), &lock)?;
+    assert!(BuildLock::acquire(repository.path()).is_err());
+    assert!(fs::symlink_metadata(&lock)?.file_type().is_symlink());
+    assert_eq!(fs::read(external.path())?, b"unrelated bytes");
+    fs::remove_file(&lock)?;
+    fs::hard_link(external.path(), &lock)?;
+    assert!(BuildLock::acquire(repository.path()).is_err());
+    assert_eq!(fs::metadata(&lock)?.nlink(), 2);
+    assert_eq!(fs::read(external.path())?, b"unrelated bytes");
     Ok(())
 }

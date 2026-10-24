@@ -81,13 +81,7 @@ pub(super) async fn update_site(
         .begin_with("BEGIN IMMEDIATE")
         .await
         .map_err(db_error)?;
-    let author: i64 = sqlx::query_scalar(
-        "SELECT id FROM user WHERE user_type=0 AND deleted=0 AND user_status=1 ORDER BY id LIMIT 1",
-    )
-    .fetch_optional(&mut *transaction)
-    .await
-    .map_err(db_error)?
-    .ok_or(AppError(StatusCode::CONFLICT, "缺少站点作者账号"))?;
+    let author = crate::site_author_id(&mut *transaction).await?;
     let name_used: bool =
         sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM user WHERE username=? AND id<>?)")
             .bind(author_name)

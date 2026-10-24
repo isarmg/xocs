@@ -115,12 +115,12 @@ pub(super) async fn create_family(
     crate::ContractJson(input): crate::ContractJson<FamilyInput>,
 ) -> ApiResult<AdminFamily> {
     validate_family(&input)?;
-    let author = crate::site_author_id(&state.pool).await?;
     let mut transaction = state
         .pool
         .begin_with("BEGIN IMMEDIATE")
         .await
         .map_err(db_error)?;
+    let author = crate::site_author_id(&mut *transaction).await?;
     let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM family WHERE user_id=?)")
         .bind(author)
         .fetch_one(&mut *transaction)

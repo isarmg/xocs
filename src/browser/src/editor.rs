@@ -5,6 +5,71 @@ use blog_interface::component::component_props_builder;
 use blog_interface::components::notify;
 use blog_interface::prelude::*;
 use serde_json::{Value, json};
+
+#[derive(Clone)]
+struct CreationReceipt {
+    key: String,
+    body: Value,
+    ambiguous: bool,
+}
+
+// Keep the first wire payload with its key: an unsuccessful fetch may follow a
+// committed write. Subsequent edits belong to a later PUT after confirmation.
+fn creation_receipt(save: Action) -> RwSignal<Option<CreationReceipt>> {
+    let receipt = RwSignal::new(None::<CreationReceipt>);
+    Effect::new(move |_| {
+        let Some(error) = save.error.get() else {
+            return;
+        };
+        receipt.update(|pending| {
+            if let Some(request) = pending {
+                if !request.ambiguous
+                    && [400, 401, 403, 404, 409, 413, 429].contains(&error.status)
+                    && error.code != "invalid_error_response"
+                {
+                    *pending = None;
+                } else {
+                    request.ambiguous = true;
+                }
+            }
+        });
+    });
+    receipt
+}
+
+fn prepare_creation(
+    receipt: RwSignal<Option<CreationReceipt>>,
+    body: Value,
+) -> (Value, RequestOptions) {
+    let request = receipt.get_untracked().unwrap_or_else(|| {
+        let request = CreationReceipt {
+            key: web_sys::window().unwrap().crypto().unwrap().random_uuid(),
+            body,
+            ambiguous: false,
+        };
+        receipt.set(Some(request.clone()));
+        request
+    });
+    (
+        request.body,
+        RequestOptions {
+            headers: vec![("Idempotency-Key".into(), request.key)],
+            ..Default::default()
+        },
+    )
+}
+
+fn pending_creation(receipt: RwSignal<Option<CreationReceipt>>) -> impl IntoView {
+    move || {
+        receipt.get().map(|_| {
+            View::new(blog_interface::html::p().role("status").child(t(
+                "原提交等待确认；确认后会保留较新的修改。",
+                "The original submission is awaiting confirmation. Your newer edits will be kept.",
+            )))
+        })
+    }
+}
+
 #[component]
 pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
     let categories = load_typed::<Vec<Category>>(Signal::derive(|| "/api/v1/categories".into()));
@@ -23,8 +88,8 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
     let save = Action::new();
     let upload = Action::new();
     let validation = RwSignal::new(String::new());
-    let creation = StoredValue::new(web_sys::window().unwrap().crypto().unwrap().random_uuid());
-    let created_id = StoredValue::new(None::<i64>);
+    let creation = creation_receipt(save);
+    let created_id = RwSignal::new(None::<i64>);
     Effect::new(move |_| {
         if let Some(v) = article.value.get() {
             form.set(ArticleDraft::from(&v));
@@ -356,7 +421,7 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                                         .child(t("取消", "Cancel"))
                                         .class("blog-button")
                                         .r#type("button")
-                                        .disabled(move || save.busy.get())
+                                        .disabled(move || save.busy.get() || creation.get().is_some())
                                         .on(blog_interface::ev::click, move |_| {
                                             upload.abort();
                                             navigate("articles")
@@ -367,12 +432,15 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                                                 t("图片上传中…", "Uploading image…")
                                             } else if save.busy.get() {
                                                 t("保存中…", "Saving…")
+                                            } else if creation.get().is_some() {
+                                                t("确认原文章提交", "Confirm original article")
                                             } else {
                                                 t("保存文章", "Save article")
                                             }
                                         })
                                         .class("blog-button")
                                         .r#type("submit")
+                                        .formnovalidate(move || creation.get().is_some())
                                         .disabled(move || save.busy.get() || upload.busy.get()),
                                 ))
                                 .class("blog-actions"),
@@ -383,11 +451,20 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                 .class("editor-form")
                 .on(blog_interface::ev::submit, move |ev| {
                     ev.prevent_default();
-                    if upload.busy.get_untracked() || !ready.get_untracked() {
+                    if save.busy.get_untracked()
+                        || upload.busy.get_untracked()
+                        || !ready.get_untracked()
+                    {
                         return;
                     }
                     let f = form.get_untracked();
-                    let issue = if f.view_status {
+                    let issue = if creation.get_untracked().is_some() {
+                        None
+                    } else if f.article_title.trim().is_empty()
+                        || f.article_title.chars().count() > 120
+                    {
+                        Some(t("文章标题须为 1–120 个字符", "Article title must contain 1–120 characters"))
+                    } else if f.view_status {
                         None
                     } else {
                         crate::dates::password_error(
@@ -399,6 +476,7 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                         validation.set(issue);
                         return;
                     }
+                    validation.set(String::new());
                     let f = f.for_submission();
                     let Ok(body) = blog_interface::api::encode_json_body(&f) else {
                         save.error.set(Some(invalid()));
@@ -407,38 +485,53 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                     let target = if id > 0 {
                         Some(id)
                     } else {
-                        created_id.get_value()
+                        created_id.get_untracked()
                     };
                     let path = target
                         .map(|id| format!("/api/v1/content/articles/{id}"))
                         .unwrap_or("/api/v1/content/articles".into());
-                    let opts = RequestOptions {
-                        headers: if target.is_none() {
-                            vec![("Idempotency-Key".into(), creation.get_value())]
-                        } else {
-                            vec![]
-                        },
-                        ..Default::default()
+                    let (body, opts) = if target.is_none() {
+                        prepare_creation(creation, body)
+                    } else {
+                        (body, RequestOptions::default())
                     };
+                    let submitted = body.clone();
                     save.run_typed_options(
                         path,
                         if target.is_some() { "PUT" } else { "POST" },
                         Some(body),
                         opts,
                         move |v: Article| {
-                            if id == 0 {
-                                created_id.set_value(Some(v.id));
+                            if target.is_some_and(|target| target != v.id) {
+                                save.error.set(Some(invalid()));
+                                return;
+                            }
+                            if target.is_none() {
+                                created_id.set(Some(v.id));
+                                existing.set(v.password_required);
+                                creation.set(None);
+                                if blog_interface::api::encode_json_body(
+                                    &form.get_untracked().for_submission(),
+                                ).ok().as_ref() != Some(&submitted) {
+                                    notify(t(
+                                        "原文章已确认，较新的修改可继续保存。",
+                                        "Original article confirmed. Your newer edits are ready to save.",
+                                    ));
+                                    return;
+                                }
                             }
                             notify(t("文章已保存", "Article saved"));
                             navigate("articles");
                         },
                     );
                 }),
-            (id > 0).then(|| {
-                View::new(NewsEditor(
-                    component_props_builder(&NewsEditor).id(id).build(),
-                ))
-            }),
+            move || {
+                (if id > 0 { Some(id) } else { created_id.get() }).map(|id| {
+                    View::new(NewsEditor(
+                        component_props_builder(&NewsEditor).id(id).build(),
+                    ))
+                })
+            },
         )
     };
     View::new(
@@ -446,7 +539,7 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
         .child(
             (
                     blog_interface::html::h1()
-                    .child( if id > 0 {
+                    .child( move || if id > 0 || created_id.get().is_some() {
                     t("编辑文章", "Edit article") } else { t("新增文章",
                     "Add article") }),
                     blog_interface::html::p()
@@ -465,8 +558,9 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                     "Unable to load article")).retry( Some(Callback::new(move | () | article.reload()))).build()),
                     Feedback(component_props_builder(& Feedback)
                     .error( save.error)
-                    .fallback( t("尚未确认文章是否已创建，请保留原内容重试。",
-                    "Article creation is not yet confirmed. Retry with the original content unchanged.")).build()),
+                    .fallback( t("尚未确认文章是否已创建，请确认原提交；较新的修改会保留。",
+                    "Article creation is not yet confirmed. Confirm the original submission; your newer edits will be kept.")).build()),
+                    pending_creation(creation),
                     Feedback(component_props_builder(& Feedback)
                     .error( upload.error).build()),
                     move | | (! validation.get().is_empty()).then(| | View::new(
@@ -510,14 +604,16 @@ fn NewsEditor(id: i64) -> impl IntoView {
     let original = RwSignal::new(json!({"content":"","create_time":""}));
     let editing = RwSignal::new(None::<i64>);
     let save = Action::new();
-    let receipt = StoredValue::new(None::<(String, String)>);
+    let receipt = creation_receipt(save);
     let validation = RwSignal::new(String::new());
     let reset = Callback::new(move |()| {
+        if receipt.get_untracked().is_some() {
+            return;
+        }
         let empty = json!({"content":"","create_time":""});
         form.set(empty.clone());
         original.set(empty);
         editing.set(None);
-        receipt.set_value(None);
         validation.set(String::new());
     });
     let render_row = move |item: News| {
@@ -536,7 +632,7 @@ fn NewsEditor(id: i64) -> impl IntoView {
                             blog_interface::html::button()
                                 .child(t("编辑", "Edit"))
                                 .class("blog-button")
-                                .disabled(move || save.busy.get())
+                                .disabled(move || save.busy.get() || receipt.get().is_some())
                                 .on(blog_interface::ev::click, move |_| {
                                     if form.get_untracked() != original.get_untracked()
                                         && !web_sys::window()
@@ -559,7 +655,7 @@ fn NewsEditor(id: i64) -> impl IntoView {
                             blog_interface::html::button()
                                 .child(t("删除", "Delete"))
                                 .class("blog-button blog-danger")
-                                .disabled(move || save.busy.get())
+                                .disabled(move || save.busy.get() || receipt.get().is_some())
                                 .on(blog_interface::ev::click, move |_| {
                                     if web_sys::window()
                                         .unwrap()
@@ -605,6 +701,7 @@ fn NewsEditor(id: i64) -> impl IntoView {
                     data.reload()))).build()),
                     Feedback(component_props_builder(& Feedback)
                     .error( save.error).build()),
+                    pending_creation(receipt),
                     move | | (! validation.get().is_empty()).then(| | View::new(
     blog_interface::html::p()
         .child(
@@ -623,7 +720,7 @@ fn NewsEditor(id: i64) -> impl IntoView {
                     .form( form)
                     .textarea( true)
                     .required( true)
-                    .max( 2048).build()),
+                    .max( 1024).build()),
                     blog_interface::html::label()
                     .child((t("进展时间（UTC）", "Update time (UTC)"),
                     blog_interface::html::input()
@@ -638,8 +735,11 @@ fn NewsEditor(id: i64) -> impl IntoView {
                     "Leave blank to use current UTC for a new update, or keep its existing time when editing.")).class("blog-field-help"),
                     blog_interface::html::div()
                     .child((blog_interface::html::button()
-                    .child( move | | if editing.get().is_some() { t("保存修改",
-                    "Save changes") } else { t("发布进展", "Publish update") }).class("blog-button").r#type("submit"),
+                    .child( move | | if receipt.get().is_some() {
+                    t("确认原进展提交", "Confirm original update")
+                    } else if editing.get().is_some() { t("保存修改",
+                    "Save changes") } else { t("发布进展", "Publish update") }).class("blog-button").r#type("submit")
+                    .formnovalidate(move || receipt.get().is_some()),
                     move | | (editing.get().is_some() || form.get() != original
                     .get()).then(| | View::new(
     blog_interface::html::button()
@@ -649,6 +749,7 @@ fn NewsEditor(id: i64) -> impl IntoView {
         )
         .class("blog-button")
         .r#type("button")
+        .disabled(move || receipt.get().is_some())
         .on(
             blog_interface::ev::click,
             move |_| if form.get_untracked() == original.get_untracked()
@@ -670,29 +771,50 @@ fn NewsEditor(id: i64) -> impl IntoView {
                     .disabled(move
                     | | save.busy.get() || data.value.get().is_none()))
                     .class("editor-form").on(blog_interface::ev::submit,
-                    move | ev | { ev.prevent_default(); let f = form.get_untracked();
-                    let content = text(& f, "content"); if ! (1..= 1024).contains(&
-                    content.trim().chars().count()) { validation
-                    .set(t("进展正文须为 1–1024 个字符",
-                    "Update content must contain 1–1024 characters")); return; }
-                    let input = json!({ "content" : content, "create_time" : crate
-                    ::dates::iso(& text(& f, "create_time")) }); let body = input
-                    .to_string(); if editing.get_untracked().is_none() && receipt
-                    .get_value().as_ref().is_none_or(| (_, b) | * b != body) {
-                    receipt.set_value(Some((web_sys::window().unwrap().crypto()
-                    .unwrap().random_uuid(), body))); } let target = editing
-                    .get_untracked(); let path =
-                    format!("/api/v1/content/articles/{id}/news{}", target.map(| id |
-                    format!("/{id}")).unwrap_or_default()); let opts = RequestOptions
-                    { headers : if target.is_none() { receipt.get_value().map(| (k,
-                    _) | vec![("Idempotency-Key".into(), k)]).unwrap_or_default() }
-                    else { vec![] }, ..Default::default() }; save.run_options(path,
-                    if target.is_some() { "PUT" } else { "POST" }, Some(input), opts,
-                    move | v | { if text(& v, "content") != content.trim() || target
-                    .is_some_and(| i | num(& v, "id") != i) { save.error
-                    .set(Some(invalid())); return; } reset.run(()); page.set(1); data
-                    .reload(); notify(t("文章进展已保存",
-                    "Article update saved")); }); }),
+                    move |ev| {
+                        ev.prevent_default();
+                        if save.busy.get_untracked() {
+                            return;
+                        }
+                        let f = form.get_untracked();
+                        let content = text(&f, "content");
+                        let confirming = receipt.get_untracked().is_some();
+                        if !confirming && !(1..=1024).contains(&content.trim().chars().count()) {
+                            validation.set(t("进展正文须为 1–1024 个字符", "Update content must contain 1–1024 characters"));
+                            return;
+                        }
+                        validation.set(String::new());
+                        let input = json!({"content":content,"create_time":crate::dates::iso(&text(&f,"create_time"))});
+                        let target = editing.get_untracked();
+                        let path = format!("/api/v1/content/articles/{id}/news{}",target.map(|id|format!("/{id}")).unwrap_or_default());
+                        let (input, opts) = if target.is_none() {
+                            prepare_creation(receipt, input)
+                        } else {
+                            (input, RequestOptions::default())
+                        };
+                        let submitted = input.clone();
+                        save.run_options(path, if target.is_some() { "PUT" } else { "POST" }, Some(input), opts, move |v| {
+                            if (!confirming && text(&v,"content") != text(&submitted,"content").trim())
+                                || target.is_some_and(|id|num(&v,"id") != id)
+                            {
+                                save.error.set(Some(invalid()));
+                                return;
+                            }
+                            receipt.set(None);
+                            let current = form.get_untracked();
+                            let current_body = json!({"content":text(&current,"content"),"create_time":crate::dates::iso(&text(&current,"create_time"))});
+                            if target.is_none() && current_body != submitted {
+                                editing.set(Some(num(&v,"id")));
+                                original.set(json!({"content":v["content"],"create_time":crate::dates::input(&text(&v,"create_time"))}));
+                                notify(t("原进展已确认，较新的修改可继续保存。", "Original update confirmed. Your newer edits are ready to save."));
+                            } else {
+                                reset.run(());
+                                notify(t("文章进展已保存", "Article update saved"));
+                            }
+                            page.set(1);
+                            data.reload();
+                        });
+                    }),
                     move | | data.value.get().map(| v | View::new(
     blog_interface::html::div()
         .child(
@@ -751,16 +873,21 @@ pub fn Notes() -> impl IntoView {
     let original = RwSignal::new(empty_note());
     let editing = RwSignal::new(None::<i64>);
     let save = Action::new();
+    let receipt = creation_receipt(save);
     let upload = Action::new();
     let filename = RwSignal::new(String::new());
     let lightbox = RwSignal::new(None::<String>);
     let validation = RwSignal::new(String::new());
     let reset = Callback::new(move |()| {
+        if receipt.get_untracked().is_some() {
+            return;
+        }
         upload.abort();
         form.set(empty_note());
         original.set(empty_note());
         editing.set(None);
         filename.set(String::new());
+        validation.set(String::new());
     });
     let render_row = move |item: Value| {
         let id = num(&item, "id");
@@ -809,7 +936,9 @@ pub fn Notes() -> impl IntoView {
                             blog_interface::html::button()
                                 .child(t("编辑", "Edit"))
                                 .class("blog-button")
-                                .disabled(move || save.busy.get() || upload.busy.get())
+                                .disabled(move || {
+                                    save.busy.get() || upload.busy.get() || receipt.get().is_some()
+                                })
                                 .on(blog_interface::ev::click, move |_| {
                                     if form.get_untracked() != original.get_untracked()
                                         && !web_sys::window()
@@ -840,6 +969,7 @@ pub fn Notes() -> impl IntoView {
                                 .disabled(move || {
                                     save.busy.get()
                                         || upload.busy.get()
+                                        || receipt.get().is_some()
                                         || editing.get() == Some(id) && form.get() != original.get()
                                 })
                                 .on(blog_interface::ev::click, move |_| {
@@ -870,7 +1000,9 @@ pub fn Notes() -> impl IntoView {
                             blog_interface::html::button()
                                 .child(t("删除", "Delete"))
                                 .class("blog-button blog-danger")
-                                .disabled(move || save.busy.get() || upload.busy.get())
+                                .disabled(move || {
+                                    save.busy.get() || upload.busy.get() || receipt.get().is_some()
+                                })
                                 .on(blog_interface::ev::click, move |_| {
                                     if web_sys::window()
                                         .unwrap()
@@ -914,6 +1046,7 @@ pub fn Notes() -> impl IntoView {
                     "Unable to load notes")).retry( Some(Callback::new(move | () | data.reload()))).build()), Feedback(component_props_builder(& Feedback)
                     .error( save.error).build()), Feedback(component_props_builder(& Feedback)
                     .error( upload.error).build()),
+                    pending_creation(receipt),
                     move | | (! validation.get().is_empty()).then(| | View::new(
     blog_interface::html::p()
         .child(
@@ -933,7 +1066,7 @@ pub fn Notes() -> impl IntoView {
                     .form( form)
                     .textarea( true)
                     .required( true)
-                    .max( 2048).build()),
+                    .max( 1024).build()),
                     FilePicker(component_props_builder(& FilePicker)
                     .label( t("随笔图片", "Note image")).filename( Signal::derive(move | |
                     filename.get())).disabled( Signal::derive(move | | upload.busy.get() || save.busy.get()))
@@ -973,9 +1106,11 @@ pub fn Notes() -> impl IntoView {
                     .child((blog_interface::html::button()
                     .child( move | | if upload.busy.get() { t("图片上传中…",
                     "Uploading image…") } else if save.busy.get() {
-                    t("保存中…", "Saving…") } else if editing.get().is_some()
+                    t("保存中…", "Saving…") } else if receipt.get().is_some() {
+                    t("确认原随笔提交", "Confirm original note") } else if editing.get().is_some()
                     { t("保存修改", "Save changes") } else { t("发布",
                     "Publish") }).class("blog-button").r#type("submit")
+                    .formnovalidate(move || receipt.get().is_some())
                     .disabled(move
                     | | save.busy.get() || upload.busy.get()),
                     move | | (editing.get().is_some() || form.get() != original.get()
@@ -988,7 +1123,7 @@ pub fn Notes() -> impl IntoView {
         .class("blog-button")
         .r#type("button")
         .disabled(
-            move || save.busy.get(),
+            move || save.busy.get() || receipt.get().is_some(),
         )
         .on(
             blog_interface::ev::click,
@@ -1010,22 +1145,49 @@ pub fn Notes() -> impl IntoView {
                     .class("blog-fieldset")
                     .disabled(move
                     | | save.busy.get())).class("editor-form")
-                    .on(blog_interface::ev::submit, move | ev | { ev
-                    .prevent_default(); if upload.busy.get_untracked() { return; }
-                    let f = form.get_untracked(); let content = text(& f, "content");
-                    if ! (1..= 1024).contains(& content.trim().chars().count()) {
-                    validation.set(t("随笔正文须为 1–1024 个字符",
-                    "Note content must contain 1–1024 characters")); return; } let
-                    id = editing.get_untracked(); let expected = f.clone(); let path
-                    = id.map(| id | format!("/api/v1/content/notes/{id}"))
-                    .unwrap_or("/api/v1/content/notes".into()); save.run(path, if id
-                    .is_some() { "PUT" } else { "POST" }, Some(f), move | v | { if
-                    text(& v, "content") != content.trim() || v["image_path"] !=
-                    expected["image_path"] || flag(& v, "is_public") != flag(&
-                    expected, "is_public") || id.is_some_and(| id | num(& v, "id") !=
-                    id) { save.error.set(Some(invalid())); return; } reset.run(());
-                    page.set(1); data.reload(); notify(t("随笔已保存",
-                    "Note saved")); }); }),
+                    .on(blog_interface::ev::submit, move |ev| {
+                        ev.prevent_default();
+                        if save.busy.get_untracked() || upload.busy.get_untracked() {
+                            return;
+                        }
+                        let f = form.get_untracked();
+                        let content = text(&f,"content");
+                        let confirming = receipt.get_untracked().is_some();
+                        if !confirming && !(1..=1024).contains(&content.trim().chars().count()) {
+                            validation.set(t("随笔正文须为 1–1024 个字符", "Note content must contain 1–1024 characters"));
+                            return;
+                        }
+                        validation.set(String::new());
+                        let target = editing.get_untracked();
+                        let path = target.map(|id|format!("/api/v1/content/notes/{id}")).unwrap_or("/api/v1/content/notes".into());
+                        let (input, opts) = if target.is_none() {
+                            prepare_creation(receipt, f)
+                        } else {
+                            (f, RequestOptions::default())
+                        };
+                        let submitted = input.clone();
+                        save.run_options(path, if target.is_some() { "PUT" } else { "POST" }, Some(input), opts, move |v| {
+                            if (!confirming && (text(&v,"content") != text(&submitted,"content").trim()
+                                || v["image_path"] != submitted["image_path"]
+                                || flag(&v,"is_public") != flag(&submitted,"is_public")))
+                                || target.is_some_and(|id|num(&v,"id") != id)
+                            {
+                                save.error.set(Some(invalid()));
+                                return;
+                            }
+                            receipt.set(None);
+                            if target.is_none() && form.get_untracked() != submitted {
+                                editing.set(Some(num(&v,"id")));
+                                original.set(json!({"content":v["content"],"image_path":v["image_path"],"is_public":flag(&v,"is_public")}));
+                                notify(t("原随笔已确认，较新的修改可继续保存。", "Original note confirmed. Your newer edits are ready to save."));
+                            } else {
+                                reset.run(());
+                                notify(t("随笔已保存", "Note saved"));
+                            }
+                            page.set(1);
+                            data.reload();
+                        });
+                    }),
                     move | | data.value.get().map(| v | View::new(
     blog_interface::html::div()
         .child(

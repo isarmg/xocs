@@ -108,3 +108,11 @@ CREATE TABLE article_news_submission (
     request_hash BLOB NOT NULL CHECK(length(request_hash)=32),
     news_id INTEGER REFERENCES wei_yan(id) ON DELETE SET NULL
 );
+
+-- Keep the initial note submission identity after edits and deletion.
+CREATE TABLE note_submission (
+    request_id TEXT PRIMARY KEY NOT NULL CHECK(length(request_id) BETWEEN 1 AND 128),
+    request_hash BLOB NOT NULL CHECK(length(request_hash)=32),
+    note_id INTEGER REFERENCES wei_yan(id) ON DELETE SET NULL
+);
+CREATE INDEX note_submission_note ON note_submission(note_id);

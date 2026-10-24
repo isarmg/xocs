@@ -4381,6 +4381,31 @@
       "directory": "src/tools/assets",
       "reason": "Share bounded source collection, verification roots and digest encoding between build-script and runtime snapshots, reuse fixed product layout definitions, and reject unused web directory and script configuration fields while retaining configurable output and native build settings.",
       "production_behavior_change": true
+    },
+    {
+      "directory": "src/application",
+      "reason": "Keep administrator activity timestamps monotonic under reversed login commits, share the advertised process-wide body admission budget across routers, and remove unused filesystem capabilities and unreachable non-Unix dispatch while retaining the live Linux safety implementation.",
+      "production_behavior_change": true
+    },
+    {
+      "directory": "src/server",
+      "reason": "Retain managed media through normalized URL aliases, read paginated totals and rows from one transaction snapshot, parse absolute progress timestamps deterministically, persist keyed note creation receipts in the current blog-db-v4 layout, and consolidate author and schema validation authorities.",
+      "production_behavior_change": true
+    },
+    {
+      "directory": "src/browser",
+      "reason": "Preserve immutable original submissions while confirming ambiguous article, progress and note writes; recover public reads and paginated collections, render language-bound navigation, preserve Unicode input and reply focus, coordinate admin validation and resource actions, and use shared native modal lifecycle semantics.",
+      "production_behavior_change": true
+    },
+    {
+      "directory": "src/interface",
+      "reason": "Provide a native modal surface that keeps product content and close state with its caller while sharing focus entry, keyboard containment, cancel handling and connected-opener restoration across dialogs and media viewers.",
+      "production_behavior_change": true
+    },
+    {
+      "directory": "src/tools/assets",
+      "reason": "Unify accepted authored Web inputs with source snapshots and watches, bound license paths and accumulated output memory, serialize product build/publication ownership, retain edits and retry contention in the watcher, and bound external commands with concurrent output draining, deadlines and process-group cleanup.",
+      "production_behavior_change": true
     }
   ]
 }

@@ -65,7 +65,7 @@ pub(super) async fn create_category(
         return Err(invalid("分类名称无效"));
     }
     let id = sqlx::query("INSERT INTO sort(sort_name,sort_description,priority) VALUES(?,?,?)")
-        .bind(input.name)
+        .bind(input.name.trim())
         .bind(input.description)
         .bind(input.priority.unwrap_or(0))
         .execute(&state.pool)
@@ -207,7 +207,7 @@ pub(super) async fn create_label(
     }
     let id = sqlx::query("INSERT INTO label(sort_id,label_name,label_description) VALUES(?,?,?)")
         .bind(input.sort_id)
-        .bind(input.name)
+        .bind(input.name.trim())
         .bind(input.description)
         .execute(&mut *transaction)
         .await
