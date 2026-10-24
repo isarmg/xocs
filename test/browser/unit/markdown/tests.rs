@@ -226,6 +226,35 @@ fn video_attachments_escape_urls_and_admit_only_safe_posters() {
 }
 
 #[test]
+fn normalized_root_video_and_poster_urls_cannot_become_cross_origin() {
+    for source in [
+        "/a/..//evil.example/clip.mp4",
+        "/a/..//evil.example/clip.webm",
+        "/a/%2e%2e//evil.example/clip.mp4",
+    ] {
+        assert!(video_html(source, None).is_none(), "{source}");
+        assert!(video_block(source).is_none(), "{source}");
+        let rendered = html(&format!("```video\n{source}\n```"));
+        assert!(!rendered.contains("<video "), "{source}: {rendered}");
+        assert!(rendered.contains("<pre><code"), "{source}: {rendered}");
+        assert!(
+            !video_html("/media/clip.mp4", Some(source))
+                .unwrap()
+                .contains("poster="),
+            "{source}"
+        );
+    }
+    let rendered = video_html(
+        "/media/old/../clip.webm?token=one&part=two",
+        Some("/media/./poster.png"),
+    )
+    .unwrap();
+    assert!(rendered.contains("src=\"/media/clip.webm?token=one&amp;part=two\""));
+    assert!(rendered.contains("poster=\"/media/poster.png\""));
+    assert!(video_block("/media/./clip.mp4").is_some());
+}
+
+#[test]
 fn editor_video_blocks_cannot_inject_another_fence_or_html() {
     assert_eq!(
         video_block(" /media/a.webm ").as_deref(),

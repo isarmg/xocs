@@ -16,6 +16,24 @@ fn video_address_error() -> String {
     )
 }
 
+fn video_insertion_error(uploaded: bool) -> String {
+    let issue = t(
+        "当前格式尚未结束，请先补全格式或把光标移到完整段落之间。",
+        "The current formatting is unfinished. Complete it or place the cursor between complete paragraphs.",
+    );
+    if uploaded {
+        format!(
+            "{} {issue}",
+            t(
+                "视频已上传，可在文件管理中找到。",
+                "The video was uploaded and is available in File management.",
+            )
+        )
+    } else {
+        issue
+    }
+}
+
 fn capture_insertion(
     source: String,
     area: NodeRef<blog_interface::html::Textarea>,
@@ -35,8 +53,8 @@ fn insert_body_video(
     area: NodeRef<blog_interface::html::Textarea>,
     insertion: Insertion,
     block: &str,
-) {
-    let (content, cursor) = insertion.apply(&form.get_untracked().article_content, block);
+) -> Result<(), insertion::UnfinishedFormatting> {
+    let (content, cursor) = insertion.apply(&form.get_untracked().article_content, block)?;
     form.update(|draft| draft.article_content = content.clone());
     if let Some(area) = area.get() {
         // Write the same value as the controlled property before restoring the
@@ -45,6 +63,7 @@ fn insert_body_video(
         let _ = area.focus();
         let _ = area.set_selection_range(cursor, cursor);
     }
+    Ok(())
 }
 
 #[derive(Clone)]
@@ -179,7 +198,11 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                         upload.error.set(Some(invalid()));
                         return;
                     };
-                    insert_body_video(form, body_area, insertion, &block);
+                    if insert_body_video(form, body_area, insertion, &block).is_err() {
+                        validation.set(video_insertion_error(true));
+                        return;
+                    }
+                    validation.set(String::new());
                 } else {
                     form.update(|draft| {
                         if draft.video_url == previous {
@@ -411,7 +434,10 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                                                         body_area,
                                                         body_touched.get_untracked(),
                                                     );
-                                                    insert_body_video(form, body_area, insertion, &block);
+                                                    if insert_body_video(form, body_area, insertion, &block).is_err() {
+                                                        validation.set(video_insertion_error(false));
+                                                        return;
+                                                    }
                                                     body_video_url.set(String::new());
                                                     validation.set(String::new());
                                                 }),
@@ -419,8 +445,8 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                                     blog_interface::html::p()
                                         .class("blog-field-help blog-row")
                                         .child(t(
-                                            "视频插入正文光标处。支持 MP4 / WebM 地址及 B 站、YouTube 链接，上传最大 50 MB。",
-                                            "Insert videos at the text cursor. Use MP4 / WebM URLs or Bilibili / YouTube links. Uploads: up to 50 MB.",
+                                            "视频插入正文光标处；位于代码或复杂格式内时，放在完整格式之后。支持 MP4 / WebM 地址及 B 站、YouTube 链接，上传最大 50 MB。",
+                                            "Insert videos at the text cursor, or after the complete block when inside code or formatted content. Use MP4 / WebM URLs or Bilibili / YouTube links. Uploads: up to 50 MB.",
                                         )),
                                 )),
                             move || {

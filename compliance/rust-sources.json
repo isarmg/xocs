@@ -5502,7 +5502,7 @@
   },
   "local_modifications_sha256": "516b0e84e9dbe2c312a1578ce3291d0e770c383d0b2c1eaff8f5f5f605d7b6d4",
   "lockfiles_sha256": {
-    "Cargo.lock": "8f655b4a885008a5f062ddc08d848e25c500a798f5a90ed49ada54f8e5b722c8"
+    "Cargo.lock": "8b499fc09929c3f46fa87a50f311e51a6ed9fc90b2ae7543a89993384256619d"
   },
   "manifests_sha256": {
     "Cargo.toml": "90963586a9584da043c9c572ecdac88c385cfa9104446579a22cbc8a8b3bfffc",
@@ -5731,9 +5731,9 @@
     "src/interface/Cargo.toml": "c6cfa3f5d1f38642927e390f2caa08727f2897ad1c7473c4330d4eb7eefb1d1b",
     "src/interface/dom/Cargo.toml": "48431d233682ad338e45a83f6a84bf0c1b2905340be5987fcffe20db195a3cbe",
     "src/interface/macros/Cargo.toml": "c40d47a150160a7b20226364db9919b6264b6007474e88cd2e360e01a9a839c3",
-    "src/server/Cargo.toml": "0e7c9231a4608da6475b53f3e89ef0bd8dc14bf5472ad013a84f1ee66ddf7223",
+    "src/server/Cargo.toml": "6d31a5d0d7a093a2ac2623f01ea67f17d6825d1881aa98287f35007a8bbf8c8f",
     "src/tools/assets/Cargo.toml": "1f66773dc914169ebc4844566c607e96b9679acf9bdfddb8dab7c0cd8ec86941",
-    "src/tools/setup/Cargo.toml": "e5113da996d9941ef984611117d51d49d516106de01c704811a6ed93634aa01a",
+    "src/tools/setup/Cargo.toml": "7ac153af612624e3c96040fc567644fc0dcd14efa9b132c9dcba1e3c82029a35",
     "test/browser-domain/Cargo.toml": "b278c5103425a2084f617a3a5fea842659f9fe46e7c1d6127969890dc40ce6fe"
   },
   "origin_records_sha256": {
@@ -33346,11 +33346,11 @@
         "src/common/request.rs": "87be49ca67357eb00f1e9f31a4e42eaf08c15f7a38ffadde09dd72fd2f736e51",
         "src/contracts.rs": "003ec846bb8e27cf2fd412042e05da4ca3df6c423739407def23b74d66c8ce4c",
         "src/dates.rs": "2beb8be9eac2c01eb17b9e5f2fc151564c69e9c36fbe2e8da8d16d60570d655c",
-        "src/editor.rs": "93c272f76772878600a0cc1485f7af7582706d150bc9f7fdd44998784ca382e6",
-        "src/editor/insertion.rs": "7f3871aebe79e67b276d6c9038ed23d74445529ec36f9af7e00f999fa2cb042a",
+        "src/editor.rs": "7a7e85065115248b44a66014e93e46cfc6a0421feb2dfc3bf8333df123b598bb",
+        "src/editor/insertion.rs": "3ed19c509322b0a8a27c21d6487679b34ac3c7cf2e8a1c4c57c3b04779c3882a",
         "src/lib.rs": "ae772f2c49c8465d169546704bb5a2c27f0d5f5c59e31aaf231f4b0249d14631",
         "src/markdown.rs": "0df336b4a615fea10c876bb48d8faabee05d1ace355b0ecf6e6f743aed09d910",
-        "src/markdown/video.rs": "47d26e9bc4fd2b650a7e881fa66ea49f56c56df678f181eb73f43d63e0dcec98",
+        "src/markdown/video.rs": "acc9f12ea3662583102223ee8086d08a336bfe09f5b3a16b5d4f1fb948c51cb8",
         "src/models.rs": "abdfcf2f12b521f4f7276455019b1ae1a6861376695857661a4fa7ae5cc552f7",
         "src/public/appearance.rs": "f5d38d333769717d6c28491db7a3ab6d5fcbf28bc2cf75c031d3ea36feae208f",
         "src/public/articles.rs": "bd3891e2289dc039c820f45e8f033e293066dd649d9a8cea5bb3e0a35afa8bf5",
@@ -33375,7 +33375,7 @@
         "test/browser/admin-layout.mjs": "82e40011776154fb6845e7dca7e56313d54cd8674bd9676f372c3ed5cd8fe0f1",
         "test/browser/admin-recovery.mjs": "3c7cc47e2e2974329e9100c85ee2fe7d48d392d17aaac509b03637d04f55b78b",
         "test/browser/anonymous-comments.mjs": "b7b5a25f98a6e6751e8dfa99e8279d1beaee7a84ba09970921f3f3575e6e96f7",
-        "test/browser/article-video.mjs": "6d9634354caa783db29f724549451702cc679506afaf69272e5a9e754c4cac5f",
+        "test/browser/article-video.mjs": "fa7118b06a856f627ccfadbcd09c6dd22942d0600849c4b178db7c1e648553e2",
         "test/browser/async-state.mjs": "e2e93434a66f7b332aa4c6c67295483f5fe3fbe0842a6413efa58bf94e225144",
         "test/browser/blog-interface-runtime.mjs": "375c6b8eb976663da1d8765d973b85f0b746816bb431aa99286e6f5aa1bca828",
         "test/browser/browser-fixtures.mjs": "b98fd5c28abfef85c0c76042688c5418405280d5eff39b585ae81c26c94af342",
@@ -33405,8 +33405,8 @@
         "test/browser/unit/comments/tests.rs": "68527237cb94517ac4d775ade8b5db91543289eac798928dd9b37f759e607ad8",
         "test/browser/unit/contracts/tests.rs": "288e650739a706bd4286cf30938cd3431a1824edef7ad13c111a241faadf9fc4",
         "test/browser/unit/dates/tests.rs": "a89f07b3dc8ac98065f20fe5bf8de10c1b1fb88ae6c3a257163641af1115f401",
-        "test/browser/unit/editor/insertion.rs": "03db042463dae7eb892945f2b46e6160d141f657a1cd6d22a38b2ed996e3c064",
-        "test/browser/unit/markdown/tests.rs": "17f947403d5b26d3cf2eeed661ecae442e587a26ad65e5cad234295bb7c1e46f",
+        "test/browser/unit/editor/insertion.rs": "dd14b42ada7179f86ce9bf41640afabfadaffbfcbdf567d82d1328d63a6cc557",
+        "test/browser/unit/markdown/tests.rs": "10329d5d99d37c4fc89859c963a6eacd5a48715a3378d8b4b2aaadee5cafad23",
         "test/browser/unit/models/decode.rs": "57c77ae27cb404212a23eac14529b7007a3fcd810482a2c83f5aae7c8c312d31",
         "test/browser/unit/models/site.json": "1c5974df1ea01716111f7377150bbd23137e4127ed6e5487dc5c851e4281d620",
         "test/browser/unit/models/tests.rs": "378e1daec24ddf9656f4e2498a7225a70f547e958682bcb5c7f03a2a2b015c3c"
@@ -49445,7 +49445,7 @@
       ],
       "directory": "src/server",
       "files_sha256": {
-        "Cargo.toml": "0e7c9231a4608da6475b53f3e89ef0bd8dc14bf5472ad013a84f1ee66ddf7223",
+        "Cargo.toml": "6d31a5d0d7a093a2ac2623f01ea67f17d6825d1881aa98287f35007a8bbf8c8f",
         "build.rs": "f58de83aa93d7795ed32df883cab32564c498b1d06aeb6a78333d097c19d391b",
         "schema/initialize-site-author.sql": "fa82753ff3758d95a71df0fd0c0318cfe134b4738137cd7d3f30c93cb2f500af",
         "schema/product.sql": "8cc383a30744407d81ad89c59b2cd913716fc76124edd6ceff07261ea40eb247",
@@ -49516,7 +49516,7 @@
         "test/server/unit/tests/slow_body.rs": "6a1ac8ef4915ca93098b7b2a4f3297c06e97ba81ad5eed35b12bdf92d9609951",
         "test/server/unit/tests/taxonomy.rs": "cf648747c31d55c950f614c5bd102eee0579b863f2a2750c554ae149da11d2ad"
       },
-      "version": "1.1.0"
+      "version": "2.0.0"
     },
     "src/tools/assets": {
       "dependencies": [
@@ -49598,7 +49598,7 @@
       ],
       "directory": "src/tools/setup",
       "files_sha256": {
-        "Cargo.toml": "e5113da996d9941ef984611117d51d49d516106de01c704811a6ed93634aa01a",
+        "Cargo.toml": "7ac153af612624e3c96040fc567644fc0dcd14efa9b132c9dcba1e3c82029a35",
         "README.md": "61d16b3aa5a9298d5db53cba33c527e2cda4a1a343a968b0e699334a394d543f",
         "src/main.rs": "c4aa568381c76e8154dc147d4e3999525f10b4450548ef295e2a706784481919"
       },
@@ -49608,7 +49608,7 @@
       "origins": [],
       "purpose": "离线初始化、账户恢复与实例维护",
       "tests_sha256": {},
-      "version": "1.1.0"
+      "version": "2.0.0"
     },
     "test/browser-domain": {
       "dependencies": [
@@ -51320,7 +51320,7 @@
           "roles": [
             "runtime"
           ],
-          "version": "1.1.0"
+          "version": "2.0.0"
         },
         "src/tools/setup": {
           "features": [],
@@ -51328,7 +51328,7 @@
           "roles": [
             "runtime"
           ],
-          "version": "1.1.0"
+          "version": "2.0.0"
         }
       },
       "profile": "native",
@@ -56920,7 +56920,7 @@
           "roles": [
             "compile"
           ],
-          "version": "1.1.0"
+          "version": "2.0.0"
         },
         "src/tools/assets": {
           "features": [],
@@ -56936,7 +56936,7 @@
           "roles": [
             "compile"
           ],
-          "version": "1.1.0"
+          "version": "2.0.0"
         },
         "test/browser-domain": {
           "features": [],
@@ -68972,9 +68972,42 @@
             "version": "0.0.0"
           }
         ]
+      },
+      {
+        "from": [
+          {
+            "directory": "src/server",
+            "name": "blog",
+            "origins": [],
+            "version": "1.1.0"
+          },
+          {
+            "directory": "src/tools/setup",
+            "name": "blog-setup",
+            "origins": [],
+            "version": "1.1.0"
+          }
+        ],
+        "id": "release-product-2-0-0",
+        "reason": "Advance the product and setup identities to 2.0.0 for the current database contract and source layout while preserving all upstream lineage.",
+        "retired_origins": [],
+        "to": [
+          {
+            "directory": "src/server",
+            "name": "blog",
+            "origins": [],
+            "version": "2.0.0"
+          },
+          {
+            "directory": "src/tools/setup",
+            "name": "blog-setup",
+            "origins": [],
+            "version": "2.0.0"
+          }
+        ]
       }
     ],
     "schema": 1
   },
-  "source_migrations_sha256": "e7e838472f9d4927f6eb2ab54ef1fe537a659ca8006ff69f39ad30ebe5aec4ee"
+  "source_migrations_sha256": "4b2a1a40d42fd4c4312126c53589c311a4ce46d9802047f29f0024182c39d94a"
 }

@@ -85,6 +85,11 @@ fn parse(source: &str) -> Option<Address> {
     }
     if source.starts_with('/') {
         url.href = url.href.strip_prefix("https://article.invalid")?.into();
+        // Dot-segment normalization can expose a second leading slash. Such
+        // a serialized root path would become an authority on the next parse.
+        if url.href.starts_with("//") {
+            return None;
+        }
     }
     Some(url)
 }

@@ -12,6 +12,7 @@ const youtubeEmbed = 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ';
 const bilibili = 'https://www.bilibili.com/video/BV1xx411c7mD/?p=2';
 const bilibiliEmbed = 'https://player.bilibili.com/player.html?bvid=BV1xx411c7mD&page=2&autoplay=0';
 const directVideo = '/__test-media/background.webm';
+const authorityPaths = ['/a/..//evil.example/clip.mp4', '/a/%2e%2e//evil.example/clip.webm'];
 // MP4 bytes exercise the browser's MIME-preserving upload path. Actual native
 // playback below uses the valid WebM fixture; container validation is a native
 // server responsibility and has separate tests.
@@ -19,10 +20,12 @@ const mp4UploadBytes = Buffer.from('article-video MP4 upload transport fixture')
 const labels = {
   en: { body: 'Markdown content', url: 'Video URL', contentUrl: 'Content video URL', insert: 'Insert video',
     bodyUpload: 'Choose file: Upload content video', mainUpload: 'Choose file: Upload article video',
-    preview: 'Preview content', save: 'Save article', cancel: 'Cancel', articles: 'Articles', title: 'Title' },
+    preview: 'Preview content', save: 'Save article', cancel: 'Cancel', articles: 'Articles', title: 'Title',
+    formatting: 'The current formatting is unfinished. Complete it or place the cursor between complete paragraphs.' },
   'zh-CN': { body: 'Markdown 正文', url: '视频地址', contentUrl: '正文视频地址', insert: '插入视频',
     bodyUpload: '选择文件：上传正文视频', mainUpload: '选择文件：上传文章视频',
-    preview: '预览正文', save: '保存文章', cancel: '取消', articles: '文章管理', title: '标题' },
+    preview: '预览正文', save: '保存文章', cancel: '取消', articles: '文章管理', title: '标题',
+    formatting: '当前格式尚未结束，请先补全格式或把光标移到完整段落之间。' },
 };
 const artifacts = process.env.BLOG_ARTICLE_VIDEO_ARTIFACTS;
 if (artifacts) await mkdir(artifacts, { recursive: true });
@@ -162,9 +165,12 @@ try {
       assert.ok(replaced.indexOf('youtube') < replaced.indexOf(directVideo), 'Video blocks follow insertion order');
 
       const unchanged = await body.inputValue();
-      await contentUrl.fill('javascript:alert(1)'); await insert.click();
-      await expect(page.getByRole('alert')).toBeVisible();
-      await expect(body).toHaveValue(unchanged);
+      for (const invalid of ['javascript:alert(1)', ...authorityPaths]) {
+        await contentUrl.fill(invalid); await insert.click();
+        await expect(page.getByRole('alert')).toBeVisible();
+        await expect(body).toHaveValue(unchanged);
+        await expect(contentUrl).toHaveValue(invalid);
+      }
       await selectText(body, unchanged.length);
       await contentUrl.fill(bilibili); await insert.click();
       await expect(page.getByRole('alert')).toHaveCount(0);
@@ -238,6 +244,23 @@ try {
       assert.ok(externalRequests.length >= 2, 'Players load through actual browser frames');
       assert.ok(externalRequests.every(value => [new URL(youtubeEmbed).origin, new URL(bilibiliEmbed).origin].includes(new URL(value).origin)), JSON.stringify(externalRequests));
 
+      // A root path can gain a second leading slash after dot normalization.
+      // Neither video fences nor the attachment poster may reinterpret it as
+      // another origin, including the percent-encoded dot-segment form.
+      const beforePolicyProbe = structuredClone(saved);
+      for (const poster of authorityPaths) {
+        saved = { ...saved, article_cover: poster, video_url: directVideo,
+          article_content: [...authorityPaths, directVideo].map(value => `\`\`\`video\n${value}\n\`\`\``).join('\n\n') };
+        await page.goto(`${base}/article/1?lang=${language}`); await waitForApplication(page);
+        const attachedVideo = page.locator('.article-featured-media > video');
+        await expect(attachedVideo).toHaveAttribute('src', directVideo);
+        assert.equal(await attachedVideo.getAttribute('poster'), null, 'Unsafe normalized poster is omitted');
+        await expect(publicBody.locator('video')).toHaveCount(1);
+        await expect(publicBody.locator('iframe')).toHaveCount(0);
+        assert.deepEqual(await publicBody.locator('pre code').allTextContents(), authorityPaths.map(value => `${value}\n`));
+      }
+      saved = beforePolicyProbe;
+
       // Canceling an article aborts its pending upload. A late response cannot
       // leak a block or featured URL into a fresh editor mounted afterwards.
       await page.goto(`${base}/admin?lang=${language}#edit/1`); await waitForApplication(page);
@@ -256,9 +279,60 @@ try {
       await page.getByRole('button', { name: names.insert, exact: true }).click();
       await expect(newBody).toHaveValue(/```video\n\/__test-media\/background\.webm\n```/);
       assert.equal((await newBody.inputValue()).includes(cancelledPath), false);
+
+      // Inserting a block while the cursor is inside existing Markdown must
+      // preserve its syntax and place the player after the complete block.
+      const newContentUrl = page.getByRole('textbox', { name: names.contentUrl, exact: true });
+      const newInsert = page.getByRole('button', { name: names.insert, exact: true });
+      const code = 'fn main() {\n    println!("literal 😀");\n}';
+      const fenced = `Before\n\n\`\`\`rust\n${code}\n\`\`\`\n\nAfter`;
+      await newBody.fill(fenced);
+      await selectText(newBody, fenced.indexOf('println') + 4);
+      await newContentUrl.fill(directVideo); await newInsert.click();
+      const insertedCode = await newBody.inputValue();
+      assert.ok(insertedCode.startsWith(fenced.slice(0, fenced.indexOf('\n\nAfter'))), 'The complete original Rust fence is unchanged');
+      assert.ok(insertedCode.indexOf('```video') < insertedCode.indexOf('After'), 'Player is inserted after the fenced block and before following prose');
+      await page.getByRole('button', { name: names.preview, exact: true }).click();
+      const contextualPreview = page.locator('.editor-markdown-preview');
+      await expect(contextualPreview.locator('pre code.language-rust')).toHaveText(`${code}\n`);
+      await expect(contextualPreview.locator('video')).toHaveCount(1);
+      assert.equal(await contextualPreview.evaluate(scope => {
+        const code = scope.querySelector('pre'), video = scope.querySelector('video');
+        const after = [...scope.querySelectorAll('p')].find(node => node.textContent === 'After');
+        return Boolean(code && video && after && code.compareDocumentPosition(video) & Node.DOCUMENT_POSITION_FOLLOWING
+          && video.compareDocumentPosition(after) & Node.DOCUMENT_POSITION_FOLLOWING);
+      }), true, 'Rendered video follows the original code and precedes After');
+
+      const inline = 'Before **bold 😀 text** after.\n\nAfter';
+      await newBody.fill(inline);
+      await selectText(newBody, inline.indexOf('bold') + 2);
+      await newContentUrl.fill(directVideo); await newInsert.click();
+      assert.ok((await newBody.inputValue()).startsWith('Before **bold 😀 text** after.'), 'Inline strong syntax is not cut apart');
+      await expect(contextualPreview.locator('strong')).toHaveText('bold 😀 text');
+      await expect(contextualPreview.locator('video')).toHaveCount(1);
+      assert.equal(await contextualPreview.evaluate(scope => {
+        const first = scope.querySelector('p'), video = scope.querySelector('video');
+        const after = [...scope.querySelectorAll('p')].find(node => node.textContent === 'After');
+        return first?.textContent === 'Before bold 😀 text after.' && Boolean(video && after
+          && first.compareDocumentPosition(video) & Node.DOCUMENT_POSITION_FOLLOWING
+          && video.compareDocumentPosition(after) & Node.DOCUMENT_POSITION_FOLLOWING);
+      }), true, 'Inline context keeps its original paragraph before the inserted player');
+
+      const unfinished = 'Before\n\n```rust\nlet draft = "未完成 😀";';
+      await newBody.fill(unfinished);
+      await selectText(newBody, unfinished.indexOf('draft') + 2);
+      await newContentUrl.fill(directVideo); await newInsert.click();
+      await expect(page.getByRole('alert')).toHaveText(names.formatting);
+      await expect(newBody).toHaveValue(unfinished);
+      await expect(newContentUrl).toHaveValue(directVideo);
+      await expect(contextualPreview.locator('video')).toHaveCount(0);
+      await expect(contextualPreview.locator('pre code.language-rust')).toHaveText('let draft = "未完成 😀";\n');
+
+      assert.ok(externalRequests.every(value => [new URL(youtubeEmbed).origin, new URL(bilibiliEmbed).origin].includes(new URL(value).origin)),
+        `No normalized video or poster may request an attacker origin: ${JSON.stringify(externalRequests)}`);
       assert.equal(writes.length, 1, 'Uploads, previews and insertions never save the article implicitly');
       assert.deepEqual(errors, []);
-      console.log(`${engine.name()} ${language} ${width}px: cursor/UTF-16, multiple videos, safe platform frames, native playback, WebM/MP4 uploads, draft preservation, errors, cancellation and save/reload passed`);
+      console.log(`${engine.name()} ${language} ${width}px: cursor/UTF-16, multiple videos, safe platform frames, native playback, WebM/MP4 uploads, draft preservation, errors, cancellation, save/reload, normalized origins and Markdown context passed`);
     } finally {
       await releasePending();
       await context.close(); await browser.close();

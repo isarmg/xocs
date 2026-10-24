@@ -1,4 +1,106 @@
-//! Rebase a captured textarea selection without discarding edits made during an upload.
+//! Preserve edits and Markdown structure when inserting a standalone video block.
+
+use pulldown_cmark::{CodeBlockKind, Event, Options, Parser, Tag};
+use std::ops::Range;
+
+#[derive(Debug, PartialEq, Eq)]
+pub(super) struct UnfinishedFormatting;
+
+fn parser(source: &str) -> Parser<'_> {
+    Parser::new_ext(
+        source,
+        Options::ENABLE_TABLES | Options::ENABLE_STRIKETHROUGH,
+    )
+}
+
+fn cuts(range: &Range<usize>, start: usize, end: usize) -> bool {
+    if start == end {
+        range.start < start && start < range.end
+    } else {
+        start < range.end && end > range.start && !(start <= range.start && end >= range.end)
+    }
+}
+
+fn contextual_range(source: &str, start: usize, end: usize) -> (usize, usize) {
+    let parser = parser(source);
+    let mut destination = None::<usize>;
+    let mut protect = |range: &Range<usize>| {
+        if cuts(range, start, end) {
+            destination = Some(destination.unwrap_or(end).max(range.end).max(end));
+        }
+    };
+    // Reference definitions do not appear in the event stream. Splitting one
+    // would silently change links elsewhere in the article.
+    for (_, definition) in parser.reference_definitions().iter() {
+        protect(&definition.span);
+    }
+    let mut root = None::<(Range<usize>, bool)>;
+    let mut depth = 0usize;
+    for (event, range) in parser.into_offset_iter() {
+        match event {
+            Event::Start(tag) => {
+                if depth == 0 {
+                    let paragraph = matches!(tag, Tag::Paragraph);
+                    let line_start = source[..range.start].rfind('\n').map_or(0, |at| at + 1);
+                    let range = line_start..range.end;
+                    if !paragraph {
+                        protect(&range);
+                    }
+                    root = Some((range, paragraph));
+                } else if let Some((root, true)) = &root
+                    && cuts(&range, start, end)
+                {
+                    // Keep a partially selected inline construct intact and
+                    // place the video after its containing paragraph.
+                    protect(root);
+                }
+                depth += 1;
+            }
+            Event::End(_) => {
+                depth -= 1;
+                if depth == 0 {
+                    root = None;
+                }
+            }
+            Event::Code(_) if cuts(&range, start, end) => {
+                if let Some((root, _)) = &root {
+                    protect(root);
+                }
+            }
+            Event::InlineHtml(_) => {
+                // Offset events identify individual tags, not paired HTML
+                // elements. Preserve the whole paragraph around such markup.
+                if let Some((root, _)) = &root {
+                    protect(root);
+                }
+            }
+            Event::Rule => protect(&range),
+            _ => {}
+        }
+    }
+    destination.map_or((start, end), |at| (at, at))
+}
+
+fn standalone_video_at(source: &str, start: usize, end: usize) -> bool {
+    let mut depth = 0;
+    for (event, range) in parser(source).into_offset_iter() {
+        match event {
+            Event::Start(tag) => {
+                if depth == 0
+                    && range.start == start
+                    && range.end <= end
+                    && matches!(tag, Tag::CodeBlock(CodeBlockKind::Fenced(info)) if info.trim() == "video")
+                {
+                    return true;
+                }
+                depth += 1;
+            }
+            Event::End(_) => depth -= 1,
+            _ => {}
+        }
+    }
+    false
+}
 
 #[derive(Clone)]
 pub(super) struct Insertion {
@@ -28,8 +130,13 @@ impl Insertion {
         Self { source, start, end }
     }
 
-    pub(super) fn apply(&self, current: &str, block: &str) -> (String, u32) {
+    pub(super) fn apply(
+        &self,
+        current: &str,
+        block: &str,
+    ) -> Result<(String, u32), UnfinishedFormatting> {
         let (start, end) = self.rebased_range(current);
+        let (start, end) = contextual_range(current, start, end);
         let before = &current[..start];
         let after = &current[end..];
         let mut result = String::with_capacity(current.len() + block.len() + 4);
@@ -40,14 +147,22 @@ impl Insertion {
             }
             result.push('\n');
         }
+        let block_start = result.len();
         result.push_str(block.trim_matches('\n'));
         result.push('\n');
         if !after.is_empty() && !after.starts_with('\n') {
             result.push('\n');
         }
+        let block_end = result.len();
         let cursor = result.encode_utf16().count().min(u32::MAX as usize) as u32;
         result.push_str(after);
-        (result, cursor)
+        // An unfinished fence or HTML block can continue past its source range
+        // at EOF. Confirm the inserted block really stands on its own rather
+        // than closing, entering or changing the author's existing syntax.
+        if !standalone_video_at(&result, block_start, block_end) {
+            return Err(UnfinishedFormatting);
+        }
+        Ok((result, cursor))
     }
 
     fn rebased_range(&self, current: &str) -> (usize, usize) {

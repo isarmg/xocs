@@ -11761,6 +11761,39 @@
         }
       ],
       "retired_origins": []
+    },
+    {
+      "id": "release-product-2-0-0",
+      "reason": "Advance the product and setup identities to 2.0.0 for the current database contract and source layout while preserving all upstream lineage.",
+      "from": [
+        {
+          "directory": "src/server",
+          "name": "blog",
+          "version": "1.1.0",
+          "origins": []
+        },
+        {
+          "directory": "src/tools/setup",
+          "name": "blog-setup",
+          "version": "1.1.0",
+          "origins": []
+        }
+      ],
+      "to": [
+        {
+          "directory": "src/server",
+          "name": "blog",
+          "version": "2.0.0",
+          "origins": []
+        },
+        {
+          "directory": "src/tools/setup",
+          "name": "blog-setup",
+          "version": "2.0.0",
+          "origins": []
+        }
+      ],
+      "retired_origins": []
     }
   ]
 }
