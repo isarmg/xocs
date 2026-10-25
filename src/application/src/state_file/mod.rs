@@ -348,7 +348,9 @@ impl Drop for StateLock {
             // Release this open file description before closing it, even
             // when inherited aliases remain. Cleanup only touches the held
             // descriptor; it never reopens, unlinks or repairs a state path.
-            let _ = self.file.file().unlock();
+            if let Err(error) = self.file.file().unlock() {
+                tracing::error!(%error, "state lock finalizer could not release its descriptor");
+            }
         }
     }
 }

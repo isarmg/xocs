@@ -144,7 +144,7 @@ impl<'de> Deserialize<'de> for RequestId {
 #[error("request ID must contain between 1 and 128 ASCII letters, digits, '.', '_', ':' or '-'")]
 pub struct InvalidRequestId;
 
-fn validate_request_id(value: &str) -> Result<(), InvalidRequestId> {
+pub(crate) fn validate_request_id(value: &str) -> Result<(), InvalidRequestId> {
     if value.is_empty()
         || value.len() > MAX_REQUEST_ID_BYTES
         || !value

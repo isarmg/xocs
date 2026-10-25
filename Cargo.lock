@@ -12,6 +12,7 @@ dependencies = [
  "blog-crypto-secure-hash",
  "blog-diagnostics-error-context",
  "blog-diagnostics-structured-events",
+ "blog-diagnostics-typed-error",
  "blog-encoding-hex-codec",
  "blog-filesystem-temporary-storage",
  "blog-format-data-model",
@@ -36,7 +37,6 @@ dependencies = [
  "blog-crypto-message-authentication",
  "blog-crypto-password-derivation",
  "blog-crypto-secure-hash",
- "blog-diagnostics-error-context",
  "blog-diagnostics-structured-events",
  "blog-diagnostics-typed-error",
  "blog-encoding-application-base-encoding",
@@ -73,6 +73,7 @@ dependencies = [
  "blog-assets-style-compiler",
  "blog-crypto-secure-hash",
  "blog-diagnostics-error-context",
+ "blog-diagnostics-typed-error",
  "blog-encoding-byte-search",
  "blog-encoding-compression",
  "blog-filesystem-temporary-storage",
@@ -181,6 +182,7 @@ name = "blog-browser"
 version = "0.0.0"
 dependencies = [
  "blog-assets-markdown-parser",
+ "blog-diagnostics-typed-error",
  "blog-format-data-model",
  "blog-format-date-time",
  "blog-format-json",
@@ -729,6 +731,7 @@ version = "0.0.0"
 name = "blog-interface"
 version = "0.0.0"
 dependencies = [
+ "blog-diagnostics-typed-error",
  "blog-dom",
  "blog-format-data-model",
  "blog-format-json",

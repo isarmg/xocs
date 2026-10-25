@@ -34,7 +34,11 @@ async fn run_cli() -> Result<i32> {
     blog_assets::request_cancellation();
     // Await Drop/cleanup in the blocking command, including all pipe readers,
     // before exiting rather than abandoning its separately owned child group.
-    let _ = operation.await;
+    match operation.await {
+        Ok(Ok(())) => {}
+        Ok(Err(error)) => eprintln!("blog-assets: {error:#}"),
+        Err(error) => eprintln!("blog-assets: asset command task failed during shutdown: {error}"),
+    }
     Ok(status)
 }
 

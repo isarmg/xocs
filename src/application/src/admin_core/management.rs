@@ -13,7 +13,7 @@ impl AdministratorManagementContext {
     pub fn validate(&self) -> Result<(), Error> {
         require_persistable_time(self.now_micros)?;
         if let Some(id) = &self.request_id {
-            crate::contracts::RequestId::new(id.clone()).map_err(|_| Error::InvalidRequestId)?;
+            crate::error::validate_request_id(id)?;
         }
         Ok(())
     }
@@ -40,10 +40,14 @@ pub enum ManagementError<StoreError: std::error::Error + Send + Sync + 'static> 
     InvalidInput,
     #[error("current administrator password is incorrect")]
     InvalidCurrentPassword,
-    #[error("administrator password work is unavailable")]
-    Busy,
+    #[error(transparent)]
+    PasswordWork(#[from] PasswordWorkError),
+    #[error(transparent)]
+    Policy(#[from] Error),
+    #[error(transparent)]
+    Authentication(#[from] crate::admin_auth::Error),
     #[error("administrator storage failed: {0}")]
-    Store(StoreError),
+    Store(#[source] StoreError),
 }
 
 impl<Store: AdministratorStore + 'static> AdministratorService<Store> {
@@ -59,11 +63,8 @@ impl<Store: AdministratorStore + 'static> AdministratorService<Store> {
         if !self.store.supports_account_updates() {
             return Err(ManagementError::Unsupported);
         }
-        context
-            .validate()
-            .map_err(|_| ManagementError::InvalidInput)?;
-        let username = crate::admin_auth::normalize_administrator_username(username)
-            .map_err(|_| ManagementError::InvalidInput)?;
+        context.validate()?;
+        let username = crate::admin_auth::normalize_administrator_username(username)?;
         if current_password.len() > 1024 {
             return Err(ManagementError::InvalidInput);
         }
@@ -81,8 +82,8 @@ impl<Store: AdministratorStore + 'static> AdministratorService<Store> {
             self.argon2_slots.clone().acquire_owned(),
         )
         .await
-        .map_err(|_| ManagementError::Busy)?
-        .map_err(|_| ManagementError::Busy)?;
+        .map_err(PasswordWorkError::Capacity)?
+        .expect("invariant: password verification semaphore remains open");
         let encoded = record.password_hash.clone();
         let candidate = current_password.to_owned();
         let matches = tokio::task::spawn_blocking(move || {
@@ -91,12 +92,12 @@ impl<Store: AdministratorStore + 'static> AdministratorService<Store> {
             matches
         })
         .await
-        .map_err(|_| ManagementError::Busy)?;
+        .map_err(PasswordWorkError::Worker)?;
         if !matches {
             return Err(ManagementError::InvalidCurrentPassword);
         }
         let password_hash = match new_password {
-            Some(value) => Some(self.management_password_hash(value).await?),
+            Some(value) => Some(self.hash_password(value).await?),
             None => None,
         };
         self.store
@@ -109,19 +110,5 @@ impl<Store: AdministratorStore + 'static> AdministratorService<Store> {
                 },
             )
             .await
-    }
-
-    async fn management_password_hash(
-        &self,
-        password: &str,
-    ) -> Result<String, ManagementError<Store::StoreError>> {
-        self.hash_password(password)
-            .await
-            .map_err(|error| match error {
-                ServiceError::AuthenticationBusy | ServiceError::AuthenticationWorkerFailed => {
-                    ManagementError::Busy
-                }
-                _ => ManagementError::InvalidInput,
-            })
     }
 }

@@ -10,6 +10,7 @@ crate-type = ["cdylib", "rlib"]
 name = "blog_browser"
 
 [dependencies]
+thiserror = { path = "../foundation/diagnostics/typed-error", package = "blog-diagnostics-typed-error" }
 blog-interface = {  default-features = false, features = ["csr"], path = "../interface"}
 wasm-bindgen = { path = "../foundation/wasm/browser-bridge",package = "blog-wasm-browser-bridge"}
 wasm-bindgen-futures = { path = "../foundation/wasm/browser-futures",package = "blog-wasm-browser-futures"}

@@ -1,7 +1,8 @@
+use blog_application::error::HttpStatus;
 mod media;
 
 use crate::{ApiResult, AppError, AppState, db_error, invalid};
-use axum::{Json, extract::State, http::StatusCode};
+use axum::{Json, extract::State};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, sqlx::FromRow)]
@@ -90,7 +91,7 @@ pub(super) async fn update_site(
             .await
             .map_err(db_error)?;
     if name_used {
-        return Err(AppError(StatusCode::CONFLICT, "作者展示名已被使用"));
+        return Err(AppError::Public(HttpStatus::Conflict, "作者展示名已被使用"));
     }
     sqlx::query("UPDATE user SET username=?,update_time=CURRENT_TIMESTAMP WHERE id=?")
         .bind(author_name)

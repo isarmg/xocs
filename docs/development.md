@@ -2,6 +2,8 @@
 
 在仓库根目录执行本文命令。源码职责见[架构](architecture.md)，依赖实现和本地参考资料见[依赖文档](dependencies/README.md)。
 
+修改 Rust 代码遵循根目录的[编码规范](../AGENTS.md)：在外部边界解析并验证输入，内部依赖类型和调用约定，保留错误来源，并在能做决策的最外层处理错误。
+
 ## 构建环境
 
 准备 Rust 1.99.0（含 rustfmt、Clippy）、`wasm32-unknown-unknown` 标准库、Python 3.11+ 以及 AMD64 Linux GNU/glibc 的 C 编译环境。原生目标为 `x86_64-unknown-linux-gnu`，浏览器目标为 `wasm32-unknown-unknown`；构建脚本会检查宿主和目标。

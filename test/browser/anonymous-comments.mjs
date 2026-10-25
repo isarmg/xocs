@@ -122,6 +122,39 @@ try {
           const alpha = Number(header.background.split(',').at(-1).replace(')', ''));
           assert.ok(alpha > .4 && alpha < .8, JSON.stringify(header)); assert.match(header.blur, /blur\(16px\)/);
         }
+        if (width === 1920 && english) {
+          await page.goto(`${base}/article/1?lang=en`);
+          const comments = page.locator('.article-comments');
+          const form = comments.locator('.comment-form');
+          const input = form.getByRole('textbox', { name: 'Write your thoughts', exact: true });
+          await input.fill('Posted even when pending cleanup fails');
+          await page.evaluate(() => {
+            window.restoreCommentStorage = Storage.prototype.removeItem;
+            Storage.prototype.removeItem = function(key) {
+              if (key.startsWith('blog.comment-submission:')) throw new DOMException('Storage access revoked', 'SecurityError');
+              return window.restoreCommentStorage.call(this, key);
+            };
+          });
+          await form.getByRole('button', { name: button, exact: true }).click();
+          await expect(comments.locator('.public-comment').first()).toContainText('Posted even when pending cleanup fails');
+          await expect(comments.getByRole('alert')).toContainText('The pending submission could not be read or saved.');
+          await expect(form.getByRole('button', { name: button, exact: true })).toBeDisabled();
+          await expect.poll(() => page.evaluate(() => sessionStorage.getItem('blog.comment-submission:/api/v1/comments:1') !== null)).toBe(true);
+          await page.evaluate(() => {
+            Storage.prototype.removeItem = window.restoreCommentStorage;
+            delete window.restoreCommentStorage;
+          });
+          page.once('dialog', dialog => dialog.accept());
+          await form.getByRole('button', { name: 'Clear pending submission', exact: true }).click();
+          await expect(comments.getByRole('alert')).toHaveCount(0);
+          await expect(input).toBeEnabled();
+          await expect.poll(() => page.evaluate(() => sessionStorage.getItem('blog.comment-submission:/api/v1/comments:1'))).toBe(null);
+          await input.fill('New submission after storage recovery');
+          await form.getByRole('button', { name: button, exact: true }).click();
+          await expect(comments.locator('.public-comment').first()).toContainText('New submission after storage recovery');
+          await page.goto(`${base}/message?lang=en`);
+          await expect(page.locator('.message-comment-wrap')).toBeVisible();
+        }
         await page.evaluate(async () => {
           scrollTo(0, 0);
           await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));

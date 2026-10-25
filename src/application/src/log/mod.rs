@@ -379,7 +379,7 @@ impl LogRecord {
         if let Some(sink) = PROCESS_SINK.get() {
             return sink
                 .lock()
-                .map_err(|_| LogError::UnsafeStorage)?
+                .expect("process log sink lock poisoned")
                 .write(self);
         }
         self.emit_stderr()

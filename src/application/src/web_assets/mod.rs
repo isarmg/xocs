@@ -4,13 +4,10 @@
 //! [`DirectoryAssets`] is an explicitly selected development provider. It never replaces
 //! embedded resources automatically, and rereads each requested file for hot reload.
 
-use anyhow::{Context, Result, bail, ensure};
 use bytes::Bytes;
 use http::{HeaderMap, Method, Response, StatusCode, header};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-#[cfg(not(unix))]
-use std::fs;
 use std::{
     fs::File,
     io::Read,
@@ -19,7 +16,11 @@ use std::{
 };
 
 pub mod build;
+mod error;
 pub mod wasm;
+
+pub use error::Error;
+type Result<T> = std::result::Result<T, Error>;
 
 /// Inventory format identity. Its canonical compact JSON bytes are hashed verbatim.
 pub const MANIFEST_FORMAT: &str = "blog-browser-assets-v1";
@@ -52,72 +53,76 @@ pub struct AssetRecord {
     pub sha256: String,
 }
 
+/// A manifest whose paths, sizes, serialization and digest have been verified.
+#[derive(Debug)]
+pub struct VerifiedManifest(AssetManifest);
+
+impl VerifiedManifest {
+    pub fn files(&self) -> &[AssetRecord] {
+        &self.0.files
+    }
+}
+
 /// Verify inventory format, canonical ordering/serialization and its bound digest.
-pub fn verify_manifest(manifest: &str, digest: &str) -> Result<()> {
-    ensure!(
-        manifest.len() <= 8 * 1024 * 1024,
-        "web manifest exceeds budget"
-    );
-    let parsed: AssetManifest = serde_json::from_str(manifest).context("invalid web manifest")?;
-    ensure!(
-        parsed.format == MANIFEST_FORMAT,
-        "unsupported web manifest format"
-    );
-    ensure!(
-        !parsed.files.is_empty() && parsed.files.len() <= MAX_FILES,
-        "invalid web inventory size"
-    );
+pub fn verify_manifest(manifest: &str, digest: &str) -> Result<VerifiedManifest> {
+    if manifest.len() > 8 * 1024 * 1024 {
+        return Err(Error::ManifestBudget);
+    }
+    let parsed: AssetManifest = serde_json::from_str(manifest)?;
+    if parsed.format != MANIFEST_FORMAT {
+        return Err(Error::ManifestFormat);
+    }
+    if parsed.files.is_empty() || parsed.files.len() > MAX_FILES {
+        return Err(Error::InventorySize);
+    }
     let mut previous: Option<&str> = None;
     let mut total = 0_u64;
     for file in &parsed.files {
-        ensure!(safe_relative(&file.path), "unsafe web asset path");
-        ensure!(
-            previous.is_none_or(|path| path < file.path.as_str()),
-            "web inventory is not strictly sorted"
-        );
+        AssetPath::parse(&file.path)?;
+        if previous.is_some_and(|path| path >= file.path.as_str()) {
+            return Err(Error::InventoryOrder);
+        }
         previous = Some(&file.path);
-        ensure!(
-            file.content_type == content_type(&file.path),
-            "web asset content type differs"
-        );
-        ensure!(valid_digest(&file.sha256), "invalid web asset digest");
-        ensure!(file.size <= MAX_ASSET_BYTES, "web asset exceeds budget");
-        total = total
-            .checked_add(file.size)
-            .context("web inventory byte overflow")?;
-        ensure!(total <= MAX_TOTAL_BYTES, "web inventory exceeds budget");
+        if file.content_type != content_type(&file.path) {
+            return Err(Error::ContentType);
+        }
+        if !valid_digest(&file.sha256) {
+            return Err(Error::AssetDigest);
+        }
+        if file.size > MAX_ASSET_BYTES {
+            return Err(Error::AssetBudget);
+        }
+        total += file.size;
+        if total > MAX_TOTAL_BYTES {
+            return Err(Error::TotalBudget);
+        }
     }
-    ensure!(
-        serde_json::to_string(&parsed)? == manifest,
-        "web manifest is not canonical JSON"
-    );
-    ensure!(
-        valid_digest(digest) && sha256(manifest.as_bytes()) == digest,
-        "web manifest digest differs"
-    );
-    Ok(())
+    if serde_json::to_string(&parsed)? != manifest {
+        return Err(Error::ManifestCanonical);
+    }
+    if !valid_digest(digest) || sha256(manifest.as_bytes()) != digest {
+        return Err(Error::ManifestDigest);
+    }
+    Ok(VerifiedManifest(parsed))
 }
 
 /// Verify a generated registry against the manifest and every embedded byte.
 /// Intended for build acceptance and release validation, not every HTTP request.
 pub fn verify_embedded(assets: &[EmbeddedAsset], manifest: &str, digest: &str) -> Result<()> {
-    verify_manifest(manifest, digest)?;
-    let parsed: AssetManifest = serde_json::from_str(manifest)?;
-    ensure!(
-        parsed.files.len() == assets.len(),
-        "embedded web inventory length differs"
-    );
-    for (record, asset) in parsed.files.iter().zip(assets) {
-        ensure!(
-            record.path == asset.path && record.content_type == asset.content_type,
-            "embedded web metadata differs"
-        );
-        ensure!(
-            record.size == asset.bytes.len() as u64
-                && record.sha256 == asset.sha256
-                && record.sha256 == sha256(asset.bytes),
-            "embedded web bytes differ"
-        );
+    let parsed = verify_manifest(manifest, digest)?;
+    if parsed.files().len() != assets.len() {
+        return Err(Error::EmbeddedLength);
+    }
+    for (record, asset) in parsed.files().iter().zip(assets) {
+        if record.path != asset.path || record.content_type != asset.content_type {
+            return Err(Error::EmbeddedMetadata);
+        }
+        if record.size != asset.bytes.len() as u64
+            || record.sha256 != asset.sha256
+            || record.sha256 != sha256(asset.bytes)
+        {
+            return Err(Error::EmbeddedBytes);
+        }
     }
     Ok(())
 }
@@ -138,7 +143,7 @@ pub fn response(
     let Some(path) = request_path(path) else {
         return error_response(StatusCode::NOT_FOUND, method);
     };
-    let Ok(index) = assets.binary_search_by(|asset| asset.path.cmp(path)) else {
+    let Ok(index) = assets.binary_search_by(|asset| asset.path.cmp(path.0)) else {
         return error_response(StatusCode::NOT_FOUND, method);
     };
     let asset = &assets[index];
@@ -157,45 +162,33 @@ pub fn response(
 #[derive(Clone, Debug)]
 pub struct DirectoryAssets {
     root: PathBuf,
-    #[cfg(unix)]
     directory: Arc<File>,
-    #[cfg(not(unix))]
-    directory: Arc<()>,
 }
 
 impl DirectoryAssets {
     /// Open an absolute development directory. No production mode is selected here.
     pub fn new(root: impl AsRef<Path>) -> Result<Self> {
         let root = root.as_ref();
-        ensure!(root.is_absolute(), "web directory must be absolute");
-        ensure!(
-            root.components().all(|component| matches!(
-                component,
-                Component::RootDir | Component::Prefix(_) | Component::Normal(_)
-            )),
-            "unsafe web directory"
-        );
-        #[cfg(unix)]
-        let directory = Arc::new(open_directory(root)?);
-        #[cfg(not(unix))]
-        let directory = {
-            let mut current = PathBuf::new();
-            for component in root.components() {
-                current.push(component);
-                let metadata = fs::symlink_metadata(&current)?;
-                ensure!(
-                    metadata.is_dir() && !metadata.file_type().is_symlink(),
-                    "unsafe web directory"
-                );
-            }
-            Arc::new(())
-        };
+        let result = Self::open(root)?;
         // Fail configuration early for unsafe initial trees; later reads still
         // validate descriptors because the development tree can change.
         build::collect_paths(root, false)?;
+        Ok(result)
+    }
+
+    fn open(root: &Path) -> Result<Self> {
+        if !root.is_absolute() {
+            return Err(Error::RelativeDirectory);
+        }
+        if !root
+            .components()
+            .all(|component| matches!(component, Component::RootDir | Component::Normal(_)))
+        {
+            return Err(Error::UnsafeDirectory);
+        }
         Ok(Self {
             root: root.to_path_buf(),
-            directory,
+            directory: Arc::new(open_directory(root)?),
         })
     }
 
@@ -215,81 +208,69 @@ impl DirectoryAssets {
                 let digest = sha256(&bytes);
                 asset_response(
                     Bytes::from(bytes),
-                    content_type(path),
+                    content_type(path.0),
                     &digest,
                     method,
                     headers,
                 )
             }
-            Err(_) => error_response(StatusCode::NOT_FOUND, method),
+            Err(Error::UnsafeFile | Error::AssetBudget) => {
+                error_response(StatusCode::NOT_FOUND, method)
+            }
+            Err(Error::Descriptor(
+                rustix::io::Errno::NOENT | rustix::io::Errno::NOTDIR | rustix::io::Errno::LOOP,
+            )) => error_response(StatusCode::NOT_FOUND, method),
+            Err(error) => {
+                tracing::error!(error = ?error, "development asset read failed");
+                error_response(StatusCode::INTERNAL_SERVER_ERROR, method)
+            }
         }
     }
 
-    pub(crate) fn read(&self, path: &str) -> Result<Vec<u8>> {
-        ensure!(safe_relative(path), "unsafe web asset path");
-        #[cfg(unix)]
-        {
-            use rustix::fs::{FileType, Mode, OFlags, fstat, openat};
-            let mut parent = self.directory.try_clone()?;
-            let mut components = Path::new(path).components().peekable();
-            while let Some(Component::Normal(name)) = components.next() {
-                if components.peek().is_some() {
-                    parent = File::from(openat(&parent, name, directory_flags(), Mode::empty())?);
-                } else {
-                    let file = File::from(openat(
-                        &parent,
-                        name,
-                        OFlags::RDONLY | OFlags::NOFOLLOW | OFlags::NONBLOCK | OFlags::CLOEXEC,
-                        Mode::empty(),
-                    )?);
-                    let metadata = fstat(&file)?;
-                    ensure!(
-                        FileType::from_raw_mode(metadata.st_mode) == FileType::RegularFile
-                            && metadata.st_nlink == 1,
-                        "unsafe web asset file"
-                    );
-                    return read_bounded(file);
+    fn read(&self, path: AssetPath<'_>) -> Result<Vec<u8>> {
+        use rustix::fs::{FileType, Mode, OFlags, fstat, openat};
+        let mut parent = self.directory.try_clone()?;
+        let mut components = Path::new(path.0).components().peekable();
+        while let Some(Component::Normal(name)) = components.next() {
+            if components.peek().is_some() {
+                parent = File::from(openat(&parent, name, directory_flags(), Mode::empty())?);
+            } else {
+                let file = File::from(openat(
+                    &parent,
+                    name,
+                    OFlags::RDONLY | OFlags::NOFOLLOW | OFlags::NONBLOCK | OFlags::CLOEXEC,
+                    Mode::empty(),
+                )?);
+                let metadata = fstat(&file)?;
+                if FileType::from_raw_mode(metadata.st_mode) != FileType::RegularFile
+                    || metadata.st_nlink != 1
+                {
+                    return Err(Error::UnsafeFile);
                 }
+                return read_bounded(file);
             }
-            bail!("empty web asset path");
         }
-        #[cfg(not(unix))]
-        {
-            let _ = &self.directory;
-            let mut current = self.root.clone();
-            for component in Path::new(path).components() {
-                current.push(component);
-                let metadata = fs::symlink_metadata(&current)?;
-                ensure!(!metadata.file_type().is_symlink(), "unsafe web asset link");
-            }
-            let metadata = fs::symlink_metadata(&current)?;
-            ensure!(metadata.is_file(), "unsafe web asset file");
-            read_bounded(File::open(current)?)
-        }
+        unreachable!("invariant: a validated asset path contains a normal component")
     }
 }
 
 fn read_bounded(file: File) -> Result<Vec<u8>> {
-    ensure!(
-        file.metadata()?.len() <= MAX_ASSET_BYTES,
-        "web asset exceeds budget"
-    );
+    if file.metadata()?.len() > MAX_ASSET_BYTES {
+        return Err(Error::AssetBudget);
+    }
     let mut bytes = Vec::new();
     file.take(MAX_ASSET_BYTES + 1).read_to_end(&mut bytes)?;
-    ensure!(
-        bytes.len() as u64 <= MAX_ASSET_BYTES,
-        "web asset exceeds budget"
-    );
+    if bytes.len() as u64 > MAX_ASSET_BYTES {
+        return Err(Error::AssetBudget);
+    }
     Ok(bytes)
 }
 
-#[cfg(unix)]
 fn directory_flags() -> rustix::fs::OFlags {
     use rustix::fs::OFlags;
     OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC
 }
 
-#[cfg(unix)]
 fn open_directory(path: &Path) -> Result<File> {
     use rustix::fs::{Mode, open, openat};
     let mut fd = open("/", directory_flags(), Mode::empty())?;
@@ -297,18 +278,33 @@ fn open_directory(path: &Path) -> Result<File> {
         match component {
             Component::RootDir => (),
             Component::Normal(name) => fd = openat(&fd, name, directory_flags(), Mode::empty())?,
-            _ => bail!("unsafe web directory"),
+            Component::Prefix(_) | Component::CurDir | Component::ParentDir => {
+                unreachable!("invariant: the directory path has already been validated")
+            }
         }
     }
     Ok(File::from(fd))
 }
 
-fn request_path(path: &str) -> Option<&str> {
+#[derive(Clone, Copy)]
+struct AssetPath<'a>(&'a str);
+
+impl<'a> AssetPath<'a> {
+    fn parse(path: &'a str) -> Result<Self> {
+        if safe_relative(path) {
+            Ok(Self(path))
+        } else {
+            Err(Error::UnsafePath)
+        }
+    }
+}
+
+fn request_path(path: &str) -> Option<AssetPath<'_>> {
     if path.is_empty() || path == "/" {
-        Some("index.html")
+        Some(AssetPath("index.html"))
     } else {
         let path = path.strip_prefix('/').unwrap_or(path);
-        safe_relative(path).then_some(path)
+        safe_relative(path).then_some(AssetPath(path))
     }
 }
 
@@ -342,7 +338,11 @@ pub(crate) fn sha256(bytes: &[u8]) -> String {
 
 /// Explicit MIME mappings; unknown outputs remain binary and cannot be sniffed.
 pub fn content_type(path: &str) -> &'static str {
-    match path.rsplit('.').next().unwrap_or("") {
+    match path
+        .rsplit('.')
+        .next()
+        .expect("invariant: split always yields at least one item")
+    {
         "html" | "htm" => "text/html; charset=utf-8",
         "js" | "mjs" => "text/javascript; charset=utf-8",
         "css" => "text/css; charset=utf-8",
@@ -367,12 +367,7 @@ pub fn content_type(path: &str) -> &'static str {
     }
 }
 
-fn base_response(
-    status: StatusCode,
-    content_type: &str,
-    size: usize,
-    method: &Method,
-) -> Response<Bytes> {
+fn base_response(status: StatusCode, content_type: &str, size: usize) -> Response<Bytes> {
     let mut builder = Response::builder()
         .status(status)
         .header(header::CONTENT_TYPE, content_type)
@@ -381,12 +376,9 @@ fn base_response(
     if status != StatusCode::NOT_MODIFIED {
         builder = builder.header(header::CONTENT_LENGTH, size.to_string());
     }
-    let body = if method == Method::HEAD {
-        Bytes::new()
-    } else {
-        Bytes::from_static(b"")
-    };
-    builder.body(body).expect("constant HTTP headers are valid")
+    builder
+        .body(Bytes::new())
+        .expect("constant HTTP headers are valid")
 }
 
 fn asset_response(
@@ -416,7 +408,6 @@ fn asset_response(
         },
         content_type,
         bytes.len(),
-        method,
     );
     result.headers_mut().insert(
         header::CACHE_CONTROL,
@@ -442,10 +433,12 @@ fn asset_response(
 fn error_response(status: StatusCode, method: &Method) -> Response<Bytes> {
     let message: &'static [u8] = if status == StatusCode::METHOD_NOT_ALLOWED {
         b"Method not allowed\n"
-    } else {
+    } else if status == StatusCode::NOT_FOUND {
         b"Not found\n"
+    } else {
+        b"Internal server error\n"
     };
-    let mut result = base_response(status, "text/plain; charset=utf-8", message.len(), method);
+    let mut result = base_response(status, "text/plain; charset=utf-8", message.len());
     result.headers_mut().insert(
         header::CACHE_CONTROL,
         "no-store".parse().expect("constant cache header"),

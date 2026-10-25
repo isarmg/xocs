@@ -224,7 +224,7 @@ pub fn sync_directory(path: &Path) -> Result<(), Error> {
 }
 fn temporary_name() -> Result<String, Error> {
     let mut bytes = [0u8; 16];
-    getrandom::fill(&mut bytes).map_err(|_| Error::Randomness)?;
+    getrandom::fill(&mut bytes).map_err(Error::Randomness)?;
     let nonce: String = bytes.iter().map(|byte| format!("{byte:02x}")).collect();
     Ok(format!(".state-atomic-{nonce}.tmp"))
 }
@@ -232,7 +232,7 @@ fn temporary_name() -> Result<String, Error> {
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("secure randomness unavailable")]
-    Randomness,
+    Randomness(#[source] getrandom::Error),
     #[error("an absolute path is required: {0:?}")]
     AbsolutePathRequired(PathBuf),
     #[error("unsafe relative path: {0:?}")]
@@ -246,13 +246,19 @@ pub enum Error {
     #[error("directory entry identity changed: {0:?}")]
     IdentityChanged(PathBuf),
     #[error("publication happened but durability could not be confirmed: {0}")]
-    PublishedDurabilityUnknown(io::Error),
+    PublishedDurabilityUnknown(#[source] io::Error),
     #[error("advisory lock is already held: {0:?}")]
     AlreadyLocked(PathBuf),
     #[error("destination already exists: {0:?}")]
     DestinationExists(PathBuf),
     #[error("directory inventory budget exceeded")]
     BudgetExceeded,
+    #[error("{operation}; temporary-file cleanup also failed: {cleanup}")]
+    Cleanup {
+        #[source]
+        operation: Box<Error>,
+        cleanup: io::Error,
+    },
     #[error(transparent)]
     Io(#[from] io::Error),
 }

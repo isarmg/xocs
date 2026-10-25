@@ -1,7 +1,7 @@
 //! Anonymous guestbook posting and message display.
 use super::appearance::{background_style, site_media_url};
 use super::shell::{Chrome, site_data};
-use crate::comments::Comments;
+use crate::comments::{CommentKind, Comments};
 use crate::common::{Action, Feedback, load, safe_url, t, text};
 use blog_interface::children::ToChildren;
 use blog_interface::component::component_props_builder;
@@ -106,7 +106,7 @@ pub(super) fn Message() -> impl IntoView {
                                         .class("message-hero"),
                                         html::div()
                                         .child( Comments(component_props_builder(& Comments)
-                                        .kind( "message").build())).class("message-comment-wrap")
+                                        .kind(CommentKind::Message).build())).class("message-comment-wrap")
                                     ,),
                             )
                             .class("message-page")))

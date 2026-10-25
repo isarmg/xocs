@@ -216,19 +216,20 @@ pub struct ArticleAccess {
     pub tips: Option<String>,
 }
 
-#[derive(Clone, Copy, Debug, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum HomeKind {
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[serde(tag = "kind", rename_all = "lowercase")]
+pub enum HomeSource {
     Latest,
     Recommended,
-    Category,
+    Category { sort_id: i64 },
 }
 #[derive(Clone, Debug, Deserialize)]
 pub struct HomeSection {
     pub id: i64,
     pub title: String,
-    pub kind: HomeKind,
-    pub sort_id: Option<i64>,
+    #[serde(flatten)]
+    pub source: HomeSource,
+    pub enabled: bool,
 }
 
 #[derive(Clone, Debug, Deserialize)]

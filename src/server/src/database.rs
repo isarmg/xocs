@@ -1,7 +1,7 @@
+use crate::Error;
 #[cfg(any(test, feature = "maintenance"))]
 use crate::now_micros;
 use crate::schema;
-use anyhow::{Context, bail};
 #[cfg(any(test, feature = "maintenance"))]
 use blog_application::admin_core::AdministratorService;
 use blog_application::admin_sqlite::SqliteAdministratorStore;
@@ -11,8 +11,8 @@ use sqlx::{
 };
 use std::{
     fs::{self, OpenOptions},
-    os::unix::fs::{OpenOptionsExt, PermissionsExt},
-    path::{Path, PathBuf},
+    os::unix::fs::OpenOptionsExt,
+    path::Path,
     time::Duration,
 };
 
@@ -23,7 +23,7 @@ const CONNECTION_LIMITS: blog_application::sqlite::ConnectionLimits =
         .with_max_sql_bytes(256 * 1024)
         .with_max_vm_operations(100_000);
 
-pub(crate) async fn open_database(path: &Path, create: bool) -> anyhow::Result<SqlitePool> {
+pub(crate) async fn open_database(path: &Path, create: bool) -> Result<SqlitePool, Error> {
     open_database_with_limit(path, create, 8).await
 }
 
@@ -31,45 +31,26 @@ pub(crate) async fn open_database_with_limit(
     path: &Path,
     create: bool,
     max_connections: u32,
-) -> anyhow::Result<SqlitePool> {
-    if !path.is_absolute() {
-        bail!("database path must be absolute");
-    }
+) -> Result<SqlitePool, Error> {
     let parent = path
         .parent()
-        .context("database path has no parent directory")?;
-    let parent_metadata =
-        fs::symlink_metadata(parent).context("database parent directory is missing")?;
-    if !parent_metadata.is_dir()
-        || parent_metadata.file_type().is_symlink()
-        || parent_metadata.permissions().mode() & 0o077 != 0
-    {
-        bail!("database parent directory must be a private 0700 directory");
-    }
+        .expect("invariant: database has a parent directory");
+    let directory = blog_application::state_file::PrivateStateDirectory::open(parent)?;
     if create {
         OpenOptions::new()
             .write(true)
             .create_new(true)
             .mode(0o600)
-            .open(path)
-            .context("create private SQLite database")?;
-    } else {
-        let metadata = fs::symlink_metadata(path).context("database does not exist")?;
-        if !metadata.is_file()
-            || metadata.file_type().is_symlink()
-            || metadata.permissions().mode() & 0o077 != 0
-        {
-            bail!("database must be a regular private 0600 file");
-        }
+            .open(path)?;
     }
-    let directory = blog_application::state_file::PrivateStateDirectory::open(parent)?;
-    let descriptor =
-        directory.open_existing(path.file_name().context("database name is required")?)?;
+    let descriptor = directory.open_existing(
+        path.file_name()
+            .expect("invariant: database has a filename"),
+    )?;
     descriptor.verify_identity()?;
-    // Closing any raw descriptor for a SQLite inode after SQLite opens it can
-    // release that process's POSIX locks. Complete descriptor checks first.
+    let before = descriptor.file().metadata()?;
+    // Closing a raw descriptor after SQLite opens the inode releases POSIX locks.
     drop(descriptor);
-    let before = fs::symlink_metadata(path)?;
     let options = SqliteConnectOptions::new()
         .filename(path)
         .create_if_missing(false)
@@ -88,17 +69,15 @@ pub(crate) async fn open_database_with_limit(
             })
         })
         .connect_with(options)
-        .await
-        .context("open SQLite database")?;
+        .await?;
     use std::os::unix::fs::MetadataExt;
     let verified = (|| {
         let after = fs::symlink_metadata(path)?;
-        anyhow::ensure!(
-            (before.dev(), before.ino()) == (after.dev(), after.ino()),
-            "database identity changed while opening"
-        );
+        if (before.dev(), before.ino()) != (after.dev(), after.ino()) {
+            return Err(Error::DatabaseIdentityChanged);
+        }
         directory.verify_identity()?;
-        Ok::<(), anyhow::Error>(())
+        Ok::<(), Error>(())
     })();
     if let Err(error) = verified {
         pool.close().await;
@@ -111,9 +90,11 @@ pub(crate) async fn open_database_with_limit(
 pub(crate) async fn initialize_new_database(
     database: &Path,
     username: &str,
-    password: &str,
-) -> anyhow::Result<()> {
-    let root = database.parent().context("database parent is required")?;
+    password: &blog_application::admin_auth::Password,
+) -> Result<(), Error> {
+    let root = database
+        .parent()
+        .expect("invariant: database has a parent directory");
     let directory = blog_application::fs_safety::PrivateDirectory::open_existing(root)?;
     let temporary = tempfile::Builder::new()
         .prefix(".blog-init-")
@@ -126,31 +107,34 @@ pub(crate) async fn initialize_new_database(
         let (busy, _, _): (i64, i64, i64) = sqlx::query_as("PRAGMA wal_checkpoint(TRUNCATE)")
             .fetch_one(&pool)
             .await?;
-        anyhow::ensure!(busy == 0, "initial database checkpoint did not complete");
+        if busy != 0 {
+            return Err(Error::InitialCheckpointBusy);
+        }
         let mode: String = sqlx::query_scalar("PRAGMA journal_mode=DELETE")
             .fetch_one(&pool)
             .await?;
-        anyhow::ensure!(
-            mode.eq_ignore_ascii_case("delete"),
-            "initial database could not leave staging WAL mode"
-        );
-        Ok::<(), anyhow::Error>(())
+        if !mode.eq_ignore_ascii_case("delete") {
+            return Err(Error::InitialWalMode);
+        }
+        Ok::<(), Error>(())
     }
     .await;
     pool.close().await;
     result?;
     temporary.as_file().sync_all()?;
-    let (file, staging) = temporary
-        .keep()
-        .context("retain completed initialization staging file")?;
+    let (file, staging) = temporary.keep()?;
     let source = blog_application::fs_safety::RelativePath::new(
-        staging.file_name().context("staging filename")?,
+        staging
+            .file_name()
+            .expect("invariant: tempfile has a filename"),
     )?;
     let destination = blog_application::fs_safety::RelativePath::new(
-        database.file_name().context("database filename")?,
+        database
+            .file_name()
+            .expect("invariant: database has a filename"),
     )?;
     blog_application::fs_safety::NoClobberPublish::publish(&directory, &source, &destination)
-        .context("publish initialized database without replacing an existing file; completed staging is retained if publication fails")?;
+        .map_err(|source| Error::PublishDatabase { staging, source })?;
     file.sync_all()?;
     Ok(())
 }
@@ -159,8 +143,8 @@ pub(crate) async fn initialize_new_database(
 pub(crate) async fn initialize(
     pool: &SqlitePool,
     username: &str,
-    password: &str,
-) -> anyhow::Result<()> {
+    password: &blog_application::admin_auth::Password,
+) -> Result<(), Error> {
     sqlx::raw_sql(include_str!(concat!(
         env!("OUT_DIR"),
         "/blog-current-schema.sql"
@@ -176,39 +160,38 @@ pub(crate) async fn initialize(
     validate_database(pool).await
 }
 
-pub(crate) async fn validate_database(pool: &SqlitePool) -> anyhow::Result<()> {
+pub(crate) async fn validate_database(pool: &SqlitePool) -> Result<(), Error> {
     schema::validate(pool).await?;
     let violations: Vec<(String, Option<i64>, String, i64)> =
         sqlx::query_as("PRAGMA foreign_key_check")
             .fetch_all(pool)
             .await?;
     if !violations.is_empty() {
-        bail!("database contains foreign-key violations");
+        return Err(Error::ForeignKeyViolations);
     }
     let duplicate_family: bool = sqlx::query_scalar(
         "SELECT EXISTS(SELECT 1 FROM family WHERE user_id IS NOT NULL GROUP BY user_id HAVING COUNT(*) > 1)",
     )
     .fetch_one(pool)
     .await?;
-    anyhow::ensure!(
-        !duplicate_family,
-        "an author must have at most one family record"
-    );
+    if duplicate_family {
+        return Err(Error::DuplicateFamily);
+    }
     let authors: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM user WHERE user_type=0 AND deleted=0 AND user_status=1",
     )
     .fetch_one(pool)
     .await?;
     if authors == 0 {
-        bail!("database has no active site author");
+        return Err(Error::MissingAuthor);
     }
     Ok(())
 }
 
 pub(crate) async fn validate_existing_database(
-    path: &PathBuf,
+    path: &Path,
     temporary_root: &Path,
-) -> anyhow::Result<()> {
+) -> Result<(), Error> {
     let snapshot = blog_application::sqlite::ValidationSnapshot::capture_in(path, temporary_root)?
         .into_pool_with_connection_limits(CONNECTION_LIMITS)
         .await?;
@@ -216,16 +199,17 @@ pub(crate) async fn validate_existing_database(
         validate_database(snapshot.pool()).await?;
         let store = SqliteAdministratorStore::new(snapshot.pool().clone());
         use blog_application::admin_core::AdministratorStore as _;
-        anyhow::ensure!(
-            store.administrator_count().await? > 0,
-            "explicit initialization is required"
-        );
+        if store.administrator_count().await? == 0 {
+            return Err(Error::NotInitialized);
+        }
         store.validate_all_administrators().await?;
         let integrity: Vec<String> = sqlx::query_scalar("PRAGMA integrity_check")
             .fetch_all(snapshot.pool())
             .await?;
-        anyhow::ensure!(integrity == ["ok"], "database integrity check failed");
-        Ok::<(), anyhow::Error>(())
+        if integrity != ["ok"] {
+            return Err(Error::IntegrityCheckFailed);
+        }
+        Ok::<(), Error>(())
     }
     .await;
     snapshot.close().await;

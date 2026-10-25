@@ -22,9 +22,7 @@ pub(super) async fn execute(
     context: &AdministratorManagementContext,
     mutation: AdministratorMutation,
 ) -> Result<(), Failure> {
-    context
-        .validate()
-        .map_err(|_| ManagementError::InvalidInput)?;
+    context.validate()?;
     // Serialize authorization, account checks, data and audit writes.
     // Read the clock AFTER waiting for the writer lock and password hashing.
     let mut transaction = store
@@ -55,11 +53,9 @@ pub(super) async fn execute(
             expected_password_hash,
             password_hash,
         } => {
-            crate::admin_auth::require_canonical_administrator_username(&username)
-                .map_err(|_| ManagementError::InvalidInput)?;
+            crate::admin_auth::require_canonical_administrator_username(&username)?;
             if let Some(hash) = &password_hash {
-                crate::admin_auth::require_current_password_hash(hash)
-                    .map_err(|_| ManagementError::InvalidInput)?;
+                crate::admin_auth::require_current_password_hash(hash)?;
             }
             let id = &context.identity.administrator_id;
             let changed = sqlx::query("UPDATE _common_administrators SET username=?, password_hash=COALESCE(?, password_hash), session_version=session_version+1, updated_at_micros=? WHERE administrator_id=? AND active=1 AND password_hash=?")

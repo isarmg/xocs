@@ -40,7 +40,8 @@ fn administrator_username_has_one_canonical_policy() {
 
 #[test]
 fn only_the_current_password_policy_verifies() {
-    let encoded = hash_password("correct horse battery staple").unwrap();
+    let password = Password::new("correct horse battery staple").unwrap();
+    let encoded = password.hash().unwrap();
     require_current_password_hash(&encoded).unwrap();
     assert!(verify_password("correct horse battery staple", &encoded));
     assert!(!verify_password("wrong-password", &encoded));
@@ -63,6 +64,58 @@ fn only_the_current_password_policy_verifies() {
     ));
     assert!(!verify_password("correct horse battery staple", &weak));
     assert!(require_current_password_hash("not-a-password-hash").is_err());
+}
+
+#[test]
+fn password_type_rejects_external_invalid_values_and_keeps_crypto_error_sources() {
+    use std::error::Error as _;
+
+    for invalid in [
+        "short".to_owned(),
+        "a".repeat(PASSWORD_MAX_BYTES + 1),
+        "password\nwith-control".into(),
+    ] {
+        assert!(matches!(
+            Password::new(invalid),
+            Err(Error::InvalidPassword)
+        ));
+    }
+    assert_eq!(Password::new("密码密码").unwrap().as_str(), "密码密码");
+    let random = Error::Random(getrandom::Error::UNSUPPORTED);
+    assert_eq!(
+        random.source().unwrap().downcast_ref::<getrandom::Error>(),
+        Some(&getrandom::Error::UNSUPPORTED)
+    );
+    let hashing = Error::PasswordHash(argon2::password_hash::Error::Crypto);
+    assert_eq!(
+        hashing
+            .source()
+            .unwrap()
+            .downcast_ref::<argon2::password_hash::Error>(),
+        Some(&argon2::password_hash::Error::Crypto)
+    );
+}
+
+#[test]
+fn authentication_parsers_preserve_their_original_errors() {
+    use std::error::Error as _;
+
+    let failure = require_current_password_hash("not-a-password-hash").unwrap_err();
+    assert!(matches!(failure, Error::PasswordHashParse(_)));
+    assert!(
+        failure
+            .source()
+            .unwrap()
+            .is::<argon2::password_hash::Error>()
+    );
+
+    let failure = derive_csrf_token(&format!("{}!", "A".repeat(42))).unwrap_err();
+    assert!(matches!(failure, Error::CsrfTokenDecode(_)));
+    assert!(failure.source().unwrap().is::<base64::DecodeError>());
+
+    let failure = require_single_security_header_value(CSRF_HEADER, &[&[0xff][..]]).unwrap_err();
+    assert!(matches!(failure, Error::SecurityHeaderEncoding { .. }));
+    assert!(failure.source().unwrap().is::<std::str::Utf8Error>());
 }
 
 #[test]
@@ -573,8 +626,9 @@ fn singleton_security_and_csrf_headers_fail_closed() {
     let non_utf8 = [&[0xff_u8][..]];
     assert!(matches!(
         require_single_security_header_value(ORIGIN_HEADER, &non_utf8),
-        Err(Error::InvalidSecurityHeaderValue {
-            name: ORIGIN_HEADER
+        Err(Error::SecurityHeaderEncoding {
+            name: ORIGIN_HEADER,
+            ..
         })
     ));
     assert!(matches!(

@@ -25,18 +25,6 @@ pub use crate::state_file::INSTANCE_LOCK_FILE;
 
 pub const SERVICE_IDENTITY_HEADER: &str = "x-service";
 
-/// Preserve a public machine error while crossing a product's anyhow boundary.
-/// Display intentionally excludes details and any internal diagnostic chain.
-#[derive(Debug)]
-pub struct CliError(pub ErrorEnvelope);
-
-impl std::fmt::Display for CliError {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(formatter, "{}: {}", self.0.code, self.0.message)
-    }
-}
-impl std::error::Error for CliError {}
-
 fn failure(code: &'static str, message: &'static str) -> ErrorEnvelope {
     ErrorEnvelope::with_code(
         ErrorCode::new(code).expect("static public error code"),
@@ -148,7 +136,7 @@ pub fn snapshot_error(error: &SnapshotError) -> ErrorEnvelope {
             "The validation source does not support the required native locking.",
             false,
         ),
-        SnapshotError::CaptureTaskFailed => (
+        SnapshotError::CaptureTaskFailed(_) => (
             "snapshot.capture_failed",
             "The validation capture task failed.",
             false,

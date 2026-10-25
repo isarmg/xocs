@@ -35,7 +35,6 @@ libc = { path = "../foundation/platform/system-abi",package = "blog-platform-sys
 tokio-util = {  features = ["rt"], path = "../foundation/runtime/scheduled-io",package = "blog-runtime-scheduled-io"}
 socket2 = {  path = "../foundation/platform/socket-options",package = "blog-platform-socket-options"}
 chrono = {  default-features = false, features = ["clock", "std"], path = "../foundation/format/date-time",package = "blog-format-date-time"}
-anyhow = {  path = "../foundation/diagnostics/error-context",package = "blog-diagnostics-error-context"}
 http = {  path = "../foundation/network/http-message",package = "blog-network-http-message"}
 
 [dev-dependencies]

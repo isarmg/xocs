@@ -157,6 +157,8 @@ fn unsafe_unknown_and_non_get_requests_are_rejected() {
 #[test]
 fn manifests_validate_bytes_order_and_canonical_json() {
     let (assets, manifest, digest) = fixture();
+    let verified = verify_manifest(&manifest, &digest).unwrap();
+    assert_eq!(verified.files()[0].path, "assets/app.js");
     verify_embedded(assets, &manifest, &digest).unwrap();
     assert!(verify_manifest(&format!("{manifest}\n"), &digest).is_err());
     assert!(verify_manifest(&manifest, &"0".repeat(64)).is_err());
@@ -168,6 +170,24 @@ fn manifests_validate_bytes_order_and_canonical_json() {
     parsed.files[0].sha256 = "0".repeat(64);
     let tampered = serde_json::to_string(&parsed).unwrap();
     assert!(verify_embedded(assets, &tampered, &sha256(tampered.as_bytes())).is_err());
+}
+
+#[test]
+fn external_metadata_and_filesystem_errors_keep_their_source() {
+    use std::error::Error as _;
+
+    let error = verify_manifest("{", &"0".repeat(64)).unwrap_err();
+    assert!(matches!(error, Error::Json(_)));
+    assert!(error.source().unwrap().is::<serde_json::Error>());
+
+    let root = tempfile::tempdir().unwrap();
+    let error = DirectoryAssets::new(root.path().join("missing")).unwrap_err();
+    assert!(matches!(error, Error::Descriptor(rustix::io::Errno::NOENT)));
+    assert!(error.source().unwrap().is::<rustix::io::Errno>());
+
+    let directory = DirectoryAssets::new(root.path()).unwrap();
+    let missing = directory.response("/missing.js", &Method::GET, &HeaderMap::new());
+    assert_eq!(missing.status(), StatusCode::NOT_FOUND);
 }
 
 #[test]

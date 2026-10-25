@@ -1,6 +1,25 @@
 use super::*;
 
 #[test]
+fn output_modes_are_parsed_at_the_configuration_boundary() -> Result<()> {
+    let directory = tempfile::tempdir()?;
+    let path = directory.path().join("rust-web.toml");
+    for (field, unknown) in [("kind", "server"), ("runtime_root", "external")] {
+        fs::write(&path, format!("[web]\n{field}={unknown:?}\n"))?;
+        let error = Config::read(directory.path()).unwrap_err();
+        assert!(error.downcast_ref::<toml::de::Error>().is_some());
+    }
+    fs::write(
+        path,
+        "[web]\nkind='embedded'\nruntime_root='product'\n[web.entries]\n'entry.js'='src/main.js'\n",
+    )?;
+    let config = Config::read(directory.path())?;
+    assert_eq!(config.web.kind, OutputKind::Embedded);
+    assert_eq!(config.web.runtime_root, RuntimeRoot::Product);
+    Ok(())
+}
+
+#[test]
 fn css_compiler_keeps_values_while_minifying_and_rejects_invalid_colors() {
     use style_compiler::style_optimizer::{
         printer::PrinterOptions,
@@ -65,6 +84,23 @@ fn public_fixture() -> Result<(tempfile::TempDir, Config)> {
     config.web.entry = "src/main.js".into();
     config.web.licenses.clear();
     Ok((dir, config))
+}
+
+#[test]
+fn configured_copy_lookup_preserves_missing_file_errors() -> Result<()> {
+    let (directory, mut config) = public_fixture()?;
+    config
+        .web
+        .copies
+        .insert("assets/copy.txt".into(), "src/missing.txt".into());
+    let source = directory.path().join("pkg/app_bg.wasm");
+    let mut linker = Linker::new(directory.path(), &directory.path().join("pkg"), config);
+    let error = linker.asset(&source).unwrap_err();
+    assert_eq!(
+        error.downcast_ref::<std::io::Error>().unwrap().kind(),
+        std::io::ErrorKind::NotFound
+    );
+    Ok(())
 }
 
 fn public_manifest(web: &Path, config: &mut Config) -> Result<()> {
@@ -433,7 +469,7 @@ fn public_assets_remain_budgeted_and_cannot_shadow_provenance() -> Result<()> {
 fn embedded_public_urls_are_relative_to_the_css_and_module_outputs() -> Result<()> {
     let (dir, mut config) = public_fixture()?;
     let web = dir.path();
-    config.web.kind = "embedded".into();
+    config.web.kind = OutputKind::Embedded;
     config.web.relative_urls = true;
     config.web.css_output = "dist/platform.css".into();
     config
@@ -693,9 +729,9 @@ fn embedded_entries_keep_templates_fixed_fonts_and_same_origin_svg() -> Result<(
     )?;
     fs::write(pkg.join("app_bg.wasm"), b"\0asm\x01\0\0\0")?;
     let mut config = Config::default();
-    config.web.kind = "embedded".into();
+    config.web.kind = OutputKind::Embedded;
     config.web.relative_urls = true;
-    config.web.runtime_root = "product".into();
+    config.web.runtime_root = RuntimeRoot::Product;
     config.web.licenses.clear();
     config.web.css_output = "dist/platform.css".into();
     config

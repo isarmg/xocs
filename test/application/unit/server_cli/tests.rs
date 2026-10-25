@@ -40,6 +40,27 @@ fn filesystem_failures_keep_machine_semantics_and_hide_diagnostics() {
     assert!(!snapshot_error(&SnapshotError::InvalidDatabase).retryable);
 }
 
+#[tokio::test]
+async fn snapshot_worker_failure_keeps_source_and_hides_panic_details_on_the_wire() {
+    use std::error::Error as _;
+
+    let source = tokio::task::spawn_blocking(|| panic!("SECRET capture panic"))
+        .await
+        .unwrap_err();
+    let failure = SnapshotError::CaptureTaskFailed(source);
+    assert!(
+        failure
+            .source()
+            .unwrap()
+            .downcast_ref::<tokio::task::JoinError>()
+            .unwrap()
+            .is_panic()
+    );
+    let envelope = snapshot_error(&failure);
+    assert_eq!(envelope.code.as_str(), "snapshot.capture_failed");
+    assert!(!serde_json::to_string(&envelope).unwrap().contains("SECRET"));
+}
+
 #[test]
 fn machine_errors_emit_one_contract_record_and_no_human_output() {
     let error = failure("contract_violation", "Configuration is invalid.");

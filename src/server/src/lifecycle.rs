@@ -30,7 +30,7 @@ impl LifecycleParticipant for Lifecycle {
         self.pool.close().await;
         self.lock
             .lock()
-            .map_err(|_| "state lock poisoned".to_string())?
+            .expect("instance state lock poisoned")
             .take();
         Ok(())
     }

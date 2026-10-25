@@ -1,5 +1,4 @@
 //! Bounded subprocess output, deadlines and ownership of a Linux process group.
-use anyhow::{Context, Result, bail, ensure};
 use rustix::{
     fs::OFlags,
     process::{Pid, Signal, WaitId, WaitIdOptions, kill_process_group, waitid},
@@ -19,6 +18,63 @@ use std::{
     thread::{self, JoinHandle},
     time::{Duration, Instant},
 };
+
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum ProcessError {
+    #[error("{operation}: {source}")]
+    Io {
+        operation: &'static str,
+        #[source]
+        source: io::Error,
+    },
+    #[error("{operation}: {source}")]
+    System {
+        operation: &'static str,
+        #[source]
+        source: rustix::io::Errno,
+    },
+    #[error("Allocate bounded command output: {0}")]
+    Allocation(#[from] std::collections::TryReserveError),
+    #[error("command cancelled")]
+    Cancelled,
+    #[error("Command {0} exceeded its byte budget")]
+    ByteBudget(&'static str),
+    #[error("Command output destination stopped accepting bytes")]
+    OutputClosed,
+    #[error("Command exceeded its time budget")]
+    Timeout,
+    #[error("Command failed ({0})")]
+    Exit(ExitStatus),
+    #[error("Command output reader stopped")]
+    ReaderStopped,
+    #[error("Command output reader panicked")]
+    ReaderPanic,
+    #[error("{context}: {source}{diagnostics}")]
+    Command {
+        context: String,
+        #[source]
+        source: Box<Self>,
+        diagnostics: String,
+    },
+    #[error("{source}; command cleanup also failed: {cleanup}")]
+    Cleanup {
+        #[source]
+        source: Box<Self>,
+        cleanup: Box<Self>,
+    },
+}
+
+type Result<T> = std::result::Result<T, ProcessError>;
+
+fn combine(result: Result<()>, cleanup: Result<()>) -> Result<()> {
+    match (result, cleanup) {
+        (Ok(()), result) | (result, Ok(())) => result,
+        (Err(source), Err(cleanup)) => Err(ProcessError::Cleanup {
+            source: Box::new(source),
+            cleanup: Box::new(cleanup),
+        }),
+    }
+}
 
 const CHUNK: usize = 8192;
 const DIAGNOSTIC: usize = 16 * 1024;
@@ -136,11 +192,21 @@ struct Output {
 impl Output {
     fn live_destination(stream: Stream) -> Result<Option<File>> {
         let (original, descriptor) = match stream {
-            Stream::Stdout => (rustix::io::dup(io::stdout().as_fd())?, 1),
-            Stream::Stderr => (rustix::io::dup(io::stderr().as_fd())?, 2),
+            Stream::Stdout => (rustix::io::dup(io::stdout().as_fd()), 1),
+            Stream::Stderr => (rustix::io::dup(io::stderr().as_fd()), 2),
         };
-        let original = File::from(original);
-        if original.metadata()?.is_file() {
+        let original = File::from(original.map_err(|source| ProcessError::System {
+            operation: "Duplicate command output",
+            source,
+        })?);
+        if original
+            .metadata()
+            .map_err(|source| ProcessError::Io {
+                operation: "Inspect command output",
+                source,
+            })?
+            .is_file()
+        {
             // Share the caller's file offset. An independent append descriptor
             // leaves its offset behind, so later parent writes overwrite logs.
             return Ok(Some(original));
@@ -148,16 +214,29 @@ impl Output {
         // Pipes/TTY need an independent file description: setting O_NONBLOCK
         // on a dup would also change the caller's stdout/stderr flags. Sockets
         // and environments without procfs keep bounded capture and diagnostics.
-        Ok(OpenOptions::new()
+        match OpenOptions::new()
             .write(true)
             .custom_flags(OFlags::NONBLOCK.bits() as i32)
             .open(format!("/proc/self/fd/{descriptor}"))
-            .ok())
+        {
+            Ok(file) => Ok(Some(file)),
+            // procfs may be unavailable; sockets cannot be reopened this way.
+            Err(source)
+                if source.kind() == io::ErrorKind::NotFound
+                    || source.raw_os_error() == Some(rustix::io::Errno::NXIO.raw_os_error()) =>
+            {
+                Ok(None)
+            }
+            Err(source) => Err(ProcessError::Io {
+                operation: "Open command output",
+                source,
+            }),
+        }
     }
 
     fn new(maximum: usize, live: bool, stream: Stream) -> Result<Self> {
         let live = if live {
-            Self::live_destination(stream).context("Open command output")?
+            Self::live_destination(stream)?
         } else {
             None
         };
@@ -183,16 +262,12 @@ impl Output {
                 .saturating_mul(2)
                 .max(needed)
                 .min(self.maximum);
-            self.bytes
-                .try_reserve_exact(capacity - self.bytes.len())
-                .context("Allocate bounded command output")?;
+            self.bytes.try_reserve_exact(capacity - self.bytes.len())?;
         }
         self.bytes.extend_from_slice(&bytes[..count]);
-        ensure!(
-            count == bytes.len(),
-            "Command {} exceeded its byte budget",
-            stream.name()
-        );
+        if count != bytes.len() {
+            return Err(ProcessError::ByteBudget(stream.name()));
+        }
         Ok(())
     }
 
@@ -201,14 +276,19 @@ impl Output {
             && self.forwarded < self.bytes.len()
         {
             match file.write(&self.bytes[self.forwarded..]) {
-                Ok(0) => bail!("Command output destination stopped accepting bytes"),
+                Ok(0) => return Err(ProcessError::OutputClosed),
                 Ok(count) => self.forwarded += count,
                 Err(error)
                     if matches!(
                         error.kind(),
                         io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted
                     ) => {}
-                Err(error) => return Err(error).context("Forward command output"),
+                Err(source) => {
+                    return Err(ProcessError::Io {
+                        operation: "Forward command output",
+                        source,
+                    });
+                }
             }
         }
         Ok(())
@@ -249,7 +329,10 @@ impl Running {
             .stderr(Stdio::piped())
             .process_group(0)
             .spawn()
-            .context("Start command")?;
+            .map_err(|source| ProcessError::Io {
+                operation: "Start command",
+                source,
+            })?;
         let group = Pid::from_child(&child);
         let (sender, receiver) = mpsc::sync_channel(4);
         let mut running = Self {
@@ -260,18 +343,34 @@ impl Running {
             receiver: Some(receiver),
             readers: Vec::new(),
         };
-        let stdout = running.child.stdout.take().context("Child stdout")?;
+        let stdout = running
+            .child
+            .stdout
+            .take()
+            .expect("invariant: child stdout is piped");
         let stdout_sender = sender.clone();
         running.readers.push(
             thread::Builder::new()
                 .name("command-stdout".into())
-                .spawn(move || reader(stdout, Stream::Stdout, stdout_sender))?,
+                .spawn(move || reader(stdout, Stream::Stdout, stdout_sender))
+                .map_err(|source| ProcessError::Io {
+                    operation: "Start stdout reader",
+                    source,
+                })?,
         );
-        let stderr = running.child.stderr.take().context("Child stderr")?;
+        let stderr = running
+            .child
+            .stderr
+            .take()
+            .expect("invariant: child stderr is piped");
         running.readers.push(
             thread::Builder::new()
                 .name("command-stderr".into())
-                .spawn(move || reader(stderr, Stream::Stderr, sender))?,
+                .spawn(move || reader(stderr, Stream::Stderr, sender))
+                .map_err(|source| ProcessError::Io {
+                    operation: "Start stderr reader",
+                    source,
+                })?,
         );
         Ok(running)
     }
@@ -282,15 +381,25 @@ impl Running {
             // ownership of this group unambiguous until descendants are killed.
             self.stopped = true;
             let killed = kill_process_group(self.group, Signal::KILL);
-            if killed.is_err() {
-                let _ = self.child.kill();
-            }
-            self.status = Some(self.child.wait().context("Wait for command")?);
-            if let Err(error) = killed
-                && error != rustix::io::Errno::SRCH
-            {
-                return Err(error).context("Stop command process group");
-            }
+            let fallback = match killed {
+                Ok(()) | Err(rustix::io::Errno::SRCH) => Ok(()),
+                Err(_) => self.child.kill().map_err(|source| ProcessError::Io {
+                    operation: "Stop command leader",
+                    source,
+                }),
+            };
+            self.status = Some(self.child.wait().map_err(|source| ProcessError::Io {
+                operation: "Wait for command",
+                source,
+            })?);
+            let group = match killed {
+                Ok(()) | Err(rustix::io::Errno::SRCH) => Ok(()),
+                Err(source) => Err(ProcessError::System {
+                    operation: "Stop command process group",
+                    source,
+                }),
+            };
+            combine(group, fallback)?;
         }
         Ok(())
     }
@@ -302,10 +411,12 @@ impl Running {
         stderr: &mut Output,
     ) -> Result<()> {
         loop {
-            ensure!(!cancelled(), "Command cancelled");
+            if cancelled() {
+                return Err(ProcessError::Cancelled);
+            }
             let remaining = deadline
                 .checked_duration_since(Instant::now())
-                .context("Command exceeded its time budget")?;
+                .ok_or(ProcessError::Timeout)?;
             if self.status.is_none() {
                 match waitid(
                     WaitId::Pid(self.group),
@@ -314,7 +425,12 @@ impl Running {
                     Ok(Some(_)) => self.stop()?,
                     Ok(None) => {}
                     Err(rustix::io::Errno::INTR) => continue,
-                    Err(error) => return Err(error).context("Observe command exit"),
+                    Err(source) => {
+                        return Err(ProcessError::System {
+                            operation: "Observe command exit",
+                            source,
+                        });
+                    }
                 }
             }
             stdout.forward()?;
@@ -323,13 +439,16 @@ impl Running {
                 && stdout.complete()
                 && stderr.complete()
             {
-                ensure!(status.success(), "Command failed ({status})");
-                return Ok(());
+                return if status.success() {
+                    Ok(())
+                } else {
+                    Err(ProcessError::Exit(status))
+                };
             }
             match self
                 .receiver
                 .as_ref()
-                .context("Command output receiver")?
+                .expect("invariant: output receiver exists until cleanup")
                 .recv_timeout(remaining.min(POLL))
             {
                 Ok(Event::Bytes(stream, bytes)) => match stream {
@@ -338,15 +457,20 @@ impl Running {
                 },
                 Ok(Event::Closed(Stream::Stdout)) => stdout.closed = true,
                 Ok(Event::Closed(Stream::Stderr)) => stderr.closed = true,
-                Ok(Event::Failed(stream, error)) => {
-                    return Err(error).with_context(|| format!("Read command {}", stream.name()));
+                Ok(Event::Failed(stream, source)) => {
+                    return Err(ProcessError::Io {
+                        operation: match stream {
+                            Stream::Stdout => "Read command stdout",
+                            Stream::Stderr => "Read command stderr",
+                        },
+                        source,
+                    });
                 }
                 Err(RecvTimeoutError::Timeout) => {}
                 Err(RecvTimeoutError::Disconnected) => {
-                    ensure!(
-                        stdout.closed && stderr.closed,
-                        "Command output reader stopped"
-                    );
+                    if !stdout.closed || !stderr.closed {
+                        return Err(ProcessError::ReaderStopped);
+                    }
                     thread::sleep(remaining.min(POLL));
                 }
             }
@@ -361,15 +485,22 @@ impl Running {
         for reader in self.readers.drain(..) {
             reader_failed |= reader.join().is_err();
         }
-        stopped?;
-        ensure!(!reader_failed, "Command output reader panicked");
-        Ok(())
+        combine(
+            stopped,
+            if reader_failed {
+                Err(ProcessError::ReaderPanic)
+            } else {
+                Ok(())
+            },
+        )
     }
 }
 
 impl Drop for Running {
     fn drop(&mut self) {
-        let _ = self.cleanup();
+        if let Err(error) = self.cleanup() {
+            eprintln!("Command cleanup failed: {error}");
+        }
     }
 }
 
@@ -377,21 +508,27 @@ impl Drop for Running {
 /// policy budgets plus fixed reader chunks and a four-chunk queue. Every exit path
 /// kills the owned process group before reaping its leader and joining readers.
 pub(crate) fn run(command: &mut Command, policy: Policy, context: &str) -> Result<Vec<u8>> {
-    ensure!(!cancelled(), "{context}: command cancelled");
-    let deadline = Instant::now()
-        .checked_add(policy.timeout)
-        .context("Invalid command time budget")?;
+    if cancelled() {
+        return Err(ProcessError::Cancelled);
+    }
+    let deadline = Instant::now() + policy.timeout;
     let mut stdout = Output::new(policy.stdout, policy.live_stdout, Stream::Stdout)?;
     let mut stderr = Output::new(policy.stderr, policy.live_stderr, Stream::Stderr)?;
-    let mut running = Running::spawn(command).with_context(|| context.to_owned())?;
+    let mut running = Running::spawn(command).map_err(|source| ProcessError::Command {
+        context: context.to_owned(),
+        source: Box::new(source),
+        diagnostics: String::new(),
+    })?;
     let result = running.collect(deadline, &mut stdout, &mut stderr);
     let cleanup = running.cleanup();
-    result.and(cleanup).with_context(|| {
-        format!(
-            "{context}{}{}",
+    combine(result, cleanup).map_err(|source| ProcessError::Command {
+        context: context.to_owned(),
+        source: Box::new(source),
+        diagnostics: format!(
+            "{}{}",
             stderr.diagnostic(Stream::Stderr),
             stdout.diagnostic(Stream::Stdout)
-        )
+        ),
     })?;
     Ok(stdout.bytes)
 }

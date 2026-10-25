@@ -1,5 +1,5 @@
 //! Product mutations and uploads: serialized work, cancellation and conflict feedback.
-use super::{ApiError, RequestOptions, enc, invalid, request, t};
+use super::{ApiError, LocalErrorCode, RequestOptions, enc, invalid, request, t};
 use blog_interface::prelude::*;
 use blog_interface::thread_bound::SendWrapper;
 use serde::de::DeserializeOwned;
@@ -95,7 +95,7 @@ impl Action {
                 Ok(v) => done(v),
                 Err(mut e) => {
                     if e.status == 409 && path.starts_with("/api/v1/content/resources/") {
-                        e.code = "display_error".into();
+                        e.code = LocalErrorCode::DisplayError.into();
                         e.message = t(
                             "文件仍被引用或记录已变化。请刷新列表，移除引用后再重试。",
                             "This file is referenced or its record has changed. Refresh the list and remove its references before retrying.",
@@ -104,7 +104,7 @@ impl Action {
                         && method == "PUT"
                         && path.starts_with("/api/v1/content/labels/")
                     {
-                        e.code = "display_error".into();
+                        e.code = LocalErrorCode::DisplayError.into();
                         e.message = t(
                             "标签仍被文章使用，不能更改分类。请先修改文章的分类和标签。",
                             "This tag is still used by articles. Update their categories and tags before moving this tag.",
@@ -170,7 +170,7 @@ impl Action {
                         "Choose a PNG, JPEG, GIF, or WebP image up to 10 MB",
                     )
                 },
-                code: "display_error".into(),
+                code: LocalErrorCode::DisplayError.into(),
                 ..invalid()
             }));
             return;

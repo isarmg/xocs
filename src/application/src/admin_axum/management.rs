@@ -103,18 +103,24 @@ fn management_error<E: std::error::Error + Send + Sync + 'static>(
         ManagementError::Unsupported => (StatusCode::NOT_FOUND, "admin.unsupported", false),
         ManagementError::Unauthorized => (StatusCode::UNAUTHORIZED, "auth.session_required", false),
         ManagementError::Conflict => (StatusCode::CONFLICT, "admin.conflict", false),
-        ManagementError::InvalidInput => return invalid(id),
+        ManagementError::InvalidInput
+        | ManagementError::Policy(_)
+        | ManagementError::Authentication(_)
+        | ManagementError::PasswordWork(PasswordWorkError::Invalid(_)) => return invalid(id),
         ManagementError::InvalidCurrentPassword => (
             StatusCode::FORBIDDEN,
             "admin.current_password_invalid",
             false,
         ),
-        ManagementError::Busy => (
+        ManagementError::PasswordWork(
+            PasswordWorkError::Capacity(_) | PasswordWorkError::Worker(_),
+        ) => (
             StatusCode::SERVICE_UNAVAILABLE,
             "auth.capacity_unavailable",
             true,
         ),
-        ManagementError::Store(_) => (
+        ManagementError::Store(_)
+        | ManagementError::PasswordWork(PasswordWorkError::Hashing(_)) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             "platform.internal",
             false,

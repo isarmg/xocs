@@ -1,6 +1,7 @@
 use super::{AdminPageQuery, PageResult};
 use crate::{ApiResult, AppError, AppState, absent, db_error, invalid};
-use axum::{Json, extract::State, http::StatusCode};
+use axum::{Json, extract::State};
+use blog_application::error::HttpStatus;
 use blog_application::server_cli::{ContractPath as Path, ContractQuery as Query};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -103,7 +104,7 @@ async fn create_anonymous_comment(
         let enabled: Option<i64> = sqlx::query_scalar("SELECT comment_status FROM article WHERE id=? AND deleted=0 AND view_status=1 AND password IS NULL")
             .bind(source).fetch_optional(&mut *transaction).await.map_err(db_error)?;
         if enabled != Some(1) {
-            return Err(AppError(StatusCode::FORBIDDEN, "文章不允许评论"));
+            return Err(AppError::Public(HttpStatus::Forbidden, "文章不允许评论"));
         }
     }
     let previous: Option<(Vec<u8>, Option<i64>)> =
@@ -114,9 +115,15 @@ async fn create_anonymous_comment(
             .map_err(db_error)?;
     if let Some((previous_hash, comment_id)) = previous {
         if previous_hash != request_hash {
-            return Err(AppError(StatusCode::CONFLICT, "评论请求标识已用于不同内容"));
+            return Err(AppError::Public(
+                HttpStatus::Conflict,
+                "评论请求标识已用于不同内容",
+            ));
         }
-        let id = comment_id.ok_or(AppError(StatusCode::CONFLICT, "原评论已删除，不会重复发表"))?;
+        let id = comment_id.ok_or(AppError::Public(
+            HttpStatus::Conflict,
+            "原评论已删除，不会重复发表",
+        ))?;
         let comment = sqlx::query_as::<_, Comment>(sqlx::AssertSqlSafe(format!(
             "{COMMENT_SQL} WHERE c.id=?"
         )))

@@ -19,7 +19,10 @@ pub(crate) use navigation::{
     search_signal,
 };
 pub(crate) use pagination::{BrowsePager, Pager};
-pub(crate) use request::{ApiError, Data, RequestOptions, invalid, load, load_typed, request};
+pub(crate) use request::{
+    ApiError, ApiErrorCode, Data, LocalErrorCode, RequestOptions, invalid, load, load_typed,
+    request,
+};
 use serde_json::Value;
 
 pub(crate) fn tr(zh: &str, en: &str, args: &[String]) -> String {

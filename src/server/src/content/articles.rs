@@ -1,11 +1,8 @@
 use super::PageResult;
 use crate::{ApiResult, AppError, AppState, absent, db_error, invalid};
-use axum::{
-    Json,
-    extract::State,
-    http::{HeaderMap, StatusCode},
-};
+use axum::{Json, extract::State, http::HeaderMap};
 use blog_application::server_cli::{ContractPath as Path, ContractQuery as Query};
+use blog_application::{admin_auth::Password, error::HttpStatus};
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 
@@ -439,7 +436,8 @@ async fn insert_article_news(
     use sha2::{Digest, Sha256};
     // Bind the key to its article and normalized original draft, including time.
     let request_hash = Sha256::digest(
-        serde_json::to_vec(&(id, content, &time)).map_err(|_| invalid("进展内容无效"))?,
+        serde_json::to_vec(&(id, content, &time))
+            .expect("invariant: news strings and identifiers serialize to JSON"),
     )
     .to_vec();
     let mut transaction = state
@@ -466,9 +464,15 @@ async fn insert_article_news(
     };
     let news_id = if let Some((hash, news_id)) = previous {
         if hash != request_hash {
-            return Err(AppError(StatusCode::CONFLICT, "进展请求标识已用于不同内容"));
+            return Err(AppError::Public(
+                HttpStatus::Conflict,
+                "进展请求标识已用于不同内容",
+            ));
         }
-        news_id.ok_or(AppError(StatusCode::CONFLICT, "原进展已删除，不会重复发表"))?
+        news_id.ok_or(AppError::Public(
+            HttpStatus::Conflict,
+            "原进展已删除，不会重复发表",
+        ))?
     } else {
         let news_id = sqlx::query("INSERT INTO wei_yan(user_id,content,type,source,is_public,create_time) VALUES(?,?,'news',?,1,COALESCE(?,CURRENT_TIMESTAMP))")
             .bind(author).bind(content).bind(id).bind(time).execute(&mut *transaction).await.map_err(db_error)?.last_insert_rowid();
@@ -534,8 +538,11 @@ pub(super) async fn unlock_article(
         state.password_slots.clone().acquire_owned(),
     )
     .await
-    .map_err(|_| AppError(StatusCode::SERVICE_UNAVAILABLE, "密码验证暂时繁忙"))?
-    .map_err(|_| AppError(StatusCode::SERVICE_UNAVAILABLE, "密码验证暂时不可用"))?;
+    .map_err(|source| AppError::Busy {
+        message: "密码验证暂时繁忙",
+        source,
+    })?
+    .expect("invariant: password semaphore is never closed");
     let password = input.password;
     // The permit remains held by the worker even if the HTTP request is cancelled.
     let (allowed, stored) = tokio::task::spawn_blocking(move || {
@@ -546,9 +553,12 @@ pub(super) async fn unlock_article(
         )
     })
     .await
-    .map_err(|_| AppError(StatusCode::INTERNAL_SERVER_ERROR, "密码验证失败"))?;
+    .map_err(|source| AppError::Task {
+        message: "密码验证失败",
+        source,
+    })?;
     if !allowed {
-        return Err(AppError(StatusCode::FORBIDDEN, "访问密码错误"));
+        return Err(AppError::Public(HttpStatus::Forbidden, "访问密码错误"));
     }
     // Recheck access after waiting/hashing, and read the body under the same
     // writer boundary so a concurrent password change cannot expose new content.
@@ -566,8 +576,8 @@ pub(super) async fn unlock_article(
     .await
     .map_err(db_error)?;
     if changed.rows_affected() != 1 {
-        return Err(AppError(
-            StatusCode::FORBIDDEN,
+        return Err(AppError::Public(
+            HttpStatus::Forbidden,
             "文章访问权限已变更，请重试",
         ));
     }
@@ -612,10 +622,6 @@ fn validate_article(input: &ArticleInput, has_existing_password: bool) -> Result
     }
     if input.view_status && input.password.is_some() {
         return Err(invalid("公开文章不可设置访问密码"));
-    }
-    if let Some(password) = &input.password {
-        blog_application::admin_auth::validate_password(password)
-            .map_err(|_| invalid("文章密码至少需要 12 字节"))?;
     }
     Ok(())
 }
@@ -662,9 +668,17 @@ pub(super) async fn create_article(
         })
         .transpose()?;
     use sha2::{Digest, Sha256};
-    let request_hash =
-        Sha256::digest(serde_json::to_vec(&input).map_err(|_| invalid("文章内容无效"))?).to_vec();
-    let password = hash_article_password(&state, input.password.as_deref()).await?;
+    let request_hash = Sha256::digest(
+        serde_json::to_vec(&input).expect("invariant: article strings and flags serialize to JSON"),
+    )
+    .to_vec();
+    let password = input
+        .password
+        .as_deref()
+        .map(Password::new)
+        .transpose()
+        .map_err(AppError::InvalidPassword)?;
+    let password = hash_article_password(&state, password).await?;
     let mut transaction = state
         .pool
         .begin_with("BEGIN IMMEDIATE")
@@ -675,7 +689,10 @@ pub(super) async fn create_article(
             .bind(key).fetch_optional(&mut *transaction).await.map_err(db_error)?;
         if let Some((hash, id, deleted)) = receipt {
             if hash != request_hash || deleted != 0 {
-                return Err(AppError(StatusCode::CONFLICT, "文章请求已使用或文章已删除"));
+                return Err(AppError::Public(
+                    HttpStatus::Conflict,
+                    "文章请求已使用或文章已删除",
+                ));
             }
             transaction.commit().await.map_err(db_error)?;
             return Ok(Json(load_article(&state.pool, id, true).await?));
@@ -705,28 +722,32 @@ pub(super) async fn create_article(
 
 async fn hash_article_password(
     state: &AppState,
-    value: Option<&str>,
+    password: Option<Password>,
 ) -> Result<Option<String>, AppError> {
-    let Some(value) = value else {
+    let Some(password) = password else {
         return Ok(None);
     };
-    blog_application::admin_auth::validate_password(value).map_err(|_| invalid("文章密码无效"))?;
     let permit = tokio::time::timeout(
         std::time::Duration::from_secs(2),
         state.password_slots.clone().acquire_owned(),
     )
     .await
-    .map_err(|_| AppError(StatusCode::SERVICE_UNAVAILABLE, "密码计算暂时繁忙"))?
-    .map_err(|_| AppError(StatusCode::SERVICE_UNAVAILABLE, "密码计算暂时不可用"))?;
-    let password = value.to_owned();
+    .map_err(|source| AppError::Busy {
+        message: "密码计算暂时繁忙",
+        source,
+    })?
+    .expect("invariant: password semaphore is never closed");
     tokio::task::spawn_blocking(move || {
         let _permit = permit;
-        blog_application::admin_auth::hash_password(&password)
+        password.hash()
     })
     .await
-    .map_err(|_| AppError(StatusCode::INTERNAL_SERVER_ERROR, "密码计算失败"))?
+    .map_err(|source| AppError::Task {
+        message: "密码计算失败",
+        source,
+    })?
     .map(Some)
-    .map_err(|_| invalid("文章密码无效"))
+    .map_err(AppError::Password)
 }
 
 pub(super) async fn update_article(
@@ -734,7 +755,13 @@ pub(super) async fn update_article(
     Path(id): Path<i64>,
     crate::ContractJson(input): crate::ContractJson<ArticleInput>,
 ) -> ApiResult<Article> {
-    let password = hash_article_password(&state, input.password.as_deref()).await?;
+    let password = input
+        .password
+        .as_deref()
+        .map(Password::new)
+        .transpose()
+        .map_err(AppError::InvalidPassword)?;
+    let password = hash_article_password(&state, password).await?;
     let mut transaction = state
         .pool
         .begin_with("BEGIN IMMEDIATE")

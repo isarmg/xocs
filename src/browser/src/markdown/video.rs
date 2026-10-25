@@ -30,11 +30,12 @@ fn address(source: &str) -> Option<Address> {
         .iter()
         .flat_map(|key| {
             let values = parameters.get_all(key);
-            (0..values.length()).filter_map(move |index| {
-                values
+            (0..values.length()).map(move |index| {
+                let value = values
                     .get(index)
                     .as_string()
-                    .map(|value| ((*key).into(), value))
+                    .expect("invariant: URLSearchParams contains strings");
+                ((*key).into(), value)
             })
         })
         .collect();
@@ -51,7 +52,8 @@ fn address(source: &str) -> Option<Address> {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn address(source: &str) -> Option<Address> {
-    let base = url_encoding::address::Url::parse("https://article.invalid/").ok()?;
+    let base = url_encoding::address::Url::parse("https://article.invalid/")
+        .expect("invariant: article base URL is valid");
     let url = base.join(source).ok()?;
     Some(Address {
         href: url.as_str().into(),

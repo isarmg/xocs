@@ -366,7 +366,9 @@ pub fn snapshot(root: &Path) -> Result<Value> {
             Value::Object(record)
         })
         .collect::<Vec<_>>();
-    let browser_inputs = rust.remove(layout::BROWSER).unwrap_or_default();
+    let browser_inputs = rust
+        .remove(layout::BROWSER)
+        .expect("invariant: cargo_sources records the browser root");
     let shared_inputs = rust.get(layout::INTERFACE).cloned().unwrap_or_default();
     Ok(
         json!({"browser_inputs":browser_inputs,"shared_inputs":shared_inputs,"patched_inputs":rust,"asset_inputs":assets,

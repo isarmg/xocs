@@ -19,7 +19,7 @@ fn selected_root_controls_default_media_and_private_namespace_validation() {
         data_dir: root.join("state"),
         ..Default::default()
     };
-    assert_eq!(settings.media_path().unwrap(), root.join("media"));
+    assert_eq!(settings.media_path(), root.join("media"));
     settings.validate().unwrap();
     for namespace in [
         "bin",
@@ -75,7 +75,7 @@ fn current_installation_plan_retains_runtime_defaults_and_database_location() {
         target: "x86_64-unknown-linux-gnu".into(),
         state_contract_sha256: "0".repeat(64),
     };
-    let schema = crate::schema::current_identity().unwrap();
+    let schema = crate::schema::current_identity();
     installation_definition::emit(
         destination.path(),
         &identity,
@@ -111,15 +111,9 @@ fn current_installation_plan_retains_runtime_defaults_and_database_location() {
         .unwrap()
         .replace("$ROOT", root.to_str().unwrap());
     let suffix = material["databases"][0]["path"]["suffix"].as_str().unwrap();
-    assert_eq!(
-        settings.database_path().unwrap(),
-        Path::new(&directory).join(suffix)
-    );
-    assert_eq!(
-        settings.database_path().unwrap(),
-        root.join("state/site.sqlite")
-    );
-    assert_eq!(settings.media_path().unwrap(), root.join("media"));
+    assert_eq!(settings.database_path(), Path::new(&directory).join(suffix));
+    assert_eq!(settings.database_path(), root.join("state/site.sqlite"));
+    assert_eq!(settings.media_path(), root.join("media"));
     assert_eq!(
         serde_json::to_value(Settings::default()).unwrap(),
         serde_json::json!({

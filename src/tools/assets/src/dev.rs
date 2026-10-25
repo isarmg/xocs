@@ -10,7 +10,7 @@ use axum::{
     http::{Method, StatusCode, header},
     response::Response,
 };
-use serde_json::{Value, json};
+use serde_json::json;
 use std::{
     net::SocketAddr,
     path::{Path, PathBuf},
@@ -29,7 +29,14 @@ struct App {
     base: String,
     proxies: Vec<(String, String)>,
     client: proxy::Client,
-    status: Arc<RwLock<Value>>,
+    status: Arc<RwLock<BuildStatus>>,
+}
+
+#[derive(Default, serde::Serialize)]
+struct BuildStatus {
+    building: bool,
+    generation: u64,
+    last_error: Option<String>,
 }
 
 fn content_type(path: &Path) -> &'static str {
@@ -266,9 +273,9 @@ async fn source_signature(root: PathBuf) -> Result<String, String> {
     .unwrap_or_else(|error| Err(error.to_string()))
 }
 
-async fn rebuild(options: Options, status: Arc<RwLock<Value>>) -> BuildOutcome {
+async fn rebuild(options: Options, status: Arc<RwLock<BuildStatus>>) -> BuildOutcome {
     {
-        status.write().await["building"] = json!(true);
+        status.write().await.building = true;
     }
     let result = tokio::task::spawn_blocking(move || crate::build(&options)).await;
     let outcome = if matches!(&result, Ok(Err(error)) if error.is::<crate::BuildBusy>()) {
@@ -277,16 +284,16 @@ async fn rebuild(options: Options, status: Arc<RwLock<Value>>) -> BuildOutcome {
         BuildOutcome::Settled
     };
     let mut status = status.write().await;
-    status["building"] = json!(false);
+    status.building = false;
     match result {
         Ok(Ok(_)) => {
-            status["last_error"] = Value::Null;
-            status["generation"] = json!(status["generation"].as_u64().unwrap_or(0) + 1);
+            status.last_error = None;
+            status.generation += 1;
         }
         error => {
             let message = format!("{error:?}");
             eprintln!("Build failed; preserving last successful assets: {message}");
-            status["last_error"] = json!(message);
+            status.last_error = Some(message);
         }
     }
     outcome
@@ -342,9 +349,7 @@ pub async fn serve(
     }
     let mut proxies = proxies.into_iter().collect::<Vec<_>>();
     proxies.sort_by_key(|(prefix, _)| std::cmp::Reverse(prefix.len()));
-    let status = Arc::new(RwLock::new(
-        json!({"building":false,"generation":0,"last_error":null}),
-    ));
+    let status = Arc::new(RwLock::new(BuildStatus::default()));
     let dist = crate::distribution(&options)?;
     let mut watcher = if watch {
         Some(WatchState::new(

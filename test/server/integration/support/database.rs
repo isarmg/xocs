@@ -1,4 +1,5 @@
 //! Current test data fixtures, excluded from the Server and release package.
+use blog::Error;
 use std::{
     fs,
     os::unix::fs::PermissionsExt,
@@ -51,7 +52,13 @@ pub async fn initialize(root: &Path, username: &str, password: &str) -> anyhow::
             .duration_since(std::time::UNIX_EPOCH)?
             .as_micros(),
     )?;
-    administrator::seed_administrator(&service, username, password, now).await?;
+    administrator::seed_administrator(
+        &service,
+        username,
+        &blog_application::admin_auth::Password::new(password)?,
+        now,
+    )
+    .await?;
     pool.close().await;
     check(root).await?;
     Ok(database)

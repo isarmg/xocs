@@ -300,16 +300,18 @@ impl Inner {
             EventKind::Schedule,
         )?);
         listeners.push(self.listen(self.view.as_ref(), "pagehide", false, EventKind::PageHide)?);
-        self.setup
-            .set(Setup {
-                observer,
-                resize,
-                _mutation: mutation,
-                _resize: resize_callback,
-                animation_frame,
-                listeners,
-            })
-            .map_err(|_| JsValue::from_str("Server decoration is already installed"))?;
+        let installed = self.setup.set(Setup {
+            observer,
+            resize,
+            _mutation: mutation,
+            _resize: resize_callback,
+            animation_frame,
+            listeners,
+        });
+        assert!(
+            installed.is_ok(),
+            "invariant: a corner controller is installed once"
+        );
         Ok(())
     }
     fn listen(
@@ -626,10 +628,10 @@ fn restore(
 ) -> Result<(), JsValue> {
     let style = record.node.style();
     if !final_restore
-        && record.restored_style.is_some()
+        && let Some(restored_style) = &record.restored_style
         && record.applied_style.as_ref() == Some(&style.css_text())
     {
-        style.set_css_text(record.restored_style.as_deref().unwrap_or_default());
+        style.set_css_text(restored_style);
         for (name, saved) in &mut record.saved {
             if !TRANSITIONS.contains(&name.as_str()) {
                 saved.applied = None;
@@ -923,7 +925,7 @@ impl State {
             if self.index(&node).is_none() {
                 self.prepare_transitions(inner, &node, Some(&live))?;
             }
-            let css = paint::snapshot(&live);
+            let css = paint::snapshot(&live)?;
             let width = measured_dimension(&node, &css, "width");
             let height = measured_dimension(&node, &css, "height");
             let fragments = node.get_client_rects().length();
@@ -1363,16 +1365,12 @@ fn measured_dimension(node: &HtmlElement, css: &CssSnapshot, axis: &str) -> f64 
     }
 }
 fn position_foreground(record: &Record) -> Result<(), JsValue> {
-    let Some(foreground) = record.foreground.as_ref().filter(|foreground| {
-        foreground.is_connected()
-            && foreground
-                .style()
-                .get_property_value("display")
-                .unwrap_or_default()
-                != "none"
-    }) else {
+    let Some(foreground) = record.foreground.as_ref() else {
         return Ok(());
     };
+    if !foreground.is_connected() || foreground.style().get_property_value("display")? == "none" {
+        return Ok(());
+    }
     let Some(matrix) = foreground.get_screen_ctm() else {
         return Ok(());
     };

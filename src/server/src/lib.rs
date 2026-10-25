@@ -10,6 +10,10 @@ mod static_assets;
 
 mod app;
 mod database;
+mod error;
+
+pub use error::Error;
+pub use static_assets::AssetError;
 
 #[cfg(any(test, feature = "maintenance"))]
 pub(crate) use app::now_micros;
@@ -20,7 +24,7 @@ const PRODUCT_ID: &str = "blog";
 
 mod runtime;
 
-pub async fn run(root: &std::path::Path) -> anyhow::Result<()> {
+pub async fn run(root: &std::path::Path) -> Result<(), Error> {
     runtime::run(root).await
 }
 
@@ -36,6 +40,7 @@ pub mod maintenance;
 
 /// Verify the identity compiled into this product before runtime or offline work.
 /// This consumes canonical identity bytes and their digest in both executables.
-pub fn verify_compiled_identity() -> anyhow::Result<()> {
-    static_assets::verify_identity()
+pub fn verify_compiled_identity() -> Result<(), Error> {
+    static_assets::verify_identity()?;
+    Ok(())
 }

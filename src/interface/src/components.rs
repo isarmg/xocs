@@ -1,5 +1,5 @@
 use crate::{
-    api::{self, AuthPhase},
+    api::{self, ApiErrorCode, AuthPhase, RemoteErrorCode, RequestId},
     i18n::{switch_language, t},
     theme,
 };
@@ -41,32 +41,23 @@ pub fn EmptyState(message: String) -> impl IntoView {
 #[component]
 pub fn ErrorState(
     message: String,
-    #[prop(optional_no_strip)] request_id: Option<String>,
+    #[prop(optional_no_strip)] request_id: Option<RequestId>,
 ) -> impl IntoView {
     View::new(
         blog_interface::html::div()
             .child((
                 IntoRender::into_render(message),
                 IntoRender::into_render({
-                    request_id
-                        .filter(|v| crate::contracts::safe_request_id(v))
-                        .map(|id| {
-                            View::new(
-                                blog_interface::html::p()
-                                    .child((
-                                        IntoRender::into_render({
-                                            t("请求标识：", "Request ID: ")
-                                        }),
-                                        blog_interface::html::code().child(
-                                            #[allow(unused_braces)]
-                                            {
-                                                IntoRender::into_render({ id })
-                                            },
-                                        ),
-                                    ))
-                                    .class("blog-request-id"),
-                            )
-                        })
+                    request_id.map(|id| {
+                        View::new(
+                            blog_interface::html::p()
+                                .child((
+                                    t("请求标识：", "Request ID: "),
+                                    blog_interface::html::code().child(id.to_string()),
+                                ))
+                                .class("blog-request-id"),
+                        )
+                    })
                 }),
             ))
             .class("blog-error blog-row")
@@ -963,7 +954,7 @@ pub fn LoginPage(#[prop(optional)] landing: &'static str) -> impl IntoView {
     let username = NodeRef::<blog_interface::html::Input>::new();
     let password = NodeRef::<blog_interface::html::Input>::new();
     let pending = RwSignal::new(false);
-    let failure = RwSignal::new(None::<(String, Option<String>)>);
+    let failure = RwSignal::new(None::<(String, Option<RequestId>)>);
     View::new(
         blog_interface::html::form()
             .child((
@@ -1416,14 +1407,14 @@ pub fn AccountPage() -> impl IntoView {
                                         failure.set(None);
                                         wasm_bindgen_futures::spawn_local(async move {
                                             if let Err(error) = api::update_account(input).await {
-                                                let message = match error.code.as_str() {
-                                                    "admin.current_password_invalid" => {
+                                                let message = match &error.code {
+                                                    ApiErrorCode::Remote(RemoteErrorCode::CurrentPasswordInvalid) => {
                                                         t(
                                                             "当前密码不正确。",
                                                             "The current password is incorrect.",
                                                         )
                                                     }
-                                                    "admin.conflict" => {
+                                                    ApiErrorCode::Remote(RemoteErrorCode::AdministratorConflict) => {
                                                         t(
                                                             "用户名已被使用。",
                                                             "The username is already in use.",
@@ -1440,7 +1431,7 @@ pub fn AccountPage() -> impl IntoView {
                                                 secret.set_value("");
                                                 password.set_value("");
                                                 confirm.set_value("");
-                                                let _ = if error.code == "admin.conflict" {
+                                                let _ = if error.code == ApiErrorCode::Remote(RemoteErrorCode::AdministratorConflict) {
                                                     name.focus()
                                                 } else {
                                                     secret.focus()

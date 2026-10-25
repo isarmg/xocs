@@ -348,11 +348,17 @@ fn atomic_write(
             .sync_all()
             .map_err(Error::PublishedDurabilityUnknown)
     })();
-    if result.is_err() {
-        // Our exclusive temporary lives under the held private directory handle.
-        let _ = unlinkat(&directory.directory, temporary.as_str(), AtFlags::empty());
+    result.map_err(|operation| cleanup_failed_write(directory, &temporary, operation))
+}
+
+fn cleanup_failed_write(directory: &PrivateDirectory, temporary: &str, operation: Error) -> Error {
+    match unlinkat(&directory.directory, temporary, AtFlags::empty()) {
+        Ok(()) | Err(rustix::io::Errno::NOENT) => operation,
+        Err(cleanup) => Error::Cleanup {
+            operation: Box::new(operation),
+            cleanup: cleanup.into(),
+        },
     }
-    result
 }
 
 pub(super) fn advisory_lock(

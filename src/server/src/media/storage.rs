@@ -1,5 +1,5 @@
 //! Content-addressed publication and reconciliation of the deletion journal.
-use axum::{body::Bytes, http::StatusCode};
+use axum::body::Bytes;
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use sqlx::SqlitePool;
@@ -35,29 +35,32 @@ pub(super) async fn save(
     let filename = format!("{hash}.{extension}");
     let path = format!("/media/{filename}");
     let directory = state.media.clone();
-    let content = body.clone();
-    tokio::task::spawn_blocking(move || -> anyhow::Result<()> {
+    let size = body.len();
+    tokio::task::spawn_blocking(move || -> Result<(), blog_application::fs_safety::Error> {
         let directory = blog_application::fs_safety::PrivateDirectory::open_existing(directory)?;
         let name = blog_application::fs_safety::EntryName::new(filename)?;
-        match blog_application::fs_safety::AtomicFile::create(&directory, &name, &content) {
+        match blog_application::fs_safety::AtomicFile::create(&directory, &name, &body) {
             Ok(()) => Ok(()),
             Err(blog_application::fs_safety::Error::DestinationExists(_)) => {
                 let existing = directory.read_bounded(&name, limit)?;
-                anyhow::ensure!(
-                    existing.as_slice() == content.as_ref(),
-                    "existing media content does not match its identity"
-                );
+                if existing.as_slice() != body.as_ref() {
+                    return Err(blog_application::fs_safety::Error::IdentityChanged(
+                        name.as_path().to_path_buf(),
+                    ));
+                }
                 Ok(())
             }
-            Err(error) => Err(error.into()),
+            Err(error) => Err(error),
         }
     })
     .await
-    .map_err(|_| AppError(StatusCode::INTERNAL_SERVER_ERROR, "媒体保存失败"))?
-    .map_err(|_| AppError(StatusCode::INTERNAL_SERVER_ERROR, "媒体保存失败"))?;
+    .map_err(|source| AppError::Task {
+        message: "媒体保存失败",
+        source,
+    })??;
     sqlx::query("INSERT INTO resource(user_id,type,path,size,original_name,mime_type,status,store_type) VALUES(?,?,?,?,?,?,1,'local') ON CONFLICT(path) DO NOTHING")
         .bind(owner).bind(kind.resource_type())
-        .bind(&path).bind(body.len() as i64).bind(original_name.as_deref()).bind(mime_type)
+        .bind(&path).bind(size as i64).bind(original_name.as_deref()).bind(mime_type)
         .execute(&state.pool).await.map_err(db_error)?;
     let id: i64 = sqlx::query_scalar("SELECT id FROM resource WHERE path=?")
         .bind(&path)
@@ -68,13 +71,8 @@ pub(super) async fn save(
         id,
         path,
         mime_type,
-        size: body.len(),
+        size,
     })
-}
-
-pub(super) fn filesystem_error(error: impl std::fmt::Display) -> AppError {
-    tracing::error!(%error, "media filesystem operation failed");
-    AppError(StatusCode::INTERNAL_SERVER_ERROR, "媒体文件操作失败")
 }
 
 pub(super) fn not_found(error: &blog_application::fs_safety::Error) -> bool {
@@ -132,14 +130,17 @@ pub(super) async fn reconcile_deletion(
         }
     })
     .await
-    .map_err(filesystem_error)?
-    .map_err(filesystem_error)
+    .map_err(|source| AppError::Task {
+        message: "媒体文件操作失败",
+        source,
+    })?
+    .map_err(AppError::from)
 }
 
 pub(crate) async fn recover_deletions(
     pool: &SqlitePool,
     media: &std::path::Path,
-) -> anyhow::Result<()> {
+) -> Result<(), AppError> {
     let directory = blog_application::fs_safety::PrivateDirectory::open_existing(media)?;
     for entry in directory.files(blog_application::fs_safety::InventoryLimits {
         max_entries: 100_000,
@@ -153,13 +154,10 @@ pub(crate) async fn recover_deletions(
         else {
             continue;
         };
-        anyhow::ensure!(
-            is_media_filename(name),
-            "invalid media deletion journal name"
-        );
-        reconcile_deletion(pool, media, name)
-            .await
-            .map_err(|error| anyhow::anyhow!("{}", error.1))?;
+        if !is_media_filename(name) {
+            return Err(AppError::InvalidDeletionJournal);
+        }
+        reconcile_deletion(pool, media, name).await?;
     }
     Ok(())
 }

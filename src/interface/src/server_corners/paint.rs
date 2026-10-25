@@ -21,7 +21,9 @@ impl CssSnapshot {
 }
 
 #[cfg(target_arch = "wasm32")]
-pub(super) fn snapshot(css: &web_sys::CssStyleDeclaration) -> CssSnapshot {
+pub(super) fn snapshot(
+    css: &web_sys::CssStyleDeclaration,
+) -> Result<CssSnapshot, wasm_bindgen::JsValue> {
     let mut result = CssSnapshot::default();
     for property in [
         "width",
@@ -44,21 +46,20 @@ pub(super) fn snapshot(css: &web_sys::CssStyleDeclaration) -> CssSnapshot {
         "--blog-server-corner-mode",
         "--blog-server-corner-foreground",
     ] {
-        result.values.insert(
-            property.into(),
-            css.get_property_value(property).unwrap_or_default(),
-        );
+        result
+            .values
+            .insert(property.into(), css.get_property_value(property)?);
     }
     for side in SIDES {
         for property in [format!("padding-{side}"), format!("border-{side}-width")] {
-            let value = css.get_property_value(&property).unwrap_or_default();
+            let value = css.get_property_value(&property)?;
             result.values.insert(property, value);
         }
         let visible = number(result.get(&format!("border-{side}-width"))) > 0.0;
         for (suffix, hidden) in [("color", "transparent"), ("style", "none")] {
             let property = format!("border-{side}-{suffix}");
             let value = if visible {
-                css.get_property_value(&property).unwrap_or_default()
+                css.get_property_value(&property)?
             } else {
                 hidden.into()
             };
@@ -75,13 +76,12 @@ pub(super) fn snapshot(css: &web_sys::CssStyleDeclaration) -> CssSnapshot {
             "background-clip",
             "background-blend-mode",
         ] {
-            result.values.insert(
-                property.into(),
-                css.get_property_value(property).unwrap_or_default(),
-            );
+            result
+                .values
+                .insert(property.into(), css.get_property_value(property)?);
         }
     }
-    result
+    Ok(result)
 }
 
 /// Read the numeric prefix of a computed CSS value, matching `parseFloat`.
@@ -129,7 +129,9 @@ pub(super) fn number(value: &str) -> f64 {
             cursor = exponent;
         }
     }
-    value[..cursor].parse().unwrap_or(0.0)
+    value[..cursor]
+        .parse()
+        .expect("invariant: the scanned numeric prefix is a float")
 }
 
 pub(super) fn fmt(value: f64) -> String {

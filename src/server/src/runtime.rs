@@ -1,3 +1,4 @@
+use crate::Error;
 use crate::{
     AppState, PRODUCT_ID,
     app::router,
@@ -5,13 +6,12 @@ use crate::{
     database::{open_database, validate_existing_database},
     lifecycle, media, schema, static_assets,
 };
-use anyhow::{Context, bail};
 use blog_application::admin_auth::AdministratorOriginMode;
-use blog_application::admin_core::{AdministratorService, AdministratorStore as _};
+use blog_application::admin_core::AdministratorService;
 use blog_application::admin_sqlite::SqliteAdministratorStore;
-use std::{fs, os::unix::fs::PermissionsExt, path::Path, sync::Arc};
+use std::{fs, path::Path, sync::Arc};
 
-pub(crate) async fn run(root: &Path) -> anyhow::Result<()> {
+pub(crate) async fn run(root: &Path) -> Result<(), Error> {
     static_assets::verify()?;
     let loaded = config::load(root, &root.join("config/config.json"))?;
     let settings = &loaded.value;
@@ -21,36 +21,23 @@ pub(crate) async fn run(root: &Path) -> anyhow::Result<()> {
         .with(
             settings
                 .log_level
-                .parse::<tracing::collector::filter::LevelFilter>()?,
+                .parse::<tracing::collector::filter::LevelFilter>()
+                .expect("invariant: configured log level was validated"),
         )
         .with(log_layer)
         .try_init()?;
-    let database = settings.database_path()?;
-    let media = settings.media_path()?;
+    let database = settings.database_path();
+    let media = settings.media_path();
     let instance_lock = Arc::new(config::runtime_lock(settings)?);
     let bind = settings.bind;
     let web = settings.web.clone();
     let development = settings.development;
     if let Some(web) = &web
-        && (!development || !web.is_absolute() || !web.join("index.html").is_file())
+        && !fs::metadata(web.join("index.html"))?.is_file()
     {
-        bail!(
-            "Web directory configuration requires development HTTP and an absolute built directory"
-        );
+        return Err(Error::InvalidWebEntry);
     }
-    if development && !bind.ip().is_loopback() {
-        bail!("development HTTP may only bind loopback");
-    }
-    if !media.is_absolute() {
-        bail!("media directory path must be absolute");
-    }
-    let media_metadata = fs::symlink_metadata(&media).context("media directory is missing")?;
-    if !media_metadata.is_dir()
-        || media_metadata.file_type().is_symlink()
-        || media_metadata.permissions().mode() & 0o077 != 0
-    {
-        bail!("media directory must be a private 0700 directory");
-    }
+    blog_application::fs_safety::PrivateDirectory::open_existing(&media)?;
     validate_existing_database(&database, &settings.root.join("run")).await?;
     let pool = open_database(&database, false).await?;
     let result = async {
@@ -62,11 +49,6 @@ pub(crate) async fn run(root: &Path) -> anyhow::Result<()> {
         let admin = Arc::new(AdministratorService::new(SqliteAdministratorStore::new(
             pool.clone(),
         )));
-        anyhow::ensure!(
-            admin.store().administrator_count().await? > 0,
-            "explicit initialization is required"
-        );
-        blog_application::fs_safety::PrivateDirectory::open_existing(settings.root.join("logs"))?;
         attach_log_file(settings)?;
         tracing::info!(event = "common.config.loaded");
         let scope = blog_application::server_runtime::WorkScope::new();
@@ -85,17 +67,12 @@ pub(crate) async fn run(root: &Path) -> anyhow::Result<()> {
                 capabilities: vec!["admin-persistent".into()],
             },
         )
-        .with_schema_identity(schema::current_identity()?)
+        .with_schema_identity(schema::current_identity())
         .register_health_check(
             "database",
             blog_application::server_runtime::health_check(move || {
                 let pool = health_pool.clone();
-                async move {
-                    sqlx::query_scalar::<_, i64>("SELECT 1")
-                        .fetch_one(&pool)
-                        .await
-                        .is_ok_and(|value| value == 1)
-                }
+                async move { sqlx::query("SELECT 1").execute(&pool).await.is_ok() }
             }),
         )
         .build()
@@ -131,7 +108,7 @@ pub(crate) async fn run(root: &Path) -> anyhow::Result<()> {
             return Err(error.into());
         }
         tracing::info!(event = "common.runtime.stopped");
-        Ok::<_, anyhow::Error>(())
+        Ok::<_, Error>(())
     }
     .await;
     pool.close().await;
@@ -139,8 +116,7 @@ pub(crate) async fn run(root: &Path) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn attach_log_file(settings: &config::Settings) -> anyhow::Result<()> {
-    blog_application::fs_safety::PrivateDirectory::open_existing(settings.root.join("logs"))?;
+fn attach_log_file(settings: &config::Settings) -> Result<(), Error> {
     blog_application::log::install_rotating_file(blog_application::log::RotatingLogFile::open(
         settings.root.join("logs"),
         "server",

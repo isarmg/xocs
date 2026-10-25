@@ -1,21 +1,22 @@
 //! Visible read, empty and error states with product-specific message policy.
-use super::{ApiError, Data, rows, t};
+use super::{ApiError, ApiErrorCode, Data, LocalErrorCode, rows, t};
 use blog_interface::prelude::*;
 
 pub(crate) fn public_error(e: &ApiError, fallback: &str) -> String {
-    if e.code == "display_error" {
+    if e.code == ApiErrorCode::Local(LocalErrorCode::DisplayError) {
         return e.message.clone();
     }
-    if [
-        "invalid_response",
-        "invalid_json_response",
-        "invalid_response_shape",
-        "invalid_typed_response_shape",
-        "invalid_response_contract",
-        "invalid_content_type",
-    ]
-    .contains(&e.code.as_str())
-    {
+    if matches!(
+        e.code,
+        ApiErrorCode::Local(
+            LocalErrorCode::InvalidResponse
+                | LocalErrorCode::InvalidJsonResponse
+                | LocalErrorCode::InvalidResponseShape
+                | LocalErrorCode::InvalidTypedResponseShape
+                | LocalErrorCode::InvalidResponseContract
+                | LocalErrorCode::InvalidContentType
+        )
+    ) {
         return t(
             "服务器响应格式无效，无法确认操作结果。",
             "The server response was invalid. The operation result could not be confirmed.",
@@ -96,7 +97,7 @@ pub(crate) fn Feedback(
                                     blog_interface::html::p()
                                         .child((
                                             t("请求标识：", "Request ID: "),
-                                            blog_interface::html::code().child(id),
+                                            blog_interface::html::code().child(id.to_string()),
                                         ))
                                         .class("blog-request-id"),
                                 )

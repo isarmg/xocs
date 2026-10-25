@@ -100,7 +100,7 @@ async fn fixture_budgets_are_isolated_but_keep_the_production_limit_and_timeout(
     let started = tokio::time::Instant::now();
     assert!(matches!(
         first.hash_password("correct horse battery").await,
-        Err(ServiceError::AuthenticationBusy)
+        Err(PasswordWorkError::Capacity(_))
     ));
     assert!(started.elapsed() >= Duration::from_micros(ARGON2_ACQUIRE_TIMEOUT_MICROS));
     drop(permits);
@@ -109,6 +109,8 @@ async fn fixture_budgets_are_isolated_but_keep_the_production_limit_and_timeout(
 
 #[test]
 fn audit_input_is_bounded_before_json_parsing_and_uses_canonical_request_ids() {
+    use std::error::Error as _;
+
     let mut event = SecurityAuditEvent {
         event_id: Identifier::new("event-1").unwrap(),
         action: SecurityAction::LoginSucceeded,
@@ -127,7 +129,30 @@ fn audit_input_is_bounded_before_json_parsing_and_uses_canonical_request_ids() {
     assert!(event.validate().is_err());
     event.detail_json = "{}".into();
     event.request_id = Some("invalid\nrequest".into());
-    assert!(event.validate().is_err());
+    let failure = event.validate().unwrap_err();
+    assert!(
+        failure
+            .source()
+            .unwrap()
+            .is::<crate::error::InvalidRequestId>()
+    );
+
+    event.request_id = None;
+    event.detail_json = "{".into();
+    let failure = event.validate().unwrap_err();
+    assert!(failure.source().unwrap().is::<serde_json::Error>());
+
+    let context = LoginContext {
+        request_id: Some("invalid\nrequest".into()),
+        now_micros: 1,
+    };
+    let failure = context.validate().unwrap_err();
+    assert!(
+        failure
+            .source()
+            .unwrap()
+            .is::<crate::error::InvalidRequestId>()
+    );
 }
 
 // Separate fixtures model separate processes without sharing the process-wide budget.

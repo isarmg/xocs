@@ -3,6 +3,24 @@ use serde::{Deserialize, Serialize};
 
 use crate::{ApiResult, AppState, db_error, invalid};
 
+#[derive(Clone, Copy, Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum HomeKind {
+    Latest,
+    Recommended,
+    Category,
+}
+
+impl HomeKind {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Latest => "latest",
+            Self::Recommended => "recommended",
+            Self::Category => "category",
+        }
+    }
+}
+
 #[derive(Serialize, sqlx::FromRow)]
 struct HomeSection {
     id: i64,
@@ -17,7 +35,7 @@ struct HomeSection {
 #[serde(deny_unknown_fields)]
 struct SectionInput {
     title: String,
-    kind: String,
+    kind: HomeKind,
     sort_id: Option<i64>,
     priority: i64,
     enabled: bool,
@@ -63,8 +81,7 @@ async fn save_sections(
         if title.is_empty()
             || title.chars().count() > 32
             || !(-1000..=1000).contains(&item.priority)
-            || !matches!(item.kind.as_str(), "latest" | "recommended" | "category")
-            || (item.kind == "category") != item.sort_id.is_some()
+            || matches!(item.kind, HomeKind::Category) != item.sort_id.is_some()
         {
             return Err(invalid("栏目配置无效"));
         }
@@ -88,7 +105,7 @@ async fn save_sections(
             "INSERT INTO home_sections(title,kind,sort_id,priority,enabled) VALUES(?,?,?,?,?)",
         )
         .bind(item.title.trim().to_owned())
-        .bind(item.kind)
+        .bind(item.kind.as_str())
         .bind(item.sort_id)
         .bind(item.priority)
         .bind(item.enabled)

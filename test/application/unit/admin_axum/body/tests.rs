@@ -45,7 +45,7 @@ fn global_budget_releases_permits_without_source_identity() {
     permits.pop();
     permits.push(admission.acquire(None).unwrap());
     drop(permits);
-    assert_eq!(admission.0.lock().unwrap().total, 0);
+    assert_eq!(admission.0.available_permits(), ADMIN_BODY_READERS_GLOBAL);
 }
 
 #[tokio::test]
@@ -123,7 +123,10 @@ async fn independently_created_routers_share_the_process_body_budget() {
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     drop(readers);
     assert!(dropped.iter().all(|flag| flag.load(Ordering::SeqCst)));
-    assert_eq!(BodyAdmission::default().0.lock().unwrap().total, 0);
+    assert_eq!(
+        BodyAdmission::default().0.available_permits(),
+        ADMIN_BODY_READERS_GLOBAL
+    );
 }
 
 #[tokio::test(start_paused = true)]
@@ -146,7 +149,7 @@ async fn slow_body_deadline_and_cancellation_drop_body_and_permit() {
     assert_eq!(envelope.request_id.as_ref(), Some(&id));
     assert!(envelope.retryable);
     assert!(dropped.load(Ordering::SeqCst));
-    assert_eq!(admission.0.lock().unwrap().total, 0);
+    assert_eq!(admission.0.available_permits(), ADMIN_BODY_READERS_GLOBAL);
     let dropped = Arc::new(AtomicBool::new(false));
     let mut read = Box::pin(admission.read(
         request(Body::new(PendingBody(dropped.clone()))),
@@ -159,10 +162,13 @@ async fn slow_body_deadline_and_cancellation_drop_body_and_permit() {
         Poll::Ready(())
     })
     .await;
-    assert_eq!(admission.0.lock().unwrap().total, 1);
+    assert_eq!(
+        admission.0.available_permits(),
+        ADMIN_BODY_READERS_GLOBAL - 1
+    );
     drop(read);
     assert!(dropped.load(Ordering::SeqCst));
-    assert_eq!(admission.0.lock().unwrap().total, 0);
+    assert_eq!(admission.0.available_permits(), ADMIN_BODY_READERS_GLOBAL);
 }
 
 #[tokio::test]

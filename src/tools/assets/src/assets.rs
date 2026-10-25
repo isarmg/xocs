@@ -125,16 +125,30 @@ impl Default for Config {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum OutputKind {
+    Spa,
+    Embedded,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum RuntimeRoot {
+    Web,
+    Product,
+}
+
 #[derive(Clone, Debug, serde::Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Web {
-    pub kind: String,
+    pub kind: OutputKind,
     pub entry: String,
     pub entries: BTreeMap<String, String>,
     pub copies: BTreeMap<String, String>,
     pub css_output: String,
     pub relative_urls: bool,
-    pub runtime_root: String,
+    pub runtime_root: RuntimeRoot,
     pub dist: String,
     pub base: String,
     pub max_asset_bytes: usize,
@@ -149,13 +163,13 @@ pub struct Web {
 impl Default for Web {
     fn default() -> Self {
         Self {
-            kind: "spa".into(),
+            kind: OutputKind::Spa,
             entry: String::new(),
             entries: BTreeMap::new(),
             copies: BTreeMap::new(),
             css_output: String::new(),
             relative_urls: false,
-            runtime_root: "web".into(),
+            runtime_root: RuntimeRoot::Web,
             dist: format!("{}/dist", layout::WEB),
             base: "/".into(),
             max_asset_bytes: 512 * 1024,
@@ -190,15 +204,7 @@ impl Config {
             .into();
         }
         source_inputs::web_relative(Path::new(&config.web.entry), false)?;
-        ensure!(
-            matches!(config.web.kind.as_str(), "spa" | "embedded"),
-            "web.kind must be spa or embedded"
-        );
-        ensure!(
-            matches!(config.web.runtime_root.as_str(), "web" | "product"),
-            "web.runtime_root must be web or product"
-        );
-        if config.web.kind == "embedded" {
+        if config.web.kind == OutputKind::Embedded {
             ensure!(
                 !config.web.entries.is_empty(),
                 "Embedded output needs explicit entry points"
@@ -300,7 +306,7 @@ impl<'i> style_compiler::style_optimizer::visitor::Visitor<'i> for CssUrls<'_> {
             return Ok(());
         }
         if value.starts_with("data:") {
-            if self.linker.config.web.kind == "embedded" {
+            if self.linker.config.web.kind == OutputKind::Embedded {
                 let encoded=value.strip_prefix("data:image/svg+xml,").context("Embedded CSP only supports authored SVG data URLs, emitted as same-origin files")?;
                 let svg = url_encoding::percent::percent_decode_str(encoded)
                     .decode_utf8()?
@@ -390,7 +396,9 @@ impl Linker {
             "Unsupported module/resource URL {specifier:?}"
         );
         let mut parts = specifier.split('?');
-        let plain = parts.next().unwrap_or_default();
+        let plain = parts
+            .next()
+            .expect("invariant: split yields its first segment");
         if let Some(query) = parts.next() {
             ensure!(
                 query == "url" && parts.next().is_none(),
@@ -405,9 +413,7 @@ impl Linker {
                 aliased = Some(if plain == name {
                     self.web.join(destination)
                 } else {
-                    self.web
-                        .join(destination)
-                        .join(plain.strip_prefix(name).unwrap_or_default())
+                    self.web.join(destination).join(&plain[name.len()..])
                 });
                 break;
             }
@@ -419,11 +425,10 @@ impl Linker {
                 .parent()
                 .context("Missing module parent")?
                 .join(plain)
-        } else if plain.starts_with('/') {
+        } else if let Some(relative) = plain.strip_prefix('/') {
             // Public URLs are rooted at the output, not at a `public/` URL prefix.
             // CSS follows Vite's public-first URL lookup. ESM imports prefer an
             // actual Web source file, with public as a bounded fallback.
-            let relative = plain.strip_prefix('/').context("Absolute resource URL")?;
             inventory::relative(Path::new(relative))?;
             let web = self.web.join(relative);
             let public = self.web.join("public").join(relative);
@@ -635,14 +640,13 @@ impl Linker {
         if extension == "wasm" {
             ensure!(bytes.starts_with(b"\0asm"), "Expected WebAssembly bytes");
         }
-        let fixed = self.config.web.copies.iter().find_map(|(output, input)| {
-            self.web
-                .join(input)
-                .canonicalize()
-                .ok()
-                .filter(|path| path == source)
-                .map(|_| output.clone())
-        });
+        let mut fixed = None;
+        for (output, input) in &self.config.web.copies {
+            if self.web.join(input).canonicalize()? == source {
+                fixed = Some(output.clone());
+                break;
+            }
+        }
         let output = if let Some(output) = self.public_output(source, bytes.clone())? {
             output
         } else if let Some(output) = fixed {
@@ -892,7 +896,7 @@ impl Linker {
     pub fn finish(mut self, provenance: &[u8]) -> Result<(BTreeMap<String, Vec<u8>>, Value)> {
         self.copy_public()?;
         let mut script = String::new();
-        if self.config.web.kind == "embedded" {
+        if self.config.web.kind == OutputKind::Embedded {
             for (facade, input) in self.config.web.entries.clone() {
                 let source = self.authored_source(&input)?;
                 let output = self.module(&source)?;
@@ -912,7 +916,7 @@ impl Linker {
                 self.generated_output(facade.clone(), wrapper)?;
                 self.modules
                     .get_mut(&source)
-                    .context("Entry module")?
+                    .expect("invariant: a linked entry is cached as a module")
                     .derived_outputs
                     .push(facade);
             }
@@ -971,7 +975,7 @@ impl Linker {
             "assets/vendor-sources.json".into(),
             serde_json::to_vec_pretty(&vendor_sources)?,
         )?;
-        if self.config.web.kind == "spa" {
+        if self.config.web.kind == OutputKind::Spa {
             let mut html = String::from_utf8(inventory::read(&self.web.join("index.html"))?)?;
             let script_tag = Regex::new(r#"<script\s+[^>]*type=["']module["'][^>]*>\s*</script>"#)?;
             ensure!(
@@ -1040,7 +1044,7 @@ impl Linker {
             } else {
                 inventory::relative(module.source.strip_prefix(&self.web)?)?
             };
-            let relative = if self.config.web.runtime_root == "product" {
+            let relative = if self.config.web.runtime_root == RuntimeRoot::Product {
                 format!("{}/{relative}", layout::WEB)
             } else {
                 relative

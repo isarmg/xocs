@@ -1,22 +1,76 @@
-use crate::common::{Action, Data, Feedback, flag, list, load, num, t, text, tr};
+use crate::common::{Action, Data, Feedback, list, load, load_typed, num, t, text, tr};
+use crate::models::{HomeSection, HomeSource};
 use blog_interface::component::component_props_builder;
 use blog_interface::components::notify;
 use blog_interface::prelude::*;
-use serde_json::{Value, json};
+use serde::Deserialize;
+use serde_json::json;
+
+#[derive(Clone)]
+struct SectionRow {
+    id: i64,
+    form: ArcRwSignal<SectionForm>,
+}
+
+#[derive(Clone)]
+struct SectionForm {
+    title: String,
+    source: SectionSource,
+    enabled: bool,
+}
+
+#[derive(Clone, Copy, Deserialize)]
+#[serde(tag = "kind", rename_all = "lowercase")]
+enum SectionSource {
+    Latest,
+    Recommended,
+    Category { sort_id: Option<i64> },
+}
+
+impl SectionSource {
+    fn kind(self) -> &'static str {
+        match self {
+            Self::Latest => "latest",
+            Self::Recommended => "recommended",
+            Self::Category { .. } => "category",
+        }
+    }
+}
+
+impl From<HomeSection> for SectionRow {
+    fn from(section: HomeSection) -> Self {
+        Self {
+            id: section.id,
+            form: ArcRwSignal::new(SectionForm {
+                title: section.title,
+                source: match section.source {
+                    HomeSource::Latest => SectionSource::Latest,
+                    HomeSource::Recommended => SectionSource::Recommended,
+                    HomeSource::Category { sort_id } => SectionSource::Category {
+                        sort_id: Some(sort_id),
+                    },
+                },
+                enabled: section.enabled,
+            }),
+        }
+    }
+}
 
 #[component]
 pub(super) fn HomeSections() -> impl IntoView {
-    let data = load(Signal::derive(|| "/api/v1/content/home-sections".into()));
+    let data =
+        load_typed::<Vec<HomeSection>>(Signal::derive(|| "/api/v1/content/home-sections".into()));
     let categories = load(Signal::derive(|| "/api/v1/categories".into()));
-    let sections = RwSignal::new(Vec::<Value>::new());
+    let sections = RwSignal::new(Vec::<SectionRow>::new());
     let loaded = RwSignal::new(false);
+    let next_id = RwSignal::new(-1i64);
     let save = Action::new();
     let validation = RwSignal::new(String::new());
     Effect::new(move |_| {
         if let Some(v) = data.value.get()
             && !loaded.get_untracked()
         {
-            sections.set(v.as_array().cloned().unwrap_or_default());
+            sections.set(v.into_iter().map(SectionRow::from).collect());
             loaded.set(true);
         }
     });
@@ -24,9 +78,13 @@ pub(super) fn HomeSections() -> impl IntoView {
         if !loaded.get_untracked() || save.busy.get_untracked() {
             return;
         }
-        let payload:Vec<Value>=sections.get_untracked().into_iter().enumerate().map(|(i,v)|json!({"title":text(&v,"title").trim(),"kind":v["kind"],"sort_id":if v["kind"]=="category"{v["sort_id"].clone()}else{Value::Null},"priority":i*10,"enabled":flag(&v,"enabled")})).collect();
-        if payload.iter().any(|v| {
-            text(v, "title").is_empty() || v["kind"] == "category" && num(v, "sort_id") == 0
+        if sections.with_untracked(|rows| {
+            rows.iter().any(|row| {
+                row.form.with_untracked(|form| {
+                    form.title.trim().is_empty()
+                        || matches!(form.source, SectionSource::Category { sort_id: None })
+                })
+            })
         }) {
             validation.set(t(
                 "请填写栏目标题并选择分类",
@@ -35,12 +93,46 @@ pub(super) fn HomeSections() -> impl IntoView {
             return;
         }
         validation.set(String::new());
-        save.run(
+        let payload: Vec<_> = sections.with_untracked(|rows| {
+            rows.iter()
+                .enumerate()
+                .map(|(index, row)| {
+                    row.form.with_untracked(|form| {
+                        let sort_id = match form.source {
+                            SectionSource::Category { sort_id } => sort_id,
+                            SectionSource::Latest | SectionSource::Recommended => None,
+                        };
+                        json!({
+                            "title": form.title.trim(),
+                            "kind": form.source.kind(),
+                            "sort_id": sort_id,
+                            "priority": index * 10,
+                            "enabled": form.enabled,
+                        })
+                    })
+                })
+                .collect()
+        });
+        save.run_typed(
             "/api/v1/content/home-sections".into(),
             "PUT",
             Some(json!(payload)),
-            move |v| {
-                sections.set(v.as_array().cloned().unwrap_or_default());
+            move |v: Vec<HomeSection>| {
+                sections.update(|rows| {
+                    *rows = v
+                        .into_iter()
+                        .map(|section| {
+                            let next = SectionRow::from(section);
+                            match rows.iter().find(|row| row.id == next.id) {
+                                Some(row) => {
+                                    row.form.set(next.form.get_untracked());
+                                    row.clone()
+                                }
+                                None => next,
+                            }
+                        })
+                        .collect();
+                });
                 notify(t("首页栏目已保存", "Home sections saved"));
             },
         )
@@ -94,12 +186,20 @@ pub(super) fn HomeSections() -> impl IntoView {
                                     .class("blog-button")
                                     .disabled(move || sections.get().len() >= 12)
                                     .on(blog_interface::ev::click, move |_| {
+                                        let id = next_id.get_untracked();
+                                        next_id.update(|id| *id -= 1);
                                         sections.update(|rows| {
-                                            rows.push(json!({ "id":- (js_sys::Date::now() as
-                    i64), "title" : t("新栏目", "New section"), "kind" :
-                    "category", "sort_id" : list(categories.value.get_untracked())
-                    .first().map(| v | v["id"].clone()).unwrap_or(Value::Null),
-                    "priority" : rows.len(), "enabled" : true }))
+                                            rows.push(SectionRow {
+                                                id,
+                                                form: ArcRwSignal::new(SectionForm {
+                                                    title: t("新栏目", "New section"),
+                                                    source: SectionSource::Category {
+                                                        sort_id: list(categories.value.get_untracked())
+                                                            .first().map(|category| num(category, "id")),
+                                                    },
+                                                    enabled: true,
+                                                }),
+                                            })
                                         })
                                     }),
                             )
@@ -128,11 +228,11 @@ pub(super) fn HomeSections() -> impl IntoView {
                                         blog_interface::html::tbody().child(For(
                                             component_props_builder(&For)
                                                 .each(move || sections.get())
-                                                .key(|v| num(v, "id"))
+                                                .key(|row| row.id)
                                                 .children(move |item| {
                                                     View::new(HomeRow(
                                                         component_props_builder(&HomeRow)
-                                                            .id(num(&item, "id"))
+                                                            .item(item)
                                                             .sections(sections)
                                                             .categories(categories)
                                                             .build(),
@@ -157,27 +257,18 @@ pub(super) fn HomeSections() -> impl IntoView {
 }
 
 #[component]
-fn HomeRow(id: i64, sections: RwSignal<Vec<Value>>, categories: Data) -> impl IntoView {
+fn HomeRow(
+    item: SectionRow,
+    sections: RwSignal<Vec<SectionRow>>,
+    categories: Data,
+) -> impl IntoView {
+    let id = item.id;
+    let current = RwSignal::from(item.form);
     let index = Signal::derive(move || {
+        // A removed keyed row can be read before its owner is disposed.
         sections
-            .get()
-            .iter()
-            .position(|v| num(v, "id") == id)
+            .with(|rows| rows.iter().position(|row| row.id == id))
             .unwrap_or(0)
-    });
-    let current = Signal::derive(move || {
-        sections
-            .get()
-            .into_iter()
-            .find(|v| num(v, "id") == id)
-            .unwrap_or(Value::Null)
-    });
-    let change = Callback::new(move |(k, v): (&'static str, Value)| {
-        sections.update(|rows| {
-            if let Some(row) = rows.iter_mut().find(|v| num(v, "id") == id) {
-                row[k] = v
-            }
-        })
     });
     View::new(
         blog_interface::html::tr().child((
@@ -206,9 +297,9 @@ fn HomeRow(id: i64, sections: RwSignal<Vec<Value>>, categories: Data) -> impl In
                                 )
                             })
                             .maxlength("32")
-                            .prop("value", move || text(&current.get(), "title"))
+                            .prop("value", move || current.with(|form| form.title.clone()))
                             .on(blog_interface::ev::input, move |ev| {
-                                change.run(("title", json!(event_target_value(&ev))))
+                                current.update(|form| form.title = event_target_value(&ev))
                             }),
                     ))
                     .class("blog-form-field blog-stack"),
@@ -222,7 +313,9 @@ fn HomeRow(id: i64, sections: RwSignal<Vec<Value>>, categories: Data) -> impl In
                             &[(index.get() + 1).to_string()],
                         )
                     }))
-                    .value(Signal::derive(move || text(&current.get(), "kind")))
+                    .value(Signal::derive(move || {
+                        current.with(|form| form.source.kind().to_string())
+                    }))
                     .options(Signal::derive(|| {
                         vec![
                             ("latest".into(), t("最新文章", "Latest articles")),
@@ -231,23 +324,26 @@ fn HomeRow(id: i64, sections: RwSignal<Vec<Value>>, categories: Data) -> impl In
                         ]
                     }))
                     .change(Callback::new(move |kind: String| {
-                        change.run((
-                            "sort_id",
-                            if kind == "category" {
-                                list(categories.value.get_untracked())
+                        let source = serde_json::from_value::<SectionSource>(json!({"kind": kind}))
+                            .expect("invariant: source selector emits its declared options");
+                        let source = match source {
+                            SectionSource::Category { .. } => SectionSource::Category {
+                                sort_id: list(categories.value.get_untracked())
                                     .first()
-                                    .map(|v| v["id"].clone())
-                                    .unwrap_or(Value::Null)
-                            } else {
-                                Value::Null
+                                    .map(|category| num(category, "id")),
                             },
-                        ));
-                        change.run(("kind", json!(kind)));
+                            SectionSource::Latest | SectionSource::Recommended => source,
+                        };
+                        current.update(|form| form.source = source);
                     }))
                     .build(),
             )),
             blog_interface::html::td().child(move || {
-                (text(&current.get(), "kind") == "category").then(|| {
+                matches!(
+                    current.with(|form| form.source),
+                    SectionSource::Category { .. }
+                )
+                .then(|| {
                     View::new(crate::select::Select(
                         component_props_builder(&crate::select::Select)
                             .label(Signal::derive(move || {
@@ -258,7 +354,14 @@ fn HomeRow(id: i64, sections: RwSignal<Vec<Value>>, categories: Data) -> impl In
                                 )
                             }))
                             .value(Signal::derive(move || {
-                                num(&current.get(), "sort_id").to_string()
+                                match current.with(|form| form.source) {
+                                    SectionSource::Category { sort_id } => {
+                                        sort_id.map_or_else(|| "0".into(), |id| id.to_string())
+                                    }
+                                    SectionSource::Latest | SectionSource::Recommended => {
+                                        "0".into()
+                                    }
+                                }
                             }))
                             .options(Signal::derive(move || {
                                 std::iter::once((
@@ -273,7 +376,14 @@ fn HomeRow(id: i64, sections: RwSignal<Vec<Value>>, categories: Data) -> impl In
                                 .collect()
                             }))
                             .change(Callback::new(move |v: String| {
-                                change.run(("sort_id", json!(v.parse::<i64>().unwrap_or(0))))
+                                let id = v
+                                    .parse::<i64>()
+                                    .expect("invariant: category selector values are integer IDs");
+                                current.update(|form| {
+                                    form.source = SectionSource::Category {
+                                        sort_id: (id != 0).then_some(id),
+                                    };
+                                });
                             }))
                             .build(),
                     ))
@@ -285,9 +395,9 @@ fn HomeRow(id: i64, sections: RwSignal<Vec<Value>>, categories: Data) -> impl In
                     .child((
                         blog_interface::html::input()
                             .r#type("checkbox")
-                            .prop("checked", move || flag(&current.get(), "enabled"))
+                            .prop("checked", move || current.with(|form| form.enabled))
                             .on(blog_interface::ev::change, move |ev| {
-                                change.run(("enabled", json!(event_target_checked(&ev))))
+                                current.update(|form| form.enabled = event_target_checked(&ev))
                             }),
                         t(" 启用", " Enable"),
                     )),
@@ -333,7 +443,7 @@ fn HomeRow(id: i64, sections: RwSignal<Vec<Value>>, categories: Data) -> impl In
                             .child(t("删除", "Delete"))
                             .class("blog-button blog-danger")
                             .on(blog_interface::ev::click, move |_| {
-                                sections.update(|r| r.retain(|v| num(v, "id") != id))
+                                sections.update(|r| r.retain(|row| row.id != id))
                             }),
                     ))
                     .class("blog-actions blog-flow"),

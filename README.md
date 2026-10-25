@@ -30,4 +30,6 @@ cargo +1.99.0 build --locked --offline -p blog-setup
 
 服务端位于 `src/server`，应用基础位于 `src/application`，浏览器应用和组件位于 `src/browser`、`src/interface`，依赖实现按职责放在 `src/foundation`。工具与浏览器资源位于 `src/tools`、`src/operations` 和 `src/web`，测试代码、fixture 与验证脚本集中在 [`test`](test/README.md)。参阅[架构](docs/architecture.md)、[依赖文档](docs/dependencies/README.md)和[完整文档目录](docs/README.md)。
 
+修改代码遵循根目录的 [Rust 编码规范](AGENTS.md)。
+
 项目使用 [MIT 许可证](LICENSE)。依赖许可证与原始来源材料保存在 `compliance/`，对应关系见[第三方源码清单](docs/THIRD_PARTY_RUST_SOURCES.md)。

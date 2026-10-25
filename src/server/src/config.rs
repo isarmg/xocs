@@ -1,17 +1,17 @@
-use anyhow::ensure;
+use crate::Error;
 use blog_application::config::{EnvMapping, EnvValueKind, Loaded};
 use std::path::{Path, PathBuf};
 
 pub use crate::config_definition::Settings;
 
-pub fn load(root: &Path, config: &Path) -> anyhow::Result<Loaded<Settings>> {
+pub fn load(root: &Path, config: &Path) -> Result<Loaded<Settings>, Error> {
     load_with_environment(root, config, true)
 }
 
 /// Offline operations take their complete state target from ROOT/config only.
 /// Runtime environment overrides must never redirect a maintenance operation.
 #[cfg(feature = "maintenance")]
-pub(crate) fn load_offline(root: &Path, config: &Path) -> anyhow::Result<Loaded<Settings>> {
+pub(crate) fn load_offline(root: &Path, config: &Path) -> Result<Loaded<Settings>, Error> {
     load_with_environment(root, config, false)
 }
 
@@ -19,16 +19,18 @@ fn load_with_environment(
     root: &Path,
     config: &Path,
     runtime: bool,
-) -> anyhow::Result<Loaded<Settings>> {
-    ensure!(
-        root.is_absolute()
-            && root != Path::new("/")
-            && !root.components().any(|part| matches!(
+) -> Result<Loaded<Settings>, Error> {
+    if !root.is_absolute()
+        || root == Path::new("/")
+        || root.components().any(|part| {
+            matches!(
                 part,
                 std::path::Component::ParentDir | std::path::Component::CurDir
-            )),
-        "ROOT must be an absolute normalized directory"
-    );
+            )
+        })
+    {
+        return Err(Error::InvalidRoot);
+    }
     let bytes = blog_application::config::read_managed_file(
         config,
         cfg!(debug_assertions) && env!("BLOG_SOURCE_REVISION") == "unbound",
@@ -73,7 +75,12 @@ fn load_with_environment(
                     values.insert(mapping.variable, value);
                 }
                 Err(std::env::VarError::NotPresent) => {}
-                Err(_) => anyhow::bail!("{} must be valid Unicode", mapping.variable),
+                Err(source) => {
+                    return Err(Error::Environment {
+                        variable: mapping.variable,
+                        source,
+                    });
+                }
             }
         }
     }
@@ -85,23 +92,10 @@ fn load_with_environment(
         Some(&bytes),
         &environment,
         &[],
-        |value, source| {
-            let mut effective = value.clone();
-            effective.root = root.to_path_buf();
-            effective.validate().map_err(|_| {
-                blog_application::config::ConfigError::new(
-                    blog_application::config::Reason::InvalidValue,
-                    "/",
-                    source,
-                )
-            })
-        },
+        |value, source| value.validate_at(root, source),
     )?;
     settings.value.root = root.to_path_buf();
-    settings.value.validate()?;
-    if let Ok(media) = settings.value.media_path()
-        && config.starts_with(media)
-    {
+    if config.starts_with(settings.value.media_path()) {
         return Err(blog_application::config::ConfigError::new(
             blog_application::config::Reason::InvalidValue,
             "/media",
@@ -113,37 +107,39 @@ fn load_with_environment(
 }
 
 impl Settings {
-    pub fn database_path(&self) -> anyhow::Result<PathBuf> {
-        Ok(self
-            .data_dir
-            .join(crate::config_definition::DATABASE_FILENAME))
+    pub fn database_path(&self) -> PathBuf {
+        self.data_dir
+            .join(crate::config_definition::DATABASE_FILENAME)
     }
-    pub fn media_path(&self) -> anyhow::Result<PathBuf> {
-        Ok(self
-            .media
+    pub fn media_path(&self) -> PathBuf {
+        self.media
             .clone()
-            .unwrap_or_else(|| self.root.join(crate::config_definition::MEDIA_DIRECTORY)))
+            .unwrap_or_else(|| self.root.join(crate::config_definition::MEDIA_DIRECTORY))
     }
-    pub fn state_directory(&self) -> anyhow::Result<PathBuf> {
-        Ok(self.data_dir.clone())
+    #[cfg(test)]
+    pub fn validate(&self) -> Result<(), blog_application::config::ConfigError> {
+        self.validate_at(&self.root, blog_application::config::ConfigSource::File)
     }
-    pub fn validate(&self) -> anyhow::Result<()> {
+
+    fn validate_at(
+        &self,
+        root: &Path,
+        source: blog_application::config::ConfigSource,
+    ) -> Result<(), blog_application::config::ConfigError> {
         let source_bound = !cfg!(debug_assertions) || env!("BLOG_SOURCE_REVISION") != "unbound";
         blog_application::configuration_contract::validate_rules(
             &crate::config_definition::current_rules(source_bound),
-            &serde_json::to_value(self)?,
-            &self.root,
-            blog_application::config::ConfigSource::File,
-        )?;
-        Ok(())
+            &serde_json::to_value(self).expect("invariant: settings serialize to JSON"),
+            root,
+            source,
+        )
     }
 }
 
 pub fn runtime_lock(
     settings: &Settings,
-) -> anyhow::Result<blog_application::state_file::InstanceLock> {
-    let state =
-        blog_application::state_file::PrivateStateDirectory::open(settings.state_directory()?)?;
+) -> Result<blog_application::state_file::InstanceLock, Error> {
+    let state = blog_application::state_file::PrivateStateDirectory::open(&settings.data_dir)?;
     let lock = state.try_instance_lock()?;
     state.verify_identity()?;
     Ok(lock)

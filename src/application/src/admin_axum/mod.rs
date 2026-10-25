@@ -4,7 +4,9 @@ mod body;
 mod management;
 
 use crate::admin_auth::AdministratorOriginMode;
-use crate::admin_core::{AdministratorService, AdministratorStore, ServiceError};
+use crate::admin_core::{
+    AdministratorService, AdministratorStore, PasswordWorkError, ServiceError,
+};
 use crate::contracts::{
     ADMIN_LOGIN_PATH, ADMIN_LOGOUT_PATH, ADMIN_SESSION_PATH, AdministratorLoginRequest, ErrorCode,
     ErrorEnvelope, RequestId,
@@ -542,19 +544,53 @@ where
             false,
             request_id,
         ),
-        ServiceError::AuthenticationBusy | ServiceError::AuthenticationWorkerFailed => error(
+        ServiceError::AuthenticationBusy
+        | ServiceError::PasswordWork(
+            PasswordWorkError::Capacity(_) | PasswordWorkError::Worker(_),
+        ) => error(
             StatusCode::SERVICE_UNAVAILABLE,
             "auth.capacity_unavailable",
             true,
             request_id,
         ),
-        ServiceError::Authentication(_) => error(
+        ServiceError::Authentication(
+            crate::admin_auth::Error::InvalidCsrfToken
+            | crate::admin_auth::Error::CsrfTokenDecode(_)
+            | crate::admin_auth::Error::CsrfTokenMismatch
+            | crate::admin_auth::Error::MissingSecurityHeader { .. }
+            | crate::admin_auth::Error::DuplicateSecurityHeader { .. }
+            | crate::admin_auth::Error::InvalidSecurityHeaderValue { .. }
+            | crate::admin_auth::Error::SecurityHeaderEncoding { .. },
+        ) => error(
             StatusCode::FORBIDDEN,
             "auth.csrf_rejected",
             false,
             request_id,
         ),
-        ServiceError::Policy(_) | ServiceError::Store(_) | ServiceError::Contract(_) => error(
+        ServiceError::Authentication(
+            crate::admin_auth::Error::UnexpectedOriginScheme { .. }
+            | crate::admin_auth::Error::OriginHostMismatch
+            | crate::admin_auth::Error::DevelopmentHostIsNotLoopback,
+        ) => error(
+            StatusCode::FORBIDDEN,
+            "auth.origin_rejected",
+            false,
+            request_id,
+        ),
+        ServiceError::Policy(_)
+        | ServiceError::Store(_)
+        | ServiceError::Contract(_)
+        | ServiceError::Authentication(
+            crate::admin_auth::Error::InvalidAdministratorUsername
+            | crate::admin_auth::Error::InvalidPassword
+            | crate::admin_auth::Error::InvalidPasswordHash
+            | crate::admin_auth::Error::PasswordHashParse(_)
+            | crate::admin_auth::Error::PasswordHash(_)
+            | crate::admin_auth::Error::Random(_),
+        )
+        | ServiceError::PasswordWork(
+            PasswordWorkError::Invalid(_) | PasswordWorkError::Hashing(_),
+        ) => error(
             StatusCode::INTERNAL_SERVER_ERROR,
             "platform.internal",
             false,

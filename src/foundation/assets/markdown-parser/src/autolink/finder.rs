@@ -44,7 +44,6 @@ impl<'t> Link<'t> {
 
 /// The type of link that was found.
 #[derive(Debug, Eq, PartialEq)]
-#[non_exhaustive]
 pub enum LinkKind {
     /// URL links like `http://example.org`.
     Url,

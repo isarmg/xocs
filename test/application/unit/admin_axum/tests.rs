@@ -5,6 +5,93 @@ use axum::http::{Method, Request as HttpRequest};
 use std::net::SocketAddr;
 use tower::ServiceExt;
 
+#[tokio::test]
+async fn password_hashing_failure_stays_internal_and_preserves_its_source() {
+    use std::error::Error as _;
+    let failure = ServiceError::<std::io::Error>::PasswordWork(PasswordWorkError::Hashing(
+        crate::admin_auth::Error::Random(getrandom::Error::UNSUPPORTED),
+    ));
+    assert!(failure.source().unwrap().source().is_some());
+    let response = service_error(failure, None);
+    assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    let bytes = to_bytes(response.into_body(), 8192).await.unwrap();
+    let envelope: ErrorEnvelope = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(envelope.code.as_str(), "platform.internal");
+    assert!(!std::str::from_utf8(&bytes).unwrap().contains("random"));
+}
+
+#[tokio::test]
+async fn authentication_primitive_failures_are_distinct_from_csrf_rejections() {
+    use crate::admin_auth::Error;
+
+    let id = RequestId::new("authentication-failure").unwrap();
+    for (failure, status, code) in [
+        (
+            Error::Random(getrandom::Error::UNSUPPORTED),
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "platform.internal",
+        ),
+        (
+            Error::PasswordHash(argon2::password_hash::Error::Crypto),
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "platform.internal",
+        ),
+        (
+            crate::admin_auth::require_current_password_hash("SECRET invalid PHC").unwrap_err(),
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "platform.internal",
+        ),
+        (
+            Error::CsrfTokenMismatch,
+            StatusCode::FORBIDDEN,
+            "auth.csrf_rejected",
+        ),
+        (
+            Error::InvalidCsrfToken,
+            StatusCode::FORBIDDEN,
+            "auth.csrf_rejected",
+        ),
+        (
+            crate::admin_auth::derive_csrf_token(&format!("{}!", "A".repeat(42))).unwrap_err(),
+            StatusCode::FORBIDDEN,
+            "auth.csrf_rejected",
+        ),
+        (
+            crate::admin_auth::require_single_security_header_value(
+                crate::admin_auth::CSRF_HEADER,
+                &[&[0xff][..]],
+            )
+            .unwrap_err(),
+            StatusCode::FORBIDDEN,
+            "auth.csrf_rejected",
+        ),
+        (
+            Error::MissingSecurityHeader {
+                name: crate::admin_auth::CSRF_HEADER,
+            },
+            StatusCode::FORBIDDEN,
+            "auth.csrf_rejected",
+        ),
+    ] {
+        let response = service_error(
+            ServiceError::<std::io::Error>::Authentication(failure),
+            Some(&id),
+        );
+        assert_eq!(response.status(), status);
+        let bytes = to_bytes(response.into_body(), 8192).await.unwrap();
+        let envelope: ErrorEnvelope = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(envelope.code.as_str(), code);
+        assert_eq!(envelope.request_id.as_ref(), Some(&id));
+        assert!(
+            !std::str::from_utf8(&bytes)
+                .unwrap()
+                .contains("random source")
+        );
+        assert!(!std::str::from_utf8(&bytes).unwrap().contains("Argon2"));
+        assert!(!std::str::from_utf8(&bytes).unwrap().contains("SECRET"));
+    }
+}
+
 fn isolated_router<Store: AdministratorStore + 'static>(
     product_id: impl Into<String>,
     mode: AdministratorOriginMode,

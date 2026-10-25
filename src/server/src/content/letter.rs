@@ -1,5 +1,6 @@
 use crate::{ApiResult, AppError, AppState, db_error, invalid};
-use axum::{Json, extract::State, http::StatusCode};
+use axum::{Json, extract::State};
+use blog_application::error::HttpStatus;
 use serde::{Deserialize, Serialize};
 
 const MAX_STORED_LETTER_BYTES: usize = 128 * 1024;
@@ -46,7 +47,7 @@ fn validate_content(content: &LetterContent) -> Result<(), AppError> {
 }
 
 fn stored_content(stored: &StoredLetter) -> Result<LetterContent, AppError> {
-    let malformed = || AppError(StatusCode::CONFLICT, "信笺存储内容无效");
+    let malformed = || AppError::Public(HttpStatus::Conflict, "信笺存储内容无效");
     if !matches!(stored.is_public, Some(0 | 1))
         || stored.image_path.is_some()
         || stored.source.is_some()
@@ -57,8 +58,10 @@ fn stored_content(stored: &StoredLetter) -> Result<LetterContent, AppError> {
     if raw.len() > MAX_STORED_LETTER_BYTES {
         return Err(malformed());
     }
-    let content: LetterContent = serde_json::from_str(raw).map_err(|_| malformed())?;
-    validate_content(&content).map_err(|_| malformed())?;
+    let content: LetterContent = serde_json::from_str(raw).map_err(AppError::StoredLetter)?;
+    if validate_content(&content).is_err() {
+        return Err(malformed());
+    }
     Ok(content)
 }
 
@@ -77,7 +80,10 @@ async fn load_stored_letter(
     .await
     .map_err(db_error)?;
     if rows.len() > 1 {
-        return Err(AppError(StatusCode::CONFLICT, "站点作者存在多份信笺"));
+        return Err(AppError::Public(
+            HttpStatus::Conflict,
+            "站点作者存在多份信笺",
+        ));
     }
     Ok(rows.pop())
 }
@@ -125,7 +131,8 @@ pub(super) async fn save_letter(
         content: input.content.trim().to_owned(),
     };
     validate_content(&content)?;
-    let encoded = serde_json::to_string(&content).map_err(|_| invalid("信笺内容无效"))?;
+    let encoded =
+        serde_json::to_string(&content).expect("invariant: letter strings serialize to JSON");
     if encoded.len() > MAX_STORED_LETTER_BYTES {
         return Err(invalid("信笺内容过长"));
     }

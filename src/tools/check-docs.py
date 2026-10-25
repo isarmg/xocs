@@ -128,7 +128,7 @@ def links(text: str) -> list[tuple[int, str]]:
 
 
 def documents(root: Path) -> list[Path]:
-    paths = [root / 'README.md', root / 'test/README.md']
+    paths = [root / 'README.md', root / 'AGENTS.md', root / 'test/README.md']
     paths.extend((root / 'docs').rglob('*.md'))
     paths.extend((root / 'deploy').rglob('*.md'))
     paths.extend((root / 'src/tools').rglob('*.md'))

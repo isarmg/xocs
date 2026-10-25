@@ -19,7 +19,8 @@ fn scheme(value: &str) -> Option<String> {
 fn scheme(value: &str) -> Option<String> {
     url_encoding::address::Url::options()
         .base_url(Some(
-            &url_encoding::address::Url::parse("https://markdown.invalid/").ok()?,
+            &url_encoding::address::Url::parse("https://markdown.invalid/")
+                .expect("invariant: Markdown base URL is valid"),
         ))
         .parse(value)
         .ok()
@@ -77,7 +78,22 @@ pub fn html(content: &str) -> String {
                     }
                     video = None;
                 }
-                _ => {}
+                Event::Start(_)
+                | Event::End(_)
+                | Event::Code(_)
+                | Event::InlineMath(_)
+                | Event::DisplayMath(_)
+                | Event::Html(_)
+                | Event::InlineHtml(_)
+                | Event::FootnoteReference(_)
+                | Event::SoftBreak
+                | Event::HardBreak
+                | Event::Rule
+                | Event::TaskListMarker(_) => {
+                    unreachable!(
+                        "invariant: code blocks contain only text before their closing event"
+                    )
+                }
             }
             continue;
         }
@@ -118,7 +134,10 @@ pub fn html(content: &str) -> String {
                 }
             }
             Event::End(TagEnd::Link) => {
-                if links.pop() == Some(true) {
+                if links
+                    .pop()
+                    .expect("invariant: parser link events are balanced")
+                {
                     events.push(Event::End(TagEnd::Link));
                 }
             }
@@ -140,7 +159,10 @@ pub fn html(content: &str) -> String {
                 }
             }
             Event::End(TagEnd::Image) => {
-                if images.pop() == Some(true) {
+                if images
+                    .pop()
+                    .expect("invariant: parser image events are balanced")
+                {
                     events.push(Event::End(TagEnd::Image));
                 }
             }
@@ -152,7 +174,7 @@ pub fn html(content: &str) -> String {
                         LinkKind::Url if !has_authority_scheme(link.as_str()) => {
                             format!("http://{}", link.as_str())
                         }
-                        _ => link.as_str().to_owned(),
+                        LinkKind::Url => link.as_str().to_owned(),
                     };
                     if !allowed_destination(&destination, false) {
                         continue;

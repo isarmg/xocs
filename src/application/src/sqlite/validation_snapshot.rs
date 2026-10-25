@@ -148,7 +148,7 @@ pub async fn open_validation_snapshot(
     let path = path.as_ref().to_path_buf();
     let snapshot = tokio::task::spawn_blocking(move || ValidationSnapshot::capture(path))
         .await
-        .map_err(|_| SnapshotError::CaptureTaskFailed)??;
+        .map_err(SnapshotError::CaptureTaskFailed)??;
     snapshot.into_pool().await
 }
 
@@ -160,7 +160,7 @@ pub async fn open_validation_snapshot_with_connection_limits(
     let path = path.as_ref().to_path_buf();
     let snapshot = tokio::task::spawn_blocking(move || ValidationSnapshot::capture(path))
         .await
-        .map_err(|_| SnapshotError::CaptureTaskFailed)??;
+        .map_err(SnapshotError::CaptureTaskFailed)??;
     snapshot.into_pool_with_connection_limits(limits).await
 }
 
@@ -514,9 +514,9 @@ pub enum SnapshotError {
     #[error("SQLite source has an active writer, checkpoint or recovery; retry later")]
     Busy,
     #[error("SQLite validation source does not support the required native lock: {0}")]
-    LockUnavailable(io::Error),
+    LockUnavailable(#[source] io::Error),
     #[error("SQLite validation capture task failed")]
-    CaptureTaskFailed,
+    CaptureTaskFailed(#[source] tokio::task::JoinError),
     #[error("SQLite validation I/O failed: {0}")]
     Io(#[from] io::Error),
     #[error("SQLite private validation failed: {0}")]

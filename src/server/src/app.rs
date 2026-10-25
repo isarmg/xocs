@@ -7,9 +7,9 @@ use axum::{
     response::{IntoResponse, Response},
     routing::get,
 };
-use blog_application::admin_auth::AdministratorOriginMode;
 use blog_application::admin_core::AdministratorService;
 use blog_application::admin_sqlite::SqliteAdministratorStore;
+use blog_application::{admin_auth::AdministratorOriginMode, error::HttpStatus};
 use sqlx::SqlitePool;
 use std::{path::PathBuf, sync::Arc, time::Duration};
 use tower_http::{
@@ -51,8 +51,8 @@ async fn admit_public_mutation(
         return next.run(request).await;
     }
     let Ok(_admission) = capacity.admitted.clone().try_acquire_owned() else {
-        return AppError(
-            StatusCode::SERVICE_UNAVAILABLE,
+        return AppError::Public(
+            HttpStatus::ServiceUnavailable,
             "服务写入容量已满，请稍后重试",
         )
         .into_response();
@@ -63,8 +63,8 @@ async fn admit_public_mutation(
     )
     .await
     else {
-        return AppError(
-            StatusCode::SERVICE_UNAVAILABLE,
+        return AppError::Public(
+            HttpStatus::ServiceUnavailable,
             "服务写入暂时繁忙，请稍后重试",
         )
         .into_response();
@@ -72,31 +72,79 @@ async fn admit_public_mutation(
     next.run(request).await
 }
 
-#[derive(Debug)]
-pub(crate) struct AppError(pub(crate) StatusCode, pub(crate) &'static str);
+#[derive(Debug, thiserror::Error)]
+pub enum AppError {
+    #[error("{1}")]
+    Public(HttpStatus, &'static str),
+    #[error("数据库操作失败")]
+    Database(#[from] sqlx::Error),
+    #[error("数据库暂时不可用")]
+    DatabaseUnavailable(#[source] sqlx::Error),
+    #[error("媒体文件操作失败")]
+    Filesystem(#[from] blog_application::fs_safety::Error),
+    #[error("服务正在停止")]
+    Stopping(#[from] blog_application::server_runtime::WorkClosed),
+    #[error("{message}")]
+    Task {
+        message: &'static str,
+        #[source]
+        source: tokio::task::JoinError,
+    },
+    #[error("{message}")]
+    Busy {
+        message: &'static str,
+        #[source]
+        source: tokio::time::error::Elapsed,
+    },
+    #[error("文章密码应为 12 至 1024 字节且不含控制字符")]
+    InvalidPassword(#[source] blog_application::admin_auth::Error),
+    #[error("密码计算失败")]
+    Password(#[from] blog_application::admin_auth::Error),
+    #[error("文件名编码无效")]
+    FileNameHeader(#[source] axum::http::header::ToStrError),
+    #[error("文件名编码无效")]
+    FileNameEncoding(#[source] std::str::Utf8Error),
+    #[error("信笺存储内容无效")]
+    StoredLetter(#[source] serde_json::Error),
+    #[error("媒体删除日志名称无效")]
+    InvalidDeletionJournal,
+}
 impl AppError {
+    fn status(&self) -> HttpStatus {
+        match self {
+            Self::Public(status, _) => *status,
+            Self::Stopping(_) | Self::Busy { .. } | Self::DatabaseUnavailable(_) => {
+                HttpStatus::ServiceUnavailable
+            }
+            Self::StoredLetter(_) => HttpStatus::Conflict,
+            Self::FileNameHeader(_) | Self::FileNameEncoding(_) | Self::InvalidPassword(_) => {
+                HttpStatus::BadRequest
+            }
+            Self::Database(_)
+            | Self::Filesystem(_)
+            | Self::Task { .. }
+            | Self::Password(_)
+            | Self::InvalidDeletionJournal => HttpStatus::Internal,
+        }
+    }
+
     pub(crate) fn envelope(&self) -> blog_application::error::ErrorEnvelope {
-        let code = match self.0 {
-            StatusCode::BAD_REQUEST => "bad_request",
-            StatusCode::UNAUTHORIZED => "unauthorized",
-            StatusCode::FORBIDDEN => "forbidden",
-            StatusCode::NOT_FOUND => "not_found",
-            StatusCode::CONFLICT => "conflict",
-            StatusCode::PAYLOAD_TOO_LARGE => "payload_too_large",
-            StatusCode::TOO_MANY_REQUESTS => "too_many_requests",
-            StatusCode::SERVICE_UNAVAILABLE => "service_unavailable",
-            _ => "internal_error",
-        };
         blog_application::error::ErrorEnvelope::with_code(
-            blog_application::error::ErrorCode::new(code).expect("static error code"),
-            self.1,
+            self.status().error_code(),
+            self.to_string(),
         )
     }
 }
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
+        use std::error::Error as _;
+        if self.source().is_some() {
+            tracing::error!(error = ?self, "request operation failed");
+        }
         let envelope = self.envelope();
-        let mut response = (self.0, Json(envelope)).into_response();
+        let status = StatusCode::from_u16(self.status().status())
+            .expect("invariant: HTTP error statuses are valid");
+        let mut response = (status, Json(envelope)).into_response();
         response.headers_mut().insert(
             axum::http::header::CACHE_CONTROL,
             axum::http::HeaderValue::from_static("no-store, private, max-age=0"),
@@ -107,14 +155,13 @@ impl IntoResponse for AppError {
 pub(crate) type ApiResult<T> = Result<Json<T>, AppError>;
 
 pub(crate) fn db_error(error: sqlx::Error) -> AppError {
-    tracing::error!(%error, "database operation failed");
-    AppError(StatusCode::INTERNAL_SERVER_ERROR, "数据库操作失败")
+    AppError::Database(error)
 }
 pub(crate) fn invalid(message: &'static str) -> AppError {
-    AppError(StatusCode::BAD_REQUEST, message)
+    AppError::Public(HttpStatus::BadRequest, message)
 }
 pub(crate) fn absent() -> AppError {
-    AppError(StatusCode::NOT_FOUND, "内容不存在")
+    AppError::Public(HttpStatus::NotFound, "内容不存在")
 }
 pub(crate) async fn site_author_id<'executor, E>(executor: E) -> Result<i64, AppError>
 where
@@ -126,17 +173,18 @@ where
     .fetch_optional(executor)
     .await
     .map_err(db_error)?
-    .ok_or(AppError(StatusCode::CONFLICT, "缺少站点作者账号"))
+    .ok_or(AppError::Public(HttpStatus::Conflict, "缺少站点作者账号"))
 }
 #[cfg(any(test, feature = "maintenance"))]
-pub(crate) fn now_micros() -> anyhow::Result<u64> {
+pub(crate) fn now_micros() -> Result<u64, crate::Error> {
     use std::time::{SystemTime, UNIX_EPOCH};
-    Ok(u64::try_from(
-        SystemTime::now().duration_since(UNIX_EPOCH)?.as_micros(),
-    )?)
+    Ok(SystemTime::now()
+        .duration_since(UNIX_EPOCH)?
+        .as_micros()
+        .try_into()?)
 }
 
-pub(crate) fn router(state: AppState, web: Option<PathBuf>) -> anyhow::Result<Router> {
+pub(crate) fn router(state: AppState, web: Option<PathBuf>) -> Result<Router, crate::Error> {
     let admin_routes = content::admin_routes()
         .merge(media::admin_routes())
         .merge(home::admin_routes())
@@ -237,7 +285,7 @@ async fn admit_request(
         return absent().into_response();
     }
     let Some(_admission) = scope.enter_request().await else {
-        return AppError(StatusCode::SERVICE_UNAVAILABLE, "服务正在停止").into_response();
+        return AppError::Public(HttpStatus::ServiceUnavailable, "服务正在停止").into_response();
     };
     next.run(request).await
 }
@@ -257,20 +305,19 @@ const PAGE_ROUTES: &[&str] = &[
 ];
 
 async fn health(State(pool): State<SqlitePool>) -> Response {
-    match sqlx::query_scalar::<_, i64>("SELECT 1")
-        .fetch_one(&pool)
+    match sqlx::query("SELECT 1")
+        .execute(&pool)
         .await
     {
-        Ok(1) => Json(serde_json::json!({"status":"ready","application":PRODUCT_ID,"schema_identity":schema::current_identity().expect("compiled schema identity")})).into_response(),
-        _ => AppError(StatusCode::SERVICE_UNAVAILABLE, "数据库暂时不可用").into_response(),
+        Ok(_) => {
+            Json(serde_json::json!({"status":"ready","application":PRODUCT_ID,"schema_identity":schema::current_identity()})).into_response()
+        }
+        Err(error) => AppError::DatabaseUnavailable(error).into_response(),
     }
 }
 
 async fn readiness(State(pool): State<SqlitePool>) -> Response {
-    let ready = sqlx::query_scalar::<_, i64>("SELECT 1")
-        .fetch_one(&pool)
-        .await
-        .is_ok_and(|value| value == 1);
+    let ready = sqlx::query("SELECT 1").execute(&pool).await.is_ok();
     (
         if ready {
             StatusCode::OK
@@ -297,3 +344,7 @@ async fn admin_gate(State(state): State<AppState>, request: Request, next: Next)
         Err(response) => *response,
     }
 }
+
+#[cfg(test)]
+#[path = "../../../test/server/unit/app_errors.rs"]
+mod error_tests;

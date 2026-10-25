@@ -1,4 +1,5 @@
 //! Media HTTP routes and the write/deletion transaction coordinators.
+use blog_application::error::HttpStatus;
 mod formats;
 mod references;
 mod storage;
@@ -10,7 +11,7 @@ use axum::{
     Json, Router,
     body::Bytes,
     extract::{DefaultBodyLimit, State},
-    http::{HeaderMap, StatusCode},
+    http::HeaderMap,
     routing::post,
 };
 use blog_application::server_cli::ContractPath;
@@ -20,7 +21,7 @@ use sqlx::Row;
 use self::{
     formats::{MediaFormat, MediaKind},
     references::referenced,
-    storage::{DELETE_PREFIX, UploadedMedia, filesystem_error, not_found, reconcile_deletion},
+    storage::{DELETE_PREFIX, UploadedMedia, not_found, reconcile_deletion},
 };
 use crate::{ApiResult, AppError, AppState, db_error};
 
@@ -68,24 +69,29 @@ async fn save_media(
     let owned = state.clone();
     let original_name = headers
         .get("x-file-name")
-        .and_then(|value| value.to_str().ok())
-        .and_then(|value| {
-            url_encoding::percent::percent_decode_str(value)
+        .map(|value| {
+            let value = value.to_str().map_err(AppError::FileNameHeader)?;
+            let value = url_encoding::percent::percent_decode_str(value)
                 .decode_utf8()
-                .ok()
+                .map_err(AppError::FileNameEncoding)?;
+            if value.len() > 200 || value.contains('/') || value.contains('\\') {
+                return Err(crate::invalid("文件名无效"));
+            }
+            Ok(value.into_owned())
         })
-        .filter(|value| value.len() <= 200 && !value.contains('/') && !value.contains('\\'))
-        .map(|value| value.into_owned());
+        .transpose()?;
     let result = state
         .scope
         .commit_tasks
         .try_spawn(async move {
             let _operation = owned.media_operations.lock().await;
             storage::save(&owned, body, owner, kind, original_name).await
-        })
-        .map_err(|_| AppError(StatusCode::SERVICE_UNAVAILABLE, "服务正在停止"))?
+        })?
         .await
-        .map_err(|_| AppError(StatusCode::INTERNAL_SERVER_ERROR, "媒体保存失败"))?;
+        .map_err(|source| AppError::Task {
+            message: "媒体保存失败",
+            source,
+        })?;
     result.map(Json)
 }
 
@@ -129,19 +135,19 @@ async fn delete_resource(
                         })
                 })
                 .filter(|_| storage.as_deref() == Some("local"))
-                .ok_or(AppError(
-                    StatusCode::CONFLICT,
+                .ok_or(AppError::Public(
+                    HttpStatus::Conflict,
                     "仅可删除本站上传的图片或视频",
                 ))?;
             if path != input.path {
-                return Err(AppError(
-                    StatusCode::CONFLICT,
+                return Err(AppError::Public(
+                    HttpStatus::Conflict,
                     "文件记录已经改变，请刷新后重试",
                 ));
             }
             if referenced(&mut transaction, &path).await? {
-                return Err(AppError(
-                    StatusCode::CONFLICT,
+                return Err(AppError::Public(
+                    HttpStatus::Conflict,
                     "媒体仍被站内内容引用，请先移除引用",
                 ));
             }
@@ -161,13 +167,16 @@ async fn delete_resource(
                 )
             })
             .await
-            .map_err(filesystem_error)?;
+            .map_err(|source| AppError::Task {
+                message: "媒体删除失败",
+                source,
+            })?;
             if let Err(error) = moved
                 && !not_found(&error)
             {
                 transaction.rollback().await.map_err(db_error)?;
                 reconcile_deletion(&owned.pool, &owned.media, &filename).await?;
-                return Err(filesystem_error(error));
+                return Err(error.into());
             }
             let deletion = sqlx::query("DELETE FROM resource WHERE id=?")
                 .bind(id)
@@ -184,8 +193,10 @@ async fn delete_resource(
             }
             reconcile_deletion(&owned.pool, &owned.media, &filename).await?;
             Ok(Json(serde_json::json!({"deleted":true})))
-        })
-        .map_err(|_| AppError(StatusCode::SERVICE_UNAVAILABLE, "服务正在停止"))?
+        })?
         .await
-        .map_err(|_| AppError(StatusCode::INTERNAL_SERVER_ERROR, "媒体删除失败"))?
+        .map_err(|source| AppError::Task {
+            message: "媒体删除失败",
+            source,
+        })?
 }

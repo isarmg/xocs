@@ -4436,6 +4436,12 @@
       "directory": "src/browser",
       "reason": "Present every administration page in one ZXS-style top navigation using current-page semantics, retain canonical page order and article-editor selection, and remove the superseded navigation-group rendering helpers without changing page routes or domain behavior.",
       "production_behavior_change": true
+    },
+    {
+      "directory": "src/foundation/assets/markdown-parser",
+      "file": "src/autolink/finder.rs",
+      "reason": "Make the maintained autolink kind a closed enum so product consumers exhaustively handle URL and email links and newly added kinds require compiler-checked decisions.",
+      "production_behavior_change": false
     }
   ]
 }

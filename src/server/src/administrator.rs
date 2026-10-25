@@ -4,17 +4,16 @@ use blog_application::admin_core::{
     SecurityAction, SecurityAuditEvent,
 };
 
-pub async fn seed_administrator<S: AdministratorStore>(
-    service: &AdministratorService<S>,
+pub async fn seed_administrator(
+    service: &AdministratorService<blog_application::admin_sqlite::SqliteAdministratorStore>,
     username: &str,
-    password: &str,
+    password: &blog_application::admin_auth::Password,
     now: u64,
-) -> anyhow::Result<bool> {
-    let username = blog_application::admin_auth::normalize_administrator_username(username)?;
+) -> Result<(), super::Error> {
     let account = AdministratorRecord {
         administrator_id: Identifier::new(blog_application::admin_auth::random_token()?)?,
-        username: username.clone(),
-        password_hash: blog_application::admin_auth::hash_password(password)?,
+        username: username.to_owned(),
+        password_hash: password.hash()?,
         active: true,
         session_version: 1,
         created_at_micros: now,
@@ -30,12 +29,12 @@ pub async fn seed_administrator<S: AdministratorStore>(
                 action: SecurityAction::AdministratorCreated,
                 outcome: AuditOutcome::Success,
                 actor_administrator_id: None,
-                subject_digest: Some(blog_application::admin_auth::token_hash(&username)),
+                subject_digest: Some(blog_application::admin_auth::token_hash(username)),
                 request_id: None,
                 detail_json: "{}".into(),
                 occurred_at_micros: now,
             },
         )
         .await?;
-    Ok(true)
+    Ok(())
 }

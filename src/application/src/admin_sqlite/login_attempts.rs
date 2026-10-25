@@ -111,7 +111,7 @@ pub(super) async fn state_for_pool(
     REGISTRY
         .get_or_init(|| Mutex::new(Registry::default()))
         .lock()
-        .map_err(|_| AuthenticationStateError::Unavailable)?
+        .expect("authentication scope registry lock poisoned")
         .acquire(scope, &owner, database_identity_pin)
 }
 

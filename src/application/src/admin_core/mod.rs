@@ -277,14 +277,12 @@ impl SecurityAuditEvent {
             return Err(Error::InvalidAuditEvent);
         }
         let detail: serde_json::Value =
-            serde_json::from_str(&self.detail_json).map_err(|_| Error::InvalidAuditEvent)?;
-        if !detail.is_object()
-            || self
-                .request_id
-                .as_ref()
-                .is_some_and(|value| crate::contracts::RequestId::new(value.clone()).is_err())
-        {
+            serde_json::from_str(&self.detail_json).map_err(Error::AuditJson)?;
+        if !detail.is_object() {
             return Err(Error::InvalidAuditEvent);
+        }
+        if let Some(request_id) = &self.request_id {
+            crate::error::validate_request_id(request_id)?;
         }
         Ok(())
     }
@@ -364,8 +362,7 @@ impl LoginContext {
     pub fn validate(&self) -> Result<(), Error> {
         require_persistable_time(self.now_micros)?;
         if let Some(request_id) = &self.request_id {
-            crate::contracts::RequestId::new(request_id.clone())
-                .map_err(|_| Error::InvalidRequestId)?;
+            crate::error::validate_request_id(request_id)?;
         }
         Ok(())
     }
@@ -423,27 +420,23 @@ where
         &self.store
     }
 
-    async fn hash_password(
-        &self,
-        password: &str,
-    ) -> Result<String, ServiceError<Store::StoreError>> {
-        crate::admin_auth::validate_password(password)?;
+    async fn hash_password(&self, password: &str) -> Result<String, PasswordWorkError> {
+        let password = crate::admin_auth::Password::new(password)?;
         let permit = tokio::time::timeout(
             Duration::from_micros(ARGON2_ACQUIRE_TIMEOUT_MICROS),
             self.argon2_slots.clone().acquire_owned(),
         )
         .await
-        .map_err(|_| ServiceError::AuthenticationBusy)?
-        .map_err(|_| ServiceError::AuthenticationBusy)?;
-        let password = password.to_owned();
+        .map_err(PasswordWorkError::Capacity)?
+        .expect("invariant: password verification semaphore remains open");
         tokio::task::spawn_blocking(move || {
-            let result = crate::admin_auth::hash_password(&password);
+            let result = password.hash();
             drop(permit);
             result
         })
         .await
-        .map_err(|_| ServiceError::AuthenticationWorkerFailed)?
-        .map_err(ServiceError::Authentication)
+        .map_err(PasswordWorkError::Worker)?
+        .map_err(PasswordWorkError::Hashing)
     }
 
     pub async fn login(
@@ -483,8 +476,8 @@ where
             self.argon2_slots.clone().acquire_owned(),
         )
         .await
-        .map_err(|_| ServiceError::AuthenticationBusy)?
-        .map_err(|_| ServiceError::AuthenticationBusy)?;
+        .map_err(PasswordWorkError::Capacity)?
+        .expect("invariant: password verification semaphore remains open");
         let password = password.to_owned();
         let encoded = encoded.to_owned();
         let password_matches = tokio::task::spawn_blocking(move || {
@@ -493,7 +486,7 @@ where
             matches
         })
         .await
-        .map_err(|_| ServiceError::AuthenticationWorkerFailed)?;
+        .map_err(PasswordWorkError::Worker)?;
         let Some(administrator) = administrator.filter(|value| value.active && password_matches)
         else {
             return Err(ServiceError::InvalidCredentials);
@@ -716,6 +709,18 @@ where
 
 const DUMMY_PASSWORD_HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$MDEyMzQ1Njc4OWFiY2RlZg$5ZQ3RjSgS3eazD2qv8ZO2Cm50ONQ2RplT/MMLbScSMU";
 
+#[derive(Debug, Error)]
+pub enum PasswordWorkError {
+    #[error("password is invalid")]
+    Invalid(#[from] crate::admin_auth::Error),
+    #[error("password hashing failed")]
+    Hashing(#[source] crate::admin_auth::Error),
+    #[error("password work capacity is temporarily exhausted")]
+    Capacity(#[source] tokio::time::error::Elapsed),
+    #[error("password worker exited unexpectedly")]
+    Worker(#[source] tokio::task::JoinError),
+}
+
 fn security_event(
     action: SecurityAction,
     administrator: &AdministratorRecord,
@@ -744,16 +749,16 @@ where
     LoginAttemptsExceeded { retry_after_seconds: u64 },
     #[error("password verification capacity is temporarily exhausted")]
     AuthenticationBusy,
-    #[error("password verification worker exited unexpectedly")]
-    AuthenticationWorkerFailed,
+    #[error(transparent)]
+    PasswordWork(#[from] PasswordWorkError),
     #[error("administrator session is invalid or expired")]
     InvalidSession,
     #[error(transparent)]
     Policy(#[from] Error),
     #[error("administrator store failed: {0}")]
-    Store(StoreError),
+    Store(#[source] StoreError),
     #[error("administrator response contract failed: {0}")]
-    Contract(crate::contracts::ValidationError),
+    Contract(#[source] crate::contracts::ValidationError),
     #[error("authentication primitive failed: {0}")]
     Authentication(#[from] crate::admin_auth::Error),
 }
@@ -825,7 +830,7 @@ fn require_persistable_time(value: u64) -> Result<(), Error> {
     }
 }
 
-#[derive(Clone, Debug, Eq, Error, PartialEq)]
+#[derive(Debug, Error)]
 pub enum Error {
     #[error("identifier must be 1 to 64 visible non-whitespace ASCII bytes")]
     InvalidIdentifier,
@@ -841,8 +846,10 @@ pub enum Error {
     InvalidSessionRecord,
     #[error("security audit event violates current policy")]
     InvalidAuditEvent,
+    #[error("security audit details are not valid JSON")]
+    AuditJson(#[source] serde_json::Error),
     #[error("request ID is invalid")]
-    InvalidRequestId,
+    InvalidRequestId(#[from] crate::error::InvalidRequestId),
     #[error(transparent)]
     Authentication(#[from] crate::admin_auth::Error),
 }

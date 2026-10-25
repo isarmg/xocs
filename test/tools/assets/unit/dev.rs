@@ -76,15 +76,16 @@ async fn lock_contention_is_retryable_even_when_the_source_is_unchanged() -> Res
         debug: true,
         dist: None,
     };
-    let status = Arc::new(RwLock::new(
-        json!({"building":false,"generation":0,"last_error":null}),
-    ));
+    let status = Arc::new(RwLock::new(BuildStatus::default()));
     let outcome = rebuild(options, status.clone()).await;
     assert!(outcome == BuildOutcome::Retry);
-    assert_eq!(status.read().await["generation"], 0);
+    assert_eq!(status.read().await.generation, 0);
     assert!(
-        status.read().await["last_error"]
-            .as_str()
+        status
+            .read()
+            .await
+            .last_error
+            .as_deref()
             .unwrap()
             .contains("Another asset build owns")
     );
@@ -123,9 +124,24 @@ async fn static_head_etag_and_traversal() -> Result<()> {
         base: "/".into(),
         proxies: Vec::new(),
         client: proxy::Client::new(Duration::from_secs(300)),
-        status: Arc::new(RwLock::new(json!({}))),
+        status: Arc::new(RwLock::new(BuildStatus::default())),
     };
     let router = Router::new().fallback(handler).with_state(app);
+    let status = router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/__rust_web/status")
+                .body(Body::empty())?,
+        )
+        .await?;
+    assert_eq!(status.status(), StatusCode::OK);
+    assert_eq!(
+        serde_json::from_slice::<serde_json::Value>(
+            &axum::body::to_bytes(status.into_body(), 1024).await?
+        )?,
+        json!({"building":false,"generation":0,"last_error":null})
+    );
     let first = router
         .clone()
         .oneshot(Request::builder().uri("/a.js").body(Body::empty())?)
@@ -190,7 +206,7 @@ async fn wasm_encoding_refusal_never_falls_back_to_forbidden_identity() -> Resul
         base: "/".into(),
         proxies: Vec::new(),
         client: proxy::Client::new(Duration::from_secs(300)),
-        status: Arc::new(RwLock::new(json!({}))),
+        status: Arc::new(RwLock::new(BuildStatus::default())),
     };
     let router = Router::new().fallback(handler).with_state(app);
     for method in [Method::GET, Method::HEAD] {

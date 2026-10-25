@@ -17,27 +17,42 @@ pub const ROOT_RESERVED_DIRECTORIES: [&str; 7] = [
 /// One explicit installation root; never infer it from the process directory.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Layout {
-    pub root: PathBuf,
+    root: PathBuf,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, thiserror::Error)]
+pub enum Error {
+    #[error("installation root must be UTF-8 without control characters")]
+    InvalidText,
+    #[error("installation root must be absolute")]
+    RelativeRoot,
+    #[error("installation root cannot be the filesystem root")]
+    FilesystemRoot,
+    #[error("installation root must be normalized")]
+    UnnormalizedRoot,
 }
 
 impl Layout {
-    pub fn new(root: &Path) -> anyhow::Result<Self> {
-        anyhow::ensure!(
-            root.to_str()
-                .is_some_and(|name| !name.chars().any(char::is_control)),
-            "installation root must be UTF-8 without control characters"
-        );
-        anyhow::ensure!(root.is_absolute(), "installation root must be absolute");
-        anyhow::ensure!(
-            root != Path::new("/"),
-            "installation root cannot be the filesystem root"
-        );
-        anyhow::ensure!(
-            root.components()
-                .all(|part| matches!(part, Component::RootDir | Component::Normal(_)))
-                && root.components().collect::<PathBuf>().as_os_str() == root.as_os_str(),
-            "installation root must be normalized"
-        );
+    pub fn new(root: &Path) -> Result<Self, Error> {
+        if !root
+            .to_str()
+            .is_some_and(|name| !name.chars().any(char::is_control))
+        {
+            return Err(Error::InvalidText);
+        }
+        if !root.is_absolute() {
+            return Err(Error::RelativeRoot);
+        }
+        if root == Path::new("/") {
+            return Err(Error::FilesystemRoot);
+        }
+        if !root
+            .components()
+            .all(|part| matches!(part, Component::RootDir | Component::Normal(_)))
+            || root.components().collect::<PathBuf>().as_os_str() != root.as_os_str()
+        {
+            return Err(Error::UnnormalizedRoot);
+        }
         Ok(Self {
             root: root.to_path_buf(),
         })

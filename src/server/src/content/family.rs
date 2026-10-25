@@ -1,5 +1,6 @@
 use crate::{ApiResult, AppError, AppState, absent, db_error, invalid};
-use axum::{Json, extract::State, http::StatusCode};
+use axum::{Json, extract::State};
+use blog_application::error::HttpStatus;
 use blog_application::server_cli::ContractPath as Path;
 use serde::{Deserialize, Serialize};
 
@@ -127,7 +128,10 @@ pub(super) async fn create_family(
         .await
         .map_err(db_error)?;
     if exists {
-        return Err(AppError(StatusCode::CONFLICT, "家已创建，请编辑现有资料"));
+        return Err(AppError::Public(
+            HttpStatus::Conflict,
+            "家已创建，请编辑现有资料",
+        ));
     }
     let id=sqlx::query("INSERT INTO family(user_id,bg_cover,man_cover,woman_cover,man_name,woman_name,timing,countdown_title,countdown_time,family_info,status) VALUES(?,?,?,?,?,?,?,?,?,?,?)")
         .bind(author)

@@ -1,7 +1,7 @@
 //! Explicit offline operations for the separate `blog-setup` executable.
 //! Every operation takes the same instance lock as the server. Runtime startup
 //! never calls these functions and never initializes or resets stored data.
-use anyhow::{Context, ensure};
+use crate::Error;
 use blog_application::{
     admin_auth,
     admin_core::{
@@ -15,23 +15,38 @@ use std::path::Path;
 /// Initialize a fresh current database without replacing any existing file.
 /// The administrator controls ROOT/config/config.json. Mutable directories may
 /// already exist, but must be private and owned by the invoking service user.
-pub async fn initialize(root: &Path, username: &str, password: &str) -> anyhow::Result<()> {
+pub async fn initialize(root: &Path, username: &str, password: &str) -> Result<(), Error> {
     crate::verify_compiled_identity()?;
     let username = admin_auth::normalize_administrator_username(username)?;
-    admin_auth::validate_password(password)?;
+    let password = admin_auth::Password::new(password)?;
     let settings = crate::config::load_offline(root, &root.join("config/config.json"))?.value;
     let state = PrivateDirectory::create(&settings.data_dir)?;
     let lock = crate::config::runtime_lock(&settings)?;
-    let database = settings.database_path()?;
-    ensure!(
-        std::fs::symlink_metadata(&database)
-            .is_err_and(|e| e.kind() == std::io::ErrorKind::NotFound),
-        "database already exists or cannot be inspected"
-    );
-    let media = PrivateDirectory::create(settings.media_path()?)?;
+    let database = settings.database_path();
+    let media = PrivateDirectory::create(settings.media_path())?;
     let run = PrivateDirectory::create(root.join("run"))?;
     let logs = PrivateDirectory::create(root.join("logs"))?;
-    crate::database::initialize_new_database(&database, &username, password).await?;
+    match crate::database::initialize_new_database(&database, &username, &password).await {
+        Ok(()) => {}
+        Err(Error::PublishDatabase {
+            staging,
+            mut source,
+        }) => {
+            // EEXIST from RENAME_NOREPLACE guarantees that this staging was not published.
+            if matches!(
+                source,
+                blog_application::fs_safety::Error::DestinationExists(_)
+            ) && let Err(cleanup) = std::fs::remove_file(&staging)
+            {
+                source = blog_application::fs_safety::Error::Cleanup {
+                    operation: Box::new(source),
+                    cleanup,
+                };
+            }
+            return Err(Error::PublishDatabase { staging, source });
+        }
+        Err(error) => return Err(error),
+    }
     crate::database::validate_existing_database(&database, &root.join("run")).await?;
     for directory in [&state, &media, &run, &logs] {
         directory.verify_identity()?;
@@ -41,14 +56,14 @@ pub async fn initialize(root: &Path, username: &str, password: &str) -> anyhow::
 }
 
 /// Validate a stopped instance using a bounded temporary database snapshot.
-pub async fn check(root: &Path) -> anyhow::Result<()> {
+pub async fn check(root: &Path) -> Result<(), Error> {
     crate::verify_compiled_identity()?;
     let settings = crate::config::load_offline(root, &root.join("config/config.json"))?.value;
     let lock = crate::config::runtime_lock(&settings)?;
-    let media = PrivateDirectory::open_existing(settings.media_path()?)?;
+    let media = PrivateDirectory::open_existing(settings.media_path())?;
     let run = PrivateDirectory::open_existing(root.join("run"))?;
     let logs = PrivateDirectory::open_existing(root.join("logs"))?;
-    crate::database::validate_existing_database(&settings.database_path()?, &root.join("run"))
+    crate::database::validate_existing_database(&settings.database_path(), &root.join("run"))
         .await?;
     for directory in [&media, &run, &logs] {
         directory.verify_identity()?;
@@ -59,26 +74,26 @@ pub async fn check(root: &Path) -> anyhow::Result<()> {
 
 /// Reset the sole administrator's password and revoke every prior session in
 /// one database transaction, with the same audit records as current auth code.
-pub async fn reset_password(root: &Path, username: &str, password: &str) -> anyhow::Result<()> {
+pub async fn reset_password(root: &Path, username: &str, password: &str) -> Result<(), Error> {
     crate::verify_compiled_identity()?;
     let username = admin_auth::normalize_administrator_username(username)?;
-    admin_auth::validate_password(password)?;
+    let password = admin_auth::Password::new(password)?;
     let settings = crate::config::load_offline(root, &root.join("config/config.json"))?.value;
     let lock = crate::config::runtime_lock(&settings)?;
-    PrivateDirectory::open_existing(settings.media_path()?)?;
+    PrivateDirectory::open_existing(settings.media_path())?;
     PrivateDirectory::open_existing(root.join("logs"))?;
-    let database = settings.database_path()?;
+    let database = settings.database_path();
     crate::database::validate_existing_database(&database, &root.join("run")).await?;
-    let hash = admin_auth::hash_password(password)?;
+    let hash = password.hash()?;
     let pool = crate::database::open_database(&database, false).await?;
     let result = async {
         let store = SqliteAdministratorStore::new(pool.clone());
         let administrator = store
             .administrator_by_username(&username)
             .await?
-            .context("administrator not found")?;
+            .ok_or(Error::AdministratorNotFound)?;
         let now = crate::app::now_micros()?;
-        let audit = |action| -> anyhow::Result<_> {
+        let audit = |action| -> Result<_, Error> {
             Ok(SecurityAuditEvent {
                 event_id: Identifier::new(admin_auth::random_token()?)?,
                 action,
@@ -102,7 +117,7 @@ pub async fn reset_password(root: &Path, username: &str, password: &str) -> anyh
             )
             .await?;
         store.validate_all_administrators().await?;
-        Ok::<(), anyhow::Error>(())
+        Ok::<(), Error>(())
     }
     .await;
     pool.close().await;

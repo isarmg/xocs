@@ -1,5 +1,5 @@
 use super::*;
-use crate::admin_core::{AdministratorService, LoginContext};
+use crate::admin_core::{AdministratorService, LoginContext, PasswordWorkError};
 
 struct Fixture {
     _directory: tempfile::TempDir,
@@ -275,7 +275,9 @@ async fn explicit_empty_password_does_not_update_or_revoke_the_account() {
         f.service
             .update_own_account(&f.context, "renamed", "correct horse battery", Some(""))
             .await,
-        Err(ManagementError::InvalidInput)
+        Err(ManagementError::PasswordWork(PasswordWorkError::Invalid(
+            crate::admin_auth::Error::InvalidPassword
+        )))
     ));
     assert_eq!(logical_snapshot(f.service.store().pool()).await, before);
 }

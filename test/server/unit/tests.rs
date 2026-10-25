@@ -33,9 +33,13 @@ async fn setup_with_password_slots(
     let pool = crate::database::open_database_with_limit(&db, true, limit)
         .await
         .unwrap();
-    initialize(&pool, "admin", "TemporaryPassphrase123")
-        .await
-        .unwrap();
+    initialize(
+        &pool,
+        "admin",
+        &blog_application::admin_auth::Password::new("TemporaryPassphrase123").unwrap(),
+    )
+    .await
+    .unwrap();
     std::fs::write(dir.path().join("index.html"), "<h1>BLOG</h1>").unwrap();
     let admin = Arc::new(AdministratorService::new(SqliteAdministratorStore::new(
         pool.clone(),
@@ -151,17 +155,25 @@ async fn initialization_publishes_only_complete_data_and_never_overwrites() {
     let directory = tempfile::tempdir().unwrap();
     std::fs::set_permissions(directory.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
     let database = directory.path().join("site.sqlite");
-    initialize_new_database(&database, "admin", "TemporaryPassphrase123")
-        .await
-        .unwrap();
+    initialize_new_database(
+        &database,
+        "admin",
+        &blog_application::admin_auth::Password::new("TemporaryPassphrase123").unwrap(),
+    )
+    .await
+    .unwrap();
     validate_existing_database(&database, database.parent().unwrap())
         .await
         .unwrap();
     let before = std::fs::read(&database).unwrap();
     assert!(
-        initialize_new_database(&database, "other-admin", "AnotherPassphrase123")
-            .await
-            .is_err()
+        initialize_new_database(
+            &database,
+            "other-admin",
+            &blog_application::admin_auth::Password::new("AnotherPassphrase123").unwrap()
+        )
+        .await
+        .is_err()
     );
     assert_eq!(std::fs::read(&database).unwrap(), before);
 }
@@ -966,7 +978,7 @@ async fn comment_submission_requires_current_identity_and_current_ddl() {
             .unwrap();
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     }
-    let identity = crate::schema::current_identity().unwrap();
+    let identity = crate::schema::current_identity();
     assert_eq!(identity.application_version, "blog-db-v4");
     assert_eq!(identity.schema_revision, 4);
     crate::schema::validate(&pool).await.unwrap();

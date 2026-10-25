@@ -9,6 +9,7 @@ build = "build.rs"
 autotests = false
 
 [dependencies]
+thiserror = { path = "../../foundation/diagnostics/typed-error", package = "blog-diagnostics-typed-error" }
 anyhow = { path = "../../foundation/diagnostics/error-context",package = "blog-diagnostics-error-context"}
 memchr = { path = "../../foundation/encoding/byte-search",package = "blog-encoding-byte-search"}
 mime_guess = { path = "../../foundation/network/media-detection",package = "blog-network-media-detection"}

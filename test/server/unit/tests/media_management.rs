@@ -950,3 +950,36 @@ async fn browser_normalized_media_aliases_in_saved_settings_and_markdown_block_d
     assert!(!image_file(directory.path(), &image).exists());
     assert_eq!(get(&app, path).await.status(), StatusCode::NOT_FOUND);
 }
+
+#[tokio::test]
+async fn uploads_reject_malformed_names_without_publishing_media() {
+    let (_directory, app, pool) = setup().await;
+    let session = login(&app).await;
+    for name in ["bad%FF.png", "..%2Fprivate.png", &"x".repeat(201)] {
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/content/upload")
+                    .header(header::HOST, "127.0.0.1:18881")
+                    .header(header::ORIGIN, "http://127.0.0.1:18881")
+                    .header("sec-fetch-site", "same-origin")
+                    .header(header::COOKIE, &session.0)
+                    .header("x-csrf-token", &session.1)
+                    .header(header::CONTENT_TYPE, "image/png")
+                    .header("x-file-name", name)
+                    .body(Body::from(b"\x89PNG\r\n\x1a\nfixture".as_slice()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(body_json(response).await["code"], "bad_request");
+    }
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM resource")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(count, 0);
+}

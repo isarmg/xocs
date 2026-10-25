@@ -114,12 +114,10 @@ fn installed_layer_switches_to_a_bounded_custom_file_and_counts_sink_failure() {
     };
     tracing::subscriber::with_default(subscriber, || {
         tracing::info!(event = "common.config.loaded");
-        layer
-            .set_rotating_file(
-                crate::log::RotatingLogFile::open_file(directory.join("custom.log"), retention)
-                    .unwrap(),
-            )
-            .unwrap();
+        layer.set_rotating_file(
+            crate::log::RotatingLogFile::open_file(directory.join("custom.log"), retention)
+                .unwrap(),
+        );
         for _ in 0..100 {
             tracing::info!(event = "common.runtime.started", padding = "x".repeat(1024));
         }

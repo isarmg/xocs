@@ -3,7 +3,7 @@ use super::appearance::{Avatar, background_style, site_media_url};
 use super::journal::NoteCard;
 use super::photos::Collection;
 use super::shell::{Chrome, site_data};
-use crate::comments::Comments;
+use crate::comments::{CommentKind, Comments};
 use crate::common::{Feedback, Lightbox, Pager, Petals, href, list, load, rows, safe_url, t, text};
 use blog_interface::children::ToChildren;
 use blog_interface::component::component_props_builder;
@@ -443,7 +443,7 @@ pub(super) fn Love() -> impl IntoView {
             Comments(component_props_builder(
                                     &Comments,
                                 )
-                                .kind( "love")
+                                .kind(CommentKind::Love)
                                 .title( t("祝福板", "Wishes"))
                                 .build()),
         )

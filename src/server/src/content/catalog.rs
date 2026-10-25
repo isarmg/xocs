@@ -1,5 +1,6 @@
 use crate::{ApiResult, AppError, AppState, absent, db_error, invalid};
-use axum::{Json, extract::State, http::StatusCode};
+use axum::{Json, extract::State};
+use blog_application::error::HttpStatus;
 use blog_application::server_cli::{ContractPath as Path, ContractQuery as Query};
 use serde::{Deserialize, Serialize};
 
@@ -126,7 +127,7 @@ pub(super) async fn delete_category(
             .await
             .map_err(db_error)?;
     if used > 0 {
-        return Err(AppError(StatusCode::CONFLICT, "分类中还有文章"));
+        return Err(AppError::Public(HttpStatus::Conflict, "分类中还有文章"));
     }
     let removes_last_section: i64 = sqlx::query_scalar(
         "SELECT EXISTS(SELECT 1 FROM home_sections WHERE sort_id=? AND enabled=1) AND NOT EXISTS(SELECT 1 FROM home_sections WHERE enabled=1 AND (sort_id IS NULL OR sort_id<>?))",
@@ -137,8 +138,8 @@ pub(super) async fn delete_category(
     .await
     .map_err(db_error)?;
     if removes_last_section != 0 {
-        return Err(AppError(
-            StatusCode::CONFLICT,
+        return Err(AppError::Public(
+            HttpStatus::Conflict,
             "请先启用其他首页栏目，再删除此分类",
         ));
     }
@@ -250,8 +251,8 @@ pub(super) async fn update_label(
         .await
         .map_err(db_error)?;
         if used {
-            return Err(AppError(
-                StatusCode::CONFLICT,
+            return Err(AppError::Public(
+                HttpStatus::Conflict,
                 "标签仍被文章使用，不能更改分类；请先修改文章的分类和标签",
             ));
         }
@@ -301,7 +302,7 @@ pub(super) async fn delete_label(
             .await
             .map_err(db_error)?;
     if used > 0 {
-        return Err(AppError(StatusCode::CONFLICT, "标签中还有文章"));
+        return Err(AppError::Public(HttpStatus::Conflict, "标签中还有文章"));
     }
     let changed = sqlx::query("DELETE FROM label WHERE id=?")
         .bind(id)

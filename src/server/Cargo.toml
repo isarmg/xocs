@@ -10,7 +10,7 @@ description = "博客 HTTP 服务、内容业务与管理员 API"
 
 [dependencies]
 schemars = { path = "../foundation/format/json-schema",package = "blog-format-json-schema"}
-anyhow = { path = "../foundation/diagnostics/error-context",package = "blog-diagnostics-error-context"}
+thiserror = { path = "../foundation/diagnostics/typed-error", package = "blog-diagnostics-typed-error" }
 async-trait = { path = "../foundation/syntax/async-trait",package = "blog-syntax-async-trait"}
 chrono = {  features = ["serde", "clock"], path = "../foundation/format/date-time",package = "blog-format-date-time"}
 clap = {  features = ["derive", "env"], path = "../foundation/cli/arguments",package = "blog-cli-arguments"}
@@ -33,6 +33,7 @@ serde_json = { path = "../foundation/format/json",package = "blog-format-json"}
 blog-application = {  path = "../application"}
 
 [dev-dependencies]
+anyhow = { path = "../foundation/diagnostics/error-context", package = "blog-diagnostics-error-context" }
 tokio = { default-features = false, features = ["test-util"], path = "../foundation/runtime/task-scheduler", package = "blog-runtime-task-scheduler" }
 http-body = { path = "../foundation/network/body-stream", package = "blog-network-body-stream" }
 

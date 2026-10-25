@@ -4,7 +4,7 @@ use super::articles::Card;
 use super::shell::{Chrome, notices, site_data};
 use crate::common::{Feedback, href, list, load, load_typed, query, safe_url, t, text};
 use crate::models::{
-    ArticleSummary, Category, HomeKind, HomeSection as HomeSectionModel, Label, Page, SiteStats,
+    ArticleSummary, Category, HomeSection as HomeSectionModel, HomeSource, Label, Page, SiteStats,
 };
 use blog_interface::children::ToChildren;
 use blog_interface::component::component_props_builder;
@@ -441,18 +441,17 @@ pub(super) fn Home() -> impl IntoView {
 
 #[component]
 fn HomeSection(section: HomeSectionModel) -> impl IntoView {
-    let kind = section.kind;
-    let filter = match kind {
-        HomeKind::Recommended => "&recommended=true".into(),
-        HomeKind::Category => format!("&sort_id={}", section.sort_id.unwrap_or(0)),
-        _ => String::new(),
+    let filter = match section.source {
+        HomeSource::Recommended => "&recommended=true".into(),
+        HomeSource::Category { sort_id } => format!("&sort_id={sort_id}"),
+        HomeSource::Latest => String::new(),
     };
     let path = format!("/api/v1/articles?size=6{filter}");
     let data = load_typed::<Page<ArticleSummary>>(Signal::derive(move || path.clone()));
-    let more = match kind {
-        HomeKind::Recommended => "/sort?recommended=1".into(),
-        HomeKind::Category => format!("/sort?sort_id={}", section.sort_id.unwrap_or(0)),
-        _ => "/sort".into(),
+    let more = match section.source {
+        HomeSource::Recommended => "/sort?recommended=1".into(),
+        HomeSource::Category { sort_id } => format!("/sort?sort_id={sort_id}"),
+        HomeSource::Latest => "/sort".into(),
     };
     View::new(
         html::section()

@@ -36,7 +36,7 @@ impl AuthenticationState {
         let mut window = self
             .window
             .lock()
-            .map_err(|_| AuthenticationStateError::Unavailable)?;
+            .expect("authentication admission lock poisoned");
         let current = window.get_or_insert(Window {
             started_at: now,
             admitted: 0,
@@ -60,11 +60,13 @@ impl AuthenticationState {
     }
 
     pub(crate) fn can_retire(&self) -> bool {
-        self.window.lock().is_ok_and(|window| {
-            window.as_ref().is_none_or(|window| {
+        self.window
+            .lock()
+            .expect("authentication admission lock poisoned")
+            .as_ref()
+            .is_none_or(|window| {
                 Instant::now().duration_since(window.started_at) >= LOGIN_ATTEMPTS_WINDOW
             })
-        })
     }
 }
 

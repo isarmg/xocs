@@ -3,11 +3,20 @@ use blog_interface::component::component_props_builder;
 use blog_interface::prelude::*;
 use blog_interface::thread_bound::SendWrapper;
 use serde_json::{Value, json};
-fn endpoint(kind: &str) -> &'static str {
-    match kind {
-        "message" => "/api/v1/message-comments",
-        "love" => "/api/v1/love-comments",
-        _ => "/api/v1/comments",
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum CommentKind {
+    Article,
+    Message,
+    Love,
+}
+
+impl CommentKind {
+    fn endpoint(self) -> &'static str {
+        match self {
+            Self::Article => "/api/v1/comments",
+            Self::Message => "/api/v1/message-comments",
+            Self::Love => "/api/v1/love-comments",
+        }
     }
 }
 fn commenter(v: &Value) -> String {
@@ -39,39 +48,58 @@ pub fn valid_submission(v: &Value) -> bool {
                 .is_some_and(|i| i > 0 && i <= 9_007_199_254_740_991)
         })
 }
-fn storage() -> Result<web_sys::Storage, ()> {
-    web_sys::window()
-        .unwrap()
-        .session_storage()
-        .map_err(|_| ())?
-        .ok_or(())
+#[derive(Debug, thiserror::Error)]
+enum PendingError {
+    #[error("session storage is unavailable")]
+    Unavailable,
+    #[error("session storage failed: {0:?}")]
+    Browser(wasm_bindgen::JsValue),
+    #[error("pending comment is not valid JSON")]
+    Json(#[from] serde_json::Error),
+    #[error("pending comment has an invalid submission shape")]
+    InvalidSubmission,
 }
-fn read_pending(key: &str) -> Result<Option<Value>, ()> {
-    let Some(raw) = storage()?.get_item(key).map_err(|_| ())? else {
+
+fn storage() -> Result<web_sys::Storage, PendingError> {
+    web_sys::window()
+        .expect("invariant: comments run in a browser window")
+        .session_storage()
+        .map_err(PendingError::Browser)?
+        .ok_or(PendingError::Unavailable)
+}
+
+fn clear_pending(key: &str) -> Result<(), PendingError> {
+    storage()?.remove_item(key).map_err(PendingError::Browser)
+}
+
+fn read_pending(key: &str) -> Result<Option<Value>, PendingError> {
+    let Some(raw) = storage()?.get_item(key).map_err(PendingError::Browser)? else {
         return Ok(None);
     };
-    let v = serde_json::from_str(&raw).map_err(|_| ())?;
-    if valid_submission(&v) {
-        let mut normalized = json!({"request_id":v["request_id"],"content":v["content"],"parent_comment_id":v["parent_comment_id"]});
-        if let Some(article) = v.get("article_id") {
-            normalized["article_id"] = article.clone();
-        }
-        Ok(Some(normalized))
-    } else {
-        Err(())
+    let v = serde_json::from_str(&raw)?;
+    if !valid_submission(&v) {
+        return Err(PendingError::InvalidSubmission);
     }
+    let mut normalized = json!({"request_id":v["request_id"],"content":v["content"],"parent_comment_id":v["parent_comment_id"]});
+    if let Some(article) = v.get("article_id") {
+        normalized["article_id"] = article.clone();
+    }
+    Ok(Some(normalized))
 }
 #[component]
-pub fn Comments(
-    #[prop(default = "article")] kind: &'static str,
+pub(crate) fn Comments(
+    #[prop(default = CommentKind::Article)] kind: CommentKind,
     #[prop(default = 0)] article_id: i64,
     #[prop(optional)] title: String,
 ) -> impl IntoView {
-    let path = endpoint(kind);
+    let path = kind.endpoint();
     let key = format!("blog.comment-submission:{path}:{article_id}");
-    let loaded = read_pending(&key);
-    let pending = RwSignal::new(loaded.as_ref().ok().cloned().flatten());
-    let storage_failure = RwSignal::new(loaded.is_err());
+    let (restored, unavailable) = match read_pending(&key) {
+        Ok(pending) => (pending, false),
+        Err(_) => (None, true),
+    };
+    let pending = RwSignal::new(restored);
+    let storage_failure = RwSignal::new(unavailable);
     let draft = RwSignal::new(
         pending
             .get_untracked()
@@ -87,7 +115,7 @@ pub fn Comments(
         format!(
             "{path}?page={}&size=10{}",
             page.get(),
-            if kind == "article" {
+            if kind == CommentKind::Article {
                 format!("&article_id={article_id}")
             } else {
                 String::new()
@@ -280,11 +308,7 @@ pub fn Comments(
                                             {
                                                 return;
                                             }
-                                            if storage()
-                                                .and_then(|s| {
-                                                    s.remove_item(&key.get_value()).map_err(|_| ())
-                                                })
-                                                .is_err()
+                                            if clear_pending(&key.get_value()).is_err()
                                             {
                                                 storage_failure.set(true);
                                                 return;
@@ -314,18 +338,20 @@ pub fn Comments(
                         if busy.get_untracked() || storage_failure.get_untracked() {
                             return;
                         }
-                        let retry = pending.get_untracked().is_some();
-                        let submission = pending.get_untracked().unwrap_or_else(|| {
-                            let mut v = json!({
-                    "request_id" : web_sys::window().unwrap().crypto().unwrap()
-                    .random_uuid(), "content" : draft.get_untracked().trim(),
-                    "parent_comment_id" : reply.get_untracked().map(| v | v["id"]
-                    .clone()).unwrap_or(Value::Null) });
-                            if kind == "article" {
-                                v["article_id"] = json!(article_id);
+                        let (submission, retry) = match pending.get_untracked() {
+                            Some(submission) => (submission, true),
+                            None => {
+                                let mut submission = json!({
+                                    "request_id": web_sys::window().unwrap().crypto().unwrap().random_uuid(),
+                                    "content": draft.get_untracked().trim(),
+                                    "parent_comment_id": reply.get_untracked().map(|v| v["id"].clone()),
+                                });
+                                if kind == CommentKind::Article {
+                                    submission["article_id"] = json!(article_id);
+                                }
+                                (submission, false)
                             }
-                            v
-                        });
+                        };
                         if text(&submission, "content").is_empty() {
                             return;
                         }
@@ -339,7 +365,7 @@ pub fn Comments(
                         if storage()
                             .and_then(|s| {
                                 s.set_item(&key.get_value(), &submission.to_string())
-                                    .map_err(|_| ())
+                                    .map_err(PendingError::Browser)
                             })
                             .is_err()
                         {
@@ -372,9 +398,7 @@ pub fn Comments(
                                     if text(&v, "comment_content")
                                         == text(&submission, "content").trim() =>
                                 {
-                                    let _ = storage().and_then(|s| {
-                                        s.remove_item(&key.get_value()).map_err(|_| ())
-                                    });
+                                    storage_failure.set(clear_pending(&key.get_value()).is_err());
                                     pending.set(None);
                                     draft.set(String::new());
                                     reply.set(None);
@@ -387,18 +411,16 @@ pub fn Comments(
                                     if !retry
                                         && [400, 401, 403, 404, 409, 413, 429]
                                             .contains(&e.status)
-                                        && e.code != "invalid_error_response" =>
+                                        && e.code != blog_interface::api::ApiErrorCode::Local(blog_interface::api::LocalErrorCode::InvalidErrorResponse) =>
                                 {
-                                    let _ = storage().and_then(|s| {
-                                        s.remove_item(&key.get_value()).map_err(|_| ())
-                                    });
+                                    storage_failure.set(clear_pending(&key.get_value()).is_err());
                                     pending.set(None);
                                     failure.set(public_error(
                                         &e,
                                         &t("请求失败，请重试。", "Request failed. Please retry."),
                                     ));
                                 }
-                                _ => failure.set(t("评论提交结果尚未确认。请确认原提交；重试会使用同一请求，不会重复发表。", "Your comment submission is not yet confirmed. Confirm the original submission; retrying uses the same request and will not post it twice.")),
+                                Ok(_) | Err(_) => failure.set(t("评论提交结果尚未确认。请确认原提交；重试会使用同一请求，不会重复发表。", "Your comment submission is not yet confirmed. Confirm the original submission; retrying uses the same request and will not post it twice.")),
                             }
                             busy.set(false);
                             controller.set_value(SendWrapper::new(None));
@@ -452,7 +474,7 @@ fn CommentEntry(item: Value, reply: Callback<Value>) -> impl IntoView {
 #[component]
 fn Replies(
     root: Value,
-    kind: &'static str,
+    kind: CommentKind,
     choose: Callback<Value>,
     refresh: RwSignal<u64>,
 ) -> impl IntoView {
@@ -464,7 +486,11 @@ fn Replies(
         if count == 0 {
             String::new()
         } else {
-            format!("{}/{id}/replies?page={}&size=5", endpoint(kind), page.get())
+            format!(
+                "{}/{id}/replies?page={}&size=5",
+                kind.endpoint(),
+                page.get()
+            )
         }
     });
     let data = load(path);

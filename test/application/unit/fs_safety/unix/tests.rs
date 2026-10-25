@@ -6,6 +6,39 @@ use std::{
 };
 
 #[test]
+fn failed_write_cleanup_retains_the_operation_and_any_real_unlink_failure() {
+    let temporary = tempfile::tempdir().unwrap();
+    let directory = PrivateDirectory::create(temporary.path().join("state")).unwrap();
+    let write_failure = || {
+        Error::Io(io::Error::new(
+            io::ErrorKind::WriteZero,
+            "original write failure",
+        ))
+    };
+
+    for name in ["temporary", "already-moved"] {
+        if name == "temporary" {
+            fs::write(directory.path().join(name), b"partial").unwrap();
+        }
+        let failure = cleanup_failed_write(&directory, name, write_failure());
+        assert!(matches!(failure, Error::Io(error) if error.kind() == io::ErrorKind::WriteZero));
+        assert!(
+            matches!(fs::metadata(directory.path().join(name)), Err(error) if error.kind() == io::ErrorKind::NotFound)
+        );
+    }
+
+    fs::create_dir(directory.path().join("replaced-with-directory")).unwrap();
+    let failure = cleanup_failed_write(&directory, "replaced-with-directory", write_failure());
+    assert!(failure.to_string().contains("original write failure"));
+    let Error::Cleanup { operation, cleanup } = failure else {
+        panic!("both failures must survive cleanup");
+    };
+    assert!(matches!(*operation, Error::Io(error) if error.kind() == io::ErrorKind::WriteZero));
+    assert_eq!(cleanup.kind(), io::ErrorKind::IsADirectory);
+    assert!(directory.path().join("replaced-with-directory").is_dir());
+}
+
+#[test]
 fn administrative_atomic_files_keep_service_owner_and_refuse_unsafe_targets() {
     use std::os::unix::fs::{MetadataExt, chown};
     let temporary = tempfile::tempdir().unwrap();

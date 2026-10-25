@@ -371,7 +371,7 @@ pub(crate) fn build_locked(options: &Options, owner: &BuildLock) -> Result<Value
         .context("Browser package name")?
         .replace('-', "_");
     let config = assets::Config::read(&web)?;
-    let runtime_root = if config.web.runtime_root == "product" {
+    let runtime_root = if config.web.runtime_root == assets::RuntimeRoot::Product {
         options.root.clone()
     } else {
         web.clone()

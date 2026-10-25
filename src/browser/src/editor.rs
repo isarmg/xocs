@@ -85,7 +85,7 @@ fn creation_receipt(save: Action) -> RwSignal<Option<CreationReceipt>> {
             if let Some(request) = pending {
                 if !request.ambiguous
                     && [400, 401, 403, 404, 409, 413, 429].contains(&error.status)
-                    && error.code != "invalid_error_response"
+                    && error.code != ApiErrorCode::Local(LocalErrorCode::InvalidErrorResponse)
                 {
                     *pending = None;
                 } else {

@@ -1,10 +1,7 @@
 use super::{AdminPageQuery, PageResult};
 use crate::{ApiResult, AppError, AppState, absent, db_error, invalid};
-use axum::{
-    Json,
-    extract::State,
-    http::{HeaderMap, StatusCode},
-};
+use axum::{Json, extract::State, http::HeaderMap};
+use blog_application::error::HttpStatus;
 use blog_application::server_cli::{ContractPath as Path, ContractQuery as Query};
 use serde::{Deserialize, Serialize};
 
@@ -153,7 +150,7 @@ pub(super) async fn create_admin_note(
     // Bind the initial normalized draft, independently of later edits to its row.
     let request_hash = Sha256::digest(
         serde_json::to_vec(&(input.content.trim(), &input.image_path, input.is_public))
-            .map_err(|_| invalid("动态内容无效"))?,
+            .expect("invariant: note strings and flags serialize to JSON"),
     )
     .to_vec();
     let mut transaction = state
@@ -170,9 +167,15 @@ pub(super) async fn create_admin_note(
                 .map_err(db_error)?;
         if let Some((hash, id)) = receipt {
             if hash != request_hash {
-                return Err(AppError(StatusCode::CONFLICT, "动态请求标识已用于不同内容"));
+                return Err(AppError::Public(
+                    HttpStatus::Conflict,
+                    "动态请求标识已用于不同内容",
+                ));
             }
-            let id = id.ok_or(AppError(StatusCode::CONFLICT, "原动态已删除，不会重复发表"))?;
+            let id = id.ok_or(AppError::Public(
+                HttpStatus::Conflict,
+                "原动态已删除，不会重复发表",
+            ))?;
             // A removed original image need not remain available after an edit.
             // Recovery returns the current row without revalidating old uploads.
             let note = load_admin_note(&mut transaction, id).await?;

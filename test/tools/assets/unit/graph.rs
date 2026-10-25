@@ -182,6 +182,18 @@ fn csr_graph_selects_browser_manifest_independently_of_workspace_root() -> Resul
 }
 
 #[test]
+fn browser_manifest_lookup_preserves_filesystem_errors() -> Result<()> {
+    let (temp, value) = fixture()?;
+    std::fs::remove_file(temp.path().join("src/interface/dom/Cargo.toml"))?;
+    let error = browser_root(&value, &temp.path().join("src/browser")).unwrap_err();
+    assert_eq!(
+        error.downcast_ref::<std::io::Error>().unwrap().kind(),
+        std::io::ErrorKind::NotFound
+    );
+    Ok(())
+}
+
+#[test]
 fn csr_graph_rejects_external_dependency_target_even_with_local_manifest() -> Result<()> {
     let (temp, mut value) = fixture()?;
     let external = tempfile::NamedTempFile::new()?;

@@ -54,6 +54,25 @@ fn captures_both_streams_and_keeps_nonzero_diagnostics() {
 }
 
 #[test]
+fn spawn_failure_retains_the_original_io_error() {
+    let temporary = tempfile::tempdir().unwrap();
+    let error = run(
+        &mut Command::new(temporary.path().join("missing-command")),
+        policy(),
+        "missing command fixture",
+    )
+    .unwrap_err();
+    let ProcessError::Command { source, .. } = &error else {
+        panic!("expected command context: {error}");
+    };
+    let source = std::error::Error::source(source.as_ref()).unwrap();
+    assert_eq!(
+        source.downcast_ref::<io::Error>().unwrap().kind(),
+        io::ErrorKind::NotFound
+    );
+}
+
+#[test]
 fn stdout_and_stderr_overflow_stop_a_sleeping_process() {
     for descriptor in [1, 2] {
         let temporary = tempfile::tempdir().unwrap();

@@ -1,6 +1,6 @@
 //! Contract-checked reads and the page-owned state of the latest request.
 use super::t;
-pub(crate) use blog_interface::api::{ApiError, RequestOptions};
+pub(crate) use blog_interface::api::{ApiError, ApiErrorCode, LocalErrorCode, RequestOptions};
 use blog_interface::prelude::*;
 use blog_interface::thread_bound::SendWrapper;
 use serde::de::DeserializeOwned;
@@ -9,7 +9,7 @@ use serde_json::Value;
 pub(crate) fn invalid() -> ApiError {
     ApiError {
         status: 0,
-        code: "invalid_response".into(),
+        code: LocalErrorCode::InvalidResponse.into(),
         message: t(
             "服务器响应格式无效，无法确认操作结果。",
             "The server response was invalid. The operation result could not be confirmed.",
@@ -17,6 +17,7 @@ pub(crate) fn invalid() -> ApiError {
         request_id: None,
         retryable: false,
         retry_after_seconds: None,
+        source: None,
     }
 }
 

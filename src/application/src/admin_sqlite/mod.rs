@@ -163,8 +163,7 @@ impl AdministratorStore for SqliteAdministratorStore {
             return Ok(state.clone());
         }
         let state = login_attempts::state_for_pool(&self.pool).await?;
-        let _ = self.authentication.set(state.clone());
-        Ok(state)
+        Ok(self.authentication.get_or_init(|| state).clone())
     }
 
     fn supports_account_updates(&self) -> bool {
@@ -418,10 +417,10 @@ async fn enforce_session_caps(
     now: u64,
 ) -> Result<(), Error> {
     sqlx::query("UPDATE _common_admin_sessions SET revoked_at_micros=? WHERE session_id IN (SELECT session_id FROM _common_admin_sessions WHERE administrator_id=? AND revoked_at_micros IS NULL AND idle_expires_at_micros>? AND absolute_expires_at_micros>? ORDER BY created_at_micros DESC, session_id DESC LIMIT -1 OFFSET ?)")
-        .bind(to_i64(now)?).bind(session.administrator_id.as_str()).bind(to_i64(now)?).bind(to_i64(now)?).bind(i64::try_from(SESSIONS_PER_ADMINISTRATOR).map_err(|_| Error::IntegerRange)?)
+        .bind(to_i64(now)?).bind(session.administrator_id.as_str()).bind(to_i64(now)?).bind(to_i64(now)?).bind(SESSIONS_PER_ADMINISTRATOR as i64)
         .execute(&mut **transaction).await?;
     sqlx::query("UPDATE _common_admin_sessions SET revoked_at_micros=? WHERE session_id IN (SELECT session_id FROM _common_admin_sessions WHERE revoked_at_micros IS NULL AND idle_expires_at_micros>? AND absolute_expires_at_micros>? ORDER BY created_at_micros DESC, session_id DESC LIMIT -1 OFFSET ?)")
-        .bind(to_i64(now)?).bind(to_i64(now)?).bind(to_i64(now)?).bind(i64::try_from(SESSIONS_GLOBAL).map_err(|_| Error::IntegerRange)?)
+        .bind(to_i64(now)?).bind(to_i64(now)?).bind(to_i64(now)?).bind(SESSIONS_GLOBAL as i64)
         .execute(&mut **transaction).await?;
     Ok(())
 }
@@ -443,7 +442,6 @@ async fn insert_audit(
     transaction: &mut Transaction<'_, Sqlite>,
     event: &SecurityAuditEvent,
 ) -> Result<(), Error> {
-    event.validate()?;
     sqlx::query(SECURITY_AUDIT_INSERT_SQL)
         .bind(event.event_id.as_str())
         .bind(event.action.as_str())

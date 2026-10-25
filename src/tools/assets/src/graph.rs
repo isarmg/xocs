@@ -25,23 +25,22 @@ fn browser_root<'a>(metadata: &'a Value, frontend: &Path) -> Result<&'a Value> {
     let manifest = frontend.join("Cargo.toml");
     inventory::physical(&manifest)?;
     let expected = manifest.canonicalize()?;
-    let candidates = metadata["packages"]
-        .as_array()
-        .context("Cargo packages")?
-        .iter()
-        .filter(|package| {
-            package["source"].is_null()
-                && package["manifest_path"]
-                    .as_str()
-                    .and_then(|path| Path::new(path).canonicalize().ok())
-                    .is_some_and(|path| path == expected)
-        })
-        .collect::<Vec<_>>();
-    ensure!(
-        candidates.len() == 1,
-        "Workspace must contain exactly one browser manifest"
-    );
-    Ok(candidates[0])
+    let mut found = None;
+    for package in metadata["packages"].as_array().context("Cargo packages")? {
+        if package["source"].is_null() {
+            let path = package["manifest_path"]
+                .as_str()
+                .context("Cargo manifest")?;
+            if Path::new(path).canonicalize()? == expected {
+                ensure!(
+                    found.is_none(),
+                    "Workspace must contain exactly one browser manifest"
+                );
+                found = Some(package);
+            }
+        }
+    }
+    found.context("Workspace must contain exactly one browser manifest")
 }
 
 fn local_manifest<'a>(package: &'a Value, repository: &Path) -> Result<&'a Path> {
@@ -87,11 +86,11 @@ pub fn runtime(options: &Options, inputs: &Value) -> Result<Value> {
             .arg(&manifest)
             .args(["--locked", "--offline"])
             .current_dir(&options.root);
-        process::run(
+        Ok(process::run(
             &mut command,
             process::Policy::query(32 * 1024 * 1024),
             "Query browser runtime Cargo graph",
-        )
+        )?)
     };
     let metadata: Value = serde_json::from_slice(&run(&[
         "metadata",

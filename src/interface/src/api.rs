@@ -1,8 +1,12 @@
 //! Same-origin, bounded HTTP and serialized in-memory administrator sessions.
 pub use crate::contracts::AdministratorSession;
+#[path = "api_codes.rs"]
+mod codes;
 use crate::contracts::*;
 use blog_dom::events::EventListener;
+use blog_dom::thread_bound::SendWrapper;
 use blog_dom::timers::callback::Timeout;
+pub use codes::{ApiErrorCode, LocalErrorCode, RemoteErrorCode, RequestId};
 use futures::{
     FutureExt,
     future::{LocalBoxFuture, Shared},
@@ -15,6 +19,7 @@ use std::{
     cell::{Cell, RefCell},
     fmt,
     rc::Rc,
+    sync::Arc,
 };
 use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen_futures::JsFuture;
@@ -39,14 +44,44 @@ impl Drop for AbortOnDrop {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ApiError {
     pub status: u16,
-    pub code: String,
+    pub code: ApiErrorCode,
     pub message: String,
-    pub request_id: Option<String>,
+    pub request_id: Option<RequestId>,
     pub retryable: bool,
     pub retry_after_seconds: Option<u32>,
+    #[serde(skip)]
+    pub source: Option<Arc<ApiErrorSource>>,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ApiErrorSource {
+    #[error("JSON conversion failed")]
+    Json(#[from] serde_json::Error),
+    #[error("invalid numeric response header")]
+    InvalidNumber(#[from] std::num::ParseIntError),
+    #[error("browser operation failed: {0:?}")]
+    JavaScript(SendWrapper<JsValue>),
+}
+
+impl From<JsValue> for ApiErrorSource {
+    fn from(value: JsValue) -> Self {
+        Self::JavaScript(SendWrapper::new(value))
+    }
+}
+
+impl PartialEq for ApiError {
+    fn eq(&self, other: &Self) -> bool {
+        // UI equality follows the protocol values, not the diagnostic source's identity.
+        self.status == other.status
+            && self.code == other.code
+            && self.message == other.message
+            && self.request_id == other.request_id
+            && self.retryable == other.retryable
+            && self.retry_after_seconds == other.retry_after_seconds
+    }
 }
 impl fmt::Display for ApiError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -64,16 +99,31 @@ impl fmt::Display for ApiError {
         Ok(())
     }
 }
-impl std::error::Error for ApiError {}
+impl std::error::Error for ApiError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.source.as_deref().map(|source| source as _)
+    }
+}
 impl ApiError {
-    pub fn local(code: &str) -> Self {
+    pub fn local(code: LocalErrorCode) -> Self {
         Self {
             status: 0,
             code: code.into(),
-            message: code.into(),
+            message: code.as_str().into(),
             request_id: None,
-            retryable: matches!(code, "network_error" | "request_timeout"),
+            retryable: matches!(
+                code,
+                LocalErrorCode::NetworkError | LocalErrorCode::RequestTimeout
+            ),
             retry_after_seconds: None,
+            source: None,
+        }
+    }
+
+    fn with_source(code: LocalErrorCode, source: impl Into<ApiErrorSource>) -> Self {
+        Self {
+            source: Some(Arc::new(source.into())),
+            ..Self::local(code)
         }
     }
 }
@@ -141,10 +191,12 @@ pub fn snapshot() -> AuthSnapshot {
     })
 }
 fn changed() {
-    if let Some(window) = web_sys::window()
-        && let Ok(event) = web_sys::Event::new(AUTH_CHANGE_EVENT)
-    {
-        let _ = window.dispatch_event(&event);
+    if let Some(window) = web_sys::window() {
+        let event = web_sys::Event::new(AUTH_CHANGE_EVENT)
+            .expect("invariant: the auth event name is valid");
+        window
+            .dispatch_event(&event)
+            .expect("invariant: an initialized auth event can be dispatched");
     }
 }
 fn invalidate(error: Option<ApiError>) {
@@ -186,7 +238,7 @@ fn require_generation(generation: u64) -> Result<(), ApiError> {
     if STATE.with(|s| s.borrow().generation) == generation {
         Ok(())
     } else {
-        Err(ApiError::local("auth_operation_superseded"))
+        Err(ApiError::local(LocalErrorCode::AuthOperationSuperseded))
     }
 }
 fn publish(
@@ -215,37 +267,40 @@ pub fn validate_api_path(path: &str) -> bool {
 }
 fn resolve(path: &str) -> Result<String, ApiError> {
     if !validate_api_path(path) {
-        return Err(ApiError::local("invalid_api_path"));
+        return Err(ApiError::local(LocalErrorCode::InvalidApiPath));
     }
-    let window = web_sys::window().ok_or_else(|| ApiError::local("browser_required"))?;
+    let window =
+        web_sys::window().ok_or_else(|| ApiError::local(LocalErrorCode::BrowserRequired))?;
     let base = Url::new(
         &window
             .location()
             .href()
-            .map_err(|_| ApiError::local("invalid_api_path"))?,
+            .map_err(|source| ApiError::with_source(LocalErrorCode::InvalidApiPath, source))?,
     )
-    .map_err(|_| ApiError::local("invalid_api_path"))?;
-    let url =
-        Url::new_with_base(path, &base.href()).map_err(|_| ApiError::local("invalid_api_path"))?;
+    .map_err(|source| ApiError::with_source(LocalErrorCode::InvalidApiPath, source))?;
+    let url = Url::new_with_base(path, &base.href())
+        .map_err(|source| ApiError::with_source(LocalErrorCode::InvalidApiPath, source))?;
     if url.origin() != base.origin()
         || !url.pathname().starts_with("/api/v1/")
         || !url.username().is_empty()
         || !url.password().is_empty()
         || !["http:", "https:"].contains(&url.protocol().as_str())
     {
-        return Err(ApiError::local("invalid_api_path"));
+        return Err(ApiError::local(LocalErrorCode::InvalidApiPath));
     }
     Ok(url.href())
 }
 
 /// Serialize a typed request without silently replacing serialization failures with null.
 pub fn encode_json_body<T: Serialize + ?Sized>(body: &T) -> Result<Value, ApiError> {
-    serde_json::to_value(body).map_err(|_| ApiError::local("body_serialization_failed"))
+    serde_json::to_value(body)
+        .map_err(|source| ApiError::with_source(LocalErrorCode::BodySerializationFailed, source))
 }
 
 /// Decode a successful JSON response. Nullable or empty responses require `Option<T>` or `()`.
 pub fn decode_response<T: DeserializeOwned>(value: Value) -> Result<T, ApiError> {
-    serde_json::from_value(value).map_err(|_| ApiError::local("invalid_typed_response_shape"))
+    serde_json::from_value(value)
+        .map_err(|source| ApiError::with_source(LocalErrorCode::InvalidTypedResponseShape, source))
 }
 
 /// Keep product-specific bounds, revisions and path binding before constructing a DTO.
@@ -254,7 +309,7 @@ pub fn decode_validated_response<T: DeserializeOwned>(
     validate: impl FnOnce(&Value) -> bool,
 ) -> Result<T, ApiError> {
     if !validate(&value) {
-        return Err(ApiError::local("invalid_response_contract"));
+        return Err(ApiError::local(LocalErrorCode::InvalidResponseContract));
     }
     decode_response(value)
 }
@@ -350,10 +405,11 @@ async fn send_body(
     if !(1..=120_000).contains(&options.timeout_ms)
         || !(1..=MAX_RESPONSE_BYTES).contains(&options.max_response_bytes)
     {
-        return Err(ApiError::local("invalid_request_budget"));
+        return Err(ApiError::local(LocalErrorCode::InvalidRequestBudget));
     }
     let target = resolve(path)?;
-    let controller = AbortController::new().map_err(|_| ApiError::local("network_error"))?;
+    let controller = AbortController::new()
+        .map_err(|source| ApiError::with_source(LocalErrorCode::NetworkError, source))?;
     let _abort = AbortOnDrop(controller.clone());
     let timed_out = Rc::new(Cell::new(false));
     let timeout = {
@@ -378,35 +434,36 @@ async fn send_body(
     init.set_cache(RequestCache::NoStore);
     init.set_redirect(RequestRedirect::Error);
     init.set_signal(Some(&controller.signal()));
-    let headers = web_sys::Headers::new().map_err(|_| ApiError::local("invalid_headers"))?;
+    let headers = web_sys::Headers::new()
+        .map_err(|source| ApiError::with_source(LocalErrorCode::InvalidHeaders, source))?;
     headers
         .set("accept", "application/json")
-        .map_err(|_| ApiError::local("invalid_headers"))?;
+        .map_err(|source| ApiError::with_source(LocalErrorCode::InvalidHeaders, source))?;
     for (name, value) in &options.headers {
         if name.eq_ignore_ascii_case("x-csrf-token") {
-            return Err(ApiError::local("csrf_header_owned_by_session"));
+            return Err(ApiError::local(LocalErrorCode::CsrfHeaderOwnedBySession));
         }
         headers
             .set(name, value)
-            .map_err(|_| ApiError::local("invalid_headers"))?;
+            .map_err(|source| ApiError::with_source(LocalErrorCode::InvalidHeaders, source))?;
     }
     if !["GET", "HEAD", "OPTIONS", "TRACE"].contains(&method.as_str())
         && let Some(token) = token.as_deref()
     {
         headers
             .set("x-csrf-token", token)
-            .map_err(|_| ApiError::local("invalid_headers"))?;
+            .map_err(|source| ApiError::with_source(LocalErrorCode::InvalidHeaders, source))?;
     }
     if let Some(body) = body {
         headers
             .set("content-type", "application/json")
-            .map_err(|_| ApiError::local("invalid_headers"))?;
+            .map_err(|source| ApiError::with_source(LocalErrorCode::InvalidHeaders, source))?;
         init.set_body(&JsValue::from_str(&body.to_string()));
     }
     if let Some(body) = raw_body {
         if !headers
             .has("content-type")
-            .map_err(|_| ApiError::local("invalid_headers"))?
+            .map_err(|source| ApiError::with_source(LocalErrorCode::InvalidHeaders, source))?
         {
             let media = body.type_();
             headers
@@ -418,7 +475,7 @@ async fn send_body(
                         &media
                     },
                 )
-                .map_err(|_| ApiError::local("invalid_headers"))?;
+                .map_err(|source| ApiError::with_source(LocalErrorCode::InvalidHeaders, source))?;
         }
         init.set_body(body.as_ref());
     }
@@ -430,15 +487,12 @@ async fn send_body(
                 .fetch_with_str_and_init(&target, &init),
         )
         .await
-        .map_err(|_| ApiError::local("network_error"))?
+        .map_err(|source| ApiError::with_source(LocalErrorCode::NetworkError, source))?
         .dyn_into()
-        .map_err(|_| ApiError::local("invalid_response_shape"))?;
-        let request_id = response
-            .headers()
-            .get("x-request-id")
-            .ok()
-            .flatten()
-            .filter(|v| safe_request_id(v));
+        .map_err(|source| ApiError::with_source(LocalErrorCode::InvalidResponseShape, source))?;
+        // Malformed optional diagnostic identifiers are omitted from the UI.
+        let request_id = response_header(&response, "x-request-id")?
+            .and_then(|value| RequestId::try_from(value).ok());
         let status = response.status();
         // Invalidate on headers, even if a malformed/slow 401 body cannot be read.
         if status == 401
@@ -451,13 +505,7 @@ async fn send_body(
         if status == 204
             || status == 205
             || method == "HEAD"
-            || response
-                .headers()
-                .get("content-length")
-                .ok()
-                .flatten()
-                .as_deref()
-                == Some("0")
+            || response_header(&response, "content-length")?.as_deref() == Some("0")
         {
             return if response.ok() {
                 Ok(Value::Null)
@@ -465,30 +513,22 @@ async fn send_body(
                 Err(ApiError {
                     status,
                     request_id,
-                    ..ApiError::local("invalid_error_response")
+                    ..ApiError::local(LocalErrorCode::InvalidErrorResponse)
                 })
             };
         }
-        let is_json = response
-            .headers()
-            .get("content-type")
-            .ok()
-            .flatten()
-            .is_some_and(|v| {
-                let media = v
-                    .split(';')
-                    .next()
-                    .unwrap_or("")
-                    .trim()
-                    .to_ascii_lowercase();
-                media == "application/json" || media.ends_with("+json")
-            });
-        let retry_after_seconds = response
-            .headers()
-            .get("retry-after")
-            .ok()
-            .flatten()
-            .and_then(|v| v.parse::<u64>().ok())
+        let is_json = response_header(&response, "content-type")?.is_some_and(|v| {
+            let media = v
+                .split(';')
+                .next()
+                .expect("invariant: split always yields a first segment")
+                .trim()
+                .to_ascii_lowercase();
+            media == "application/json" || media.ends_with("+json")
+        });
+        // The UI supports delay-seconds, not the alternative HTTP-date form.
+        let retry_after_seconds = response_header(&response, "retry-after")?
+            .and_then(|value| value.parse::<u64>().ok())
             .map(|v| v.min(86_400) as u32);
         if !is_json {
             return Err(ApiError {
@@ -496,9 +536,9 @@ async fn send_body(
                 request_id,
                 retry_after_seconds,
                 ..ApiError::local(if response.ok() {
-                    "invalid_content_type"
+                    LocalErrorCode::InvalidContentType
                 } else {
-                    "invalid_error_response"
+                    LocalErrorCode::InvalidErrorResponse
                 })
             });
         }
@@ -512,132 +552,144 @@ async fn send_body(
             error.request_id = request_id.clone();
             error
         })?;
-        let value: Value = serde_json::from_slice(&bytes).map_err(|_| ApiError {
+        let value: Value = serde_json::from_slice(&bytes).map_err(|source| ApiError {
             status,
             request_id: request_id.clone(),
-            ..ApiError::local(if response.ok() {
-                "invalid_json_response"
-            } else {
-                "invalid_error_response"
-            })
+            ..ApiError::with_source(
+                if response.ok() {
+                    LocalErrorCode::InvalidJsonResponse
+                } else {
+                    LocalErrorCode::InvalidErrorResponse
+                },
+                source,
+            )
         })?;
         if response.ok() {
             return Ok(value);
         }
-        let code = value.get("code").and_then(Value::as_str).filter(|v| {
-            (1..=128).contains(&v.len())
-                && v.as_bytes()[0].is_ascii_lowercase()
-                && v.bytes()
-                    .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b"._-".contains(&b))
-        });
-        let message = value.get("message").and_then(Value::as_str);
-        let retryable = value.get("retryable").and_then(Value::as_bool);
-        let exact = value.as_object().is_some_and(|o| {
-            o.keys().all(|k| {
-                ["code", "message", "retryable", "request_id", "details"].contains(&k.as_str())
-            })
-        });
-        let fields_valid = value
-            .get("request_id")
-            .is_none_or(|v| v.as_str().is_some_and(safe_request_id))
-            && value.get("details").is_none_or(Value::is_object);
-        if !exact || !fields_valid || code.is_none() || message.is_none() || retryable.is_none() {
-            return Err(ApiError {
-                status,
-                request_id,
-                retry_after_seconds,
-                ..ApiError::local("invalid_error_response")
-            });
-        }
+        let envelope = decode_error_envelope(value).map_err(|error| ApiError {
+            status,
+            request_id: request_id.clone(),
+            retry_after_seconds,
+            ..error
+        })?;
         Err(ApiError {
             status,
-            code: code.unwrap().into(),
-            message: message.unwrap().into(),
-            request_id: value
-                .get("request_id")
-                .and_then(Value::as_str)
-                .filter(|v| safe_request_id(v))
-                .map(str::to_owned)
-                .or(request_id),
-            retryable: retryable.unwrap(),
+            code: envelope.code,
+            message: envelope.message,
+            request_id: envelope.request_id.or(request_id),
+            retryable: envelope.retryable,
             retry_after_seconds,
+            source: None,
         })
     }
     .await;
     drop(timeout);
     if timed_out.get() {
-        return Err(ApiError::local("request_timeout"));
+        return Err(ApiError::local(LocalErrorCode::RequestTimeout));
     }
     if options.signal.is_some_and(|signal| signal.aborted()) {
-        return Err(ApiError::local("request_aborted"));
+        return Err(ApiError::local(LocalErrorCode::RequestAborted));
     }
     operation
 }
 
-async fn read_bounded(response: &Response, maximum: usize) -> Result<Vec<u8>, ApiError> {
-    if response
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ErrorEnvelope {
+    code: ApiErrorCode,
+    message: String,
+    retryable: bool,
+    #[serde(default, deserialize_with = "non_null_request_id")]
+    request_id: Option<RequestId>,
+    #[serde(default, rename = "details", deserialize_with = "non_null_details")]
+    _details: Option<serde_json::Map<String, Value>>,
+}
+
+fn non_null_request_id<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<RequestId>, D::Error> {
+    RequestId::deserialize(deserializer).map(Some)
+}
+
+fn non_null_details<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<serde_json::Map<String, Value>>, D::Error> {
+    serde_json::Map::deserialize(deserializer).map(Some)
+}
+
+fn decode_error_envelope(value: Value) -> Result<ErrorEnvelope, ApiError> {
+    serde_json::from_value(value)
+        .map_err(|source| ApiError::with_source(LocalErrorCode::InvalidErrorResponse, source))
+}
+
+fn response_header(response: &Response, name: &str) -> Result<Option<String>, ApiError> {
+    response
         .headers()
-        .get("content-length")
-        .ok()
-        .flatten()
-        .and_then(|v| v.parse::<u64>().ok())
-        .is_some_and(|n| n > maximum as u64)
-    {
-        if let Some(body) = response.body() {
-            let _ = JsFuture::from(body.cancel()).await;
+        .get(name)
+        .map_err(|source| ApiError::with_source(LocalErrorCode::InvalidHeaders, source))
+}
+
+async fn read_bounded(response: &Response, maximum: usize) -> Result<Vec<u8>, ApiError> {
+    if let Some(value) = response_header(response, "content-length")? {
+        let length = value
+            .parse::<u64>()
+            .map_err(|source| ApiError::with_source(LocalErrorCode::InvalidHeaders, source))?;
+        if length > maximum as u64 {
+            return Err(ApiError::local(LocalErrorCode::ResponseTooLarge));
         }
-        return Err(ApiError::local("response_too_large"));
     }
     let Some(body) = response.body() else {
         return Ok(Vec::new());
     };
-    let reader: web_sys::ReadableStreamDefaultReader = body
-        .get_reader()
-        .dyn_into()
-        .map_err(|_| ApiError::local("invalid_response_shape"))?;
+    let reader: web_sys::ReadableStreamDefaultReader =
+        body.get_reader().dyn_into().map_err(|source| {
+            ApiError::with_source(LocalErrorCode::InvalidResponseShape, JsValue::from(source))
+        })?;
     let result = async {
         let mut bytes = Vec::new();
         loop {
             let item = JsFuture::from(reader.read())
                 .await
-                .map_err(|_| ApiError::local("network_error"))?;
-            if Reflect::get(&item, &"done".into())
-                .ok()
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false)
-            {
+                .map_err(|source| ApiError::with_source(LocalErrorCode::NetworkError, source))?;
+            let done = Reflect::get(&item, &"done".into())
+                .map_err(|source| {
+                    ApiError::with_source(LocalErrorCode::InvalidResponseShape, source)
+                })?
+                .as_bool()
+                .ok_or_else(|| ApiError::local(LocalErrorCode::InvalidResponseShape))?;
+            if done {
                 break;
             }
-            let value = Reflect::get(&item, &"value".into())
-                .map_err(|_| ApiError::local("invalid_response_shape"))?;
+            let value = Reflect::get(&item, &"value".into()).map_err(|source| {
+                ApiError::with_source(LocalErrorCode::InvalidResponseShape, source)
+            })?;
             let chunk = Uint8Array::new(&value);
             if bytes.len().saturating_add(chunk.length() as usize) > maximum {
-                return Err(ApiError::local("response_too_large"));
+                return Err(ApiError::local(LocalErrorCode::ResponseTooLarge));
             }
             bytes.extend(chunk.to_vec());
         }
         Ok(bytes)
     }
     .await;
-    if result.is_err() {
-        let _ = JsFuture::from(reader.cancel()).await;
-    }
+    // AbortOnDrop owns cancellation on every exit, including oversized or unread bodies.
     reader.release_lock();
     result
 }
 
 fn session(value: Value) -> Result<AdministratorSession, ApiError> {
-    let session: AdministratorSession =
-        serde_json::from_value(value).map_err(|_| ApiError::local("invalid_response_shape"))?;
+    let session: AdministratorSession = serde_json::from_value(value)
+        .map_err(|source| ApiError::with_source(LocalErrorCode::InvalidResponseShape, source))?;
     if !session.validate() {
-        return Err(ApiError::local("invalid_response_shape"));
+        return Err(ApiError::local(LocalErrorCode::InvalidResponseShape));
     }
     Ok(session)
 }
 
 pub async fn login(username: &str, password: &str) -> Result<AdministratorSession, ApiError> {
     if !valid_username_candidate(username) || !valid_password(password) {
-        return Err(ApiError::local("invalid_credentials"));
+        return Err(ApiError::local(LocalErrorCode::InvalidCredentials));
     }
     let generation = begin_mutation(false);
     let mutex = MUTATIONS.with(Clone::clone);
@@ -659,7 +711,7 @@ pub async fn restore() -> Result<AdministratorSession, ApiError> {
     // would undo the user's local sign-out and discard the revocation warning.
     // Only an explicit successful login or confirmed logout ends this barrier.
     if STATE.with(|s| s.borrow().revoking.is_some()) {
-        return Err(ApiError::local("auth_logout_unconfirmed"));
+        return Err(ApiError::local(LocalErrorCode::AuthLogoutUnconfirmed));
     }
     let (generation, pending) = STATE.with(|s| {
         let mut s = s.borrow_mut();
@@ -727,12 +779,17 @@ pub async fn logout() -> Result<(), ApiError> {
         if value.is_null() {
             Ok(())
         } else {
-            Err(ApiError::local("invalid_response_shape"))
+            Err(ApiError::local(LocalErrorCode::InvalidResponseShape))
         }
     });
     let error = match result {
         Ok(()) => None,
-        Err(error) if error.status == 401 && error.code == "auth.session_required" => None,
+        Err(error)
+            if error.status == 401
+                && error.code == ApiErrorCode::Remote(RemoteErrorCode::SessionRequired) =>
+        {
+            None
+        }
         Err(error) => Some(error),
     };
     let notify = STATE.with(|s| settle_revocation(&mut s.borrow_mut(), generation, error.as_ref()));
@@ -769,7 +826,7 @@ fn settle_revocation(state: &mut State, generation: u64, error: Option<&ApiError
 pub async fn update_account(input: Value) -> Result<(), ApiError> {
     let object = input
         .as_object()
-        .ok_or_else(|| ApiError::local("invalid_account"))?;
+        .ok_or_else(|| ApiError::local(LocalErrorCode::InvalidAccount))?;
     if !object
         .keys()
         .all(|k| ["username", "current_password", "new_password"].contains(&k.as_str()))
@@ -785,7 +842,7 @@ pub async fn update_account(input: Value) -> Result<(), ApiError> {
             .get("new_password")
             .is_some_and(|p| !p.as_str().is_some_and(valid_password))
     {
-        return Err(ApiError::local("invalid_account"));
+        return Err(ApiError::local(LocalErrorCode::InvalidAccount));
     }
     let generation = STATE.with(|s| s.borrow().generation);
     let mutex = MUTATIONS.with(Clone::clone);
@@ -793,7 +850,7 @@ pub async fn update_account(input: Value) -> Result<(), ApiError> {
     require_generation(generation)?;
     let result = request(ACCOUNT_PATH, "POST", Some(input)).await?;
     if !result.is_null() {
-        return Err(ApiError::local("invalid_response_shape"));
+        return Err(ApiError::local(LocalErrorCode::InvalidResponseShape));
     }
     require_generation(generation)?;
     invalidate(None);

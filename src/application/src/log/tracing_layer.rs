@@ -58,12 +58,14 @@ impl BlogStructuredLayer {
     }
 
     /// Switch the installed subscriber's shared sink after the run preflight.
-    /// All clones observe the switch; an unavailable sink is explicit.
+    /// All clones observe the switch.
     #[cfg(any(unix, windows))]
-    pub fn set_rotating_file(&self, output: crate::log::RotatingLogFile) -> Result<(), LogError> {
-        let mut sink = self.output.lock().map_err(|_| LogError::UnsafeStorage)?;
+    pub fn set_rotating_file(&self, output: crate::log::RotatingLogFile) {
+        let mut sink = self
+            .output
+            .lock()
+            .expect("structured log sink lock poisoned");
         *sink = Sink::File(output);
-        Ok(())
     }
 
     pub fn rejected_count(&self) -> u64 {
@@ -147,8 +149,10 @@ impl Visit for Captured {
             text: String::new(),
             truncated: false,
         };
-        let _ = write!(&mut buffer, "{value:?}");
-        self.truncated |= buffer.truncated;
+        self.truncated |= match write!(&mut buffer, "{value:?}") {
+            Ok(()) => buffer.truncated,
+            Err(fmt::Error) => true,
+        };
         self.insert(field.name(), Value::String(buffer.text));
     }
     fn record_str(&mut self, field: &Field, value: &str) {
@@ -156,8 +160,10 @@ impl Visit for Captured {
             text: String::new(),
             truncated: false,
         };
-        let _ = buffer.write_str(value);
-        self.truncated |= buffer.truncated;
+        self.truncated |= match buffer.write_str(value) {
+            Ok(()) => buffer.truncated,
+            Err(fmt::Error) => true,
+        };
         self.insert(field.name(), Value::String(buffer.text));
     }
     fn record_u64(&mut self, field: &Field, value: u64) {
@@ -203,7 +209,10 @@ where
         }
         event.record(&mut captured);
         let result = build_record(&self.service, event.metadata(), captured).and_then(|record| {
-            let mut output = self.output.lock().map_err(|_| LogError::UnsafeStorage)?;
+            let mut output = self
+                .output
+                .lock()
+                .expect("structured log sink lock poisoned");
             match &mut *output {
                 Sink::Process => record.emit(),
                 Sink::Stream(output) => record.write_to(output),

@@ -200,3 +200,37 @@ fn offline_environment_helper() {
         blog::maintenance::check(&fresh).await.unwrap();
     });
 }
+
+#[tokio::test]
+async fn repeated_initialization_preserves_database_without_staging_leaks() {
+    let root = configured_root();
+    blog::maintenance::initialize(root.path(), "admin", "InitialPassphrase123")
+        .await
+        .unwrap();
+    let database = root.path().join("state/site.sqlite");
+    let original = fs::read(&database).unwrap();
+    let entries = || {
+        let mut names = fs::read_dir(root.path().join("state"))
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .collect::<Vec<_>>();
+        names.sort();
+        names
+    };
+    let initial_entries = entries();
+    for _ in 0..2 {
+        let error = blog::maintenance::initialize(root.path(), "admin", "MustNotReplace123")
+            .await
+            .unwrap_err();
+        assert!(matches!(
+            error,
+            blog::Error::PublishDatabase {
+                source: blog_application::fs_safety::Error::DestinationExists(_),
+                ..
+            }
+        ));
+        assert_eq!(fs::read(&database).unwrap(), original);
+        assert_eq!(entries(), initial_entries);
+    }
+    blog::maintenance::check(root.path()).await.unwrap();
+}

@@ -181,3 +181,51 @@ fn detail_decodes_without_summary_only_fields_and_hydrates_no_password() {
     assert!(draft.comment_status);
     assert_eq!(draft.tips.as_deref(), Some("hint"));
 }
+
+#[test]
+fn home_source_carries_its_required_category_id() {
+    for (kind, expected) in [
+        ("latest", HomeSource::Latest),
+        ("recommended", HomeSource::Recommended),
+        ("category", HomeSource::Category { sort_id: 42 }),
+    ] {
+        let sections: Vec<HomeSection> = decode(
+            "/api/v1/home-sections",
+            "POST",
+            json!([{"id": 1, "title": "Section", "kind": kind,
+                "sort_id": if kind == "category" { json!(42) } else { json!(null) },
+                "priority": 0, "enabled": true}]),
+        )
+        .unwrap();
+        assert_eq!(sections[0].source, expected);
+    }
+    for sort_id in [
+        json!(null),
+        json!(0),
+        json!(-1),
+        json!("42"),
+        json!(9007199254740992u64),
+    ] {
+        assert!(
+            decode::<Vec<HomeSection>>(
+                "/api/v1/home-sections",
+                "GET",
+                json!([{"id": 1, "title": "Section", "kind": "category",
+                "sort_id": sort_id, "priority": 0, "enabled": true}]),
+            )
+            .is_err()
+        );
+    }
+    assert!(
+        serde_json::from_value::<HomeSection>(json!({
+            "id": 1, "title": "Section", "kind": "category", "enabled": true,
+        }))
+        .is_err()
+    );
+    assert!(
+        serde_json::from_value::<HomeSection>(json!({
+            "id": 1, "title": "Section", "kind": "unknown", "sort_id": null, "enabled": true,
+        }))
+        .is_err()
+    );
+}

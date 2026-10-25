@@ -69,12 +69,11 @@ pub fn credential_policy() -> serde_json::Value {
 pub fn credential_validation_vectors() -> Result<serde_json::Value, Error> {
     let password = "contract-fixture-password";
     let salt = SaltString::from_b64("AAECAwQFBgcICQoLDA0ODw")
-        .map_err(|error| Error::PasswordHash(error.to_string()))?;
+        .expect("invariant: credential fixture has a valid Argon2 salt");
     let encoded = current_argon2()
         .hash_password(password.as_bytes(), &salt)
-        .map_err(|error| Error::PasswordHash(error.to_string()))?
+        .map_err(Error::PasswordHash)?
         .to_string();
-    require_current_password_hash(&encoded)?;
     Ok(serde_json::json!({
         "username": [
             {"input": " Admin.Ops ", "canonical": "admin.ops", "stored_valid": false},
@@ -109,17 +108,25 @@ pub enum Error {
     )]
     InvalidPassword,
     #[error("failed to encode the current Argon2id password hash: {0}")]
-    PasswordHash(String),
+    PasswordHash(#[source] argon2::password_hash::Error),
     #[error("encoded password hash does not use the exact current Argon2id policy")]
     InvalidPasswordHash,
+    #[error("encoded password hash is not valid PHC")]
+    PasswordHashParse(#[source] argon2::password_hash::Error),
     #[error("the operating system random source failed: {0}")]
-    Random(String),
+    Random(#[source] getrandom::Error),
     #[error("required security header {name} is missing")]
     MissingSecurityHeader { name: &'static str },
     #[error("security header {name} must occur exactly once, found {actual}")]
     DuplicateSecurityHeader { name: &'static str, actual: usize },
     #[error("security header {name} has an invalid or non-canonical value")]
     InvalidSecurityHeaderValue { name: &'static str },
+    #[error("security header {name} is not valid UTF-8")]
+    SecurityHeaderEncoding {
+        name: &'static str,
+        #[source]
+        source: str::Utf8Error,
+    },
     #[error("Origin must use the {expected} scheme in the selected runtime mode")]
     UnexpectedOriginScheme { expected: &'static str },
     #[error("Origin and Host do not identify the same normalized authority")]
@@ -128,6 +135,8 @@ pub enum Error {
     DevelopmentHostIsNotLoopback,
     #[error("the CSRF header is not one canonical current authentication token")]
     InvalidCsrfToken,
+    #[error("the CSRF session secret is not valid base64url")]
+    CsrfTokenDecode(#[source] base64::DecodeError),
     #[error("the CSRF header does not match the current session")]
     CsrfTokenMismatch,
 }
@@ -233,12 +242,33 @@ pub fn validate_password(password: &str) -> Result<(), Error> {
 /// Hash a password with the exact current Argon2id policy and a fresh 16-byte
 /// salt. There is no verifier fallback for hashes using another policy.
 pub fn hash_password(password: &str) -> Result<String, Error> {
-    validate_password(password)?;
-    let salt = SaltString::generate(&mut argon2::password_hash::rand_core::OsRng);
-    current_argon2()
-        .hash_password(password.as_bytes(), &salt)
-        .map(|hash| hash.to_string())
-        .map_err(|error| Error::PasswordHash(error.to_string()))
+    Password::new(password)?.hash()
+}
+
+/// A validated plaintext password, owned so hashing can move to a worker.
+pub struct Password(String);
+
+impl Password {
+    pub fn new(value: impl Into<String>) -> Result<Self, Error> {
+        let value = value.into();
+        validate_password(&value)?;
+        Ok(Self(value))
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    pub fn hash(&self) -> Result<String, Error> {
+        let mut bytes = [0_u8; ARGON2_SALT_BYTES];
+        getrandom::fill(&mut bytes).map_err(Error::Random)?;
+        let salt = SaltString::encode_b64(&bytes)
+            .expect("invariant: fixed-length Argon2 salt fits the PHC salt buffer");
+        current_argon2()
+            .hash_password(self.0.as_bytes(), &salt)
+            .map(|hash| hash.to_string())
+            .map_err(Error::PasswordHash)
+    }
 }
 
 pub fn verify_password(password: &str, encoded: &str) -> bool {
@@ -263,7 +293,7 @@ pub fn verify_password(password: &str, encoded: &str) -> bool {
 /// even when the plaintext password is unavailable. This function accepts
 /// exactly one policy.
 pub fn require_current_password_hash(encoded: &str) -> Result<(), Error> {
-    let hash = PasswordHash::new(encoded).map_err(|_| Error::InvalidPasswordHash)?;
+    let hash = PasswordHash::new(encoded).map_err(Error::PasswordHashParse)?;
     if hash.to_string() != encoded || !password_hash_uses_current_policy(&hash) {
         return Err(Error::InvalidPasswordHash);
     }
@@ -273,7 +303,7 @@ pub fn require_current_password_hash(encoded: &str) -> Result<(), Error> {
 /// Generate a 256-bit URL-safe token without padding.
 pub fn random_token() -> Result<String, Error> {
     let mut bytes = [0_u8; SESSION_TOKEN_BYTES];
-    getrandom::fill(&mut bytes).map_err(|error| Error::Random(error.to_string()))?;
+    getrandom::fill(&mut bytes).map_err(Error::Random)?;
     Ok(URL_SAFE_NO_PAD.encode(bytes))
 }
 
@@ -291,13 +321,17 @@ pub fn is_token_shape(value: &str) -> bool {
 /// purpose separates CSRF from every other use of the session key.
 pub fn derive_csrf_token(session_token: &str) -> Result<String, Error> {
     use hmac::{Hmac, KeyInit, Mac};
-    if !is_token_shape(session_token) {
+    if session_token.len() != SESSION_TOKEN_ENCODED_BYTES {
         return Err(Error::InvalidCsrfToken);
     }
     let key = URL_SAFE_NO_PAD
         .decode(session_token)
-        .map_err(|_| Error::InvalidCsrfToken)?;
-    let mut mac = Hmac::<Sha256>::new_from_slice(&key).map_err(|_| Error::InvalidCsrfToken)?;
+        .map_err(Error::CsrfTokenDecode)?;
+    if key.len() != SESSION_TOKEN_BYTES || URL_SAFE_NO_PAD.encode(&key) != session_token {
+        return Err(Error::InvalidCsrfToken);
+    }
+    let mut mac = Hmac::<Sha256>::new_from_slice(&key)
+        .expect("invariant: HMAC-SHA256 accepts keys of any length");
     mac.update(b"sarmg/admin-csrf/v1");
     Ok(URL_SAFE_NO_PAD.encode(mac.finalize().into_bytes()))
 }
@@ -349,6 +383,8 @@ where
         });
     };
     let bytes = value.as_ref();
+    let value =
+        str::from_utf8(bytes).map_err(|source| Error::SecurityHeaderEncoding { name, source })?;
     if bytes.is_empty()
         || bytes
             .iter()
@@ -356,7 +392,7 @@ where
     {
         return Err(Error::InvalidSecurityHeaderValue { name });
     }
-    str::from_utf8(bytes).map_err(|_| Error::InvalidSecurityHeaderValue { name })
+    Ok(value)
 }
 
 /// Require one canonical 256-bit CSRF token from `X-CSRF-Token`.

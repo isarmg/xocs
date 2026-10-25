@@ -10,34 +10,21 @@ use axum::{
 use bytes::Bytes;
 use std::{
     error::Error,
-    sync::{Arc, Mutex, OnceLock},
+    sync::{Arc, OnceLock},
 };
-
-#[derive(Default)]
-struct Readers {
-    total: usize,
-}
+use tokio::sync::{Semaphore, SemaphorePermit, TryAcquireError};
 
 #[derive(Clone)]
-pub(super) struct BodyAdmission(Arc<Mutex<Readers>>);
+pub(super) struct BodyAdmission(Arc<Semaphore>);
 
 impl Default for BodyAdmission {
     fn default() -> Self {
-        static READERS: OnceLock<Arc<Mutex<Readers>>> = OnceLock::new();
-        Self(READERS.get_or_init(Arc::default).clone())
-    }
-}
-
-struct Permit {
-    admission: BodyAdmission,
-}
-
-impl Drop for Permit {
-    fn drop(&mut self) {
-        // A poisoned budget remains closed; never resume with uncertain counters.
-        if let Ok(mut readers) = self.admission.0.lock() {
-            readers.total -= 1;
-        }
+        static READERS: OnceLock<Arc<Semaphore>> = OnceLock::new();
+        Self(
+            READERS
+                .get_or_init(|| Arc::new(Semaphore::new(ADMIN_BODY_READERS_GLOBAL)))
+                .clone(),
+        )
     }
 }
 
@@ -71,34 +58,28 @@ impl Scope {
 impl BodyAdmission {
     #[cfg(test)]
     pub(super) fn isolated() -> Self {
-        Self(Arc::default())
+        Self(Arc::new(Semaphore::new(ADMIN_BODY_READERS_GLOBAL)))
     }
 
-    fn acquire(&self, id: Option<&RequestId>) -> Result<Permit, Box<Response>> {
-        let mut readers = self.0.lock().map_err(|_| {
-            Box::new(error(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "platform.internal",
-                false,
-                id,
-            ))
-        })?;
-        if readers.total >= ADMIN_BODY_READERS_GLOBAL {
-            let mut response = error(
-                StatusCode::TOO_MANY_REQUESTS,
-                "auth.body_capacity",
-                true,
-                id,
-            );
-            response
-                .headers_mut()
-                .insert(header::RETRY_AFTER, HeaderValue::from_static("1"));
-            return Err(Box::new(response));
+    fn acquire(&self, id: Option<&RequestId>) -> Result<SemaphorePermit<'_>, Box<Response>> {
+        match self.0.try_acquire() {
+            Ok(permit) => Ok(permit),
+            Err(TryAcquireError::NoPermits) => {
+                let mut response = error(
+                    StatusCode::TOO_MANY_REQUESTS,
+                    "auth.body_capacity",
+                    true,
+                    id,
+                );
+                response
+                    .headers_mut()
+                    .insert(header::RETRY_AFTER, HeaderValue::from_static("1"));
+                Err(Box::new(response))
+            }
+            Err(TryAcquireError::Closed) => {
+                unreachable!("invariant: body admission semaphore is never closed")
+            }
         }
-        readers.total += 1;
-        Ok(Permit {
-            admission: self.clone(),
-        })
     }
 
     pub(super) async fn read(
