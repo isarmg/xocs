@@ -48,7 +48,13 @@ html:not([data-blog-appearance]), html[data-blog-appearance="content-blocks"] {
   .blog-admin-shell :is(.blog-error,.blog-empty,.blog-loading) { border: 0; border-radius: 0; background: var(--blog-bg-panel); }
   .blog-app-shell :is(.blog-empty,.blog-loading) { display: flex; align-items: center; }
   .blog-admin-shell .blog-header-actions { max-width: 100%; margin-inline-start: auto; flex-shrink: 0; }
-  .blog-admin-shell .blog-header-navigation-slot { flex: 1 1 20rem; min-width: 0; }
+  /* Compact navigation keeps its first row centered on the comfortable actions.
+   * A wrapped navigation grows downward without recentering either group. */
+  .blog-admin-shell .blog-header-navigation-slot {
+    flex: 1 1 20rem;
+    min-width: 0;
+    padding-block: max(0px, calc((var(--blog-input-row-height) - var(--blog-compact-row-height)) / 2));
+  }
   .blog-admin-shell .blog-header-navigation { flex: 1 1 18rem; }
   .blog-admin-shell .blog-header-navigation :is(a,button) { flex-shrink: 0; max-width: 100%; }
   .blog-admin-shell .blog-header-navigation a { color: inherit; text-decoration: none; --blog-server-corner-extent: 0px; }

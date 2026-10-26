@@ -10,10 +10,8 @@ pub(super) fn Dashboard() -> impl IntoView {
     View::new(
         blog_interface::html::section()
             .class("blog-content-stack blog-stack")
+            .aria_label(t("总览", "Overview"))
             .child((
-                blog_interface::html::h1()
-                    .class("blog-row")
-                    .child(t("总览", "Overview")),
                 blog_interface::html::p().class("blog-row").child(t(
                     "网站内容与社区状态。",
                     "Site content and community status.",

@@ -152,6 +152,70 @@ async function keyboardFocus(locator, label) {
   }), { message: `${label} retains its visible keyboard outline` }).toMatchObject({ valid: true });
 }
 
+// Managed fields use their actual one-pixel G4 border as the focus indicator.
+// The renderer owns transparent host borders, so computed borderColor alone
+// cannot prove that the focus color reached the visible SVG paint.
+async function managedFieldFocus(locator, label) {
+  const page = locator.page(), focus = await color(page, '--blog-focus'), neutral = await color(page, '--blog-block-border');
+  assert.notEqual(focus, neutral, `${label} focus must be distinguishable from its idle border`);
+  const painted = async (expected, focused) => {
+    let result;
+    await expect.poll(async () => {
+      result = await locator.evaluate(async node => {
+        const css = getComputedStyle(node), box = node.getBoundingClientRect();
+        const layer = css.borderImageSource !== 'none' ? css.borderImageSource : css.backgroundImage;
+        const source = /^url\((["']?)(.*?)\1\)$/.exec(layer)?.[2];
+        if (!source?.startsWith('blob:')) return { ready: false };
+        try {
+          const svg = new DOMParser().parseFromString(await (await fetch(source)).text(), 'image/svg+xml');
+          const contour = svg.querySelector('clipPath#inside path')?.getAttribute('d');
+          const strokes = [...svg.querySelectorAll('path[stroke]')].map(path => ({
+            color: path.getAttribute('stroke'), width: Number(path.getAttribute('stroke-width')),
+            followsContour: Boolean(contour) && path.getAttribute('d') === contour,
+          }));
+          return { ready: true, focused: document.activeElement === node, focusVisible: node.matches(':focus-visible'),
+            width: box.width, height: box.height, extent: parseFloat(css.getPropertyValue('--blog-server-corner-extent')),
+            borderWidths: ['Top', 'Right', 'Bottom', 'Left'].map(side => parseFloat(css[`border${side}Width`])),
+            outlineVisible: !['none', 'hidden'].includes(css.outlineStyle) && parseFloat(css.outlineWidth) > 0,
+            outlineOffset: parseFloat(css.outlineOffset), contour, strokes, filters: svg.querySelectorAll('filter').length };
+        } catch { return { ready: false }; } // A repaint may just have revoked the previous Blob URL.
+      });
+      return result.ready && result.focused === focused && result.strokes.length === 4 && result.filters === 0 &&
+        result.strokes.every(stroke => stroke.color === expected && stroke.followsContour && Math.abs(stroke.width - 2) <= .1);
+    }, { message: `${label} paints/restores all four G4 border sides in ${expected}` }).toBe(true);
+    assert.ok(result.borderWidths.every(width => Math.abs(width - 1) <= .1), `${label} keeps its thin one-pixel border`);
+    if (focused) {
+      assert.equal(result.outlineVisible, false, `${label} has no outer rectangular focus outline`);
+      near(result.outlineOffset, 0, `${label} has no reserved outer focus offset`);
+    }
+    return result;
+  };
+  await locator.evaluate(node => node.blur());
+  const initial = await painted(neutral, false), combo = await locator.getAttribute('role') === 'combobox';
+  for (const method of ['pointer', 'keyboard']) {
+    if (method === 'pointer') await locator.click();
+    else {
+      await locator.focus(); await page.keyboard.press('Tab');
+      await expect(locator).not.toBeFocused();
+      await page.keyboard.press('Shift+Tab');
+    }
+    await expect(locator).toBeFocused();
+    const active = await painted(focus, true);
+    if (method === 'keyboard') assert.equal(active.focusVisible, true, `${label} is genuinely reached through keyboard navigation`);
+    near(active.width, initial.width, `${label} focus leaves width unchanged`);
+    near(active.height, initial.height, `${label} focus leaves height unchanged`);
+    near(active.extent, initial.extent, `${label} focus preserves corner geometry`);
+    assert.equal(active.contour, initial.contour, `${label} focus follows its existing contour`);
+    if (combo) {
+      if (method === 'keyboard') await locator.press('ArrowDown');
+      await page.keyboard.press('Escape'); await expect(locator).toBeFocused();
+    }
+    await locator.evaluate(node => node.blur());
+    const restored = await painted(neutral, false);
+    assert.equal(restored.contour, initial.contour, `${label} blur restores paint without changing its contour`);
+  }
+}
+
 async function color(page, property) {
   return page.evaluate(property => {
     const probe = document.createElement('span');
@@ -216,7 +280,8 @@ async function fixture(page) {
     '/api/v1/content/articles/1/news': [{ id: 1, content: 'An update to edit.', create_time: '2026-10-24' }],
   };
   await page.route('**/api/v1/**', route => {
-    const url = new URL(route.request().url()), items = data[url.pathname];
+    const url = new URL(route.request().url());
+    const items = url.pathname === '/api/v1/content/resources' && state.emptyResources ? [] : data[url.pathname];
     if (route.request().method() !== 'GET' || !items) return route.fallback();
     return route.fulfill({ json: url.pathname.endsWith('/family') ? items : pageOf(items, url) });
   });
@@ -273,6 +338,7 @@ async function businessComponents(page, base, dark, state) {
   const markdown = page.getByRole('textbox', { name: 'Markdown content', exact: true });
   await expect(markdown).toBeVisible();
   near((await markdown.boundingBox()).height, 308, 'Markdown editor retains a useful seven-row writing surface');
+  await managedFieldFocus(markdown, 'Markdown textarea');
   const checks = page.locator('.check-row > label');
   await expect(checks).toHaveCount(3);
   for (const check of await checks.all()) {
@@ -376,16 +442,30 @@ async function businessComponents(page, base, dark, state) {
   await expect(lightbox).toHaveCount(0);
   await expect(photograph).toBeFocused();
 
-  // Notifications are driven through the same document event used by actual
-  // asynchronous saves, so their portal location and inherited roles are real.
-  await page.evaluate(() => dispatchEvent(new CustomEvent('blog-notify', { detail: 'Component style verification' })));
+  // Verify a fresh notification's real pointer dismissal before spending its
+  // five-second lifetime on independent paint/geometry assertions.
+  await page.evaluate(() => dispatchEvent(new CustomEvent('blog-notify', { detail: 'Component dismissal verification' })));
+  const freshNotification = page.getByRole('status').filter({ hasText: 'Component dismissal verification' });
+  await expect(freshNotification).toBeVisible();
+  await freshNotification.getByRole('button', { name: 'Dismiss notification', exact: true }).click();
+  await expect(freshNotification).toHaveCount(0);
+
+  // Keep every original notification style assertion on a separate real toast.
+  const notificationStarted = await page.evaluate(() => {
+    const started = performance.now();
+    dispatchEvent(new CustomEvent('blog-notify', { detail: 'Component style verification' }));
+    return started;
+  });
   const notification = page.getByRole('status').filter({ hasText: 'Component style verification' });
   await expect(notification).toBeVisible();
   await expect(notification).toHaveAttribute('data-blog-server-corner-state', /^(paint|clip)$/);
   await expect.poll(() => paintedSurfaceColor(notification)).toBe(await color(page, '--blog-bg-panel'));
   await control(notification.getByRole('button', { name: 'Dismiss notification', exact: true }), 36, 18, 0);
-  await notification.getByRole('button', { name: 'Dismiss notification', exact: true }).click();
-  await expect(notification).toHaveCount(0);
+  // No click, forced action, virtual clock or product timer change: allow the
+  // application's original 5,000ms expiry to remove this style-checked toast.
+  await expect(notification).toHaveCount(0, { timeout: 10_000 });
+  const notificationLifetime = await page.evaluate(started => performance.now() - started, notificationStarted);
+  assert.ok(notificationLifetime >= 4_900, `Notification must retain its real five-second auto-dismiss lifetime: ${notificationLifetime}ms`);
 
   for (const hash of ['dashboard', 'categories', 'labels', 'letter', 'comments', 'resources', 'links', 'family', 'home']) {
     await page.goto(`${base}/admin?lang=en#${hash}`);
@@ -402,6 +482,32 @@ async function businessComponents(page, base, dark, state) {
     if (hash === 'resources') {
       await separated(page.locator('form.inline-form'), page.locator('.blog-table-scroll'), 'Upload and file list');
       await control(page.getByRole('button', { name: 'Delete', exact: true }), 34, 18, 0, 14.4);
+      const files = page.getByRole('table', { name: 'File list', exact: true });
+      const borders = async empty => {
+        await expect(files.locator('tbody > tr')).toHaveCount(empty ? 0 : 1);
+        const actual = await files.evaluate(table => {
+          const frame = table.closest('.blog-table-scroll'), css = getComputedStyle(frame);
+          const box = frame.getBoundingClientRect(), content = table.getBoundingClientRect();
+          return { separators: [...table.querySelectorAll('thead > tr:last-child > th,thead > tr:last-child > td')]
+              .map(cell => parseFloat(getComputedStyle(cell).borderBlockEndWidth)),
+            frameBorders: ['Top', 'Right', 'Bottom', 'Left'].map(side => parseFloat(css[`border${side}Width`])),
+            tableTop: content.top, tableBottom: content.bottom, frameTop: box.top, frameBottom: box.bottom };
+        });
+        assert.ok(actual.separators.length > 0, 'The real Files table has header cells to inspect');
+        for (const width of actual.separators) near(width, empty ? 0 : 1, 'Only an empty table omits its last header separator');
+        for (const width of actual.frameBorders) near(width, 1, 'The outer Files frame keeps its one-pixel contour');
+        assert.ok(actual.tableTop >= actual.frameTop + actual.frameBorders[0] - .1 &&
+          actual.tableBottom <= actual.frameBottom - actual.frameBorders[2] + .1,
+        `Files content stays inside the outer frame: ${JSON.stringify(actual)}`);
+      };
+      await borders(false);
+      state.emptyResources = true;
+      try {
+        await page.reload(); await waitForApplication(page);
+        await expect(page.locator('.blog-admin-workspace .blog-loading')).toHaveCount(0);
+        await borders(true);
+      } finally { state.emptyResources = false; }
+      await page.reload(); await waitForApplication(page); await borders(false);
     }
     if (hash === 'home') {
       const viewport = page.locator('.blog-table-scroll');
@@ -478,7 +584,7 @@ try {
           await theme(page, dark);
           await shell(page, '.blog-admin-shell', '.blog-page-header', '.blog-shell-main');
           await control(name, 36, 18, 1);
-          await keyboardFocus(name, 'Category input');
+          await managedFieldFocus(name, 'Category input');
           await control(page.getByRole('button', { name: 'Create category', exact: true }), 36, 18, 0);
           const navigationButtons = page.locator('.blog-header-navigation').getByRole('button');
           await expect(navigationButtons).toHaveCount(13);
@@ -490,6 +596,7 @@ try {
           const category = page.getByRole('combobox', { name: 'Category', exact: true });
           await expect(category).toBeEnabled();
           await control(category, 36, 18, 1);
+          await managedFieldFocus(category, 'Category selector');
           await category.click();
           const options = page.getByRole('listbox', { name: 'Category', exact: true }).getByRole('option');
           await expect(options.first()).toBeVisible();

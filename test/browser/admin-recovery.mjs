@@ -338,7 +338,7 @@ async function articleRecovery(page) {
   assert.equal([...requests[0].input.article_title].length, 100);
   await content.fill('Newer body');
   await page.getByRole('button', { name: 'Save article', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Articles', exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Articles', exact: true })).toBeVisible();
   assert.equal(requests[2].method, 'PUT');
   assert.equal(requests[2].path, '/api/v1/content/articles/77');
   assert.equal(requests[2].input.article_title, 'Newer article title');

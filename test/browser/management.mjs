@@ -90,7 +90,7 @@ try {
       await page.goto(`${base}/admin?lang=en#resources`); await fileRow.getByRole('button', { name: 'Delete', exact: true }).click(); await expect(fileRow).toHaveCount(0); assert.deepEqual(media, []);
 
       await page.goto(`${base}/admin?lang=en#edit/1`); await page.getByRole('textbox', { name: /^Password hint\b/ }).fill('A useful hint');
-      await page.getByRole('button', { name: 'Save article', exact: true }).click(); await expect(page.getByRole('heading', { name: 'Articles', exact: true })).toBeVisible(); assert.equal(adminArticle.tips, 'A useful hint');
+      await page.getByRole('button', { name: 'Save article', exact: true }).click(); await expect(page.getByRole('region', { name: 'Articles', exact: true })).toBeVisible(); assert.equal(adminArticle.tips, 'A useful hint');
       await page.goto(`${base}/admin?lang=en#edit/1`); const pager = page.getByRole('navigation', { name: 'Update pages', exact: true });
       for (let number=2;number<=6;number++) { await pager.getByRole('button', { name: 'Next page', exact: true }).click(); await expect(pager).toContainText(`Page ${number}`); await expect(page.getByRole('table', { name: 'Article updates', exact: true }).getByText(`Update ${101-(number-1)*20}`, { exact: true })).toBeVisible(); }
       await page.getByRole('row').filter({ hasText: 'Update 1' }).getByRole('button', { name: 'Edit', exact: true }).click();

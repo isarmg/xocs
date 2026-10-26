@@ -143,12 +143,12 @@ try {
     await page.locator('input[name="username"]').fill('admin');
     await page.locator('input[name="password"]').fill('TemporaryPassphrase123');
     await page.locator('form button[type="submit"]').click();
-    await page.getByRole('heading', { name: '文章管理' }).waitFor();
+    await page.getByRole('region', { name: '文章管理', exact: true }).waitFor();
     for (const label of ['总览', '首页栏目', '分类管理', '标签管理', '评论管理', '随笔管理', '留言板管理', '文件管理', '内容资源', '恋爱笔记', '网站设置']) {
       const navigation = page.locator('.blog-header-navigation');
       await navigation.getByRole('button', { name: label, exact: true }).click();
       await expect(navigation.locator('[aria-current="page"]')).toHaveText(label);
-      await page.getByRole('heading', { name: label }).waitFor();
+      await page.getByRole('region', { name: label, exact: true }).waitFor();
       if (label === '评论管理') {
         const wish = page.getByRole('row').filter({hasText:'Smoke love wish'});
         await expect(wish.getByRole('cell').nth(1)).toHaveText('匿名访客');

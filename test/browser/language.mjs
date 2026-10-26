@@ -48,10 +48,11 @@ try {
         const url = new URL(path, base); url.searchParams.set('lang', 'en');
         await page.goto(url.href);
         await waitForApplication(page);
-        await expect(page.getByRole('heading', { name: heading, exact: true }).first()).toBeVisible();
-        // Hash navigation can reuse the old document's network-idle state.
-        // Wait for the actual successful list result, not just its heading.
         const adminPage = url.pathname === '/admin' ? url.hash.slice(1) : '';
+        const role = adminPage && adminPage !== 'new' && !adminPage.startsWith('edit/') ? 'region' : 'heading';
+        await expect(page.getByRole(role, { name: heading, exact: true }).first()).toBeVisible();
+        // Hash navigation can reuse the old document's network-idle state.
+        // Wait for the actual successful list result, not just its page region.
         if (adminEmptyStates[adminPage]) {
           await expect(page.locator('.blog-admin-shell .blog-empty')).toHaveText(adminEmptyStates[adminPage]);
           await expect(page.locator('.blog-admin-shell .blog-loading')).toHaveCount(0);
@@ -109,7 +110,7 @@ try {
       await restrictedPage.getByRole('button', { name: '登录', exact: true }).click();
       await expect(restrictedPage).toHaveURL(/\/admin\?lang=zh-CN#articles$/);
       await restrictedPage.reload();
-      await expect(restrictedPage.getByRole('heading', { name: '文章管理', exact: true })).toBeVisible();
+      await expect(restrictedPage.getByRole('region', { name: '文章管理', exact: true })).toBeVisible();
       await restrictedPage.getByRole('link', { name: '返回网站', exact: true }).click();
       await expect(restrictedPage).toHaveURL(/lang=zh-CN/);
       await expect(restrictedPage.getByRole('heading', { name: '相信记录的力量', exact: true })).toBeVisible();

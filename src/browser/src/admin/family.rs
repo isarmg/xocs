@@ -46,10 +46,8 @@ pub(super) fn FamilySettings() -> impl IntoView {
     });
     View::new(
         blog_interface::html::section()
+            .aria_label(t("恋爱笔记", "Love journal"))
             .child((
-                blog_interface::html::h1()
-                    .class("blog-row")
-                    .child(t("恋爱笔记", "Love journal")),
                 blog_interface::html::p().class("blog-row").child(t(
                     "这里仅由管理员创建并维护一份家的资料。",
                     "The administrator creates and maintains one home here.",

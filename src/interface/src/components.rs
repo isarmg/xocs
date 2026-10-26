@@ -691,9 +691,10 @@ pub fn AdminShell(
                                             .class("blog-product-identity blog-row"),
                                         blog_interface::html::div()
                                             .node_ref(targets.navigation)
+                                            .class("blog-header-navigation-target")
                                             .style(("display", "contents")),
                                     ))
-                                    .class("blog-header-brand-navigation blog-flow")
+                                    .class("blog-header-brand-navigation blog-flow blog-flow--start")
                             },
                         )
                         .class("blog-header-navigation-slot"),
@@ -701,6 +702,7 @@ pub fn AdminShell(
                         .child((
                             blog_interface::html::div()
                                 .node_ref(targets.actions)
+                                .class("blog-header-actions-target")
                                 .style(("display", "contents")),
                             {
                                 #[allow(unreachable_code)] #[allow(unused_mut)]
@@ -844,7 +846,7 @@ pub fn AdminShell(
                             ),
                         ),
                 ))
-                .class("blog-page-header blog-flow"),
+                .class("blog-page-header blog-flow blog-flow--start"),
             {
                 #[allow(unreachable_code)] #[allow(unused_mut)]
                 #[allow(clippy::let_and_return, clippy::let_unit_value, clippy::unit_arg)]

@@ -23,10 +23,8 @@ pub(super) fn LetterSettings() -> impl IntoView {
     });
     View::new(
         blog_interface::html::section()
+            .aria_label(t("信笺管理", "Letter"))
             .child((
-                blog_interface::html::h1()
-                    .class("blog-row")
-                    .child(t("信笺管理", "Letter")),
                 blog_interface::html::p().class("blog-row").child(t(
                     "维护公开信笺的收信人、署名和正文。",
                     "Manage the recipient, sender, and content of the public letter.",

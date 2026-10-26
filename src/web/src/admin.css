@@ -1,5 +1,10 @@
 /* Administration owns column placement and domain content, shared roles own geometry. */
 .blog-admin-app { display: contents; }
+/* Portal's presentation-only wrapper must not become an unsized flex item. */
+.blog-admin-shell :is(.blog-header-navigation-target,.blog-header-actions-target) > div { display: contents; }
+.blog-admin-shell .blog-product-identity { flex-shrink: 0; }
+/* Separate the statistics surface from the cards inside their grid wrapper. */
+.blog-admin-workspace .blog-dashboard-sections { margin-block-start: var(--blog-block-gap); }
 .blog-site-link { color: var(--blog-text-primary); }
 .blog-site-link svg { width: 1em; height: 1em; }
 .blog-admin-workspace .blog-actions { justify-content: flex-start; }

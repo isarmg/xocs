@@ -139,8 +139,8 @@ pub(super) fn HomeSections() -> impl IntoView {
     });
     View::new(
         blog_interface::html::section()
+            .aria_label(t("首页栏目", "Home sections"))
             .child((
-                blog_interface::html::h1().class("blog-row").child(t("首页栏目", "Home sections")),
                 blog_interface::html::p().class("blog-row").child(t("设置栏目、顺序和展示内容。推荐栏目使用文章的“推荐”状态。", "Set sections, their order, and content. Recommended sections use articles marked as recommended.")),
                 blog_interface::html::button()
                     .child(t("保存栏目", "Save sections"))

@@ -91,7 +91,7 @@ for(const engine of [chromium,firefox]){
   await page.locator('.editor-form').first().evaluate(node=>{node.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));node.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));});await settle(page);assert.equal(creations.length,1);
   await pending.fulfill({status:503,json:{code:'unavailable',retryable:true}});await expect(page.getByRole('alert').first()).toBeVisible();await expect(page.getByLabel('Title',{exact:true})).toHaveValue('Preserved article');
   await page.getByRole('button',{name:'Confirm original article',exact:true}).click();await expect.poll(()=>creations.length).toBe(2);assert.deepEqual(creations[1],creations[0]);
-  await pending.fulfill({json:{...article,id:77,...creations[1].body,view_status:1,recommend_status:0,comment_status:1,password_required:0}});await expect(page.getByRole('heading',{name:'Articles',exact:true})).toBeVisible();
+  await pending.fulfill({json:{...article,id:77,...creations[1].body,view_status:1,recommend_status:0,comment_status:1,password_required:0}});await expect(page.getByRole('region',{name:'Articles',exact:true})).toBeVisible();
 
   const section={id:1,title:'Original',kind:'latest',sort_id:null,priority:0,enabled:true};let reads=0,categoryReads=0,homeWrites=[],homeRead;
   await page.route('**/api/v1/categories',route=>{categoryReads++;return categoryReads===1?route.fulfill({status:503,json:{code:'unavailable'}}):route.fulfill({json:categories});});

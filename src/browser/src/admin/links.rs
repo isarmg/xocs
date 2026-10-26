@@ -158,10 +158,8 @@ pub(super) fn Links() -> impl IntoView {
     };
     View::new(
         blog_interface::html::section()
+            .aria_label(t("内容资源", "Content resources"))
             .child((
-                blog_interface::html::h1()
-                    .class("blog-row")
-                    .child(t("内容资源", "Content resources")),
                 blog_interface::html::p().class("blog-row").child(t(
                     "维护友链、收藏、照片和音乐条目。",
                     "Manage friend links, favorites, photos, and music.",

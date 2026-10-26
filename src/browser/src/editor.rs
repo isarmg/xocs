@@ -1247,11 +1247,9 @@ pub fn Notes() -> impl IntoView {
     };
     View::new(
     blog_interface::html::section()
+        .aria_label(t("随笔管理", "Notes"))
         .child(
             (
-                    blog_interface::html::h1().class("blog-row")
-                    .child( t("随笔管理",
-                    "Notes")),
                     blog_interface::html::p().class("blog-row")
                     .child( t("维护随笔及恋爱日常中的内容。",
                     "Manage notes shown in the journal and everyday moments.")), Feedback(component_props_builder(& Feedback)

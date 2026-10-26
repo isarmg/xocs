@@ -282,8 +282,8 @@ pub(super) fn SiteSettings() -> impl IntoView {
     });
     View::new(
         blog_interface::html::section()
+            .aria_label(t("网站设置", "Site settings"))
             .child((
-                blog_interface::html::h1().class("blog-row").child(t("网站设置", "Site settings")),
                 Feedback(
                     component_props_builder(&Feedback)
                         .error(data.error)

@@ -74,7 +74,8 @@ for (const engine of [chromium, firefox].filter(engine=>requestedEngines.include
     console.log(JSON.stringify({engine:engine.name(),phase,navigating:hash}));
     await page.goto(`${base}/admin?lang=en#${hash}`);
     assert.equal(new URL(page.url()).origin, base);
-    await page.getByRole('heading', { name: heading, exact: true }).waitFor();
+    const role = hash === 'new' || hash.startsWith('edit/') ? 'heading' : 'region';
+    await page.getByRole(role, { name: heading, exact: true }).waitFor();
   }
   async function click(method, path, locator, expected = 200) {
     const waiting = page.waitForResponse(response => new URL(response.url()).pathname === path && response.request().method() === method);
@@ -328,7 +329,7 @@ for (const engine of [chromium, firefox].filter(engine=>requestedEngines.include
     await chooseOption('Category', token); await chooseOption('Tags', token);
     own.article = await click('POST', '/api/v1/content/articles', page.getByRole('button', { name: 'Save article', exact: true }));
     assert.equal(own.article.username, author);
-    await page.getByRole('heading', { name: 'Articles', exact: true }).waitFor();
+    await page.getByRole('region', { name: 'Articles', exact: true }).waitFor();
 
     phase = 'Own article news create and UTC edit';
     await admin(`edit/${own.article.id}`, 'Edit article');
@@ -356,7 +357,7 @@ for (const engine of [chromium, firefox].filter(engine=>requestedEngines.include
     await page.getByRole('textbox', { name: /^Password hint\b/ }).fill(hint);
     own.article = await click('PUT', `/api/v1/content/articles/${own.article.id}`, page.getByRole('button', { name: 'Save article', exact: true }));
     assert.equal(own.article.tips, hint); assert.equal(own.article.password_required, 1);
-    await page.getByRole('heading', { name: 'Articles', exact: true }).waitFor();
+    await page.getByRole('region', { name: 'Articles', exact: true }).waitFor();
     await publicPage.goto(`${base}/article/${own.article.id}?lang=en`);
     await expect(publicPage.getByText(hint, { exact: true })).toBeVisible();
     assert.deepEqual(errors, [], 'Uncaught page errors');

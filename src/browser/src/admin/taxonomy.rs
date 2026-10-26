@@ -228,14 +228,12 @@ pub(super) fn Taxonomy(kind: TaxonomyKind) -> impl IntoView {
     };
     View::new(
         blog_interface::html::section()
+            .aria_label(if labels {
+                t("标签管理", "Tags")
+            } else {
+                t("分类管理", "Categories")
+            })
             .child((
-                blog_interface::html::h1()
-                    .class("blog-row")
-                    .child(if labels {
-                        t("标签管理", "Tags")
-                    } else {
-                        t("分类管理", "Categories")
-                    }),
                 Feedback(
                     component_props_builder(&Feedback)
                         .error(data.error)

@@ -14,13 +14,107 @@ const pages = [
 ];
 
 async function layout(page) {
+  await waitForApplication(page);
   await page.evaluate(() => document.fonts.ready);
-  const sizes = await page.evaluate(() => ({ width: innerWidth, scroll: document.documentElement.scrollWidth,
-    headerPosition: getComputedStyle(document.querySelector('.blog-admin-shell > .blog-page-header')).position,
-    navigationWrap: getComputedStyle(document.querySelector('.blog-header-navigation')).flexWrap }));
-  assert.ok(sizes.scroll <= sizes.width, `${page.url()}: body overflows: ${JSON.stringify(sizes)}`);
-  assert.ok(['static', 'relative'].includes(sizes.headerPosition), `Header must remain in document flow: ${JSON.stringify(sizes)}`);
+  await page.evaluate(() => { scrollTo(0, 0); return new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))); });
+  const sizes = await page.evaluate(() => {
+    const box = element => {
+      const value = element.getBoundingClientRect();
+      return { top: value.top, bottom: value.bottom, left: value.left, right: value.right,
+        height: value.height, center: value.top + value.height / 2 };
+    };
+    const textBox = element => {
+      const range = document.createRange(); range.selectNodeContents(element);
+      const value = range.getBoundingClientRect();
+      return { top: value.top, center: value.top + value.height / 2 };
+    };
+    const header = document.querySelector('.blog-admin-shell > .blog-page-header');
+    const slot = document.querySelector('.blog-header-navigation-slot');
+    const brand = document.querySelector('.blog-product-identity');
+    const navigation = document.querySelector('.blog-header-navigation');
+    const buttons = [...navigation.querySelectorAll('button')];
+    const actions = document.querySelector('.blog-header-actions');
+    const actionButtons = [...actions.querySelectorAll('a,button')].map(box);
+    const brandBox = box(brand), navBox = box(navigation), slotBox = box(slot), actionBox = box(actions);
+    const gap = parseFloat(getComputedStyle(document.querySelector('.blog-header-brand-navigation')).rowGap) || 0;
+    const innerWrap = navBox.top >= brandBox.bottom - .5;
+    const navRows = [];
+    for (const button of buttons.map(box).sort((a, b) => a.top - b.top)) {
+      if (!navRows.some(row => Math.abs(row.top - button.top) <= .5)) navRows.push(button);
+    }
+    const statistics = document.querySelector('.blog-statistics-table')?.closest('.blog-frame').getBoundingClientRect();
+    const sections = document.querySelector('.blog-dashboard-sections')?.getBoundingClientRect();
+    return { width: innerWidth, scroll: document.documentElement.scrollWidth,
+      headerPosition: getComputedStyle(header).position,
+      navigationWrap: getComputedStyle(navigation).flexWrap,
+      header: box(header), slot: slotBox, brand: brandBox, brandText: textBox(brand.querySelector('strong')),
+      navigation: navBox, firstButton: box(buttons[0]), firstButtonText: textBox(buttons[0]), navRows,
+      actions: actionBox, actionButtons, sameHeaderRow: actionBox.top < slotBox.bottom - .5,
+      innerWrap, innerWrapShift: innerWrap ? brandBox.height + gap : 0,
+      selectedPage: navigation.querySelector('[aria-current="page"]')?.textContent,
+      dashboardGap: statistics && sections ? sections.top - statistics.bottom : null,
+      blockGap: sections ? parseFloat(getComputedStyle(document.querySelector('.blog-dashboard-sections')).rowGap) : null };
+  });
+  const tolerance = .5, diagnostic = `${page.url()}: ${JSON.stringify(sizes)}`;
+  assert.ok(sizes.scroll <= sizes.width, `Body overflows: ${diagnostic}`);
+  assert.ok(['static', 'relative'].includes(sizes.headerPosition), `Header must remain in document flow: ${diagnostic}`);
   assert.equal(sizes.navigationWrap, 'wrap', 'Navigation wraps naturally instead of clipping links');
+  assert.ok(Math.abs(sizes.brand.top + sizes.innerWrapShift - sizes.navigation.top) <= tolerance,
+    `Navigation starts beside the brand or immediately after its intentional narrow-screen wrap: ${diagnostic}`);
+  assert.ok(Math.abs(sizes.firstButton.top - sizes.navigation.top) <= tolerance,
+    `Measure the actual first button, not only its navigation container: ${diagnostic}`);
+  if (!sizes.innerWrap) assert.ok(Math.abs(sizes.brand.center - sizes.firstButton.center) <= tolerance,
+    `Brand and first navigation row share a center: ${diagnostic}`);
+  if (sizes.sameHeaderRow) {
+    const rowCenter = sizes.innerWrap ? sizes.brand.center : sizes.firstButton.center;
+    assert.ok(Math.abs(sizes.actionButtons[0].center - rowCenter) <= tolerance,
+      `Right actions align to the first header row rather than the middle of wrapped navigation: ${diagnostic}`);
+  } else assert.ok(sizes.actions.top >= sizes.slot.bottom - tolerance,
+    `Mobile actions may wrap only after the complete navigation slot: ${diagnostic}`);
+  for (const button of sizes.actionButtons) {
+    const row = sizes.actionButtons.find(candidate => Math.min(candidate.bottom, button.bottom) - Math.max(candidate.top, button.top) > tolerance);
+    assert.ok(Math.abs(row.center - button.center) <= tolerance,
+      `Action buttons keep their own row centers: ${diagnostic}`);
+    assert.ok(button.top >= sizes.header.top - tolerance && button.bottom <= sizes.header.bottom + tolerance,
+      `Action controls stay inside the header: ${diagnostic}`);
+  }
+  if (sizes.dashboardGap !== null) assert.ok(sizes.dashboardGap >= sizes.blockGap - 1,
+    `Statistics and management cards have separate surfaces: ${diagnostic}`);
+  return sizes;
+}
+
+async function headerResizeRegression(page) {
+  const route = new URL(page.url()).hash, samples = [];
+  for (const width of [1895, 1500, 1895, 1280, 1500, 320, 390, 1895]) {
+    await page.setViewportSize({ width, height: 900 });
+    const current = await layout(page);
+    assert.equal(new URL(page.url()).hash, route, 'Resize the same selected page and action set');
+    samples.push(current);
+  }
+  assert.ok(samples.some(sample => sample.navRows.length === 1), 'Exercise a single navigation row');
+  assert.ok(samples.some(sample => sample.navRows.length === 2), 'Exercise the transition to two navigation rows');
+  assert.ok(samples.some(sample => sample.width === 320 && sample.innerWrap), 'Exercise the intentional brand/navigation wrap at 320px');
+  const anchor = sample => ({
+    brandTop: sample.brand.top - sample.header.top,
+    brandCenter: sample.brand.center - sample.header.top,
+    brandTextTop: sample.brandText.top - sample.header.top,
+    brandTextCenter: sample.brandText.center - sample.header.top,
+    firstButtonTop: sample.firstButton.top - sample.innerWrapShift - sample.header.top,
+    firstButtonCenter: sample.firstButton.center - sample.innerWrapShift - sample.header.top,
+    firstTextTop: sample.firstButtonText.top - sample.innerWrapShift - sample.header.top,
+    firstTextCenter: sample.firstButtonText.center - sample.innerWrapShift - sample.header.top,
+  });
+  const reference = anchor(samples[0]);
+  for (const sample of samples) {
+    assert.equal(sample.selectedPage, samples[0].selectedPage, 'Keep the same selected navigation entry');
+    assert.equal(sample.actionButtons.length, samples[0].actionButtons.length, 'Keep the same page-specific actions');
+    for (const [name, value] of Object.entries(anchor(sample))) {
+      assert.ok(Math.abs(value - reference[name]) <= .5,
+        `${route} ${sample.width}px ${name} shifts between single and wrapped rows: ${JSON.stringify({ reference, actual: anchor(sample), rows: sample.navRows.length, innerWrap: sample.innerWrap })}`);
+    }
+    if (sample.sameHeaderRow) assert.ok(Math.abs(sample.actionButtons[0].center - sample.header.top - samples[0].actionButtons[0].center + samples[0].header.top) <= .5,
+      `${route}: first-row right action center must stay fixed when navigation wraps`);
+  }
 }
 
 async function accessible(page) {
@@ -67,7 +161,8 @@ try {
         for (const [id, chinese, englishTitle] of pages) {
           await primary.getByRole('button', { name: english ? englishTitle : chinese, exact: true }).click();
           await expect(page).toHaveURL(new RegExp(`#${id}$`));
-          await expect(page.getByRole('heading', { level: 1, name: english ? englishTitle : chinese, exact: true })).toBeVisible();
+          await expect(page.getByRole('region', { name: english ? englishTitle : chinese, exact: true })).toBeVisible();
+          await expect(page.getByRole('heading', { level: 1, name: english ? englishTitle : chinese, exact: true })).toHaveCount(0);
           await expect(primary.locator('[aria-current="page"]')).toHaveText(english ? englishTitle : chinese);
           await layout(page);
         }
@@ -105,12 +200,26 @@ try {
         if (english) await accessible(page);
         await layout(page);
         await page.getByRole('button', { name: english ? 'Switch to Chinese' : '切换为英文', exact: true }).click();
-        await expect(page.getByRole('heading', { level: 1, name: english ? '网站设置' : 'Site settings', exact: true })).toBeVisible();
+        await expect(page.getByRole('region', { name: english ? '网站设置' : 'Site settings', exact: true })).toBeVisible();
         await expect(page).toHaveURL(/#site$/);
         await layout(page);
         assert.deepEqual(errors, []);
         await context.close();
         console.log(`${engine.name()} ${width}px ${language}: navigation, history, forms, themes and layout passed`);
+      }
+      // Keep the route and its action set fixed while crossing the wrap point
+      // in both directions. Comparing container tops alone misses the 4px jump
+      // caused by centering a 36px navigation row beside 44px actions.
+      for (const language of ['zh-CN', 'en']) {
+        const regressionContext = await browser.newContext({ locale: language, viewport: { width: 1895, height: 900 } });
+        const regressionPage = await regressionContext.newPage();
+        await mockApi(regressionPage, { authenticated: true });
+        for (const [id, chinese, english] of [pages[0], pages[1]]) {
+          await regressionPage.goto(`${base}/admin?lang=${language}#${id}`);
+          await expect(regressionPage.getByRole('region', { name: language === 'en' ? english : chinese, exact: true })).toBeVisible();
+          await headerResizeRegression(regressionPage);
+        }
+        await regressionContext.close();
       }
       const context = await browser.newContext({ locale: 'en' }), page = await context.newPage();
       await mockApi(page, { authenticated: true });

@@ -37,6 +37,13 @@ html:has(.blog-admin-shell, .blog-auth-shell) { min-width: 320px; font-family: v
 /* Public fields retain their existing focus treatment. Administration restores
  * a visible keyboard indicator above the old shared :focus reset. */
 .blog-admin-shell :is(input,select,textarea,[role=combobox]):not(.blog-input--underline):focus-visible { outline: 2px solid var(--blog-focus); outline-offset: 3px; }
+/* Managed fields signal focus through their existing continuous contour.
+ * An exterior outline would draw a second, rectangular frame around it. */
+:root .blog-admin-shell :is(.blog-input,[role=combobox]):not(.blog-input--underline):focus {
+  outline: 0;
+  outline-offset: 0;
+  border-color: var(--blog-focus);
+}
 .blog-admin-shell a,.blog-admin-shell a:visited { color: var(--blog-text-link); }
 .blog-admin-shell .blog-dialog-heading { gap: 0; }
 .blog-admin-shell .blog-actions { margin-block: 0; }
@@ -66,7 +73,12 @@ html:has(.blog-admin-shell, .blog-auth-shell) { min-width: 320px; font-family: v
 .blog-admin-shell .blog-table :is(th,td) { box-sizing: border-box; height: var(--blog-compact-row-height); padding: 0 var(--blog-list-content-inset); border-block-end: var(--blog-control-border-width) solid var(--blog-block-border); font: inherit; font-weight: 400; text-align: inherit; vertical-align: middle; }
 .blog-admin-shell .blog-table th { color: var(--blog-block-muted); }
 .blog-admin-shell .blog-table tbody tr:last-child > td { border-block-end: 0; }
+/* An empty table ends at its header; only the outer frame paints that edge. */
+.blog-admin-shell .blog-table:not(:has(> tbody > tr)) > thead > tr:last-child > :is(th,td) { border-block-end-width: 0; }
 .blog-admin-shell .blog-table .blog-actions { justify-content: flex-start; }
 .blog-admin-shell .blog-table tbody .blog-button { min-height: calc(var(--blog-compact-row-height) - 2px); height: calc(var(--blog-compact-row-height) - 2px); padding-block: 0; font-size: inherit; white-space: nowrap; }
 .blog-admin-shell .blog-table-scroll:has(> .blog-table[hidden]) { display: none; }
 @media(forced-colors:active) { .blog-admin-shell .blog-frame { border-color: CanvasText; } .blog-admin-shell :is(input,select,textarea,[role=combobox]):not(.blog-input--underline):focus-visible { outline-color: Highlight; } }
+@media(forced-colors:active) {
+  :root .blog-admin-shell :is(.blog-input,[role=combobox]):not(.blog-input--underline):focus { border-color: Highlight; }
+}

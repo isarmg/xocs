@@ -105,7 +105,7 @@ try {
           const fieldLabel = english ? 'Upload image (PNG, JPEG, GIF, WebP)' : '上传图片（PNG、JPEG、GIF、WebP）';
           const triggerName = label => (english ? 'Choose file: ' : '选择文件：') + label;
           await page.goto(`${base}/admin?lang=${language}#dashboard`);
-          await expect(page.getByRole('heading', { name: english ? 'Overview' : '总览', exact: true })).toBeVisible();
+          await expect(page.getByRole('region', { name: english ? 'Overview' : '总览', exact: true })).toBeVisible();
           await expect(page.locator('.blog-dashboard-sections a[href="/admin#users"]')).toHaveCount(0);
           const navigation = page.locator('.blog-header-navigation');
           await expect(navigation.getByRole('button')).toHaveCount(13);

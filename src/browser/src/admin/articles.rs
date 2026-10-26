@@ -21,6 +21,7 @@ pub(super) fn Articles() -> impl IntoView {
     });
     View::new(
         blog_interface::html::section()
+            .aria_label(t("文章管理", "Articles"))
             .child((
                 HeaderActions(
                     component_props_builder(&HeaderActions)
@@ -45,9 +46,6 @@ pub(super) fn Articles() -> impl IntoView {
                         ))
                         .build(),
                 ),
-                blog_interface::html::h1()
-                    .class("blog-row")
-                    .child(t("文章管理", "Articles")),
                 blog_interface::html::p().class("blog-row").child(t(
                     "管理公开文章与草稿。",
                     "Manage published articles and drafts.",

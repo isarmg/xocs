@@ -33,6 +33,14 @@
     {
       "date": "2026-10-24",
       "description": "Use the reference compact 36px working-row geometry for administrative single-line inputs, retaining the shared 18px frame clearance, multiline writing areas and independent authentication/header targets. Match 34px table-row actions with inherited row typography and prevent wrapped action labels from increasing single-line control height."
+    },
+    {
+      "date": "2026-10-25",
+      "description": "Keep compact navigation and comfortable header actions aligned to the first row through wrapping, using start alignment and an inset derived from the existing row-height tokens."
+    },
+    {
+      "date": "2026-10-25",
+      "description": "Replace exterior rectangular focus outlines on managed administration fields with the existing one-pixel contour in the theme focus color. Preserve control geometry, native checkbox/button indicators, independent authentication and public styles, and system Highlight in forced colors. Remove the terminal header separator on empty tables so it does not stack with the unchanged outer frame; retain populated-table header separators."
     }
   ]
 }

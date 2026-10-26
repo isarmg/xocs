@@ -197,10 +197,9 @@ pub(super) fn Moderation(kind: ModerationKind) -> impl IntoView {
     };
     View::new(
     blog_interface::html::section()
+        .aria_label(title)
         .child(
             (
-                    blog_interface::html::h1().class("blog-row")
-                    .child( title),
                     Feedback(component_props_builder(& Feedback)
                     .error( data.error)
                     .retry( Some(Callback::new(move | () |

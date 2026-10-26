@@ -105,7 +105,7 @@ try {
       await page.getByRole('row').filter({ hasText: /^Deletion row 1#/ }).getByRole('button', { name: 'Delete', exact: true }).click();
       await expect.poll(() => page.evaluate(() => Boolean(window.asyncHeld))).toBe(true);
       await page.evaluate(() => { window.asyncNotices = []; location.hash = 'notes'; });
-      await expect(page.getByRole('heading', { name: 'Notes', exact: true })).toBeVisible();
+      await expect(page.getByRole('region', { name: 'Notes', exact: true })).toBeVisible();
       await page.getByLabel('Note content', { exact: true }).fill('New page draft');
       assert.equal(await page.evaluate(() => window.asyncHeld.signal.aborted), true);
       await page.evaluate(() => window.asyncHeld.release()); await settle(page);
