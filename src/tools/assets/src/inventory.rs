@@ -2,13 +2,18 @@ use crate::{
     layout,
     source_inputs::{self, SnapshotFiles},
 };
-use anyhow::{Context, Result, ensure};
+use serde::Deserialize;
 use serde_json::{Value, json};
 use std::{
     collections::{BTreeMap, BTreeSet},
-    fs,
+    fs, io,
     path::{Path, PathBuf},
 };
+
+mod error;
+pub use error::InventoryError;
+
+type Result<T> = std::result::Result<T, InventoryError>;
 
 pub type Files = BTreeMap<String, String>;
 pub const MAX_FILE: u64 = source_inputs::MAX_FILE;
@@ -18,68 +23,110 @@ pub fn sha(bytes: &[u8]) -> String {
 }
 
 pub fn relative(path: &Path) -> Result<String> {
-    Ok(source_inputs::relative(path)?)
+    source_inputs::relative(path).map_err(|source| InventoryError::RelativePath {
+        path: path.to_owned(),
+        source,
+    })
 }
 
 pub fn physical(path: &Path) -> Result<()> {
-    Ok(source_inputs::physical(path)?)
+    source_inputs::physical(path).map_err(|source| InventoryError::InspectPath {
+        path: path.to_owned(),
+        source,
+    })
 }
 
 pub fn read(path: &Path) -> Result<Vec<u8>> {
-    Ok(source_inputs::read(path)?)
+    source_inputs::read(path).map_err(|source| InventoryError::Read {
+        path: path.to_owned(),
+        source,
+    })
 }
 
 pub fn walk(root: &Path) -> Result<Vec<PathBuf>> {
-    Ok(source_inputs::walk(root, source_inputs::MAX_PACKAGE_FILES)?)
+    source_inputs::walk(root, source_inputs::MAX_PACKAGE_FILES).map_err(|source| {
+        InventoryError::EnumerateSource {
+            path: root.to_owned(),
+            source,
+        }
+    })
 }
 
 pub fn files(root: &Path) -> Result<Files> {
     walk(root)?
         .into_iter()
-        .map(|path| Ok((relative(path.strip_prefix(root)?)?, sha(&read(&path)?))))
+        .map(|path| {
+            Ok((
+                relative(
+                    path.strip_prefix(root)
+                        .expect("invariant: walked source remains under its root"),
+                )?,
+                sha(&read(&path)?),
+            ))
+        })
         .collect()
 }
 
 pub fn validate_vendor(root: &Path) -> Result<()> {
     let provenance = root.join("SOURCE.json");
-    let value: Value = serde_json::from_slice(&read(&provenance)?)?;
-    let expected: Files = serde_json::from_value(
+    let value = receipt(&provenance)?;
+    validate_vendor_receipt(root, &provenance, value)
+}
+
+fn validate_vendor_receipt(root: &Path, provenance: &Path, value: Value) -> Result<()> {
+    let expected = Files::deserialize(
         value
             .get("files")
-            .context("SOURCE.json is missing files")?
-            .clone(),
-    )?;
-    ensure!(
-        !expected.is_empty(),
-        "Vendor source inventory cannot be empty"
-    );
+            .ok_or(InventoryError::MissingEvidence("SOURCE.json files"))?,
+    )
+    .map_err(|source| InventoryError::FileInventory {
+        path: provenance.to_owned(),
+        source,
+    })?;
+    if expected.is_empty() {
+        return Err(InventoryError::EmptyVendorInventory);
+    }
     for (name, digest) in &expected {
         relative(Path::new(name))?;
-        ensure!(
-            digest.len() == 64 && digest.bytes().all(|v| v.is_ascii_hexdigit()),
-            "Invalid SOURCE digest"
-        );
+        if digest.len() != 64 || !digest.bytes().all(|v| v.is_ascii_hexdigit()) {
+            return Err(InventoryError::InvalidDigest(name.clone()));
+        }
     }
     let mut actual = files(root)?;
     actual.remove("SOURCE.json");
-    ensure!(
-        actual == expected,
-        "Vendored source differs from SOURCE.json: {}",
-        root.display()
-    );
+    if actual != expected {
+        return Err(InventoryError::VendorChanged(root.to_owned()));
+    }
     Ok(())
 }
 
 pub fn validate_vendors(root: &Path) -> Result<()> {
-    if !root.exists() {
-        return Ok(());
-    }
-    for entry in fs::read_dir(root)? {
-        let path = entry?.path();
-        ensure!(
-            path.is_dir(),
-            "Vendor root must contain package directories"
-        );
+    let entries = match fs::read_dir(root) {
+        Ok(entries) => entries,
+        Err(source) if source.kind() == io::ErrorKind::NotFound => return Ok(()),
+        Err(source) => {
+            return Err(InventoryError::EnumerateSource {
+                path: root.to_owned(),
+                source,
+            });
+        }
+    };
+    for entry in entries {
+        let entry = entry.map_err(|source| InventoryError::DirectoryEntry {
+            path: root.to_owned(),
+            source,
+        })?;
+        let path = entry.path();
+        if !entry
+            .file_type()
+            .map_err(|source| InventoryError::InspectPath {
+                path: path.clone(),
+                source,
+            })?
+            .is_dir()
+        {
+            return Err(InventoryError::VendorEntry);
+        }
         validate_vendor(&path)?;
     }
     Ok(())
@@ -88,66 +135,84 @@ pub fn validate_vendors(root: &Path) -> Result<()> {
 /// Validate immutable historical evidence while allowing the maintained source
 /// to evolve. Current implementation bytes are recorded separately by snapshot.
 pub fn maintained_source(repository: &Path, directory: &Path) -> Result<Value> {
-    let source: Value = serde_json::from_slice(&read(&directory.join("ORIGIN.json"))?)?;
-    ensure!(
-        source["format"] == 1
-            && source["ownership"] == "repository-maintained"
-            && source["changes"]
-                .as_array()
-                .is_some_and(|changes| !changes.is_empty()),
-        "Maintained source requires ownership and a local modification record"
-    );
+    let source = receipt(&directory.join("ORIGIN.json"))?;
+    validate_maintained_source(repository, directory, source)
+}
+
+fn validate_maintained_source(repository: &Path, directory: &Path, source: Value) -> Result<Value> {
+    if !(source["format"] == 1
+        && source["ownership"] == "repository-maintained"
+        && source["changes"]
+            .as_array()
+            .is_some_and(|changes| !changes.is_empty()))
+    {
+        return Err(InventoryError::Ownership);
+    }
     let upstream = &source["upstream"];
     let mut original = None;
     for kind in ["receipt", "archive"] {
         let name = upstream[kind]
             .as_str()
-            .context("Missing original source evidence")?;
+            .ok_or(InventoryError::MissingEvidence("original source evidence"))?;
         relative(Path::new(name))?;
         let bytes = read(&repository.join(name))?;
-        ensure!(
-            upstream[format!("{kind}_sha256")].as_str() == Some(sha(&bytes).as_str()),
-            "Original source evidence differs from its recorded digest: {name}"
-        );
+        if upstream[format!("{kind}_sha256")].as_str() != Some(sha(&bytes).as_str()) {
+            return Err(InventoryError::OriginalEvidenceChanged(name.into()));
+        }
         if kind == "receipt" {
-            original = Some(serde_json::from_slice::<Value>(&bytes)?);
+            original = Some(serde_json::from_slice::<Value>(&bytes).map_err(|source| {
+                InventoryError::Receipt {
+                    path: repository.join(name),
+                    source,
+                }
+            })?);
         }
     }
-    let original = original.context("Original source receipt")?;
-    ensure!(
-        original["package"] == upstream["package"]
-            && original["version"] == upstream["version"]
-            && original["files"]
-                .as_object()
-                .is_some_and(|files| !files.is_empty()),
-        "Historical source package identity changed"
-    );
-    if let Some(license) = original["files"]["LICENSE"].as_str() {
-        ensure!(
-            sha(&read(&directory.join("LICENSE"))?) == license,
-            "Original license and copyright notices must be preserved"
-        );
+    let original = original.expect("invariant: original receipt is read before its archive");
+    if !(original["package"] == upstream["package"]
+        && original["version"] == upstream["version"]
+        && original["files"]
+            .as_object()
+            .is_some_and(|files| !files.is_empty()))
+    {
+        return Err(InventoryError::OriginalIdentityChanged);
+    }
+    if let Some(license) = original["files"]["LICENSE"].as_str()
+        && sha(&read(&directory.join("LICENSE"))?) != license
+    {
+        return Err(InventoryError::LicenseChanged);
     }
     Ok(source)
 }
 
-pub fn builder_source(directory: &Path, required: bool) -> Result<Option<Value>> {
-    if !directory.join("ORIGIN.json").exists() {
-        ensure!(!required, "Embedded Web builder requires ORIGIN.json");
-        return Ok(None);
-    }
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum OriginRequirement {
+    Required,
+    Optional,
+}
+
+pub fn builder_source(directory: &Path, requirement: OriginRequirement) -> Result<Option<Value>> {
+    let Some(source) = optional_receipt(&directory.join("ORIGIN.json"))? else {
+        return match requirement {
+            OriginRequirement::Required => Err(InventoryError::MissingBuilderOrigin),
+            OriginRequirement::Optional => Ok(None),
+        };
+    };
     let repository = directory
         .ancestors()
         .nth(Path::new(layout::BUILDER).components().count())
-        .context("Builder repository")?;
-    let source = maintained_source(repository, directory)?;
-    let manifest: toml::Value =
-        toml::from_str(&String::from_utf8(read(&directory.join("Cargo.toml"))?)?)?;
-    ensure!(
-        source["package"] == "blog-assets"
-            && manifest["package"]["name"].as_str() == Some("blog-assets"),
-        "Web builder must be the repository-maintained blog-assets implementation"
-    );
+        .ok_or(InventoryError::BuilderLayout)?;
+    let source = validate_maintained_source(repository, directory, source)?;
+    let manifest = manifest(&directory.join("Cargo.toml"))?;
+    if source["package"] != "blog-assets"
+        || manifest
+            .get("package")
+            .and_then(|package| package.get("name"))
+            .and_then(toml::Value::as_str)
+            != Some("blog-assets")
+    {
+        return Err(InventoryError::BuilderIdentity);
+    }
     Ok(Some(source))
 }
 
@@ -161,30 +226,56 @@ fn cargo_sources(
     records: &mut BTreeMap<String, Files>,
 ) -> Result<()> {
     physical(base)?;
-    let base = base.canonicalize()?;
-    ensure!(
-        base.starts_with(repository),
-        "Local Rust dependency escapes repository: {}",
-        base.display()
-    );
+    let base = base
+        .canonicalize()
+        .map_err(|source| InventoryError::ResolvePath {
+            path: base.to_owned(),
+            source,
+        })?;
+    if !base.starts_with(repository) {
+        return Err(InventoryError::DependencyOutsideRepository(base));
+    }
     if !seen.insert(base.clone()) {
         return Ok(());
     }
-    ensure!(
-        !base.join("Cargo.lock").exists(),
-        "Local packages must use the root Cargo.lock: {}",
-        base.display()
+    if base
+        .join("Cargo.lock")
+        .try_exists()
+        .map_err(|source| InventoryError::InspectPath {
+            path: base.join("Cargo.lock"),
+            source,
+        })?
+    {
+        return Err(InventoryError::NestedLockfile(base));
+    }
+    let manifest_path = base.join("Cargo.toml");
+    let bytes = hashes
+        .read(&manifest_path)
+        .map_err(|source| InventoryError::Read {
+            path: manifest_path.clone(),
+            source,
+        })?;
+    let manifest = parse_manifest(&manifest_path, bytes)?;
+    if let Some(source) = optional_receipt(&base.join("ORIGIN.json"))? {
+        validate_maintained_source(repository, &base, source)?;
+    }
+    let provenance = base.join("SOURCE.json");
+    if let Some(value) = optional_receipt(&provenance)? {
+        validate_vendor_receipt(&base, &provenance, value)?;
+    }
+    let input = hashes
+        .files(&base)
+        .map_err(|source| InventoryError::SnapshotSource {
+            path: base.clone(),
+            source,
+        })?;
+    records.insert(
+        relative(
+            base.strip_prefix(repository)
+                .expect("invariant: accepted dependency is inside the repository"),
+        )?,
+        input,
     );
-    let manifest: toml::Value =
-        toml::from_str(&String::from_utf8(hashes.read(&base.join("Cargo.toml"))?)?)?;
-    if base.join("ORIGIN.json").exists() {
-        maintained_source(repository, &base)?;
-    }
-    if base.join("SOURCE.json").exists() {
-        validate_vendor(&base)?;
-    }
-    let input = hashes.files(&base)?;
-    records.insert(relative(base.strip_prefix(repository)?)?, input);
     fn dependencies(
         value: &toml::Value,
         base: &Path,
@@ -203,7 +294,9 @@ fn cargo_sources(
                             .get("workspace")
                             .and_then(|value| value.get("dependencies"))
                             .and_then(|value| value.get(name))
-                            .with_context(|| format!("Missing workspace dependency: {name}"))?,
+                            .ok_or_else(|| {
+                                InventoryError::MissingWorkspaceDependency(name.clone())
+                            })?,
                         repository,
                     )
                 } else {
@@ -212,16 +305,13 @@ fn cargo_sources(
             let path = declaration
                 .get("path")
                 .and_then(toml::Value::as_str)
-                .with_context(|| {
-                    format!(
-                        "Rust dependency must be a local path: {name} in {}",
-                        base.display()
-                    )
+                .ok_or_else(|| InventoryError::NonLocalDependency {
+                    name: name.clone(),
+                    directory: base.to_owned(),
                 })?;
-            ensure!(
-                declaration.get("git").is_none() && declaration.get("registry").is_none(),
-                "External source selector on path dependency: {name}"
-            );
+            if declaration.get("git").is_some() || declaration.get("registry").is_some() {
+                return Err(InventoryError::ExternalSourceSelector(name.clone()));
+            }
             found.push(directory.join(path));
         }
         Ok(())
@@ -262,7 +352,12 @@ pub fn foundation_inputs(root: &Path) -> Result<Files> {
 }
 
 fn foundation_inputs_with(root: &Path, hashes: &mut SnapshotFiles) -> Result<Files> {
-    Ok(hashes.verification_inputs(root)?)
+    hashes
+        .verification_inputs(root)
+        .map_err(|source| InventoryError::SnapshotSource {
+            path: root.to_owned(),
+            source,
+        })
 }
 
 pub fn foundation_digest(files: &Files) -> String {
@@ -275,8 +370,14 @@ pub fn snapshot(root: &Path) -> Result<Value> {
     let mut rust = BTreeMap::new();
     let mut seen = BTreeSet::new();
     let mut hashes = SnapshotFiles::default();
-    let workspace: toml::Value =
-        toml::from_str(&String::from_utf8(hashes.read(&root.join("Cargo.toml"))?)?)?;
+    let workspace_path = root.join("Cargo.toml");
+    let workspace_bytes = hashes
+        .read(&workspace_path)
+        .map_err(|source| InventoryError::Read {
+            path: workspace_path.clone(),
+            source,
+        })?;
+    let workspace = parse_manifest(&workspace_path, workspace_bytes)?;
     cargo_sources(
         root,
         &frontend,
@@ -286,7 +387,8 @@ pub fn snapshot(root: &Path) -> Result<Value> {
         &mut rust,
     )?;
     let builder = root.join(layout::BUILDER);
-    if builder.join("Cargo.toml").exists() {
+    let has_builder = optional_hash(&mut hashes, &builder.join("Cargo.toml"))?.is_some();
+    if has_builder {
         cargo_sources(
             root,
             &builder,
@@ -298,27 +400,55 @@ pub fn snapshot(root: &Path) -> Result<Value> {
     }
     validate_vendors(&web.join("vendor"))?;
     let mut assets = Files::new();
-    for path in source_inputs::web_paths(&web, &web)? {
-        assets.insert(relative(path.strip_prefix(&web)?)?, hashes.hash(&path)?);
+    for path in
+        source_inputs::web_paths(&web, &web).map_err(|source| InventoryError::EnumerateSource {
+            path: web.clone(),
+            source,
+        })?
+    {
+        assets.insert(
+            relative(
+                path.strip_prefix(&web)
+                    .expect("invariant: Web source remains inside its root"),
+            )?,
+            hashes
+                .hash(&path)
+                .map_err(|source| InventoryError::SnapshotSource {
+                    path: path.clone(),
+                    source,
+                })?,
+        );
     }
-    if web.join("styles/ORIGIN.json").exists() {
-        maintained_source(root, &web.join("styles"))?;
+    let styles = web.join("styles");
+    if let Some(source) = optional_receipt(&styles.join("ORIGIN.json"))? {
+        validate_maintained_source(root, &styles, source)?;
     }
-    let origin_inputs = hashes.files(&root.join("compliance/web-origins"))?;
+    let origin_root = root.join("compliance/web-origins");
+    let origin_inputs =
+        hashes
+            .files(&origin_root)
+            .map_err(|source| InventoryError::SnapshotSource {
+                path: origin_root,
+                source,
+            })?;
     let builder_source = builder_source(
         &builder,
-        root.join("blog-assets.json").is_file() && builder.join("Cargo.toml").is_file(),
+        if has_builder && optional_hash(&mut hashes, &root.join("blog-assets.json"))?.is_some() {
+            OriginRequirement::Required
+        } else {
+            OriginRequirement::Optional
+        },
     )?;
     let foundation_inputs = foundation_inputs_with(root, &mut hashes)?;
     let mut workspace_inputs = Files::new();
     for name in ["Cargo.toml", "Cargo.lock", ".cargo/config.toml"] {
         let path = root.join(name);
-        if path.exists() {
-            workspace_inputs.insert(name.into(), hashes.hash(&path)?);
+        if let Some(digest) = optional_hash(&mut hashes, &path)? {
+            workspace_inputs.insert(name.into(), digest);
         }
     }
     let mut tool_inputs = Files::new();
-    if builder.join("Cargo.toml").exists() {
+    if has_builder {
         tool_inputs.extend(workspace_inputs.clone());
         tool_inputs.insert(
             layout::FOUNDATION.into(),
@@ -326,31 +456,53 @@ pub fn snapshot(root: &Path) -> Result<Value> {
         );
         for name in ["Cargo.toml", "build.rs", "ORIGIN.json"] {
             let path = builder.join(name);
-            if path.exists() {
-                tool_inputs.insert(relative(path.strip_prefix(root)?)?, hashes.hash(&path)?);
+            if let Some(digest) = optional_hash(&mut hashes, &path)? {
+                tool_inputs.insert(
+                    relative(
+                        path.strip_prefix(root)
+                            .expect("invariant: builder is inside its repository"),
+                    )?,
+                    digest,
+                );
             }
         }
         for path in walk(&builder.join("src"))? {
-            tool_inputs.insert(relative(path.strip_prefix(root)?)?, hashes.hash(&path)?);
+            tool_inputs.insert(
+                relative(
+                    path.strip_prefix(root)
+                        .expect("invariant: walked source remains under its root"),
+                )?,
+                hashes
+                    .hash(&path)
+                    .map_err(|source| InventoryError::SnapshotSource {
+                        path: path.clone(),
+                        source,
+                    })?,
+            );
         }
     }
     if !tool_inputs.is_empty() {
         for (name, digest) in crate::compiled_inputs() {
-            ensure!(
-                tool_inputs
-                    .get(name)
-                    .is_some_and(|actual| actual == &digest),
-                "Builder executable is stale or differs from vendored source ({name}); rebuild src/tools/assets with --locked"
-            );
+            if !tool_inputs
+                .get(name)
+                .is_some_and(|actual| actual == &digest)
+            {
+                return Err(InventoryError::StaleBuilder(name.into()));
+            }
         }
     }
-    let lock: toml::Value =
-        toml::from_str(&String::from_utf8(hashes.read(&root.join("Cargo.lock"))?)?)?;
+    let lock_path = root.join("Cargo.lock");
+    let lock_bytes = hashes
+        .read(&lock_path)
+        .map_err(|source| InventoryError::Read {
+            path: lock_path.clone(),
+            source,
+        })?;
+    let lock = parse_manifest(&lock_path, lock_bytes)?;
     let packages = lock
         .get("package")
-        .context("Cargo.lock has no package records")?
-        .as_array()
-        .context("Invalid Cargo lock packages")?;
+        .and_then(toml::Value::as_array)
+        .ok_or(InventoryError::LockPackages)?;
     let cargo_packages = packages
         .iter()
         .map(|package| {
@@ -372,39 +524,45 @@ pub fn snapshot(root: &Path) -> Result<Value> {
     let shared_inputs = rust.get(layout::INTERFACE).cloned().unwrap_or_default();
     Ok(
         json!({"browser_inputs":browser_inputs,"shared_inputs":shared_inputs,"patched_inputs":rust,"asset_inputs":assets,
-        "builder_sha256":sha(&serde_json::to_vec(&tool_inputs)?),"builder_inputs":tool_inputs,"builder_source":builder_source,"cargo_packages":cargo_packages,"origin_inputs":origin_inputs,"workspace_inputs":workspace_inputs,"foundation_inputs":foundation_inputs,"lockfile":"Cargo.lock"}),
+        "builder_sha256":sha(&serde_json::to_vec(&tool_inputs).expect("invariant: string maps serialize to JSON")),"builder_inputs":tool_inputs,"builder_source":builder_source,"cargo_packages":cargo_packages,"origin_inputs":origin_inputs,"workspace_inputs":workspace_inputs,"foundation_inputs":foundation_inputs,"lockfile":"Cargo.lock"}),
     )
 }
 
 /// Public assets retain the existing 512 KiB budget. Full per-file inputs are
 /// checked internally and exported in the private frontend receipt; public
 /// provenance binds those exact inventories by SHA and per-package summaries.
-pub fn public_provenance(snapshot: &Value, runtime: &Value) -> Result<Value> {
+pub(crate) fn public_provenance(snapshot: &Value, runtime: &Value) -> Value {
     let mut public = snapshot.clone();
-    let object = public.as_object_mut().context("Source snapshot object")?;
+    let object = public
+        .as_object_mut()
+        .expect("invariant: snapshot is a JSON object");
     let dependencies = object
         .remove("patched_inputs")
-        .context("Local source packages")?;
-    let summaries = dependencies.as_object().context("Local package inventories")?.iter().map(|(name, files)| {
-        Ok((name.clone(), json!({"sha256":sha(&serde_json::to_vec(files)?),"file_count":files.as_object().context("Package files")?.len()})))
-    }).collect::<Result<BTreeMap<_,_>>>()?;
+        .expect("invariant: snapshot includes local source packages");
+    let summaries = dependencies.as_object().expect("invariant: local source packages are a JSON object").iter().map(|(name, files)| {
+        (name.clone(), json!({"sha256":sha(&serde_json::to_vec(files).expect("invariant: JSON values serialize")),"file_count":files.as_object().expect("invariant: package file inventories are JSON objects").len()}))
+    }).collect::<BTreeMap<_,_>>();
     let foundation = object
         .remove("foundation_inputs")
-        .context("Foundation source inventory")?;
+        .expect("invariant: snapshot includes foundation inputs");
     object.insert("source_packages".into(), json!(summaries));
     object.insert(
         "source_snapshot_sha256".into(),
-        json!(sha(&serde_json::to_vec(snapshot)?)),
+        json!(sha(
+            &serde_json::to_vec(snapshot).expect("invariant: JSON values serialize")
+        )),
     );
-    object.insert("foundation_inventory".into(), json!({"sha256":sha(&serde_json::to_vec(&foundation)?),"file_count":foundation.as_object().context("Foundation inputs")?.len()}));
+    object.insert("foundation_inventory".into(), json!({"sha256":sha(&serde_json::to_vec(&foundation).expect("invariant: JSON values serialize")),"file_count":foundation.as_object().expect("invariant: foundation inputs are a JSON object").len()}));
     let mut runtime = runtime.clone();
-    let runtime_object = runtime.as_object_mut().context("Rust runtime object")?;
+    let runtime_object = runtime
+        .as_object_mut()
+        .expect("invariant: runtime receipt is a JSON object");
     let sources = runtime_object
         .remove("source_inputs")
-        .context("Runtime source inventory")?;
-    runtime_object.insert("source_inputs_summary".into(), json!({"sha256":sha(&serde_json::to_vec(&sources)?),"file_count":sources.as_object().context("Runtime sources")?.len()}));
+        .expect("invariant: runtime receipt includes source inputs");
+    runtime_object.insert("source_inputs_summary".into(), json!({"sha256":sha(&serde_json::to_vec(&sources).expect("invariant: JSON values serialize")),"file_count":sources.as_object().expect("invariant: runtime source inputs are a JSON object").len()}));
     object.insert("rust_runtime".into(), runtime);
-    Ok(public)
+    public
 }
 
 /// Cheap watcher probe; the release build still hashes all inputs before and
@@ -414,38 +572,110 @@ pub fn signature(root: &Path) -> Result<String> {
     let web = root.join(layout::WEB);
     let mut result = String::new();
     let mut paths = Vec::new();
-    paths.extend(source_inputs::web_paths(&web, &web)?);
+    paths.extend(source_inputs::web_paths(&web, &web).map_err(|source| {
+        InventoryError::EnumerateSource {
+            path: web.clone(),
+            source,
+        }
+    })?);
     for name in [layout::BROWSER, layout::INTERFACE, layout::BUILDER] {
         paths.extend(walk(&root.join(name))?);
     }
-    paths.extend(source_inputs::verification_paths(root)?);
+    paths.extend(source_inputs::verification_paths(root).map_err(|source| {
+        InventoryError::EnumerateSource {
+            path: root.to_owned(),
+            source,
+        }
+    })?);
+    for path in paths {
+        let info = fs::symlink_metadata(&path).map_err(|source| InventoryError::InspectPath {
+            path: path.clone(),
+            source,
+        })?;
+        append_signature(&mut result, &path, &info)?;
+    }
     for name in ["Cargo.toml", "Cargo.lock", ".cargo/config.toml"] {
         let path = root.join(name);
-        if path.exists() {
-            paths.push(path);
+        match fs::symlink_metadata(&path) {
+            Ok(info) => append_signature(&mut result, &path, &info)?,
+            Err(source) if source.kind() == io::ErrorKind::NotFound => {}
+            Err(source) => return Err(InventoryError::InspectPath { path, source }),
         }
-    }
-    for path in paths {
-        let info = fs::symlink_metadata(&path)?;
-        result.push_str(&format!(
-            "{}:{}:{:?}",
-            path.display(),
-            info.len(),
-            info.modified()?
-        ));
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::MetadataExt;
-            result.push_str(&format!(
-                ":{}:{}:{}",
-                info.ino(),
-                info.ctime(),
-                info.ctime_nsec()
-            ));
-        }
-        result.push('\n');
     }
     Ok(sha(result.as_bytes()))
+}
+
+fn append_signature(result: &mut String, path: &Path, info: &fs::Metadata) -> Result<()> {
+    use std::fmt::Write;
+    let modified = info
+        .modified()
+        .map_err(|source| InventoryError::ModificationTime {
+            path: path.to_owned(),
+            source,
+        })?;
+    write!(result, "{}:{}:{modified:?}", path.display(), info.len())
+        .expect("invariant: writing metadata into a String cannot fail");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        write!(
+            result,
+            ":{}:{}:{}",
+            info.ino(),
+            info.ctime(),
+            info.ctime_nsec()
+        )
+        .expect("invariant: writing metadata into a String cannot fail");
+    }
+    result.push('\n');
+    Ok(())
+}
+
+fn receipt(path: &Path) -> Result<Value> {
+    parse_receipt(path, &read(path)?)
+}
+
+fn parse_receipt(path: &Path, bytes: &[u8]) -> Result<Value> {
+    serde_json::from_slice(bytes).map_err(|source| InventoryError::Receipt {
+        path: path.to_owned(),
+        source,
+    })
+}
+
+fn optional_receipt(path: &Path) -> Result<Option<Value>> {
+    match read(path) {
+        Ok(bytes) => parse_receipt(path, &bytes).map(Some),
+        Err(InventoryError::Read { source, .. }) if source.kind() == io::ErrorKind::NotFound => {
+            Ok(None)
+        }
+        Err(error) => Err(error),
+    }
+}
+
+fn optional_hash(hashes: &mut SnapshotFiles, path: &Path) -> Result<Option<String>> {
+    match hashes.hash(path) {
+        Ok(digest) => Ok(Some(digest)),
+        Err(source) if source.kind() == io::ErrorKind::NotFound => Ok(None),
+        Err(source) => Err(InventoryError::SnapshotSource {
+            path: path.to_owned(),
+            source,
+        }),
+    }
+}
+
+pub(crate) fn manifest(path: &Path) -> Result<toml::Value> {
+    parse_manifest(path, read(path)?)
+}
+
+fn parse_manifest(path: &Path, bytes: Vec<u8>) -> Result<toml::Value> {
+    let text = String::from_utf8(bytes).map_err(|source| InventoryError::ManifestEncoding {
+        path: path.to_owned(),
+        source,
+    })?;
+    toml::from_str(&text).map_err(|source| InventoryError::Manifest {
+        path: path.to_owned(),
+        source: Box::new(source),
+    })
 }
 
 #[cfg(test)]

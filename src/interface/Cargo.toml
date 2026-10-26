@@ -39,9 +39,6 @@ web-sys = {  features = [
   "console",
 ], path = "../foundation/interface/browser-api",package = "blog-interface-browser-api"}
 
-[lints.rust]
-unsafe_code = "forbid"
-
 [features]
 default = ["csr"]
 csr = ["blog-dom/csr"]
@@ -73,3 +70,6 @@ path = "../../test/interface/integration/executor_overrides.rs"
 [[test]]
 name = "kernel_state"
 path = "../../test/interface/integration/kernel_state.rs"
+
+[lints]
+workspace = true

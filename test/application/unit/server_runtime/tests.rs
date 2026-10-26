@@ -39,8 +39,37 @@ async fn readiness_requires_checks_and_critical_exit_stops_runtime() {
 #[test]
 fn request_ids_are_bounded_random_hex() {
     let id = new_request_id();
-    assert_eq!(id.len(), 32);
-    assert!(id.bytes().all(|b| b.is_ascii_hexdigit()));
+    assert_eq!(id.as_str().len(), 32);
+    assert!(id.as_str().bytes().all(|b| b.is_ascii_hexdigit()));
+    let encoded = serde_json::to_string(&id).unwrap();
+    let decoded: RequestId = serde_json::from_str(&encoded).unwrap();
+    assert_eq!(decoded, id);
+}
+
+#[tokio::test]
+async fn request_id_boundary_preserves_the_maximum_valid_identifier() {
+    let request_id = format!("{}._:-", "A".repeat(crate::error::MAX_REQUEST_ID_BYTES - 4));
+    let expected = request_id.clone();
+    let app = request_service(Router::new().route(
+        "/",
+        get(move |request: Request| async move {
+            let id = request.extensions().get::<RequestId>().unwrap();
+            assert_eq!(id.as_str(), expected);
+            assert_eq!(request.headers()["x-request-id"], expected);
+            StatusCode::NO_CONTENT
+        }),
+    ));
+    let response = app
+        .oneshot(
+            Request::get("/")
+                .header("x-request-id", &request_id)
+                .body(axum::body::Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+    assert_eq!(response.headers()["x-request-id"], request_id);
 }
 
 #[tokio::test]
@@ -146,7 +175,6 @@ async fn product_error_correlation_is_consistent_and_bounded() {
             .route(
                 "/error",
                 get(|request: Request| async move {
-                    assert_eq!(request.extensions().get::<String>().unwrap(), "trace-123");
                     assert_eq!(
                         request
                             .extensions()

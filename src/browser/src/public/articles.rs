@@ -700,8 +700,18 @@ fn Highlight(value: String, term: String) -> impl IntoView {
     views.collect_view().into_any()
 }
 
+#[derive(Clone, Copy)]
+pub(super) enum BrowseKind {
+    Categories,
+    Search,
+}
+
 #[component]
-pub(super) fn Browse(search: bool) -> impl IntoView {
+pub(super) fn Browse(kind: BrowseKind) -> impl IntoView {
+    let search = match kind {
+        BrowseKind::Categories => false,
+        BrowseKind::Search => true,
+    };
     let state = search_signal();
     let page = Signal::derive(move || page_number(state));
     let selected = Signal::derive(move || {

@@ -219,28 +219,37 @@ fn mp4_video(bytes: &[u8]) -> bool {
     parse(bytes) == Some(true)
 }
 
-fn ebml_vint(bytes: &[u8], id: bool) -> Option<(u64, usize, bool)> {
+#[derive(Clone, Copy, Eq, PartialEq)]
+enum VintKind {
+    Identifier,
+    Size,
+}
+
+fn ebml_vint(bytes: &[u8], kind: VintKind) -> Option<(u64, usize, bool)> {
     let first = *bytes.first()?;
     let width = first.leading_zeros() as usize + 1;
-    if width > if id { 4 } else { 8 } {
+    let max_width = match kind {
+        VintKind::Identifier => 4,
+        VintKind::Size => 8,
+    };
+    if width > max_width {
         return None;
     }
-    let mut value = if id {
-        first as u64
-    } else {
-        u64::from(first) & (0xff_u64 >> width)
+    let mut value = match kind {
+        VintKind::Identifier => u64::from(first),
+        VintKind::Size => u64::from(first) & (0xff_u64 >> width),
     };
     for byte in bytes.get(1..width)? {
         value = (value << 8) | u64::from(*byte);
     }
-    let unknown = !id && value == (1_u64 << (width * 7)) - 1;
+    let unknown = kind == VintKind::Size && value == (1_u64 << (width * 7)) - 1;
     Some((value, width, unknown))
 }
 
 fn ebml_element<'a>(bytes: &'a [u8], budget: &mut usize) -> Option<(u64, &'a [u8], &'a [u8])> {
     *budget = budget.checked_sub(1)?;
-    let (id, id_width, _) = ebml_vint(bytes, true)?;
-    let (size, size_width, unknown) = ebml_vint(bytes.get(id_width..)?, false)?;
+    let (id, id_width, _) = ebml_vint(bytes, VintKind::Identifier)?;
+    let (size, size_width, unknown) = ebml_vint(bytes.get(id_width..)?, VintKind::Size)?;
     let header = id_width + size_width;
     let size = if unknown {
         // Streaming WebM permits unknown Segment/Cluster lengths; these extend

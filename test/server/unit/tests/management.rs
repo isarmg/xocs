@@ -101,6 +101,57 @@ fn letter(visible: bool) -> Value {
 }
 
 #[tokio::test]
+async fn link_kinds_are_parsed_at_request_boundaries_before_database_writes() {
+    let (_directory, app, pool) = setup().await;
+    let session = session(&app).await;
+    let link = |kind| {
+        json!({
+            "title": kind,
+            "classify": "group",
+            "cover": null,
+            "url": null,
+            "introduction": null,
+            "link_type": kind,
+            "status": true,
+        })
+    };
+    for kind in ["favorites", "friendUrl", "lovePhoto", "funny"] {
+        let response = admin(&app, &session, "POST", "/api/v1/content/links", link(kind)).await;
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(body_json(response).await["link_type"], kind);
+        let page = public(&app, &format!("/api/v1/links/page?kind={kind}")).await;
+        assert_eq!(page["total"], 1);
+        assert_eq!(page["items"][0]["link_type"], kind);
+    }
+    let all = admin(&app, &session, "GET", "/api/v1/content/links", Value::Null).await;
+    assert_eq!(all.status(), StatusCode::OK);
+    assert_eq!(body_json(all).await["total"], 4);
+    assert_eq!(public(&app, "/api/v1/links/classes").await[0]["count"], 1);
+    for path in [
+        "/api/v1/links/page?kind=unknown",
+        "/api/v1/links/classes?kind=unknown",
+        "/api/v1/content/links?kind=unknown",
+    ] {
+        let response = admin(&app, &session, "GET", path, Value::Null).await;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "{path}");
+    }
+    for (method, path) in [
+        ("POST", "/api/v1/content/links"),
+        ("PUT", "/api/v1/content/links/1"),
+    ] {
+        let response = admin(&app, &session, method, path, link("unknown")).await;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+    let rows: Vec<(String, String)> =
+        sqlx::query_as("SELECT title,type FROM resource_path ORDER BY id")
+            .fetch_all(&pool)
+            .await
+            .unwrap();
+    assert_eq!(rows.len(), 4);
+    assert_eq!(rows[0], ("favorites".into(), "favorites".into()));
+}
+
+#[tokio::test]
 async fn notes_images_visibility_and_edits_complete_real_request_flow() {
     let (_directory, app, pool) = setup().await;
     let session = session(&app).await;

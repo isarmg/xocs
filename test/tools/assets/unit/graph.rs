@@ -1,4 +1,5 @@
 use super::*;
+use anyhow::Result;
 #[test]
 fn runtime_receipt_uses_target_normal_tree_without_host_build_or_dev_packages() -> Result<()> {
     let temp = tempfile::tempdir()?;
@@ -98,6 +99,10 @@ fn fixture() -> Result<(tempfile::TempDir, Value)> {
         {"id":"facade","dependencies":["core"],"features":[]},
         {"id":"graph","dependencies":[],"features":["default","effects"]}
     ]}});
+    let mut value = value;
+    for node in value["resolve"]["nodes"].as_array_mut().unwrap() {
+        node["deps"] = json!([]);
+    }
     Ok((temp, value))
 }
 #[test]
@@ -172,11 +177,11 @@ fn csr_graph_selects_browser_manifest_independently_of_workspace_root() -> Resul
     value["packages"]
         .as_array_mut()
         .unwrap()
-        .push(json!({"id":"native-root","name":"leptos","version":"1","source":"registry"}));
+        .push(json!({"id":"native-root","name":"leptos","version":"1","source":"registry","manifest_path":"unused","targets":[]}));
     value["resolve"]["nodes"]
         .as_array_mut()
         .unwrap()
-        .push(json!({"id":"native-root","dependencies":[],"features":["ssr"]}));
+        .push(json!({"id":"native-root","dependencies":[],"features":["ssr"],"deps":[]}));
     validate(&value, &temp.path().join("src/browser"))?;
     Ok(())
 }
@@ -185,11 +190,12 @@ fn csr_graph_selects_browser_manifest_independently_of_workspace_root() -> Resul
 fn browser_manifest_lookup_preserves_filesystem_errors() -> Result<()> {
     let (temp, value) = fixture()?;
     std::fs::remove_file(temp.path().join("src/interface/dom/Cargo.toml"))?;
-    let error = browser_root(&value, &temp.path().join("src/browser")).unwrap_err();
-    assert_eq!(
-        error.downcast_ref::<std::io::Error>().unwrap().kind(),
-        std::io::ErrorKind::NotFound
-    );
+    let metadata = metadata(&value)?;
+    let error = browser_root(&metadata, &temp.path().join("src/browser")).unwrap_err();
+    let GraphError::Canonicalize { source, .. } = error else {
+        panic!("missing local manifest should preserve its filesystem error");
+    };
+    assert_eq!(source.kind(), std::io::ErrorKind::NotFound);
     Ok(())
 }
 
@@ -199,5 +205,48 @@ fn csr_graph_rejects_external_dependency_target_even_with_local_manifest() -> Re
     let external = tempfile::NamedTempFile::new()?;
     value["packages"][4]["targets"][0]["src_path"] = json!(external.path());
     assert!(validate(&value, &temp.path().join("src/browser")).is_err());
+    Ok(())
+}
+
+#[test]
+fn cargo_metadata_decodes_required_fields_and_preserves_parse_sources() -> Result<()> {
+    let (temp, mut value) = fixture()?;
+    value["packages"][0]["targets"][0]["src_path"] = json!(17);
+    let error = validate(&value, &temp.path().join("src/browser")).unwrap_err();
+    let GraphError::Metadata(source) = error else {
+        panic!("invalid Cargo path type should fail at metadata decoding");
+    };
+    assert!(source.is_data());
+    Ok(())
+}
+
+#[test]
+fn cargo_metadata_rejects_duplicate_identifiers_and_missing_dependency_nodes() -> Result<()> {
+    let (temp, value) = fixture()?;
+    let mut duplicate = value.clone();
+    duplicate["packages"][1]["id"] = json!("root");
+    assert!(matches!(
+        validate(&duplicate, &temp.path().join("src/browser")),
+        Err(GraphError::DuplicateId(id)) if id == "root"
+    ));
+    let mut missing = value;
+    missing["resolve"]["nodes"][0]["dependencies"] = json!(["missing"]);
+    assert!(matches!(
+        validate(&missing, &temp.path().join("src/browser")),
+        Err(GraphError::MissingNode(id)) if id == "missing"
+    ));
+    Ok(())
+}
+
+#[test]
+fn browser_manifest_without_package_is_an_input_error() -> Result<()> {
+    let directory = tempfile::tempdir()?;
+    let frontend = directory.path().join("src/browser");
+    std::fs::create_dir_all(&frontend)?;
+    std::fs::write(frontend.join("Cargo.toml"), "[workspace]\n")?;
+    assert!(matches!(
+        browser_package(directory.path()),
+        Err(GraphError::BrowserPackageName)
+    ));
     Ok(())
 }

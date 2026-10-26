@@ -119,7 +119,9 @@ async fn extraction_errors_are_flat_safe_bounded_and_uncacheable() {
             builder = builder.header(header::CONTENT_TYPE, content_type);
         }
         let mut request = builder.body(Body::from(body)).unwrap();
-        request.extensions_mut().insert("request-1".to_string());
+        request
+            .extensions_mut()
+            .insert(RequestId::new("request-1").unwrap());
         let response = router.clone().oneshot(request).await.unwrap();
         assert_eq!(response.status().as_u16(), status);
         assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
@@ -142,6 +144,21 @@ async fn extraction_errors_are_flat_safe_bounded_and_uncacheable() {
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn untyped_extensions_do_not_supply_a_request_identifier() {
+    let router = Router::new().route("/json", post(json));
+    let mut request = Request::post("/json")
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from("{}"))
+        .unwrap();
+    request.extensions_mut().insert("untyped-id".to_string());
+    let response = router.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let bytes = to_bytes(response.into_body(), 4096).await.unwrap();
+    let error: ErrorEnvelope = serde_json::from_slice(&bytes).unwrap();
+    assert!(error.request_id.is_none());
 }
 
 #[tokio::test]

@@ -1,4 +1,5 @@
 use super::*;
+use anyhow::Result;
 #[test]
 fn strings_comments_regex_are_not_module_edges() -> Result<()> {
     let text = r#"// import x from 'fake';
@@ -88,4 +89,34 @@ fn compression_preserves_string_and_regular_expression_literals() -> Result<()> 
     assert!(!result.contains("// comment"));
     references(&result)?;
     Ok(())
+}
+
+#[test]
+fn compiler_failures_keep_structured_diagnostics_and_feature_reasons() {
+    use std::error::Error;
+    let error = references("export const = ;").unwrap_err();
+    assert!(matches!(
+        error,
+        JavaScriptError::Diagnostics {
+            stage: JavaScriptStage::Source,
+            ..
+        }
+    ));
+    assert!(error.source().unwrap().is::<OxcDiagnostic>());
+    let error = references("import(window.name); require('./legacy.js');").unwrap_err();
+    let JavaScriptError::Unsupported {
+        primary,
+        additional,
+    } = error
+    else {
+        panic!("expected unsupported module features");
+    };
+    assert!(matches!(
+        primary,
+        UnsupportedModuleFeature::ComputedDynamicImport
+    ));
+    assert!(matches!(
+        additional.as_slice(),
+        [UnsupportedModuleFeature::CommonJs]
+    ));
 }

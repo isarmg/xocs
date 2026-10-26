@@ -29,9 +29,6 @@ package = "blog-assets-compiler"
 path = "../../foundation/assets/compiler"
 [dev-dependencies]
 
-[lints.rust]
-unsafe_code = "forbid"
-
 [build-dependencies.sha2]
 path = "../../foundation/crypto/secure-hash"
 package = "blog-crypto-secure-hash"
@@ -76,3 +73,6 @@ path = "../../../test/tools/assets/integration/configuration_contracts.rs"
 [[test]]
 name = "process_lifecycle"
 path = "../../../test/tools/assets/integration/process_lifecycle.rs"
+
+[lints]
+workspace = true

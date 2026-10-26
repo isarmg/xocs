@@ -13,5 +13,5 @@ anyhow = { path = "../../foundation/diagnostics/error-context",package = "blog-d
 clap = {  features = ["derive"], path = "../../foundation/cli/arguments",package = "blog-cli-arguments"}
 tokio = {  features = ["macros", "rt-multi-thread"], path = "../../foundation/runtime/task-scheduler",package = "blog-runtime-task-scheduler"}
 
-[lints.rust]
-unsafe_code = "deny"
+[lints]
+workspace = true

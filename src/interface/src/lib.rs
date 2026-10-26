@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 //! Shared browser-only support. The Linux server crate remains independent.
 pub mod api;
 pub mod components;

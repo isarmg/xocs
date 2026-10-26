@@ -1,5 +1,5 @@
 use super::*;
-use anyhow::Context;
+use anyhow::{Context, Result, ensure};
 
 #[test]
 fn emits_browser_initialization_and_default_url_without_typescript() -> Result<()> {
@@ -46,7 +46,7 @@ fn rejects_incompatible_wire_schema_before_decoding_programs() -> Result<()> {
     module.extend_from_slice(&section);
     std::fs::write(&input, module)?;
     let error = generate(&input, &output, "browser").unwrap_err();
-    let message = format!("{error:#}");
+    let message = format!("{:#}", anyhow::Error::from(error));
     assert!(
         message.contains("Browser binding schema mismatch"),
         "{message}"

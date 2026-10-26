@@ -1,4 +1,51 @@
 use super::*;
+use anyhow::Result;
+
+#[test]
+fn native_modes_match_cli_and_canonical_receipt_formats() -> Result<()> {
+    for (text, mode) in [
+        ("development", NativeMode::Development),
+        ("candidate", NativeMode::Candidate),
+        ("release", NativeMode::Release),
+    ] {
+        assert_eq!(text.parse::<NativeMode>()?, mode);
+        assert_eq!(mode.as_str(), text);
+        assert_eq!(serde_json::to_string(&mode)?, format!("\"{text}\""));
+        assert_eq!(
+            serde_json::from_str::<NativeMode>(&format!("\"{text}\""))?,
+            mode
+        );
+    }
+    assert!("unknown".parse::<NativeMode>().is_err());
+    assert!(serde_json::from_str::<NativeMode>("\"unknown\"").is_err());
+    Ok(())
+}
+
+#[test]
+fn native_receipt_publication_replaces_bytes_and_keeps_io_failure_stage() -> Result<()> {
+    let directory = tempfile::tempdir()?;
+    let destination = directory.path().join("receipt.json");
+    publish_bytes(&destination, b"first")?;
+    publish_bytes(&destination, b"second")?;
+    assert_eq!(fs::read(&destination)?, b"second");
+    assert_eq!(
+        fs::read_dir(directory.path())?
+            .try_fold(0_usize, |count, entry| entry.map(|_| count + 1))?,
+        1
+    );
+    let missing = directory.path().join("missing/receipt.json");
+    let error = publish_bytes(&missing, b"data").unwrap_err();
+    let NativeBuildError::StageReceipt { path, source } = error else {
+        panic!("missing destination parent should report staging failure");
+    };
+    assert_eq!(path, directory.path().join("missing"));
+    assert_eq!(source.kind(), io::ErrorKind::NotFound);
+    assert!(matches!(
+        validate_destination(directory.path()),
+        Err(NativeBuildError::UnsafeDestination(_))
+    ));
+    Ok(())
+}
 
 #[test]
 fn build_config_keeps_output_and_native_overrides_but_rejects_obsolete_web_settings() {
@@ -171,7 +218,7 @@ fn self_consistent_receipt_cannot_replace_the_identity_embedded_in_binary() -> R
         web_assets_sha256: digest(&inventory_bytes),
         source_dirty: true,
         source_tree_sha256: "b".repeat(64),
-        build_mode: "candidate".into(),
+        build_mode: NativeMode::Candidate,
         schema_sha256: "d".repeat(64),
         core_source_sha256: "e".repeat(64),
     };

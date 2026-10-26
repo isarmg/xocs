@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 //! Build-time platform contract shared by the product entry points.
 //!
 //! This file is also a standalone Cargo build script. Keep it std-only so that

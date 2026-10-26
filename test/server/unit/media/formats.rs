@@ -53,7 +53,7 @@ fn video_formats_require_container_metadata_and_a_video_track() {
         assert_eq!(video_type(&webm[..size]), None, "truncated WebM at {size}");
     }
     assert!(
-        ebml_vint(&[1, 255, 255, 255, 255, 255, 255, 255], false)
+        ebml_vint(&[1, 255, 255, 255, 255, 255, 255, 255], VintKind::Size)
             .unwrap()
             .2
     );

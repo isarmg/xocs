@@ -612,7 +612,7 @@ impl<'a> StructInfo<'a> {
             fun: mutator_fn,
             required_fields,
         }: &Mutator,
-    ) -> syn::Result<TokenStream> {
+    ) -> TokenStream {
         let StructInfo {
             ref builder_name, ..
         } = *self;
@@ -655,7 +655,7 @@ impl<'a> StructInfo<'a> {
         let (m_impl_generics, m_ty_generics, m_where_clause) = m_generics.split_for_impl();
         let m_phantom = phantom_data_for_generics(self.generics);
 
-        Ok(quote! {
+        quote! {
             #[allow(dead_code, non_camel_case_types, missing_docs)]
             #[automatically_derived]
             impl #impl_generics #builder_name <#ty_generics> #where_clause {
@@ -695,7 +695,7 @@ impl<'a> StructInfo<'a> {
                     }
                 }
             }
-        })
+        }
     }
 
     fn build_method_name(&self) -> TokenStream {
@@ -905,8 +905,8 @@ impl<'a> StructInfo<'a> {
         let next_field_default_impls = self
             .fields
             .iter()
-            .filter_map(|field| field.gen_next_field_default_trait_impl(self).transpose())
-            .collect::<Result<TokenStream, _>>()?;
+            .filter_map(|field| field.gen_next_field_default_trait_impl(self))
+            .collect::<TokenStream>();
 
         let required_fields = self
             .setter_fields()
@@ -919,7 +919,7 @@ impl<'a> StructInfo<'a> {
             .flat_map(|f| &f.builder_attr.mutators)
             .chain(&self.builder_attr.mutators)
             .map(|m| self.mutator_impl(m))
-            .collect::<Result<TokenStream, _>>()?;
+            .collect::<TokenStream>();
 
         let build_method = self.build_method_impl();
 

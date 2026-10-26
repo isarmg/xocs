@@ -37,10 +37,6 @@ anyhow = { path = "../foundation/diagnostics/error-context", package = "blog-dia
 tokio = { default-features = false, features = ["test-util"], path = "../foundation/runtime/task-scheduler", package = "blog-runtime-task-scheduler" }
 http-body = { path = "../foundation/network/body-stream", package = "blog-network-body-stream" }
 
-[lints.rust]
-unsafe_code = "deny"
-
-
 [features]
 maintenance = []
 
@@ -110,3 +106,6 @@ path = "../../test/server/integration/sqlite_bindings.rs"
 [[example]]
 name = "smoke-fixture"
 path = "../../test/server/fixtures/smoke-fixture.rs"
+
+[lints]
+workspace = true

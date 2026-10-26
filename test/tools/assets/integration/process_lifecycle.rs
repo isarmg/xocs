@@ -10,6 +10,19 @@ use std::{
     time::{Duration, Instant},
 };
 
+#[test]
+fn invalid_utf8_arguments_return_a_cli_error() {
+    use std::{ffi::OsString, os::unix::ffi::OsStringExt};
+    let output = Command::new(env!("CARGO_BIN_EXE_blog-assets"))
+        .arg(OsString::from_vec(vec![0xff]))
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    let diagnostic = String::from_utf8(output.stderr).unwrap();
+    assert!(diagnostic.contains("command-line arguments must be UTF-8"));
+    assert!(!diagnostic.contains("panicked"));
+}
+
 struct FixtureProcess {
     pid: Pid,
     started: String,

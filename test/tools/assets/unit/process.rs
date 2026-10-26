@@ -47,10 +47,17 @@ fn captures_both_streams_and_keeps_nonzero_diagnostics() {
         "fixture query",
     )
     .unwrap_err();
-    let diagnostic = format!("{error:#}");
+    let diagnostic = crate::error_chain(&error);
     assert!(diagnostic.contains("compiler error"), "{diagnostic}");
     assert!(diagnostic.contains("partial result"), "{diagnostic}");
-    assert!(diagnostic.contains("exit status: 7"), "{diagnostic}");
+    let ProcessError::Command { source, .. } = &error else {
+        panic!("expected a command failure: {diagnostic}");
+    };
+    let ProcessError::Exit(status) = source.as_ref() else {
+        panic!("expected the process exit status: {diagnostic}");
+    };
+    assert_eq!(status.code(), Some(7));
+    assert_eq!(diagnostic.matches(&status.to_string()).count(), 1);
 }
 
 #[test]
@@ -82,8 +89,13 @@ fn stdout_and_stderr_overflow_stop_a_sleeping_process() {
         );
         let started = Instant::now();
         let error = run(python(&script).arg(&marker), policy(), "overflow fixture").unwrap_err();
-        let diagnostic = format!("{error:#}");
-        assert!(diagnostic.contains("byte budget"), "{diagnostic}");
+        let ProcessError::Command { source, .. } = &error else {
+            panic!("expected a command failure: {error:?}");
+        };
+        let ProcessError::ByteBudget(stream) = source.as_ref() else {
+            panic!("expected a stream byte budget failure: {error:?}");
+        };
+        assert_eq!(*stream, if descriptor == 1 { "stdout" } else { "stderr" });
         assert!(started.elapsed() < Duration::from_secs(2));
         assert_stopped(&marker);
     }
@@ -120,7 +132,10 @@ fn silent_process_obeys_the_whole_operation_deadline() {
         "timeout fixture",
     )
     .unwrap_err();
-    assert!(format!("{error:#}").contains("time budget"));
+    assert!(matches!(
+        error,
+        ProcessError::Command { source, .. } if matches!(source.as_ref(), ProcessError::Timeout)
+    ));
     assert!(started.elapsed() < Duration::from_secs(2));
     assert_stopped(&marker);
 }

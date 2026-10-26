@@ -64,10 +64,22 @@ pub(super) struct ArticleQuery {
     recommended: Option<bool>,
 }
 
+#[derive(Clone, Copy, Debug)]
+enum ArticleAudience {
+    Public,
+    Administrator,
+}
+
+#[derive(Clone, Copy)]
+enum SearchMode {
+    Browse,
+    Search,
+}
+
 async fn list_articles(
     pool: &SqlitePool,
     query: ArticleQuery,
-    public: bool,
+    audience: ArticleAudience,
 ) -> Result<PageResult<ArticleSummary>, AppError> {
     let page = query.page.unwrap_or(1).clamp(1, 100_000);
     let size = query.size.unwrap_or(12).clamp(1, 100);
@@ -82,17 +94,15 @@ async fn list_articles(
             .replace('%', "\\%")
             .replace('_', "\\_")
     );
-    let predicate = if public {
-        "deleted=0 AND (view_status=1 OR password IS NOT NULL)"
-    } else {
-        "deleted=0"
+    let predicate = match audience {
+        ArticleAudience::Public => "deleted=0 AND (view_status=1 OR password IS NOT NULL)",
+        ArticleAudience::Administrator => "deleted=0",
     };
     let recommended = query.recommended.map(i64::from);
     let phrase = format!("\"{}\"", search.replace('"', "\"\""));
-    let body_match = if public {
-        "(password IS NULL AND article_content LIKE ?3 ESCAPE '\\')"
-    } else {
-        "article_content LIKE ?3 ESCAPE '\\'"
+    let body_match = match audience {
+        ArticleAudience::Public => "(password IS NULL AND article_content LIKE ?3 ESCAPE '\\')",
+        ArticleAudience::Administrator => "article_content LIKE ?3 ESCAPE '\\'",
     };
     // Bind positions stay fixed, while absent filters no longer hide useful
     // equality constraints from SQLite behind parameter-dependent OR terms.
@@ -114,15 +124,21 @@ async fn list_articles(
             "?4 IS NULL"
         },
     );
-    let filter = if search.is_empty() {
-        format!("{predicate} AND {filters}")
+    let search_mode = if search.is_empty() {
+        SearchMode::Browse
     } else {
-        let search_index = " AND (length(?2)<3 OR id IN (SELECT rowid FROM article_search WHERE article_search MATCH ?5))";
-        format!(
-            "{predicate} AND {filters} AND (article_title LIKE ?3 ESCAPE '\\' OR {body_match}){search_index}"
-        )
+        SearchMode::Search
     };
-    let (count_sql, list_sql) = article_page_sql(&filter, &filters, public, !search.is_empty());
+    let filter = match search_mode {
+        SearchMode::Browse => format!("{predicate} AND {filters}"),
+        SearchMode::Search => {
+            let search_index = " AND (length(?2)<3 OR id IN (SELECT rowid FROM article_search WHERE article_search MATCH ?5))";
+            format!(
+                "{predicate} AND {filters} AND (article_title LIKE ?3 ESCAPE '\\' OR {body_match}){search_index}"
+            )
+        }
+    };
+    let (count_sql, list_sql) = article_page_sql(&filter, &filters, audience, search_mode);
     let mut transaction = pool.begin().await.map_err(db_error)?;
     let total: i64 = sqlx::query_scalar(sqlx::AssertSqlSafe(count_sql))
         .bind(query.sort_id)
@@ -158,44 +174,46 @@ async fn list_articles(
 fn article_page_sql(
     filter: &str,
     filters: &str,
-    public: bool,
-    searching: bool,
+    audience: ArticleAudience,
+    search_mode: SearchMode,
 ) -> (String, String) {
-    let (count, page) = if public && !searching {
-        // The disjoint visible/protected branches preserve the public contract.
-        // The visible branch can walk article_public_latest in date order.
-        let visible = format!("deleted=0 AND view_status=1 AND {filters}");
-        // Separate index ranges also avoid scanning every visible row merely
-        // to discover that it does not belong to the protected branch.
-        let protected_before =
-            format!("deleted=0 AND view_status<1 AND password IS NOT NULL AND {filters}");
-        let protected_after =
-            format!("deleted=0 AND view_status>1 AND password IS NOT NULL AND {filters}");
-        (
-            format!(
-                "SELECT (SELECT COUNT(*) FROM article WHERE {visible}) + (SELECT COUNT(*) FROM article WHERE {protected_before}) + (SELECT COUNT(*) FROM article WHERE {protected_after})"
-            ),
-            format!(
-                "SELECT id AS article_id,create_time AS page_created_at,0 AS page_search_rank FROM article WHERE {visible} UNION ALL SELECT id AS article_id,create_time AS page_created_at,0 AS page_search_rank FROM article WHERE {protected_before} UNION ALL SELECT id AS article_id,create_time AS page_created_at,0 AS page_search_rank FROM article WHERE {protected_after} ORDER BY page_created_at DESC,article_id DESC LIMIT ?7 OFFSET ?8"
-            ),
-        )
-    } else {
-        let rank = if searching {
-            "CASE WHEN article_title LIKE ?3 ESCAPE '\\' THEN 0 ELSE 1 END"
-        } else {
-            "0"
-        };
-        let order = if searching {
-            "page_search_rank,page_created_at DESC,article_id DESC"
-        } else {
-            "page_created_at DESC,article_id DESC"
-        };
-        (
-            format!("SELECT COUNT(*) FROM article WHERE {filter}"),
-            format!(
-                "SELECT id AS article_id,create_time AS page_created_at,{rank} AS page_search_rank FROM article WHERE {filter} ORDER BY {order} LIMIT ?7 OFFSET ?8"
-            ),
-        )
+    let (count, page) = match (audience, search_mode) {
+        (ArticleAudience::Public, SearchMode::Browse) => {
+            // The disjoint visible/protected branches preserve the public contract.
+            // The visible branch can walk article_public_latest in date order.
+            let visible = format!("deleted=0 AND view_status=1 AND {filters}");
+            // Separate index ranges also avoid scanning every visible row merely
+            // to discover that it does not belong to the protected branch.
+            let protected_before =
+                format!("deleted=0 AND view_status<1 AND password IS NOT NULL AND {filters}");
+            let protected_after =
+                format!("deleted=0 AND view_status>1 AND password IS NOT NULL AND {filters}");
+            (
+                format!(
+                    "SELECT (SELECT COUNT(*) FROM article WHERE {visible}) + (SELECT COUNT(*) FROM article WHERE {protected_before}) + (SELECT COUNT(*) FROM article WHERE {protected_after})"
+                ),
+                format!(
+                    "SELECT id AS article_id,create_time AS page_created_at,0 AS page_search_rank FROM article WHERE {visible} UNION ALL SELECT id AS article_id,create_time AS page_created_at,0 AS page_search_rank FROM article WHERE {protected_before} UNION ALL SELECT id AS article_id,create_time AS page_created_at,0 AS page_search_rank FROM article WHERE {protected_after} ORDER BY page_created_at DESC,article_id DESC LIMIT ?7 OFFSET ?8"
+                ),
+            )
+        }
+        (ArticleAudience::Administrator, SearchMode::Browse)
+        | (ArticleAudience::Public, SearchMode::Search)
+        | (ArticleAudience::Administrator, SearchMode::Search) => {
+            let (rank, order) = match search_mode {
+                SearchMode::Search => (
+                    "CASE WHEN article_title LIKE ?3 ESCAPE '\\' THEN 0 ELSE 1 END",
+                    "page_search_rank,page_created_at DESC,article_id DESC",
+                ),
+                SearchMode::Browse => ("0", "page_created_at DESC,article_id DESC"),
+            };
+            (
+                format!("SELECT COUNT(*) FROM article WHERE {filter}"),
+                format!(
+                    "SELECT id AS article_id,create_time AS page_created_at,{rank} AS page_search_rank FROM article WHERE {filter} ORDER BY {order} LIMIT ?7 OFFSET ?8"
+                ),
+            )
+        }
     };
     // Materialize only a page of IDs before reading body excerpts, taxonomy and
     // comment counts. CROSS JOIN fixes the page as the outer loop, so OFFSET
@@ -212,23 +230,30 @@ pub(super) async fn public_articles(
     State(state): State<AppState>,
     Query(query): Query<ArticleQuery>,
 ) -> ApiResult<PageResult<ArticleSummary>> {
-    Ok(Json(list_articles(&state.pool, query, true).await?))
+    Ok(Json(
+        list_articles(&state.pool, query, ArticleAudience::Public).await?,
+    ))
 }
 pub(super) async fn admin_articles(
     State(state): State<AppState>,
     Query(query): Query<ArticleQuery>,
 ) -> ApiResult<PageResult<ArticleSummary>> {
-    Ok(Json(list_articles(&state.pool, query, false).await?))
+    Ok(Json(
+        list_articles(&state.pool, query, ArticleAudience::Administrator).await?,
+    ))
 }
 
-async fn load_article<'executor, E>(executor: E, id: i64, admin: bool) -> Result<Article, AppError>
+async fn load_article<'executor, E>(
+    executor: E,
+    id: i64,
+    audience: ArticleAudience,
+) -> Result<Article, AppError>
 where
     E: sqlx::Executor<'executor, Database = sqlx::Sqlite>,
 {
-    let condition = if admin {
-        "id=? AND deleted=0"
-    } else {
-        "id=? AND deleted=0 AND view_status=1 AND password IS NULL"
+    let condition = match audience {
+        ArticleAudience::Administrator => "id=? AND deleted=0",
+        ArticleAudience::Public => "id=? AND deleted=0 AND view_status=1 AND password IS NULL",
     };
     sqlx::query_as::<_, Article>(sqlx::AssertSqlSafe(format!(
         "{ARTICLE_SQL} WHERE {condition}"
@@ -244,7 +269,7 @@ pub(super) async fn public_article(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> ApiResult<Article> {
-    let article = load_article(&state.pool, id, false).await?;
+    let article = load_article(&state.pool, id, ArticleAudience::Public).await?;
     sqlx::query("UPDATE article SET view_count=view_count+1 WHERE id=?")
         .bind(id)
         .execute(&state.pool)
@@ -295,7 +320,7 @@ pub(super) async fn admin_article_news(
     let page = query.page.unwrap_or(1).clamp(1, 100_000);
     let size = query.size.unwrap_or(20).clamp(1, 100);
     let mut transaction = state.pool.begin().await.map_err(db_error)?;
-    load_article(&mut *transaction, id, true).await?;
+    load_article(&mut *transaction, id, ArticleAudience::Administrator).await?;
     let total: i64 =
         sqlx::query_scalar("SELECT COUNT(*) FROM wei_yan WHERE type='news' AND source=?")
             .bind(id)
@@ -364,7 +389,7 @@ pub(super) async fn admin_update_article_news(
     Path((article_id, news_id)): Path<(i64, i64)>,
     crate::ContractJson(input): crate::ContractJson<ArticleNewsInput>,
 ) -> ApiResult<ArticleNews> {
-    load_article(&state.pool, article_id, true).await?;
+    load_article(&state.pool, article_id, ArticleAudience::Administrator).await?;
     validate_news_content(&input.content)?;
     let time = normalize_news_time(input.create_time)?;
     let changed = sqlx::query("UPDATE wei_yan SET content=?,create_time=COALESCE(?,create_time) WHERE id=? AND source=? AND type='news'")
@@ -509,7 +534,9 @@ pub(super) async fn admin_article(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> ApiResult<Article> {
-    Ok(Json(load_article(&state.pool, id, true).await?))
+    Ok(Json(
+        load_article(&state.pool, id, ArticleAudience::Administrator).await?,
+    ))
 }
 
 #[derive(Deserialize)]
@@ -695,7 +722,9 @@ pub(super) async fn create_article(
                 ));
             }
             transaction.commit().await.map_err(db_error)?;
-            return Ok(Json(load_article(&state.pool, id, true).await?));
+            return Ok(Json(
+                load_article(&state.pool, id, ArticleAudience::Administrator).await?,
+            ));
         }
     }
     let author = crate::site_author_id(&mut *transaction).await?;
@@ -717,7 +746,9 @@ pub(super) async fn create_article(
         .map_err(db_error)?;
     }
     transaction.commit().await.map_err(db_error)?;
-    Ok(Json(load_article(&state.pool, id, true).await?))
+    Ok(Json(
+        load_article(&state.pool, id, ArticleAudience::Administrator).await?,
+    ))
 }
 
 async fn hash_article_password(
@@ -787,7 +818,9 @@ pub(super) async fn update_article(
         return Err(absent());
     }
     transaction.commit().await.map_err(db_error)?;
-    Ok(Json(load_article(&state.pool, id, true).await?))
+    Ok(Json(
+        load_article(&state.pool, id, ArticleAudience::Administrator).await?,
+    ))
 }
 
 pub(super) async fn delete_article(

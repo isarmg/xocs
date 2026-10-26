@@ -25,7 +25,8 @@ async fn article_page_optimization_preserves_filters_rank_and_summaries() {
                 .execute(&pool).await.unwrap();
     }
     sqlx::query("INSERT INTO comment(source,type,comment_content) VALUES(6,'article','reply'),(6,'article','reply two')").execute(&pool).await.unwrap();
-    for public in [false, true] {
+    for audience in [ArticleAudience::Administrator, ArticleAudience::Public] {
+        let public = matches!(audience, ArticleAudience::Public);
         for search in ["", "needle", "n", "%"] {
             for (sort_id, label_id, recommended) in [
                 (None, None, None),
@@ -81,7 +82,7 @@ async fn article_page_optimization_preserves_filters_rank_and_summaries() {
                             search: Some(search.into()),
                             recommended,
                         },
-                        public,
+                        audience,
                     )
                     .await
                     .unwrap();
@@ -96,7 +97,7 @@ async fn article_page_optimization_preserves_filters_rank_and_summaries() {
         }
     }
     let filters = "?1 IS NULL AND ?6 IS NULL AND ?4 IS NULL";
-    let (_, list) = article_page_sql("", filters, true, false);
+    let (_, list) = article_page_sql("", filters, ArticleAudience::Public, SearchMode::Browse);
     let plans = sqlx::query(sqlx::AssertSqlSafe(format!("EXPLAIN QUERY PLAN {list}")))
         .bind(None::<i64>)
         .bind("")

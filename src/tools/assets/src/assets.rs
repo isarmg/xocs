@@ -1,18 +1,66 @@
-//! A deliberately bounded ESM linker: no transpilation, eval, npm install or network.
-//! Only static ESM imports, CSS imports and literal import.meta.url assets are accepted.
+//! Link static ESM, CSS and literal import.meta.url assets into a bounded web bundle.
 use crate::inventory::{self, Files};
 use crate::layout;
 use crate::source_inputs;
-use anyhow::{Context, Result, bail, ensure};
 use compression::streams::{Compression, GzBuilder};
 use regex::Regex;
 use serde_json::{Value, json};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
-    io::Write,
+    io::{self, Write},
     path::{Path, PathBuf},
 };
+mod css_error;
+mod error;
+
+use css_error::owned_css_error;
+pub use error::{AssetError, BudgetError, ConfigurationError, ImportError};
+
+type Result<T, E = AssetError> = std::result::Result<T, E>;
+
+fn input_error(path: &Path, source: io::Error) -> AssetError {
+    AssetError::Input {
+        path: path.into(),
+        source,
+    }
+}
+
+fn utf8(bytes: Vec<u8>, path: &Path) -> Result<String> {
+    String::from_utf8(bytes).map_err(|source| AssetError::Utf8 {
+        path: path.into(),
+        source,
+    })
+}
+
+fn canonicalize(path: &Path) -> Result<PathBuf> {
+    path.canonicalize()
+        .map_err(|source| AssetError::Canonicalize {
+            path: path.into(),
+            source,
+        })
+}
+
+fn source_exists(path: &Path) -> Result<bool> {
+    match fs::symlink_metadata(path) {
+        Ok(_) => Ok(true),
+        Err(source) if source.kind() == io::ErrorKind::NotFound => Ok(false),
+        Err(source) => Err(AssetError::Inspect {
+            path: path.into(),
+            source,
+        }),
+    }
+}
+
+fn js_string(value: &str) -> String {
+    serde_json::to_string(value).expect("invariant: a string serializes as JSON")
+}
+
+fn source_stem(path: &Path) -> &str {
+    path.file_stem()
+        .and_then(|stem| stem.to_str())
+        .expect("invariant: a validated source file has a UTF-8 stem")
+}
 
 const MAX_PUBLIC_MEDIA_BYTES: usize = 4 * 1024 * 1024;
 const MAX_PUBLIC_MEDIA_TOTAL_BYTES: usize = 8 * 1024 * 1024;
@@ -25,20 +73,29 @@ struct OutputBudget {
 
 impl OutputBudget {
     fn add(&mut self, config: &Web, name: &str, size: usize, public_media: bool) -> Result<()> {
-        ensure!(!name.ends_with(".map"), "Source maps cannot be published");
+        if name.ends_with(".map") {
+            return Err(AssetError::SourceMap);
+        }
         if public_media {
-            ensure!(
-                size <= MAX_PUBLIC_MEDIA_BYTES,
-                "Public media {name} exceeds {MAX_PUBLIC_MEDIA_BYTES}-byte budget ({size} bytes)"
-            );
+            if size > MAX_PUBLIC_MEDIA_BYTES {
+                return Err(BudgetError::Media {
+                    name: name.into(),
+                    limit: MAX_PUBLIC_MEDIA_BYTES,
+                    size,
+                }
+                .into());
+            }
             let total = self
                 .media
                 .checked_add(size)
-                .context("Public media byte count overflow")?;
-            ensure!(
-                total <= MAX_PUBLIC_MEDIA_TOTAL_BYTES,
-                "Public media exceed {MAX_PUBLIC_MEDIA_TOTAL_BYTES}-byte total budget ({total} bytes)"
-            );
+                .ok_or(BudgetError::CountOverflow)?;
+            if total > MAX_PUBLIC_MEDIA_TOTAL_BYTES {
+                return Err(BudgetError::MediaTotal {
+                    limit: MAX_PUBLIC_MEDIA_TOTAL_BYTES,
+                    total,
+                }
+                .into());
+            }
             self.media = total;
         } else {
             let limit = if name.ends_with(".woff") || name.ends_with(".woff2") {
@@ -48,19 +105,25 @@ impl OutputBudget {
             } else {
                 config.max_asset_bytes
             };
-            ensure!(
-                size <= limit,
-                "Asset {name} exceeds {limit}-byte budget ({size} bytes)"
-            );
+            if size > limit {
+                return Err(BudgetError::Asset {
+                    name: name.into(),
+                    limit,
+                    size,
+                }
+                .into());
+            }
             let total = self
                 .bundle
                 .checked_add(size)
-                .context("Web bundle byte count overflow")?;
-            ensure!(
-                total <= config.max_total_bytes,
-                "Web bundle exceeds {}-byte total budget ({total} bytes)",
-                config.max_total_bytes
-            );
+                .ok_or(BudgetError::CountOverflow)?;
+            if total > config.max_total_bytes {
+                return Err(BudgetError::Bundle {
+                    limit: config.max_total_bytes,
+                    total,
+                }
+                .into());
+            }
             self.bundle = total;
         }
         Ok(())
@@ -102,10 +165,9 @@ fn unique_public_files<'de, D: serde::Deserializer<'de>>(
 fn public_manifest_path(web: &Path, name: &str) -> Result<PathBuf> {
     let name = Path::new(name);
     inventory::relative(name)?;
-    ensure!(
-        name.components().count() == 1 && name.extension().is_some_and(|ext| ext == "json"),
-        "public_assets_manifest must name a JSON file directly in src/web/"
-    );
+    if name.components().count() != 1 || !name.extension().is_some_and(|ext| ext == "json") {
+        return Err(ConfigurationError::ManifestName.into());
+    }
     Ok(web.join(name))
 }
 
@@ -190,32 +252,36 @@ impl Default for Web {
 impl Config {
     pub fn read(web: &Path) -> Result<Self> {
         let path = web.join("rust-web.toml");
-        let mut config: Self = if path.exists() {
-            toml::from_str(&String::from_utf8(inventory::read(&path)?)?)?
-        } else {
-            Self::default()
+        let mut config: Self = match inventory::read(&path) {
+            Ok(bytes) => toml::from_str(&utf8(bytes, &path)?).map_err(|source| {
+                AssetError::Configuration {
+                    path: path.clone(),
+                    source: Box::new(source),
+                }
+            })?,
+            Err(inventory::InventoryError::Read { source, .. })
+                if source.kind() == io::ErrorKind::NotFound =>
+            {
+                Self::default()
+            }
+            Err(error) => return Err(error.into()),
         };
         if config.web.entry.is_empty() {
-            config.web.entry = if web.join("src/main-blog-browser.js").is_file() {
-                "src/main-blog-browser.js"
-            } else {
-                "src/main.js"
-            }
-            .into();
+            config.web.entry = "src/main.js".into();
         }
-        source_inputs::web_relative(Path::new(&config.web.entry), false)?;
-        if config.web.kind == OutputKind::Embedded {
-            ensure!(
-                !config.web.entries.is_empty(),
-                "Embedded output needs explicit entry points"
-            );
+        source_inputs::web_relative(Path::new(&config.web.entry), false)
+            .map_err(|source| input_error(Path::new(&config.web.entry), source))?;
+        if config.web.kind == OutputKind::Embedded && config.web.entries.is_empty() {
+            return Err(ConfigurationError::EmbeddedEntries.into());
         }
         for (output, source) in config.web.entries.iter().chain(config.web.copies.iter()) {
             inventory::relative(Path::new(output))?;
-            source_inputs::web_relative(Path::new(source), false)?;
+            source_inputs::web_relative(Path::new(source), false)
+                .map_err(|error| input_error(Path::new(source), error))?;
         }
         for license in &config.web.licenses {
-            source_inputs::web_relative(Path::new(license), false)?;
+            source_inputs::web_relative(Path::new(license), false)
+                .map_err(|source| input_error(Path::new(license), source))?;
         }
         if !config.web.css_output.is_empty() {
             inventory::relative(Path::new(&config.web.css_output))?;
@@ -223,38 +289,39 @@ impl Config {
         if !config.web.public_assets_manifest.is_empty() {
             public_manifest_path(web, &config.web.public_assets_manifest)?;
         }
-        ensure!(
-            config.web.base.starts_with('/')
-                && config.web.base.ends_with('/')
-                && !config
-                    .web
-                    .base
-                    .contains(['\\', '?', '#', '"', '\'', '<', '>', '\n', '\r'])
-                && !config.web.base.contains("..")
-                && !config.web.base.starts_with("//"),
-            "base must be a local /path/ URL"
-        );
+        if !(config.web.base.starts_with('/')
+            && config.web.base.ends_with('/')
+            && !config
+                .web
+                .base
+                .contains(['\\', '?', '#', '"', '\'', '<', '>', '\n', '\r'])
+            && !config.web.base.contains("..")
+            && !config.web.base.starts_with("//"))
+        {
+            return Err(ConfigurationError::BaseUrl.into());
+        }
         for limit in [
             config.web.max_asset_bytes,
             config.web.max_wasm_bytes,
             config.web.max_font_bytes,
             config.web.max_total_bytes,
         ] {
-            ensure!(
-                (1..=64 * 1024 * 1024).contains(&limit),
-                "Asset budget must be in 1..67108864"
-            );
+            if !(1..=64 * 1024 * 1024).contains(&limit) {
+                return Err(ConfigurationError::BudgetRange.into());
+            }
         }
         // Raising an established project budget requires a separately reviewed code change.
-        ensure!(
-            config.web.max_asset_bytes <= 512 * 1024
-                && config.web.max_wasm_bytes <= 4 * 1024 * 1024
-                && config.web.max_font_bytes <= 16 * 1024 * 1024
-                && config.web.max_total_bytes <= 16 * 1024 * 1024,
-            "Configuration may tighten but cannot relax asset budgets"
-        );
+        if !(config.web.max_asset_bytes <= 512 * 1024
+            && config.web.max_wasm_bytes <= 4 * 1024 * 1024
+            && config.web.max_font_bytes <= 16 * 1024 * 1024
+            && config.web.max_total_bytes <= 16 * 1024 * 1024)
+        {
+            return Err(ConfigurationError::RelaxedBudget.into());
+        }
         for destination in config.aliases.values() {
-            source_inputs::web_relative(Path::new(destination.trim_end_matches('/')), true)?;
+            let destination = Path::new(destination.trim_end_matches('/'));
+            source_inputs::web_relative(destination, true)
+                .map_err(|source| input_error(destination, source))?;
         }
         Ok(config)
     }
@@ -293,7 +360,7 @@ struct CssUrls<'a> {
     source: &'a Path,
 }
 impl<'i> style_compiler::style_optimizer::visitor::Visitor<'i> for CssUrls<'_> {
-    type Error = anyhow::Error;
+    type Error = AssetError;
     fn visit_types(&self) -> style_compiler::style_optimizer::visitor::VisitTypes {
         style_compiler::style_optimizer::visitor::VisitTypes::URLS
     }
@@ -307,9 +374,15 @@ impl<'i> style_compiler::style_optimizer::visitor::Visitor<'i> for CssUrls<'_> {
         }
         if value.starts_with("data:") {
             if self.linker.config.web.kind == OutputKind::Embedded {
-                let encoded=value.strip_prefix("data:image/svg+xml,").context("Embedded CSP only supports authored SVG data URLs, emitted as same-origin files")?;
+                let encoded = value
+                    .strip_prefix("data:image/svg+xml,")
+                    .ok_or_else(|| AssetError::SvgDataUrl(self.source.into()))?;
                 let svg = url_encoding::percent::percent_decode_str(encoded)
-                    .decode_utf8()?
+                    .decode_utf8()
+                    .map_err(|source| AssetError::SvgEncoding {
+                        path: self.source.into(),
+                        source,
+                    })?
                     .into_owned();
                 let output = self.linker.output("blog-icon", "svg", svg.into_bytes())?;
                 url.url = self.linker.css_url(&output).into();
@@ -358,26 +431,37 @@ impl Linker {
             .unwrap_or_else(|_| source.to_owned());
         let staged = self.pkg != self.web && source.starts_with(&self.pkg);
         if staged {
-            inventory::relative(source.strip_prefix(&self.pkg)?)?;
+            inventory::relative(
+                source
+                    .strip_prefix(&self.pkg)
+                    .expect("invariant: a staged source belongs to its package root"),
+            )?;
         } else {
-            source_inputs::web_relative(
+            let relative =
                 source
                     .strip_prefix(&self.web)
-                    .context("Source escapes the Web workspace")?,
-                false,
-            )?;
+                    .map_err(|error| AssetError::SourceEscape {
+                        path: source.clone(),
+                        source: error,
+                    })?;
+            source_inputs::web_relative(relative, false)
+                .map_err(|error| input_error(&source, error))?;
         }
         inventory::physical(&source)?;
-        let source = source.canonicalize()?;
-        ensure!(
-            source.starts_with(if staged { &self.pkg } else { &self.web }) && source.is_file(),
-            "Source must be a physical file inside its Web source root"
-        );
+        let source = canonicalize(&source)?;
+        let metadata = fs::metadata(&source).map_err(|error| AssetError::Inspect {
+            path: source.clone(),
+            source: error,
+        })?;
+        if !source.starts_with(if staged { &self.pkg } else { &self.web }) || !metadata.is_file() {
+            return Err(AssetError::SourceFile(source));
+        }
         Ok(source)
     }
 
     fn authored_source(&self, name: &str) -> Result<PathBuf> {
-        source_inputs::web_relative(Path::new(name), false)?;
+        source_inputs::web_relative(Path::new(name), false)
+            .map_err(|source| input_error(Path::new(name), source))?;
         self.checked_source(&self.web.join(name))
     }
 
@@ -391,19 +475,23 @@ impl Linker {
         specifier: &str,
         public_first: bool,
     ) -> Result<PathBuf> {
-        ensure!(
-            !specifier.contains(['\n', '\r', '\0', '\\', '#']),
-            "Unsupported module/resource URL {specifier:?}"
-        );
+        if specifier.contains(['\n', '\r', '\0', '\\', '#']) {
+            return Err(AssetError::Import {
+                specifier: specifier.into(),
+                source: ImportError::Url,
+            });
+        }
         let mut parts = specifier.split('?');
         let plain = parts
             .next()
             .expect("invariant: split yields its first segment");
-        if let Some(query) = parts.next() {
-            ensure!(
-                query == "url" && parts.next().is_none(),
-                "Only ?url asset imports are supported"
-            );
+        if let Some(query) = parts.next()
+            && (query != "url" || parts.next().is_some())
+        {
+            return Err(AssetError::Import {
+                specifier: specifier.into(),
+                source: ImportError::Query,
+            });
         }
         let mut aliased = None;
         let mut aliases = self.config.aliases.iter().collect::<Vec<_>>();
@@ -423,7 +511,7 @@ impl Linker {
         } else if plain.starts_with('.') {
             parent
                 .parent()
-                .context("Missing module parent")?
+                .expect("invariant: a physical module file has a parent")
                 .join(plain)
         } else if let Some(relative) = plain.strip_prefix('/') {
             // Public URLs are rooted at the output, not at a `public/` URL prefix.
@@ -444,52 +532,63 @@ impl Linker {
                     .unwrap_or_else(|_| path.into())
             };
             let mut physical = staged(&candidate);
-            if !physical.try_exists()?
-                && fs::symlink_metadata(&physical).is_err()
-                && candidate.extension().is_none()
-            {
+            let mut found = source_exists(&physical)?;
+            if !found && candidate.extension().is_none() {
                 candidate.set_extension("js");
                 physical = staged(&candidate);
+                found = source_exists(&physical)?;
             }
             // Do not conceal a dangling source symlink by falling back to public.
-            if physical.try_exists()? || fs::symlink_metadata(&physical).is_ok() {
-                candidate
-            } else {
-                second
-            }
+            if found { candidate } else { second }
         } else {
-            bail!("Unvendored bare import {specifier:?}; configure an explicit alias");
+            return Err(AssetError::Import {
+                specifier: specifier.into(),
+                source: ImportError::Bare,
+            });
         };
         let mut normalized = PathBuf::new();
         for component in path.components() {
             match component {
                 std::path::Component::ParentDir => {
-                    ensure!(normalized.pop(), "Import path escapes filesystem root");
+                    if !normalized.pop() {
+                        return Err(AssetError::Import {
+                            specifier: specifier.into(),
+                            source: ImportError::RootEscape,
+                        });
+                    }
                 }
                 std::path::Component::CurDir => {}
                 component => normalized.push(component.as_os_str()),
             }
         }
         let mut path = if normalized.starts_with(self.web.join("pkg")) {
-            self.pkg
-                .join(normalized.strip_prefix(self.web.join("pkg"))?)
+            self.pkg.join(
+                normalized
+                    .strip_prefix(self.web.join("pkg"))
+                    .expect("invariant: a remapped source has the package prefix"),
+            )
         } else {
             normalized
         };
-        if !path.exists() && path.extension().is_none() {
+        if path.extension().is_none() && !source_exists(&path)? {
             path.set_extension("js");
         }
         self.checked_source(&path)
-            .with_context(|| format!("Resolve {specifier:?} in {}", parent.display()))
+            .map_err(|source| AssetError::Resolve {
+                parent: parent.into(),
+                specifier: specifier.into(),
+                source: Box::new(source),
+            })
     }
 
     fn generated_output(&mut self, name: String, bytes: Vec<u8>) -> Result<()> {
-        ensure!(
-            !self.public_outputs.contains(&name),
-            "Public asset shadows a generated resource: {name}"
-        );
+        if self.public_outputs.contains(&name) {
+            return Err(AssetError::PublicCollision(name));
+        }
         if let Some(previous) = self.outputs.get(&name) {
-            ensure!(previous == &bytes, "Conflicting generated output: {name}");
+            if previous != &bytes {
+                return Err(AssetError::GeneratedCollision(name));
+            }
         } else {
             self.budget
                 .add(&self.config.web, &name, bytes.len(), false)?;
@@ -503,12 +602,13 @@ impl Linker {
             return Ok(None);
         };
         let name = inventory::relative(relative)?;
-        ensure!(name != "index.html", "Public asset shadows generated HTML");
+        if name == "index.html" {
+            return Err(AssetError::PublicHtml);
+        }
         if let Some(previous) = self.outputs.get(&name) {
-            ensure!(
-                self.public_outputs.contains(&name) && previous == &bytes,
-                "Public asset shadows a generated resource: {name}"
-            );
+            if !self.public_outputs.contains(&name) || previous != &bytes {
+                return Err(AssetError::PublicCollision(name));
+            }
         } else {
             self.budget.add(
                 &self.config.web,
@@ -528,17 +628,17 @@ impl Linker {
             None
         } else {
             let path = public_manifest_path(&self.web, &self.config.web.public_assets_manifest)?;
-            let expected: PublicAssetsManifest = serde_json::from_slice(&inventory::read(&path)?)?;
-            ensure!(
-                expected.format == 1,
-                "Unsupported public assets manifest format"
-            );
+            let expected: PublicAssetsManifest =
+                serde_json::from_slice(&inventory::read(&path)?)
+                    .map_err(|source| AssetError::PublicManifest { path, source })?;
+            if expected.format != 1 {
+                return Err(AssetError::PublicManifestFormat(expected.format));
+            }
             for (name, digest) in &expected.files {
                 inventory::relative(Path::new(name))?;
-                ensure!(
-                    digest.len() == 64 && digest.bytes().all(|byte| byte.is_ascii_hexdigit()),
-                    "Invalid public asset SHA-256: {name}"
-                );
+                if digest.len() != 64 || !digest.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+                    return Err(AssetError::PublicDigest(name.clone()));
+                }
             }
             self.public_media = expected
                 .files
@@ -557,26 +657,32 @@ impl Linker {
             Some(expected.files)
         };
         let mut actual = Files::new();
-        for path in source_inputs::web_paths(&self.web, &self.web.join("public"))? {
+        let public = self.web.join("public");
+        for path in source_inputs::web_paths(&self.web, &public)
+            .map_err(|source| input_error(&public, source))?
+        {
             let bytes = inventory::read(&path)?;
             let digest = inventory::sha(&bytes);
-            let name = inventory::relative(path.strip_prefix(self.web.join("public"))?)?;
-            if let Some(expected) = &expected {
-                ensure!(
-                    expected.get(&name) == Some(&digest),
-                    "Public assets differ from source inventory: {}",
-                    self.config.web.public_assets_manifest
-                );
+            let name = inventory::relative(
+                path.strip_prefix(self.web.join("public"))
+                    .expect("invariant: an enumerated public path belongs to its root"),
+            )?;
+            if let Some(expected) = &expected
+                && expected.get(&name) != Some(&digest)
+            {
+                return Err(AssetError::PublicInventory(
+                    self.config.web.public_assets_manifest.clone(),
+                ));
             }
             self.public_output(&path, bytes)?
-                .context("Public source path")?;
+                .expect("invariant: an enumerated public file belongs to the public root");
             actual.insert(name, digest);
         }
-        ensure!(
-            expected.is_none_or(|expected| actual == expected),
-            "Public assets differ from source inventory: {}",
-            self.config.web.public_assets_manifest
-        );
+        if expected.is_some_and(|expected| actual != expected) {
+            return Err(AssetError::PublicInventory(
+                self.config.web.public_assets_manifest.clone(),
+            ));
+        }
         Ok(())
     }
 
@@ -635,39 +741,46 @@ impl Linker {
             return Ok(name.clone());
         }
         let extension = source.extension().and_then(|v| v.to_str()).unwrap_or("bin");
-        ensure!(extension != "map", "Source maps cannot be published");
+        if extension == "map" {
+            return Err(AssetError::SourceMap);
+        }
         let bytes = inventory::read(source)?;
-        if extension == "wasm" {
-            ensure!(bytes.starts_with(b"\0asm"), "Expected WebAssembly bytes");
+        if extension == "wasm" && !bytes.starts_with(b"\0asm") {
+            return Err(AssetError::Wasm(source.into()));
         }
         let mut fixed = None;
         for (output, input) in &self.config.web.copies {
-            if self.web.join(input).canonicalize()? == source {
+            if canonicalize(&self.web.join(input))? == source {
                 fixed = Some(output.clone());
                 break;
             }
         }
-        let output = if let Some(output) = self.public_output(source, bytes.clone())? {
-            output
+        let output = if source.starts_with(self.web.join("public")) {
+            self.public_output(source, bytes)?
+                .expect("invariant: a public source publishes with its relative name")
         } else if let Some(output) = fixed {
-            self.generated_output(output.clone(), bytes.clone())?;
+            self.generated_output(output.clone(), bytes)?;
             output
         } else {
-            self.output(
-                source
-                    .file_stem()
-                    .and_then(|v| v.to_str())
-                    .unwrap_or("asset"),
-                extension,
-                bytes.clone(),
-            )?
+            self.output(source_stem(source), extension, bytes)?
         };
         if extension == "wasm" {
             let mut compressed = GzBuilder::new()
                 .mtime(0)
                 .write(Vec::new(), Compression::best());
-            compressed.write_all(&bytes)?;
-            self.generated_output(format!("{output}.gz"), compressed.finish()?)?;
+            compressed
+                .write_all(&self.outputs[&output])
+                .map_err(|error| AssetError::Compression {
+                    path: source.into(),
+                    source: error,
+                })?;
+            let compressed = compressed
+                .finish()
+                .map_err(|error| AssetError::Compression {
+                    path: source.into(),
+                    source: error,
+                })?;
+            self.generated_output(format!("{output}.gz"), compressed)?;
         }
         self.assets.insert(source.into(), output.clone());
         Ok(output)
@@ -681,27 +794,29 @@ impl Linker {
         };
         let checked = self.checked_source(source)?;
         let source = checked.as_path();
-        ensure!(
-            !self.css_stack.contains(source),
-            "Circular CSS @import: {}",
-            source.display()
-        );
+        if self.css_stack.contains(source) {
+            return Err(AssetError::CssCycle(source.into()));
+        }
         if let Some(css) = self.css_cache.get(source) {
             return Ok(css.clone());
         }
         self.css_stack.insert(source.into());
-        let text = String::from_utf8(inventory::read(source)?)?;
-        let mut sheet = StyleSheet::parse(&text, ParserOptions::default())
-            .map_err(|e| anyhow::anyhow!("CSS syntax error in {}: {e}", source.display()))?;
+        let text = utf8(inventory::read(source)?, source)?;
+        let mut sheet = StyleSheet::parse(&text, ParserOptions::default()).map_err(|error| {
+            AssetError::CssParse {
+                path: source.into(),
+                source: Box::new(owned_css_error(error)),
+            }
+        })?;
         let mut imported = String::new();
         for rule in &sheet.rules.0 {
             if let CssRule::Import(import) = rule {
-                ensure!(
-                    import.media.media_queries.is_empty()
-                        && import.supports.is_none()
-                        && import.layer.is_none(),
-                    "Conditional CSS imports must be explicitly bundled upstream"
-                );
+                if !import.media.media_queries.is_empty()
+                    || import.supports.is_some()
+                    || import.layer.is_some()
+                {
+                    return Err(AssetError::ConditionalCss(source.into()));
+                }
                 let specifier = import.url.as_ref();
                 let path = self.resolve(
                     source,
@@ -726,13 +841,19 @@ impl Linker {
         })?;
         sheet
             .minify(style_compiler::style_optimizer::stylesheet::MinifyOptions::default())
-            .map_err(|e| anyhow::anyhow!("CSS minify error: {e}"))?;
+            .map_err(|error| AssetError::CssMinify {
+                path: source.into(),
+                source: Box::new(error),
+            })?;
         let code = sheet
             .to_css(PrinterOptions {
                 minify: true,
                 ..Default::default()
             })
-            .map_err(|e| anyhow::anyhow!("CSS print error: {e}"))?
+            .map_err(|error| AssetError::CssPrint {
+                path: source.into(),
+                source: Box::new(error),
+            })?
             .code;
         Self::append_css(&mut imported, &code, self.config.web.max_asset_bytes)?;
         self.css_stack.remove(source);
@@ -749,14 +870,13 @@ impl Linker {
     }
 
     fn append_css(output: &mut String, css: &str, limit: usize) -> Result<()> {
-        ensure!(
-            output
-                .len()
-                .checked_add(css.len())
-                .is_some_and(|size| size <= limit),
-            "Expanded CSS exceeds {}-byte asset budget",
-            limit
-        );
+        if output
+            .len()
+            .checked_add(css.len())
+            .is_none_or(|size| size > limit)
+        {
+            return Err(BudgetError::Css { limit }.into());
+        }
         output.push_str(css);
         Ok(())
     }
@@ -766,24 +886,27 @@ impl Linker {
         if let Some(module) = self.modules.get(&source) {
             return Ok(module.output.clone());
         }
-        ensure!(
-            self.visiting.insert(source.clone()),
-            "Circular ESM imports require a reviewed prebundled ESM distribution: {}",
-            source.display()
-        );
-        let text = String::from_utf8(inventory::read(&source)?)?;
-        let references = crate::javascript::references(&text)
-            .with_context(|| format!("Parse {}", source.display()))?;
+        if !self.visiting.insert(source.clone()) {
+            return Err(AssetError::ModuleCycle(source));
+        }
+        let text = utf8(inventory::read(&source)?, &source)?;
+        let references =
+            crate::javascript::references(&text).map_err(|error| AssetError::JavaScript {
+                path: source.clone(),
+                source: error,
+            })?;
         let mut replacements = Vec::new();
         let mut children = BTreeSet::new();
         let mut derived_outputs = BTreeSet::new();
         for import in references.imports {
             let child = self.resolve(&source, &import.url)?;
             if child.extension().is_some_and(|v| v == "css") {
-                ensure!(
-                    !import.has_bindings,
-                    "CSS imports cannot create JavaScript bindings"
-                );
+                if import.has_bindings {
+                    return Err(AssetError::Import {
+                        specifier: import.url,
+                        source: ImportError::CssBindings,
+                    });
+                }
                 if self.css_entries.insert(child.clone()) {
                     let css = self.stylesheet(&child)?;
                     if !self.css.is_empty() {
@@ -794,12 +917,14 @@ impl Linker {
                 let (start, end) = crate::javascript::range(import.statement);
                 replacements.push((start, end, String::new()));
             } else if import.url.ends_with("?url") {
-                ensure!(
-                    import.default_asset,
-                    "?url requires a default import or export {{default as name}}"
-                );
+                if !import.default_asset {
+                    return Err(AssetError::Import {
+                        specifier: import.url,
+                        source: ImportError::DefaultAsset,
+                    });
+                }
                 let output = self.asset(&child)?;
-                let value = serde_json::to_string(&self.module_url(&output))?;
+                let value = js_string(&self.module_url(&output));
                 let expression = if self.config.web.relative_urls {
                     format!("new URL({value},import.meta.url).href")
                 } else {
@@ -808,31 +933,29 @@ impl Linker {
                 // Keep import/export declarations intact. A separate ESM owns
                 // the URL value, so exported names need not be identifiers and
                 // the consuming module cannot capture the generated URL call.
-                let bytes = crate::javascript::minify(&format!("export default {expression};"))?;
+                let bytes = crate::javascript::minify(&format!("export default {expression};"))
+                    .map_err(|error| AssetError::JavaScript {
+                        path: source.clone(),
+                        source: error,
+                    })?;
                 let module = self.output("asset-url", "js", bytes)?;
                 derived_outputs.insert(module.clone());
                 let (start, end) = crate::javascript::range(import.source);
-                replacements.push((
-                    start,
-                    end,
-                    serde_json::to_string(&self.module_url(&module))?,
-                ));
+                replacements.push((start, end, js_string(&self.module_url(&module))));
             } else {
-                ensure!(
-                    matches!(
-                        child.extension().and_then(|v| v.to_str()),
-                        Some("js" | "mjs")
-                    ),
-                    "ESM module must be .js or .mjs"
-                );
+                if !matches!(
+                    child.extension().and_then(|value| value.to_str()),
+                    Some("js" | "mjs")
+                ) {
+                    return Err(AssetError::Import {
+                        specifier: import.url,
+                        source: ImportError::ModuleExtension,
+                    });
+                }
                 let output = self.module(&child)?;
                 children.insert(child);
                 let (start, end) = crate::javascript::range(import.source);
-                replacements.push((
-                    start,
-                    end,
-                    serde_json::to_string(&self.module_url(&output))?,
-                ));
+                replacements.push((start, end, js_string(&self.module_url(&output))));
             }
         }
         for (url, span) in references.assets {
@@ -844,42 +967,34 @@ impl Linker {
             let child = self.resolve(&source, &specifier)?;
             let output = self.asset(&child)?;
             let (start, end) = crate::javascript::range(span);
-            replacements.push((
-                start,
-                end,
-                serde_json::to_string(&self.module_url(&output))?,
-            ));
+            replacements.push((start, end, js_string(&self.module_url(&output))));
         }
         for (url, span) in references.dynamic {
             let child = self.resolve(&source, &url)?;
             let output = self.module(&child)?;
             children.insert(child);
             let (start, end) = crate::javascript::range(span);
-            replacements.push((
-                start,
-                end,
-                serde_json::to_string(&self.module_url(&output))?,
-            ));
+            replacements.push((start, end, js_string(&self.module_url(&output))));
         }
         replacements.sort_by_key(|(start, _, _)| *start);
         let mut transformed = String::new();
         let mut end = 0;
         for (start, finish, replacement) in replacements {
-            ensure!(start >= end, "Ambiguous overlapping AST references");
+            assert!(
+                start >= end,
+                "invariant: AST references occupy disjoint source ranges"
+            );
             transformed.push_str(&text[end..start]);
             transformed.push_str(&replacement);
             end = finish;
         }
         transformed.push_str(&text[end..]);
-        let bytes = crate::javascript::minify(&transformed)?;
-        let output = self.output(
-            source
-                .file_stem()
-                .and_then(|v| v.to_str())
-                .unwrap_or("module"),
-            "js",
-            bytes,
-        )?;
+        let bytes =
+            crate::javascript::minify(&transformed).map_err(|error| AssetError::JavaScript {
+                path: source.clone(),
+                source: error,
+            })?;
+        let output = self.output(source_stem(&source), "js", bytes)?;
         self.modules.insert(
             source.clone(),
             Module {
@@ -897,7 +1012,7 @@ impl Linker {
         self.copy_public()?;
         let mut script = String::new();
         if self.config.web.kind == OutputKind::Embedded {
-            for (facade, input) in self.config.web.entries.clone() {
+            for (facade, input) in std::mem::take(&mut self.config.web.entries) {
                 let source = self.authored_source(&input)?;
                 let output = self.module(&source)?;
                 let depth = Path::new(&facade)
@@ -907,12 +1022,16 @@ impl Linker {
                 let target = format!("{}{output}", "../".repeat(depth));
                 let wrapper = crate::javascript::minify(&format!(
                     "export * from {};",
-                    serde_json::to_string(&if target.starts_with('.') {
+                    js_string(&if target.starts_with('.') {
                         target
                     } else {
                         format!("./{target}")
-                    })?
-                ))?;
+                    })
+                ))
+                .map_err(|error| AssetError::JavaScript {
+                    path: source.clone(),
+                    source: error,
+                })?;
                 self.generated_output(facade.clone(), wrapper)?;
                 self.modules
                     .get_mut(&source)
@@ -924,10 +1043,9 @@ impl Linker {
             let entry = self.web.join(&self.config.web.entry);
             script = self.module(&entry)?;
         }
-        ensure!(
-            self.outputs.keys().any(|name| name.ends_with(".wasm")),
-            "No independent WASM output was linked"
-        );
+        if !self.outputs.keys().any(|name| name.ends_with(".wasm")) {
+            return Err(AssetError::MissingWasm);
+        }
         let css_bytes = std::mem::take(&mut self.css).into_bytes();
         let css = if self.config.web.css_output.is_empty() {
             self.output("style", "css", css_bytes)?
@@ -936,20 +1054,24 @@ impl Linker {
             self.generated_output(name.clone(), css_bytes)?;
             name
         };
-        for (output, input) in self.config.web.copies.clone() {
-            let source = self.authored_source(&input)?;
+        let copies = std::mem::take(&mut self.config.web.copies);
+        for (output, input) in &copies {
+            let source = self.authored_source(input)?;
             let bytes = inventory::read(&source)?;
-            self.generated_output(output, bytes)?;
+            self.generated_output(output.clone(), bytes)?;
         }
-        for license in self.config.web.licenses.clone() {
+        self.config.web.copies = copies;
+        for license in std::mem::take(&mut self.config.web.licenses) {
             let path = self.authored_source(&license)?;
             let name = path
                 .file_name()
                 .and_then(|v| v.to_str())
-                .context("License filename")?;
+                .expect("invariant: a validated license source has a UTF-8 filename");
             let output = format!("assets/{name}");
             let bytes = inventory::read(&path)?;
-            ensure!(!bytes.is_empty(), "Required license is empty");
+            if bytes.is_empty() {
+                return Err(AssetError::EmptyLicense(path));
+            }
             self.generated_output(output, bytes)?;
         }
         self.generated_output("assets/blog-assets.json".into(), provenance.into())?;
@@ -957,31 +1079,34 @@ impl Linker {
             .web
             .ancestors()
             .nth(Path::new(layout::WEB).components().count())
-            .context("Asset source repository")?;
+            .ok_or_else(|| AssetError::RepositoryRoot(self.web.clone()))?;
         let vendor_sources = inventory::walk(&repository.join(layout::INTERFACE))?
             .into_iter()
             .chain(inventory::walk(&self.web.join("styles"))?)
-            .collect::<Vec<_>>()
-            .into_iter()
             .filter(|p| p.file_name().is_some_and(|v| v == "ORIGIN.json"))
             .map(|p| {
                 Ok((
-                    inventory::relative(p.strip_prefix(repository)?)?,
-                    serde_json::from_slice::<Value>(&inventory::read(&p)?)?,
+                    inventory::relative(p.strip_prefix(repository).expect(
+                        "invariant: a source walked under the repository retains its prefix",
+                    ))?,
+                    serde_json::from_slice::<Value>(&inventory::read(&p)?)
+                        .map_err(|source| AssetError::VendorSource { path: p, source })?,
                 ))
             })
             .collect::<Result<BTreeMap<_, _>>>()?;
         self.generated_output(
             "assets/vendor-sources.json".into(),
-            serde_json::to_vec_pretty(&vendor_sources)?,
+            serde_json::to_vec_pretty(&vendor_sources)
+                .expect("invariant: vendor source JSON values are serializable"),
         )?;
         if self.config.web.kind == OutputKind::Spa {
-            let mut html = String::from_utf8(inventory::read(&self.web.join("index.html"))?)?;
-            let script_tag = Regex::new(r#"<script\s+[^>]*type=["']module["'][^>]*>\s*</script>"#)?;
-            ensure!(
-                script_tag.find_iter(&html).count() == 1,
-                "index.html must have exactly one external module entry"
-            );
+            let index = self.web.join("index.html");
+            let mut html = utf8(inventory::read(&index)?, &index)?;
+            let script_tag = Regex::new(r#"<script\s+[^>]*type=["']module["'][^>]*>\s*</script>"#)
+                .expect("invariant: the static module-script regex is valid");
+            if script_tag.find_iter(&html).count() != 1 {
+                return Err(AssetError::HtmlEntry);
+            }
             html = script_tag
                 .replace(
                     &html,
@@ -991,11 +1116,14 @@ impl Linker {
                     ),
                 )
                 .into_owned();
-            let node_fonts = Regex::new(r#"(?:\./|/)?styles/web-fonts/([A-Za-z0-9_.-]+)"#)?;
+            let node_fonts = Regex::new(r#"(?:\./|/)?styles/web-fonts/([A-Za-z0-9_.-]+)"#)
+                .expect("invariant: the static font-preload regex is valid");
             let mut rewritten = String::new();
             let mut end = 0;
             for capture in node_fonts.captures_iter(&html) {
-                let found = capture.get(0).context("Font preload")?;
+                let found = capture
+                    .get(0)
+                    .expect("invariant: a regex capture contains the full match");
                 rewritten.push_str(&html[end..found.start()]);
                 let path = self.web.join("styles/web-fonts").join(&capture[1]);
                 let output = self.asset(&path)?;
@@ -1004,10 +1132,9 @@ impl Linker {
             }
             rewritten.push_str(&html[end..]);
             html = rewritten;
-            ensure!(
-                !html.contains("node_modules") && !html.contains("/src/"),
-                "HTML still contains a development-only resource reference"
-            );
+            if html.contains("node_modules") || html.contains("/src/") {
+                return Err(AssetError::HtmlDevelopmentReference);
+            }
             let mut preload = format!("<link rel=\"stylesheet\" href=\"{}\">\n", self.url(&css));
             for name in self
                 .outputs
@@ -1022,7 +1149,9 @@ impl Linker {
             for name in self.outputs.keys().filter(|name| name.ends_with(".wasm")) {
                 preload.push_str(&format!("<link rel=\"preload\" href=\"{}\" as=\"fetch\" type=\"application/wasm\" crossorigin=\"anonymous\">\n", self.url(name)));
             }
-            ensure!(html.contains("</head>"), "HTML is missing head terminator");
+            if !html.contains("</head>") {
+                return Err(AssetError::HtmlHead);
+            }
             html = html.replacen("</head>", &format!("{preload}</head>"), 1);
             self.generated_output("index.html".into(), html.into_bytes())?;
         }
@@ -1039,10 +1168,20 @@ impl Linker {
             let relative = if module.source.starts_with(&self.pkg) {
                 format!(
                     "pkg/{}",
-                    inventory::relative(module.source.strip_prefix(&self.pkg)?)?
+                    inventory::relative(
+                        module
+                            .source
+                            .strip_prefix(&self.pkg)
+                            .expect("invariant: a package module retains its source prefix")
+                    )?
                 )
             } else {
-                inventory::relative(module.source.strip_prefix(&self.web)?)?
+                inventory::relative(
+                    module
+                        .source
+                        .strip_prefix(&self.web)
+                        .expect("invariant: a linked module belongs to the web root"),
+                )?
             };
             let relative = if self.config.web.runtime_root == RuntimeRoot::Product {
                 format!("{}/{relative}", layout::WEB)
@@ -1082,10 +1221,16 @@ pub fn write_outputs(root: &Path, outputs: &BTreeMap<String, Vec<u8>>) -> Result
     for (name, bytes) in outputs {
         inventory::relative(Path::new(name))?;
         let path = root.join(name);
-        fs::create_dir_all(path.parent().context("Output parent")?)?;
-        fs::write(path, bytes)?;
+        let parent = path
+            .parent()
+            .expect("invariant: a validated output has a parent directory");
+        fs::create_dir_all(parent).map_err(|source| AssetError::CreateOutputDirectory {
+            path: parent.into(),
+            source,
+        })?;
+        fs::write(&path, bytes).map_err(|source| AssetError::WriteOutput { path, source })?;
     }
-    inventory::files(root)
+    Ok(inventory::files(root)?)
 }
 
 #[cfg(test)]

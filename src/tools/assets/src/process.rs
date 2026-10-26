@@ -20,20 +20,20 @@ use std::{
 };
 
 #[derive(Debug, thiserror::Error)]
-pub(crate) enum ProcessError {
-    #[error("{operation}: {source}")]
+pub enum ProcessError {
+    #[error("{operation}")]
     Io {
         operation: &'static str,
         #[source]
         source: io::Error,
     },
-    #[error("{operation}: {source}")]
+    #[error("{operation}")]
     System {
         operation: &'static str,
         #[source]
         source: rustix::io::Errno,
     },
-    #[error("Allocate bounded command output: {0}")]
+    #[error("allocate bounded command output")]
     Allocation(#[from] std::collections::TryReserveError),
     #[error("command cancelled")]
     Cancelled,
@@ -49,14 +49,14 @@ pub(crate) enum ProcessError {
     ReaderStopped,
     #[error("Command output reader panicked")]
     ReaderPanic,
-    #[error("{context}: {source}{diagnostics}")]
+    #[error("{context}{diagnostics}")]
     Command {
         context: String,
         #[source]
         source: Box<Self>,
         diagnostics: String,
     },
-    #[error("{source}; command cleanup also failed: {cleanup}")]
+    #[error("command cleanup also failed: {cleanup}")]
     Cleanup {
         #[source]
         source: Box<Self>,

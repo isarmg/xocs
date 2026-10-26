@@ -1,4 +1,16 @@
 use super::*;
+use anyhow::Result;
+use std::error::Error;
+
+fn diagnostic(error: &AssetError) -> String {
+    let mut messages = Vec::new();
+    let mut current = Some(error as &(dyn Error + 'static));
+    while let Some(error) = current {
+        messages.push(error.to_string());
+        current = error.source();
+    }
+    messages.join(": ")
+}
 
 #[test]
 fn output_modes_are_parsed_at_the_configuration_boundary() -> Result<()> {
@@ -7,7 +19,11 @@ fn output_modes_are_parsed_at_the_configuration_boundary() -> Result<()> {
     for (field, unknown) in [("kind", "server"), ("runtime_root", "external")] {
         fs::write(&path, format!("[web]\n{field}={unknown:?}\n"))?;
         let error = Config::read(directory.path()).unwrap_err();
-        assert!(error.downcast_ref::<toml::de::Error>().is_some());
+        assert!(error.source().is_some());
+        let AssetError::Configuration { source, .. } = error else {
+            panic!("expected a TOML configuration failure");
+        };
+        assert!(!source.message().is_empty());
     }
     fs::write(
         path,
@@ -96,9 +112,91 @@ fn configured_copy_lookup_preserves_missing_file_errors() -> Result<()> {
     let source = directory.path().join("pkg/app_bg.wasm");
     let mut linker = Linker::new(directory.path(), &directory.path().join("pkg"), config);
     let error = linker.asset(&source).unwrap_err();
+    let AssetError::Canonicalize { source, path } = error else {
+        panic!("expected the missing copy's canonicalization error");
+    };
+    assert_eq!(source.kind(), std::io::ErrorKind::NotFound);
+    assert_eq!(path, directory.path().join("src/missing.txt"));
+    Ok(())
+}
+
+#[test]
+fn css_diagnostic_retains_its_typed_token_after_input_is_dropped() -> Result<()> {
+    use style_compiler::style_optimizer::{
+        error::{Error as CssError, ParserError, SelectorError},
+        properties::custom::Token,
+    };
+    let error = {
+        let directory = tempfile::tempdir()?;
+        fs::write(directory.path().join("main.js"), "import './broken.css';")?;
+        fs::write(
+            directory.path().join("broken.css"),
+            ".box[foo=#broken] { color: red; }",
+        )?;
+        Linker::new(directory.path(), directory.path(), Config::default())
+            .module(&directory.path().join("main.js"))
+            .unwrap_err()
+    };
+    assert!(error.source().is_some());
+    let AssetError::CssParse { source, .. } = error else {
+        panic!("expected a CSS parse failure");
+    };
+    let source: &CssError<ParserError<'static>> = &source;
+    assert!(source.loc.is_some());
+    let ParserError::SelectorError(SelectorError::BadValueInAttr(Token::IDHash(value))) =
+        &source.kind
+    else {
+        panic!("expected the invalid attribute's hash token: {source:?}");
+    };
+    assert_eq!(value.as_ref(), "broken");
+    Ok(())
+}
+
+#[test]
+fn output_write_failure_reports_its_operation_path_and_source() -> Result<()> {
+    let directory = tempfile::tempdir()?;
+    let path = directory.path().join("blocked.css");
+    fs::create_dir(&path)?;
+    let error = write_outputs(
+        directory.path(),
+        &BTreeMap::from([("blocked.css".into(), b"body{}".to_vec())]),
+    )
+    .unwrap_err();
+    let AssetError::WriteOutput {
+        path: failed,
+        source,
+    } = error
+    else {
+        panic!("expected an output write failure");
+    };
+    assert_eq!(failed, path);
+    assert_eq!(source.kind(), io::ErrorKind::IsADirectory);
+    Ok(())
+}
+
+#[test]
+fn font_preload_discovered_after_copying_keeps_the_configured_output_name() -> Result<()> {
+    let (directory, mut config) = public_fixture()?;
+    let web = directory.path();
+    fs::create_dir_all(web.join("styles/web-fonts"))?;
+    fs::write(web.join("styles/web-fonts/alone.woff2"), b"font")?;
+    fs::write(
+        web.join("index.html"),
+        "<html><head><link rel='preload' href='/styles/web-fonts/alone.woff2'></head><body><script type='module' src='/src/main.js'></script></body></html>",
+    )?;
+    config.web.copies.insert(
+        "assets/fixed.woff2".into(),
+        "styles/web-fonts/alone.woff2".into(),
+    );
+    let (outputs, _) = Linker::new(web, &web.join("pkg"), config).finish(b"{}")?;
+    assert_eq!(outputs["assets/fixed.woff2"], b"font");
+    assert!(String::from_utf8_lossy(&outputs["index.html"]).contains("href='/assets/fixed.woff2'"));
     assert_eq!(
-        error.downcast_ref::<std::io::Error>().unwrap().kind(),
-        std::io::ErrorKind::NotFound
+        outputs
+            .keys()
+            .filter(|name| name.ends_with(".woff2"))
+            .count(),
+        1
     );
     Ok(())
 }
@@ -142,7 +240,7 @@ fn public_manifest_requires_exact_media_and_nonmedia_source_bytes() -> Result<()
             .finish(b"{}")
             .unwrap_err()
             .to_string()
-            .contains("Public assets differ from source inventory")
+            .contains("public assets differ from source inventory")
     );
     fs::write(web.join("public/legacy/bannerWave1.png"), original)?;
     fs::write(web.join("public/added.svg"), "<svg/>")?;
@@ -224,7 +322,7 @@ fn registered_public_media_enforce_four_mib_files_and_eight_mib_total() -> Resul
             .copy_public()
             .unwrap_err()
             .to_string()
-            .contains("Public media hero.svg exceeds 4194304-byte budget")
+            .contains("public media hero.svg exceeds 4194304-byte budget")
     );
     fs::write(
         web.join("public/hero.svg"),
@@ -241,7 +339,7 @@ fn registered_public_media_enforce_four_mib_files_and_eight_mib_total() -> Resul
             .copy_public()
             .unwrap_err()
             .to_string()
-            .contains("Public media exceed 8388608-byte total budget")
+            .contains("public media exceed 8388608-byte total budget")
     );
     Ok(())
 }
@@ -258,7 +356,7 @@ fn registered_javascript_and_unregistered_images_keep_original_asset_limits() ->
     assert!(
         error
             .to_string()
-            .contains("Asset app.js exceeds 524288-byte budget")
+            .contains("asset app.js exceeds 524288-byte budget")
     );
     fs::remove_file(web.join("public/app.js"))?;
     fs::write(web.join("public/hero.svg"), svg_bytes(512 * 1024 + 1))?;
@@ -269,7 +367,7 @@ fn registered_javascript_and_unregistered_images_keep_original_asset_limits() ->
     assert!(
         error
             .to_string()
-            .contains("Asset hero.svg exceeds 524288-byte budget")
+            .contains("asset hero.svg exceeds 524288-byte budget")
     );
     Ok(())
 }
@@ -297,7 +395,7 @@ fn media_inventory_does_not_relax_bundle_total_or_reclassify_text_and_fonts() ->
     assert!(
         error
             .to_string()
-            .contains("Web bundle exceeds 1-byte total budget")
+            .contains("web bundle exceeds 1-byte total budget")
     );
     config.web.max_total_bytes = 16 * 1024 * 1024;
     fs::write(web.join("public/font.woff2"), vec![0; 16 * 1024 * 1024])?;
@@ -308,7 +406,7 @@ fn media_inventory_does_not_relax_bundle_total_or_reclassify_text_and_fonts() ->
     assert!(
         error
             .to_string()
-            .contains("Web bundle exceeds 16777216-byte total budget")
+            .contains("web bundle exceeds 16777216-byte total budget")
     );
     Ok(())
 }
@@ -450,7 +548,7 @@ fn public_assets_remain_budgeted_and_cannot_shadow_provenance() -> Result<()> {
     let error = Linker::new(web, &web.join("pkg"), config.clone())
         .finish(b"{}")
         .unwrap_err();
-    assert!(error.to_string().contains("Asset oversized.bin exceeds"));
+    assert!(error.to_string().contains("asset oversized.bin exceeds"));
     fs::remove_file(web.join("public/oversized.bin"))?;
     fs::create_dir(web.join("public/assets"))?;
     fs::write(web.join("public/assets/blog-assets.json"), "{}")?;
@@ -460,7 +558,7 @@ fn public_assets_remain_budgeted_and_cannot_shadow_provenance() -> Result<()> {
     assert!(
         error
             .to_string()
-            .contains("Public asset shadows a generated resource: assets/blog-assets.json")
+            .contains("public asset shadows a generated resource: assets/blog-assets.json")
     );
     Ok(())
 }
@@ -513,7 +611,7 @@ fn public_fallback_rejects_symlinks_instead_of_reading_outside() -> Result<()> {
     let error = linker
         .resolve(&web.join("src/main.js"), "/escape.svg")
         .unwrap_err();
-    let diagnostic = format!("{error:#}");
+    let diagnostic = diagnostic(&error);
     assert!(
         diagnostic.contains("Symlink input/output is forbidden"),
         "{diagnostic}"
@@ -605,12 +703,12 @@ fn css_import_expansion_is_bounded_and_cycles_fail() -> Result<()> {
     let error = Linker::new(web, web, config)
         .stylesheet(&web.join("main.css"))
         .unwrap_err();
-    assert!(error.to_string().contains("Expanded CSS exceeds 20-byte"));
+    assert!(error.to_string().contains("expanded CSS exceeds 20-byte"));
     fs::write(web.join("leaf.css"), "@import './main.css';")?;
     let error = Linker::new(web, web, Config::default())
         .stylesheet(&web.join("main.css"))
         .unwrap_err();
-    assert!(error.to_string().contains("Circular CSS @import"));
+    assert!(error.to_string().contains("circular CSS @import"));
     Ok(())
 }
 
@@ -824,7 +922,7 @@ fn configured_license_symlink_cannot_publish_external_bytes() -> Result<()> {
     let error = Linker::new(dir.path(), &dir.path().join("pkg"), config)
         .finish(b"{}")
         .unwrap_err();
-    assert!(format!("{error:#}").contains("Symlink input/output is forbidden"));
+    assert!(diagnostic(&error).contains("Symlink input/output is forbidden"));
     Ok(())
 }
 
@@ -845,7 +943,7 @@ fn generated_web_trees_cannot_be_linker_sources() -> Result<()> {
             .finish(b"{}")
             .unwrap_err();
         assert!(
-            format!("{error:#}").contains("Generated or ignored Web paths"),
+            diagnostic(&error).contains("Generated or ignored Web paths"),
             "{generated}: {error:#}"
         );
     }
@@ -887,7 +985,7 @@ fn oversized_public_output_fails_before_reading_later_files() -> Result<()> {
     assert!(
         error
             .to_string()
-            .contains("Asset a.txt exceeds 524288-byte budget")
+            .contains("asset a.txt exceeds 524288-byte budget")
     );
     assert!(!linker.outputs.contains_key("a.txt"));
     assert!(linker.outputs.is_empty());

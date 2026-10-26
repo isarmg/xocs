@@ -1,4 +1,5 @@
 use super::*;
+use anyhow::Result;
 
 #[test]
 fn compiled_builder_binds_every_source_file() -> Result<()> {
@@ -169,7 +170,7 @@ fn a_competing_producer_cannot_enter_build_or_replace_an_owned_pair() -> Result<
         let owner = BuildLock::acquire(&product)?;
         entered.send(())?;
         resumed.recv()?;
-        replace_pair(
+        Ok(replace_pair(
             &owner,
             &product.join("pkg"),
             &product.join("stage-pkg"),
@@ -177,7 +178,7 @@ fn a_competing_producer_cannot_enter_build_or_replace_an_owned_pair() -> Result<
             &product.join("stage-dist"),
             &product.join("backups"),
             None,
-        )
+        )?)
     });
     ready.recv_timeout(std::time::Duration::from_secs(5))?;
     let options = Options {
@@ -187,7 +188,10 @@ fn a_competing_producer_cannot_enter_build_or_replace_an_owned_pair() -> Result<
         dist: None,
     };
     let competing = build(&options).unwrap_err();
-    assert!(competing.is::<BuildBusy>(), "{competing:#}");
+    assert!(matches!(
+        competing,
+        BuildError::Lock(LockError::Busy { .. })
+    ));
     for output in ["pkg", "dist"] {
         assert_eq!(
             fs::read_to_string(root.join(output).join("contents"))?,
@@ -247,5 +251,41 @@ fn unsafe_lock_files_are_rejected_without_repair_or_mutation() -> Result<()> {
     assert!(BuildLock::acquire(repository.path()).is_err());
     assert_eq!(fs::metadata(&lock)?.nlink(), 2);
     assert_eq!(fs::read(external.path())?, b"unrelated bytes");
+    Ok(())
+}
+
+#[test]
+fn library_failures_keep_the_public_thread_safe_error_contract() {
+    fn error_type<T: std::error::Error + Send + Sync + 'static>() {}
+    error_type::<BuildError>();
+    error_type::<LockError>();
+    error_type::<DistributionError>();
+    error_type::<PublishError>();
+    error_type::<BrowserModuleError>();
+    error_type::<ProcessError>();
+    error_type::<assets::AssetError>();
+    error_type::<javascript::JavaScriptError>();
+    error_type::<inventory::InventoryError>();
+    error_type::<graph::GraphError>();
+    error_type::<dev::DevError>();
+    error_type::<dev::ProxyError>();
+    error_type::<server_build::NativeBuildError>();
+}
+
+#[test]
+fn non_unicode_distribution_is_rejected_before_artifact_publication() -> Result<()> {
+    use std::os::unix::ffi::OsStringExt;
+    let root = tempfile::tempdir()?;
+    let output = root.path().join(std::ffi::OsString::from_vec(vec![0xff]));
+    let options = Options {
+        root: root.path().to_owned(),
+        offline: true,
+        debug: false,
+        dist: Some(output.clone()),
+    };
+    assert!(
+        matches!(distribution(&options), Err(DistributionError::NonUnicodeOutput(path)) if path == output)
+    );
+    assert!(!output.exists());
     Ok(())
 }

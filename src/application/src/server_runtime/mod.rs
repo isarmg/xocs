@@ -13,6 +13,7 @@ pub use shutdown::{
 pub use tasks::{TrackedTasks, WorkClosed, WorkScope};
 pub use transport::{Http1Limits, HttpServer};
 
+use crate::contracts::RequestId;
 use async_trait::async_trait;
 use axum::{
     Json, Router,
@@ -506,19 +507,29 @@ impl ServerRuntimeBuilder {
     }
 }
 
-pub fn new_request_id() -> String {
+/// Generate a bounded correlation identifier for one request.
+/// Clock/counter bytes keep correlation available if the OS entropy source fails.
+pub fn new_request_id() -> RequestId {
     static FALLBACK_COUNTER: AtomicU64 = AtomicU64::new(1);
     let mut bytes = [0_u8; 16];
-    if getrandom::fill(&mut bytes).is_err() {
+    if let Err(error) = getrandom::fill(&mut bytes) {
+        tracing::warn!(%error, "using clock and counter for request correlation");
         let counter = FALLBACK_COUNTER.fetch_add(1, Ordering::Relaxed);
         let elapsed = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_nanos();
+            .unwrap_or_else(|error| error.duration())
+            .as_nanos()
+            .to_be_bytes();
         bytes[..8].copy_from_slice(&counter.to_be_bytes());
-        bytes[8..].copy_from_slice(&(elapsed as u64).to_be_bytes());
+        bytes[8..].copy_from_slice(&elapsed[8..]);
     }
-    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+    RequestId::new(
+        bytes
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect::<String>(),
+    )
+    .expect("invariant: 16 bytes encode to a valid 32-character request ID")
 }
 
 #[derive(Clone)]
@@ -575,9 +586,34 @@ async fn readiness(AxumState(state): AxumState<PlatformState>) -> Response {
         .into_response()
 }
 
-fn request_error(status: StatusCode, code: &'static str, request_id: &str) -> Response {
+#[derive(Clone, Copy)]
+enum RequestFailure {
+    InvalidId,
+    DuplicateId,
+    Internal,
+}
+
+impl RequestFailure {
+    fn status(self) -> StatusCode {
+        match self {
+            Self::InvalidId | Self::DuplicateId => StatusCode::BAD_REQUEST,
+            Self::Internal => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+
+    fn code(self) -> &'static str {
+        match self {
+            Self::InvalidId => "request.invalid_id",
+            Self::DuplicateId => "request.duplicate_id",
+            Self::Internal => "platform.internal",
+        }
+    }
+}
+
+fn request_error(failure: RequestFailure, request_id: &RequestId) -> Response {
+    let code = failure.code();
     let mut response = (
-        status,
+        failure.status(),
         Json(serde_json::json!({
             "code": code,
             "message": code.replace('.', " "),
@@ -587,9 +623,9 @@ fn request_error(status: StatusCode, code: &'static str, request_id: &str) -> Re
         })),
     )
         .into_response();
-    if let Ok(value) = HeaderValue::from_str(request_id) {
-        response.headers_mut().insert("x-request-id", value);
-    }
+    response
+        .headers_mut()
+        .insert("x-request-id", request_id_header(request_id));
     response.headers_mut().insert(
         axum::http::header::CACHE_CONTROL,
         HeaderValue::from_static("no-store, private, max-age=0"),
@@ -598,6 +634,11 @@ fn request_error(status: StatusCode, code: &'static str, request_id: &str) -> Re
         .extensions_mut()
         .insert(crate::admin_axum::BlogErrorResponse);
     response
+}
+
+fn request_id_header(request_id: &RequestId) -> HeaderValue {
+    HeaderValue::from_str(request_id.as_str())
+        .expect("invariant: a validated request ID is a valid ASCII header value")
 }
 
 pub fn request_service<S>(
@@ -623,61 +664,44 @@ where
 {
     use tower::ServiceExt;
     static HEADER: axum::http::HeaderName = axum::http::HeaderName::from_static("x-request-id");
-    let request_id = match request
-        .headers()
-        .get_all(&HEADER)
-        .iter()
-        .collect::<Vec<_>>()
-        .as_slice()
-    {
-        [] => new_request_id(),
-        [value] => match value.to_str() {
-            Ok(value) if crate::contracts::RequestId::new(value).is_ok() => value.to_owned(),
-            _ => {
-                return request_error(
-                    StatusCode::BAD_REQUEST,
-                    "request.invalid_id",
-                    &new_request_id(),
-                );
+    let request_id = {
+        let values = request.headers().get_all(&HEADER);
+        let mut values = values.iter();
+        match values.next() {
+            None => new_request_id(),
+            Some(value) => {
+                if values.next().is_some() {
+                    return request_error(RequestFailure::DuplicateId, &new_request_id());
+                }
+                let Ok(value) = value.to_str() else {
+                    return request_error(RequestFailure::InvalidId, &new_request_id());
+                };
+                match RequestId::new(value) {
+                    Ok(id) => id,
+                    Err(_) => return request_error(RequestFailure::InvalidId, &new_request_id()),
+                }
             }
-        },
-        _ => {
-            return request_error(
-                StatusCode::BAD_REQUEST,
-                "request.duplicate_id",
-                &new_request_id(),
-            );
         }
     };
     request.extensions_mut().insert(request_id.clone());
-    request.extensions_mut().insert(
-        crate::contracts::RequestId::new(request_id.clone()).expect("validated request ID"),
-    );
-    if let Ok(value) = HeaderValue::from_str(&request_id) {
-        request.headers_mut().insert(HEADER.clone(), value);
-    }
+    let header = request_id_header(&request_id);
+    request.headers_mut().insert(HEADER.clone(), header.clone());
     let mut response = match std::panic::AssertUnwindSafe(inner.oneshot(request))
         .catch_unwind()
         .await
     {
         Ok(Ok(response)) => response,
         Ok(Err(never)) => match never {},
-        Err(_) => request_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "platform.internal",
-            &request_id,
-        ),
+        Err(_) => request_error(RequestFailure::Internal, &request_id),
     };
     response = correlate_error_response(response, &request_id).await;
-    if let Ok(value) = HeaderValue::from_str(&request_id) {
-        response.headers_mut().insert(HEADER.clone(), value);
-    }
+    response.headers_mut().insert(HEADER.clone(), header);
     response
 }
 
 /// Correlation of flat JSON errors is bounded even when a product accidentally
 /// returns a streaming error. Success/download bodies never enter this path.
-async fn correlate_error_response(response: Response, request_id: &str) -> Response {
+async fn correlate_error_response(response: Response, request_id: &RequestId) -> Response {
     use axum::http::header;
     const MAX_ERROR_BYTES: usize = 16 * 1024;
     if !(response.status().is_client_error() || response.status().is_server_error())
@@ -704,32 +728,23 @@ async fn correlate_error_response(response: Response, request_id: &str) -> Respo
     .await
     {
         Ok(Ok(bytes)) => bytes,
-        _ => {
-            return request_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "platform.internal",
-                request_id,
-            );
+        Ok(Err(error)) => {
+            tracing::error!(%error, %request_id, "could not read a JSON error response");
+            return request_error(RequestFailure::Internal, request_id);
+        }
+        Err(error) => {
+            tracing::error!(%error, %request_id, "reading a JSON error response timed out");
+            return request_error(RequestFailure::Internal, request_id);
         }
     };
     let Ok(mut error) = serde_json::from_slice::<crate::contracts::ErrorEnvelope>(&bytes) else {
         return Response::from_parts(parts, axum::body::Body::from(bytes));
     };
-    error.request_id =
-        Some(crate::contracts::RequestId::new(request_id).expect("validated request ID"));
-    let Ok(bytes) = serde_json::to_vec(&error) else {
-        return request_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "platform.internal",
-            request_id,
-        );
-    };
+    error.request_id = Some(request_id.clone());
+    let bytes = serde_json::to_vec(&error)
+        .expect("invariant: an error envelope contains only JSON-serializable values");
     if bytes.len() > MAX_ERROR_BYTES {
-        return request_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "platform.internal",
-            request_id,
-        );
+        return request_error(RequestFailure::Internal, request_id);
     }
     parts.headers.remove(header::CONTENT_LENGTH);
     parts
@@ -741,25 +756,6 @@ async fn correlate_error_response(response: Response, request_id: &str) -> Respo
 pub fn install_panic_hook() {
     // Panic payloads may include credentials, file names, or request contents.
     std::panic::set_hook(Box::new(|_| eprintln!("runtime panic; task terminated")));
-}
-
-pub async fn shutdown_signal() {
-    #[cfg(unix)]
-    {
-        use tokio::signal::unix::{SignalKind, signal};
-        match signal(SignalKind::terminate()) {
-            Ok(mut terminate) => {
-                tokio::select! { _ = tokio::signal::ctrl_c() => {}, _ = terminate.recv() => {} }
-            }
-            Err(_) => {
-                let _ = tokio::signal::ctrl_c().await;
-            }
-        }
-    }
-    #[cfg(not(unix))]
-    {
-        let _ = tokio::signal::ctrl_c().await;
-    }
 }
 
 #[derive(Debug, thiserror::Error)]

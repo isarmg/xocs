@@ -21,6 +21,7 @@
 | [界面样式](interface-design.md) | 后台几何、连续圆角与公开页边界 |
 | [开发说明](development.md) | 工具链、离线构建、开发服务、测试和打包 |
 | [Rust 编码规范](../AGENTS.md) | 信任边界、领域类型、不变量与错误处理 |
+| [完整编码方案](../RUST_CODING_RULES.md) | 类型设计、错误、持久化、并发、测试与项目适配 |
 | [测试目录](../test/README.md) | 测试分层、私有单元测试接线和验证命令 |
 | [浏览器测试](browser-testing.md) | Node/Playwright 环境、测试入口与覆盖范围 |
 | [源码布局与校验](source-layout.md) | 本地依赖解析、源码摘要、来源和许可材料 |

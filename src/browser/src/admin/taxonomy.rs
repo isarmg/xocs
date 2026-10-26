@@ -4,8 +4,18 @@ use blog_interface::components::notify;
 use blog_interface::prelude::*;
 use serde_json::{Value, json};
 
+#[derive(Clone, Copy)]
+pub(super) enum TaxonomyKind {
+    Categories,
+    Labels,
+}
+
 #[component]
-pub(super) fn Taxonomy(labels: bool) -> impl IntoView {
+pub(super) fn Taxonomy(kind: TaxonomyKind) -> impl IntoView {
+    let labels = match kind {
+        TaxonomyKind::Categories => false,
+        TaxonomyKind::Labels => true,
+    };
     let endpoint = if labels {
         "/api/v1/content/labels"
     } else {

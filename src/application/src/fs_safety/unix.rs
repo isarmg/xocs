@@ -188,8 +188,7 @@ pub(super) fn files(
         }
         use std::os::unix::ffi::OsStrExt;
         let name = EntryName::new(OsStr::from_bytes(name.to_bytes()))?;
-        let file = open_regular(directory, &name)?;
-        let bytes = file.metadata()?.len();
+        let (_file, bytes) = open_regular(directory, &name)?;
         total_bytes = total_bytes
             .checked_add(bytes)
             .ok_or(Error::BudgetExceeded)?;
@@ -201,7 +200,7 @@ pub(super) fn files(
     Ok(result)
 }
 
-fn open_regular(directory: &PrivateDirectory, name: &EntryName) -> Result<File, Error> {
+fn open_regular(directory: &PrivateDirectory, name: &EntryName) -> Result<(File, u64), Error> {
     verify_administration(directory)?;
     let file = File::from(
         openat(
@@ -223,7 +222,11 @@ fn open_regular(directory: &PrivateDirectory, name: &EntryName) -> Result<File, 
     if (identity.st_dev, identity.st_ino) != (current.st_dev, current.st_ino) {
         return Err(Error::IdentityChanged(name.as_path().to_path_buf()));
     }
-    Ok(file)
+    let size = u64::try_from(identity.st_size).map_err(|source| Error::InvalidFileLength {
+        path: name.as_path().to_path_buf(),
+        source,
+    })?;
+    Ok((file, size))
 }
 
 pub(super) fn read_bounded(
@@ -231,8 +234,8 @@ pub(super) fn read_bounded(
     name: &EntryName,
     max_bytes: usize,
 ) -> Result<Vec<u8>, Error> {
-    let file = open_regular(directory, name)?;
-    if file.metadata()?.len() > max_bytes as u64 {
+    let (file, size) = open_regular(directory, name)?;
+    if size > max_bytes as u64 {
         return Err(Error::BudgetExceeded);
     }
     let mut bytes = Vec::new();
@@ -245,7 +248,7 @@ pub(super) fn read_bounded(
 }
 
 pub(super) fn remove_file(directory: &PrivateDirectory, name: &EntryName) -> Result<(), Error> {
-    let _file = open_regular(directory, name)?;
+    let (_file, _) = open_regular(directory, name)?;
     unlinkat(&directory.directory, name.as_os_str(), AtFlags::empty()).map_err(io::Error::from)?;
     directory.sync()
 }
@@ -284,7 +287,7 @@ pub(super) fn atomic_replace(
     destination: &RelativePath,
     bytes: &[u8],
 ) -> Result<(), Error> {
-    atomic_write(directory, destination, bytes, false)
+    atomic_write(directory, destination, bytes, WriteMode::Replace)
 }
 
 pub(super) fn atomic_create(
@@ -292,14 +295,24 @@ pub(super) fn atomic_create(
     destination: &EntryName,
     bytes: &[u8],
 ) -> Result<(), Error> {
-    atomic_write(directory, &destination.as_relative(), bytes, true)
+    atomic_write(
+        directory,
+        &destination.as_relative(),
+        bytes,
+        WriteMode::Create,
+    )
+}
+
+enum WriteMode {
+    Create,
+    Replace,
 }
 
 fn atomic_write(
     directory: &PrivateDirectory,
     destination: &RelativePath,
     bytes: &[u8],
-    create_only: bool,
+    mode: WriteMode,
 ) -> Result<(), Error> {
     let name = entry_name(destination)?;
     validate_destination(directory, name)?;
@@ -327,26 +340,17 @@ fn atomic_write(
         file.write_all(bytes)?;
         file.sync_all()?;
         validate_destination(directory, name)?;
-        if create_only {
-            no_clobber_publish(directory, &RelativePath::new(&temporary)?, destination)?;
-        } else {
-            renameat(
+        match mode {
+            WriteMode::Create => rename_no_clobber(directory, temporary.as_ref(), name)?,
+            WriteMode::Replace => renameat(
                 &directory.directory,
                 temporary.as_str(),
                 &directory.directory,
                 name,
             )
-            .map_err(io::Error::from)?;
+            .map_err(io::Error::from)?,
         }
-        let published = statat(&directory.directory, name, AtFlags::SYMLINK_NOFOLLOW)
-            .map_err(io::Error::from)?;
-        if (identity.st_dev, identity.st_ino) != (published.st_dev, published.st_ino) {
-            return Err(Error::IdentityChanged(destination.as_path().to_path_buf()));
-        }
-        directory
-            .directory
-            .sync_all()
-            .map_err(Error::PublishedDurabilityUnknown)
+        finish_publish(directory, name, &identity)
     })();
     result.map_err(|operation| cleanup_failed_write(directory, &temporary, operation))
 }
@@ -465,6 +469,15 @@ pub(super) fn no_clobber_publish(
     );
     let identity = regular_single_link(&file, Path::new(source))?;
     file.sync_all()?;
+    rename_no_clobber(directory, source, destination)?;
+    finish_publish(directory, destination, &identity)
+}
+
+fn rename_no_clobber(
+    directory: &PrivateDirectory,
+    source: &OsStr,
+    destination: &OsStr,
+) -> Result<(), Error> {
     #[cfg(target_os = "linux")]
     rustix::fs::renameat_with(
         &directory.directory,
@@ -497,6 +510,14 @@ pub(super) fn no_clobber_publish(
         unlinkat(&directory.directory, source, AtFlags::empty())
             .map_err(|error| Error::PublishedDurabilityUnknown(error.into()))?;
     }
+    Ok(())
+}
+
+fn finish_publish(
+    directory: &PrivateDirectory,
+    destination: &OsStr,
+    identity: &rustix::fs::Stat,
+) -> Result<(), Error> {
     let current = statat(&directory.directory, destination, AtFlags::SYMLINK_NOFOLLOW)
         .map_err(|error| Error::PublishedDurabilityUnknown(error.into()))?;
     if (identity.st_dev, identity.st_ino) != (current.st_dev, current.st_ino) {

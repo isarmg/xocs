@@ -1,5 +1,6 @@
+#![forbid(unsafe_code)]
 use anyhow::{Context, Result, bail};
-use std::{collections::BTreeMap, env, path::PathBuf};
+use std::{collections::BTreeMap, env, os::unix::ffi::OsStringExt, path::PathBuf};
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
@@ -43,10 +44,12 @@ async fn run_cli() -> Result<i32> {
 }
 
 fn run() -> Result<()> {
-    let mut args = env::args().skip(1);
-    let command = args.next().unwrap_or_else(|| "help".into());
+    let mut args = env::args_os().skip(1).map(|argument| {
+        String::from_utf8(argument.into_vec()).context("command-line arguments must be UTF-8")
+    });
+    let command = args.next().transpose()?.unwrap_or_else(|| "help".into());
     let mut values = BTreeMap::<String, Vec<String>>::new();
-    while let Some(key) = args.next() {
+    while let Some(key) = args.next().transpose()? {
         if matches!(
             key.as_str(),
             "--offline"
@@ -59,10 +62,11 @@ fn run() -> Result<()> {
         ) {
             values.entry(key).or_default();
         } else if key.starts_with("--") {
-            values.entry(key.clone()).or_default().push(
-                args.next()
-                    .with_context(|| format!("{key} requires a value"))?,
-            );
+            let value = args
+                .next()
+                .transpose()?
+                .with_context(|| format!("{key} requires a value"))?;
+            values.entry(key).or_default().push(value);
         } else {
             bail!("Unexpected argument {key:?}");
         }
@@ -95,8 +99,7 @@ fn run() -> Result<()> {
     }
     let value = |name: &str| values.get(name).and_then(|v| v.first()).cloned();
     let root = value("--product-root")
-        .map(PathBuf::from)
-        .unwrap_or(env::current_dir()?)
+        .map_or_else(env::current_dir, |path| Ok(PathBuf::from(path)))?
         .canonicalize()?;
     let options = blog_assets::Options {
         root,
@@ -114,13 +117,23 @@ fn run() -> Result<()> {
             let mode = value("--mode").unwrap_or_else(|| "development".into());
             let config = value("--config");
             let revision = value("--source-revision");
-            let output = blog_assets::server_build::build(
-                &options,
-                config.as_deref(),
-                &mode,
+            let selection = match (
                 values.contains_key("--web-only"),
                 values.contains_key("--rust-only"),
-                revision.as_deref(),
+            ) {
+                (true, false) => blog_assets::server_build::BuildSelection::Web,
+                (false, true) => blog_assets::server_build::BuildSelection::Rust,
+                (false, false) => blog_assets::server_build::BuildSelection::All,
+                (true, true) => bail!("--web-only and --rust-only are mutually exclusive"),
+            };
+            let output = blog_assets::server_build::build(
+                &options,
+                blog_assets::server_build::BuildRequest {
+                    config_path: config.as_deref(),
+                    mode: mode.parse()?,
+                    selection,
+                    requested_revision: revision.as_deref(),
+                },
             )?;
             println!("{}", output.display());
         }
@@ -131,7 +144,14 @@ fn run() -> Result<()> {
             blog_assets::server_build::verify(&binary, &dist, &receipt)?;
             println!("Verified {}", binary.display());
         }
-        "check" | "test" => blog_assets::cargo_action(&options, &command)?,
+        "check" | "test" => blog_assets::cargo_action(
+            &options,
+            if command == "check" {
+                blog_assets::CargoAction::Check
+            } else {
+                blog_assets::CargoAction::Test
+            },
+        )?,
         "source-stamp" => println!(
             "{}",
             serde_json::to_string(&blog_assets::server_build::source_stamp(&options.root)?)?
@@ -149,8 +169,16 @@ fn run() -> Result<()> {
                 options,
                 bind,
                 proxies,
-                command == "serve" && !values.contains_key("--no-watch"),
-                command == "preview" || values.contains_key("--skip-build"),
+                if command == "serve" && !values.contains_key("--no-watch") {
+                    blog_assets::dev::WatchMode::Enabled
+                } else {
+                    blog_assets::dev::WatchMode::Disabled
+                },
+                if command == "preview" || values.contains_key("--skip-build") {
+                    blog_assets::dev::InitialBuild::ExistingAssets
+                } else {
+                    blog_assets::dev::InitialBuild::Build
+                },
             ))?;
         }
         "help" | "--help" | "-h" => println!(

@@ -21,12 +21,18 @@ pub fn Public() -> impl IntoView {
     provide_context(site);
     match pathname().as_str() {
         "/" => home::Home().into_any(),
-        "/sort" => {
-            articles::Browse(articles::BrowseProps::builder().search(false).build()).into_any()
-        }
-        "/search" => {
-            articles::Browse(articles::BrowseProps::builder().search(true).build()).into_any()
-        }
+        "/sort" => articles::Browse(
+            articles::BrowseProps::builder()
+                .kind(articles::BrowseKind::Categories)
+                .build(),
+        )
+        .into_any(),
+        "/search" => articles::Browse(
+            articles::BrowseProps::builder()
+                .kind(articles::BrowseKind::Search)
+                .build(),
+        )
+        .into_any(),
         "/jotting" => journal::Journal().into_any(),
         "/menory" => journal::Journey().into_any(),
         "/message" => guestbook::Message().into_any(),

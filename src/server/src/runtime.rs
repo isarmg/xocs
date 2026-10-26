@@ -72,7 +72,7 @@ pub(crate) async fn run(root: &Path) -> Result<(), Error> {
             "database",
             blog_application::server_runtime::health_check(move || {
                 let pool = health_pool.clone();
-                async move { sqlx::query("SELECT 1").execute(&pool).await.is_ok() }
+                async move { crate::app::database_ready(&pool).await }
             }),
         )
         .build()

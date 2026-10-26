@@ -2,13 +2,15 @@
 
 在仓库根目录执行本文命令。源码职责见[架构](architecture.md)，依赖实现和本地参考资料见[依赖文档](dependencies/README.md)。
 
-修改 Rust 代码遵循根目录的[编码规范](../AGENTS.md)：在外部边界解析并验证输入，内部依赖类型和调用约定，保留错误来源，并在能做决策的最外层处理错误。
+修改 Rust 代码遵循根目录的[编码规范](../AGENTS.md)和[完整方案](../RUST_CODING_RULES.md)：在外部边界解析并验证输入，内部依赖类型和调用约定，保留错误来源，并在能做决策的最外层处理错误。
 
 ## 构建环境
 
 准备 Rust 1.99.0（含 rustfmt、Clippy）、`wasm32-unknown-unknown` 标准库、Python 3.11+ 以及 AMD64 Linux GNU/glibc 的 C 编译环境。原生目标为 `x86_64-unknown-linux-gnu`，浏览器目标为 `wasm32-unknown-unknown`；构建脚本会检查宿主和目标。
 
 所有 Rust 源码通过本仓库路径解析，共用根 workspace 和唯一 Cargo.lock。Cargo 默认离线。Rust 工具链、目标标准库和系统构建材料需由环境提供；完整边界见[源码组织与校验](source-layout.md)。
+
+开发构建使用 Cargo 默认的增量编译。磁盘受限的验证环境可设置 `CARGO_INCREMENTAL=0`；测试和发行构建使用各自的 profile。产品、应用、浏览器与组件门面继承 workspace 的 `unused_must_use`、`unnecessary_wraps` 和 unsafe 规则，构建器与界面库另外禁止 unsafe。DOM 基础实现保留其独立的 cfg 和 unsafe 边界，通过维护库与实际消费者验证。
 
 ```sh
 python3 src/tools/rust-sources/manage.py verify --metadata

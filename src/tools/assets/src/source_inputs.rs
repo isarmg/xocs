@@ -230,7 +230,7 @@ pub(crate) fn web_paths(web: &Path, subtree: &Path) -> io::Result<Vec<PathBuf>> 
         web_relative(
             subtree
                 .strip_prefix(web)
-                .map_err(|_| invalid("Web input subtree escapes source root"))?,
+                .map_err(|source| io::Error::new(io::ErrorKind::InvalidData, source))?,
             false,
         )?;
     }
@@ -286,7 +286,11 @@ impl SnapshotFiles {
             return Ok(digest.clone());
         }
         self.read(path)?;
-        Ok(self.hashes[path].clone())
+        Ok(self
+            .hashes
+            .get(path)
+            .expect("invariant: reading a source records its digest")
+            .clone())
     }
 
     pub(crate) fn files(&mut self, root: &Path) -> io::Result<Files> {
@@ -299,7 +303,7 @@ impl SnapshotFiles {
             .map(|path| {
                 let name = relative(
                     path.strip_prefix(repository)
-                        .map_err(|_| invalid("Source path escapes repository"))?,
+                        .map_err(|source| io::Error::new(io::ErrorKind::InvalidData, source))?,
                 )?;
                 Ok((name, self.hash(&path)?))
             })

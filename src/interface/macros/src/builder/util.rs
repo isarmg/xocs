@@ -320,14 +320,11 @@ fn get_token_stream_up_to_cursor(
     input: syn::parse::ParseStream,
     cursor: syn::buffer::Cursor,
 ) -> syn::Result<TokenStream> {
-    Ok(core::iter::from_fn(|| {
-        if input.cursor() < cursor {
-            input.parse::<TokenTree>().ok()
-        } else {
-            None
-        }
-    })
-    .collect())
+    let mut tokens = TokenStream::new();
+    while input.cursor() < cursor {
+        input.parse::<TokenTree>()?.to_tokens(&mut tokens);
+    }
+    Ok(tokens)
 }
 
 impl Parse for AttrArg {
@@ -439,3 +436,7 @@ pub fn phantom_data_for_generics(generics: &syn::Generics) -> proc_macro2::Token
     });
     quote!(::core::marker::PhantomData<(#( ::core::marker::PhantomData<#phantom_generics> ),*)>)
 }
+
+#[cfg(test)]
+#[path = "../../../../../test/interface/macros/unit/builder/util_tests.rs"]
+mod tests;

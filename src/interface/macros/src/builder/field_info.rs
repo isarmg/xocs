@@ -155,13 +155,11 @@ impl<'a> FieldInfo<'a> {
     pub fn gen_next_field_default_trait_impl(
         &self,
         struct_info: &StructInfo,
-    ) -> syn::Result<Option<TokenStream>> {
+    ) -> Option<TokenStream> {
         if self.builder_attr.setter.skip.is_some() {
-            return Ok(None);
+            return None;
         }
-        let Some(default_expr) = self.builder_attr.default.as_ref() else {
-            return Ok(None);
-        };
+        let default_expr = self.builder_attr.default.as_ref()?;
 
         let crate_module_path = &struct_info.builder_attr.crate_module_path;
         let struct_name = struct_info.name;
@@ -196,7 +194,7 @@ impl<'a> FieldInfo<'a> {
                 where_clause
             };
 
-        Ok(Some(quote! {
+        Some(quote! {
             #[allow(clippy::ref_option_ref)]
             #[automatically_derived]
             impl #impl_generics #crate_module_path::NextFieldDefault<(#(#dep_types,)* (#field_type,),)> for #struct_name #ty_generics #where_clause {
@@ -216,7 +214,7 @@ impl<'a> FieldInfo<'a> {
                     #default_expr
                 }
             }
-        }))
+        })
     }
 }
 

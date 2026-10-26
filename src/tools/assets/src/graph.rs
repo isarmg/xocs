@@ -1,79 +1,164 @@
-//! Verify integrated sources and Cargo's conservative resolution graph.
-//! Metadata may include features from conditional edges that the current host
-//! compilation does not activate. This policy guard is not a compiled-unit
-//! inventory; host proc-macros are never counted as browser WASM code.
+//! Accept Cargo's external metadata once, then apply the browser source policy.
+//! Runtime receipts contain target normal dependencies and exclude host macros.
 use crate::{Options, inventory, layout, process};
-use anyhow::{Context, Result, ensure};
+use serde::Deserialize;
 use serde_json::{Value, json};
 use std::{
     collections::{BTreeMap, BTreeSet},
-    path::Path,
+    path::{Path, PathBuf},
     process::Command,
 };
 
-pub fn browser_package(root: &Path) -> Result<String> {
-    let manifest: toml::Value = toml::from_str(&String::from_utf8(inventory::read(
-        &root.join(layout::BROWSER).join("Cargo.toml"),
-    )?)?)?;
-    Ok(manifest["package"]["name"]
-        .as_str()
-        .context("Browser package name")?
-        .to_owned())
+mod error;
+pub use error::GraphError;
+
+type Result<T> = std::result::Result<T, GraphError>;
+
+// Cargo owns the complete schema; this projection borrows only fields used by the policy.
+#[derive(Debug, Deserialize)]
+struct Metadata<'a> {
+    #[serde(borrow)]
+    packages: Vec<Package<'a>>,
+    #[serde(borrow)]
+    resolve: Resolve<'a>,
 }
 
-fn browser_root<'a>(metadata: &'a Value, frontend: &Path) -> Result<&'a Value> {
-    let manifest = frontend.join("Cargo.toml");
-    inventory::physical(&manifest)?;
-    let expected = manifest.canonicalize()?;
-    let mut found = None;
-    for package in metadata["packages"].as_array().context("Cargo packages")? {
-        if package["source"].is_null() {
-            let path = package["manifest_path"]
-                .as_str()
-                .context("Cargo manifest")?;
-            if Path::new(path).canonicalize()? == expected {
-                ensure!(
-                    found.is_none(),
-                    "Workspace must contain exactly one browser manifest"
-                );
-                found = Some(package);
-            }
+#[derive(Debug, Deserialize)]
+struct Package<'a> {
+    id: &'a str,
+    name: &'a str,
+    version: &'a str,
+    source: Option<&'a str>,
+    manifest_path: &'a str,
+    #[serde(borrow)]
+    targets: Vec<Target<'a>>,
+}
+
+impl Package<'_> {
+    fn host_macro(&self) -> bool {
+        self.targets
+            .iter()
+            .any(|target| target.kind.contains(&"proc-macro"))
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct Target<'a> {
+    #[serde(borrow)]
+    kind: Vec<&'a str>,
+    src_path: &'a str,
+}
+
+#[derive(Debug, Deserialize)]
+struct Resolve<'a> {
+    #[serde(borrow)]
+    nodes: Vec<Node<'a>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Node<'a> {
+    id: &'a str,
+    #[serde(borrow)]
+    dependencies: Vec<&'a str>,
+    #[serde(borrow)]
+    features: Vec<&'a str>,
+    #[serde(borrow)]
+    deps: Vec<Dependency<'a>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Dependency<'a> {
+    pkg: &'a str,
+    dep_kinds: Vec<DependencyUsage>,
+}
+
+#[derive(Debug, Deserialize)]
+struct DependencyUsage {
+    kind: Option<DependencyKind>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum DependencyKind {
+    Dev,
+    Build,
+}
+
+fn metadata(value: &Value) -> Result<Metadata<'_>> {
+    let metadata = Metadata::deserialize(value).map_err(GraphError::Metadata)?;
+    if metadata.packages.len() > 4096 {
+        return Err(GraphError::PackageBudget);
+    }
+    let mut ids = BTreeSet::new();
+    for package in &metadata.packages {
+        if !ids.insert(package.id) {
+            return Err(GraphError::DuplicateId(package.id.into()));
         }
     }
-    found.context("Workspace must contain exactly one browser manifest")
+    ids.clear();
+    for node in &metadata.resolve.nodes {
+        if !ids.insert(node.id) {
+            return Err(GraphError::DuplicateId(node.id.into()));
+        }
+    }
+    Ok(metadata)
 }
 
-fn local_manifest<'a>(package: &'a Value, repository: &Path) -> Result<&'a Path> {
-    ensure!(
-        package["source"].is_null(),
-        "Every Rust package must be integrated as a local path: {}",
-        package["name"]
-    );
-    let manifest = Path::new(
-        package["manifest_path"]
-            .as_str()
-            .context("Cargo manifest")?,
-    );
+fn canonicalize(path: &Path) -> Result<PathBuf> {
+    path.canonicalize()
+        .map_err(|source| GraphError::Canonicalize {
+            path: path.to_owned(),
+            source,
+        })
+}
+
+pub fn browser_package(root: &Path) -> Result<String> {
+    let manifest = inventory::manifest(&root.join(layout::BROWSER).join("Cargo.toml"))?;
+    manifest
+        .get("package")
+        .and_then(|package| package.get("name"))
+        .and_then(toml::Value::as_str)
+        .map(str::to_owned)
+        .ok_or(GraphError::BrowserPackageName)
+}
+
+fn browser_root<'m, 'v>(metadata: &'m Metadata<'v>, frontend: &Path) -> Result<&'m Package<'v>> {
+    let manifest = frontend.join("Cargo.toml");
+    inventory::physical(&manifest)?;
+    let expected = canonicalize(&manifest)?;
+    let mut found = None;
+    for package in &metadata.packages {
+        if package.source.is_none() && canonicalize(Path::new(package.manifest_path))? == expected {
+            if found.is_some() {
+                return Err(GraphError::BrowserManifest);
+            }
+            found = Some(package);
+        }
+    }
+    found.ok_or(GraphError::BrowserManifest)
+}
+
+fn local_manifest<'a>(package: &'a Package<'_>, repository: &Path) -> Result<&'a Path> {
+    if package.source.is_some() {
+        return Err(GraphError::NonLocalPackage(package.name.into()));
+    }
+    let manifest = Path::new(package.manifest_path);
     inventory::physical(manifest)?;
-    ensure!(
-        manifest.canonicalize()?.starts_with(repository),
-        "Rust manifest escapes repository"
-    );
-    for target in package["targets"].as_array().context("Cargo targets")? {
-        let source = Path::new(target["src_path"].as_str().context("Cargo target source")?);
+    if !canonicalize(manifest)?.starts_with(repository) {
+        return Err(GraphError::ManifestOutsideRepository);
+    }
+    for target in &package.targets {
+        let source = Path::new(target.src_path);
         inventory::physical(source)?;
-        ensure!(
-            source.canonicalize()?.starts_with(repository),
-            "Rust target source escapes repository"
-        );
+        if !canonicalize(source)?.starts_with(repository) {
+            return Err(GraphError::TargetOutsideRepository);
+        }
     }
     Ok(manifest)
 }
 
-/// Record Cargo's selected target runtime tree, excluding host macros and all
-/// build/dev edges. Portable identities can be independently rechecked by the
-/// release producer in a private source export.
-pub fn runtime(options: &Options, inputs: &Value) -> Result<Value> {
+/// Record target normal dependencies, excluding host macros and build/dev edges.
+pub(crate) fn runtime(options: &Options, inputs: &Value) -> Result<Value> {
     let frontend = options.root.join(layout::BROWSER);
     let manifest = options.root.join("Cargo.toml");
     let package = browser_package(&options.root)?;
@@ -86,19 +171,22 @@ pub fn runtime(options: &Options, inputs: &Value) -> Result<Value> {
             .arg(&manifest)
             .args(["--locked", "--offline"])
             .current_dir(&options.root);
-        Ok(process::run(
+        process::run(
             &mut command,
             process::Policy::query(32 * 1024 * 1024),
             "Query browser runtime Cargo graph",
-        )?)
+        )
+        .map_err(GraphError::Command)
     };
-    let metadata: Value = serde_json::from_slice(&run(&[
+    let value: Value = serde_json::from_slice(&run(&[
         "metadata",
         "--format-version",
         "1",
         "--filter-platform",
         crate::TARGET,
-    ])?)?;
+    ])?)
+    .map_err(GraphError::Metadata)?;
+    let metadata = metadata(&value)?;
     let tree = String::from_utf8(run(&[
         "tree",
         "--package",
@@ -114,153 +202,136 @@ pub fn runtime(options: &Options, inputs: &Value) -> Result<Value> {
         "\t{p}",
         "--color",
         "never",
-    ])?)?;
+    ])?)
+    .map_err(GraphError::TreeEncoding)?;
     let graph = runtime_selection(&metadata, &tree, &frontend)?;
     let mut source_inputs = BTreeMap::<String, String>::new();
-    let mut append = |prefix: &str, values: &Value| -> Result<()> {
-        for (name, digest) in values.as_object().context("Rust source input inventory")? {
-            let name = format!("{prefix}{name}");
-            inventory::relative(Path::new(&name))?;
+    let mut append = |prefix: &str, values: &Value| {
+        for (name, digest) in values
+            .as_object()
+            .expect("invariant: source snapshot inventories are JSON objects")
+        {
             source_inputs.insert(
-                name,
-                digest.as_str().context("Rust source input hash")?.into(),
+                format!("{prefix}{name}"),
+                digest
+                    .as_str()
+                    .expect("invariant: source snapshot hashes are strings")
+                    .into(),
             );
         }
-        Ok(())
     };
-    append(&format!("{}/", layout::BROWSER), &inputs["browser_inputs"])?;
+    append(&format!("{}/", layout::BROWSER), &inputs["browser_inputs"]);
     for (directory, files) in inputs["patched_inputs"]
         .as_object()
-        .context("Local Rust dependencies")?
+        .expect("invariant: source snapshot contains local dependencies")
     {
-        append(&format!("{directory}/"), files)?;
+        append(&format!("{directory}/"), files);
     }
     for name in ["workspace_inputs", "foundation_inputs"] {
-        if inputs.get(name).is_some() {
-            append("", &inputs[name])?;
+        if let Some(values) = inputs.get(name) {
+            append("", values);
         }
     }
     Ok(
-        json!({"target":crate::TARGET,"mode":"csr","package":browser_root(&metadata,&frontend)?["name"],
+        json!({"target":crate::TARGET,"mode":"csr","package":browser_root(&metadata,&frontend)?.name,
         "manifest":format!("{}/Cargo.toml",layout::BROWSER),"default_features":true,"features":[],"profile":if options.debug {"debug"} else {"web-release"},"toolchain":{"rust":crate::RUST,"wasm_bindgen":crate::BRIDGE_ABI},
         "lockfile":"Cargo.lock","lock_sha256":inventory::sha(&inventory::read(&options.root.join("Cargo.lock"))?),"source_inputs":source_inputs,"graph":graph}),
     )
 }
 
-fn runtime_selection(metadata: &Value, tree: &str, frontend: &Path) -> Result<Value> {
-    let repository = frontend
-        .ancestors()
-        .nth(Path::new(layout::BROWSER).components().count())
-        .context("Repository directory")?
-        .canonicalize()?;
+fn runtime_selection(metadata: &Metadata<'_>, tree: &str, frontend: &Path) -> Result<Value> {
+    let repository = canonicalize(
+        frontend
+            .ancestors()
+            .nth(Path::new(layout::BROWSER).components().count())
+            .ok_or(GraphError::RepositoryLayout)?,
+    )?;
     let browser = browser_root(metadata, frontend)?;
-    let packages = metadata["packages"]
-        .as_array()
-        .context("Cargo metadata packages")?;
-    ensure!(
-        packages.len() <= 4096,
-        "Cargo runtime package count exceeds bound"
-    );
-    let mut selected = BTreeMap::<String, (&Value, BTreeSet<String>)>::new();
+    let nodes: BTreeMap<_, _> = metadata
+        .resolve
+        .nodes
+        .iter()
+        .map(|node| (node.id, node))
+        .collect();
+    let mut selected = BTreeMap::<String, (&Package<'_>, BTreeSet<String>)>::new();
     let mut stack = Vec::<String>::new();
     let mut root = None;
     for (number, line) in tree.lines().enumerate() {
-        ensure!(number < 200000, "Cargo runtime tree exceeds line bound");
-        let (depth, display) = line.split_once('\t').context("Cargo runtime tree depth")?;
-        let depth: usize = depth.parse()?;
-        ensure!(
-            depth <= 256 && depth <= stack.len() && (number == 0 || depth > 0),
-            "Cargo runtime tree depth changed"
-        );
-        let matches = packages
+        if number >= 200000 {
+            return Err(GraphError::TreeBudget);
+        }
+        let (depth, display) = line.split_once('\t').ok_or(GraphError::MissingTreeDepth)?;
+        let depth: usize = depth.parse().map_err(GraphError::TreeDepth)?;
+        if depth > 256 || depth > stack.len() || (number != 0 && depth == 0) {
+            return Err(GraphError::InvalidTreeDepth);
+        }
+        let matches = metadata
+            .packages
             .iter()
-            .filter(|p| {
-                let prefix = format!(
-                    "{} v{}",
-                    p["name"].as_str().unwrap_or(""),
-                    p["version"].as_str().unwrap_or("")
-                );
-                if p["source"].is_null() {
-                    Path::new(p["manifest_path"].as_str().unwrap_or(""))
+            .filter(|package| {
+                let prefix = format!("{} v{}", package.name, package.version);
+                match package.source {
+                    None => Path::new(package.manifest_path)
                         .parent()
-                        .is_some_and(|path| display == format!("{prefix} ({})", path.display()))
-                } else if p["source"] == "registry+https://github.com/rust-lang/crates.io-index" {
-                    display == prefix
-                } else if let Some(source) =
-                    p["source"].as_str().and_then(|s| s.strip_prefix("git+"))
-                {
-                    source.rsplit_once('#').is_some_and(|(url, revision)| {
-                        display
-                            .strip_prefix(&format!("{prefix} ({url}#"))
-                            .and_then(|s| s.strip_suffix(')'))
-                            .is_some_and(|short| short.len() >= 7 && revision.starts_with(short))
-                    })
-                } else {
-                    false
+                        .is_some_and(|path| display == format!("{prefix} ({})", path.display())),
+                    Some("registry+https://github.com/rust-lang/crates.io-index") => {
+                        display == prefix
+                    }
+                    Some(source) => source
+                        .strip_prefix("git+")
+                        .and_then(|source| source.rsplit_once('#'))
+                        .is_some_and(|(url, revision)| {
+                            display
+                                .strip_prefix(&format!("{prefix} ({url}#"))
+                                .and_then(|display| display.strip_suffix(')'))
+                                .is_some_and(|short| {
+                                    short.len() >= 7 && revision.starts_with(short)
+                                })
+                        }),
                 }
             })
             .collect::<Vec<_>>();
-        ensure!(
-            matches.len() == 1,
-            "Cargo runtime tree source is ambiguous: {display}"
-        );
-        let package = matches[0];
-        ensure!(
-            !package["targets"]
-                .as_array()
-                .context("Cargo package targets")?
-                .iter()
-                .any(|t| t["kind"]
-                    .as_array()
-                    .is_some_and(|k| k.iter().any(|k| k == "proc-macro"))),
-            "Host macro was selected as browser runtime"
-        );
+        let [package] = matches.as_slice() else {
+            return Err(GraphError::AmbiguousTreeSource(display.into()));
+        };
+        if package.host_macro() {
+            return Err(GraphError::HostMacroSelected);
+        }
         let manifest = local_manifest(package, &repository)?;
         let origin = format!(
             "path:{}",
-            inventory::relative(manifest.strip_prefix(&repository)?)?
+            inventory::relative(
+                manifest
+                    .strip_prefix(&repository)
+                    .expect("invariant: local manifest remains inside repository")
+            )?
         );
-        let id = format!(
-            "{}@{} {origin}",
-            package["name"].as_str().context("Cargo name")?,
-            package["version"].as_str().context("Cargo version")?
-        );
+        let id = format!("{}@{} {origin}", package.name, package.version);
         if number == 0 {
-            ensure!(
-                package["id"] == browser["id"],
-                "Cargo runtime tree has another root"
-            );
+            if package.id != browser.id {
+                return Err(GraphError::RuntimeRoot);
+            }
             root = Some(id.clone());
         }
         if depth > 0 {
             let parent = &stack[depth - 1];
-            ensure!(
-                !stack[..depth].contains(&id),
-                "Cargo runtime dependency cycle"
-            );
+            if stack[..depth].contains(&id) {
+                return Err(GraphError::RuntimeCycle);
+            }
             let parent_package = selected[parent].0;
-            let node = metadata["resolve"]["nodes"]
-                .as_array()
-                .context("Cargo nodes")?
-                .iter()
-                .find(|n| n["id"] == parent_package["id"])
-                .context("Cargo runtime parent")?;
-            ensure!(
-                node["deps"]
-                    .as_array()
-                    .context("Cargo dependency edges")?
-                    .iter()
-                    .any(|d| {
-                        d["pkg"] == package["id"]
-                            && d["dep_kinds"].as_array().is_some_and(|k| {
-                                k.is_empty() || k.iter().any(|k| k["kind"].is_null())
-                            })
-                    }),
-                "Cargo runtime tree edge differs from normal metadata"
-            );
+            let node = nodes
+                .get(parent_package.id)
+                .ok_or_else(|| GraphError::MissingRuntimeNode(parent_package.id.into()))?;
+            if !node.deps.iter().any(|dependency| {
+                dependency.pkg == package.id
+                    && (dependency.dep_kinds.is_empty()
+                        || dependency.dep_kinds.iter().any(|kind| kind.kind.is_none()))
+            }) {
+                return Err(GraphError::RuntimeEdge);
+            }
             selected
                 .get_mut(parent)
-                .context("Cargo runtime parent missing")?
+                .expect("invariant: the parent stack references a selected package")
                 .1
                 .insert(id.clone());
         }
@@ -270,22 +341,23 @@ fn runtime_selection(metadata: &Value, tree: &str, frontend: &Path) -> Result<Va
         stack.truncate(depth);
         stack.push(id);
     }
-    let lock: toml::Value = toml::from_str(&String::from_utf8(inventory::read(
-        &repository.join("Cargo.lock"),
-    )?)?)?;
-    let lock_packages = lock["package"].as_array().context("Cargo lock packages")?;
-    let records = selected.into_iter().map(|(id, (p, dependencies))| -> Result<Value> {
-        let manifest = inventory::relative(local_manifest(p, &repository)?.strip_prefix(&repository)?)?;
-        ensure!(lock_packages.iter().any(|entry| entry["name"].as_str() == p["name"].as_str()
-            && entry["version"].as_str() == p["version"].as_str() && entry.get("source").is_none()),
-            "Selected path package missing from root Cargo.lock");
-        Ok(json!({"id":id,"name":p["name"],"version":p["version"],"source":null,"manifest":manifest,"checksum":null,"dependencies":dependencies}))
+    let lock = inventory::manifest(&repository.join("Cargo.lock"))?;
+    let lock_packages = lock
+        .get("package")
+        .and_then(toml::Value::as_array)
+        .ok_or(GraphError::LockPackages)?;
+    let records = selected.into_iter().map(|(id, (package, dependencies))| -> Result<Value> {
+        let manifest = inventory::relative(local_manifest(package, &repository)?.strip_prefix(&repository).expect("invariant: local manifest remains inside repository"))?;
+        if !lock_packages.iter().any(|entry| entry.get("name").and_then(toml::Value::as_str) == Some(package.name) && entry.get("version").and_then(toml::Value::as_str) == Some(package.version) && entry.get("source").is_none()) {
+            return Err(GraphError::PackageMissingFromLock(package.name.into()));
+        }
+        Ok(json!({"id":id,"name":package.name,"version":package.version,"source":null,"manifest":manifest,"checksum":null,"dependencies":dependencies}))
     }).collect::<Result<Vec<_>>>()?;
-    Ok(json!({"root":root.context("Cargo runtime tree is empty")?,"packages":records}))
+    Ok(json!({"root":root.ok_or(GraphError::EmptyTree)?,"packages":records}))
 }
 
+/// Resolve the selected CSR dependencies through bounded, offline Cargo metadata.
 pub fn resolve(options: &Options) -> Result<Value> {
-    let frontend = options.root.join(layout::BROWSER);
     let mut command = Command::new("cargo");
     command
         .arg(format!("+{}", crate::RUST))
@@ -299,80 +371,69 @@ pub fn resolve(options: &Options) -> Result<Value> {
             "--manifest-path",
         ])
         .arg(options.root.join("Cargo.toml"))
-        .current_dir(&options.root);
-    command.arg("--offline");
+        .current_dir(&options.root)
+        .arg("--offline");
     let output = process::run(
         &mut command,
         process::Policy::query(32 * 1024 * 1024),
         "Inspect selected CSR dependency graph",
-    )?;
-    validate(&serde_json::from_slice(&output)?, &frontend)
+    )
+    .map_err(GraphError::Command)?;
+    let value: Value = serde_json::from_slice(&output).map_err(GraphError::Metadata)?;
+    validate(&value, &options.root.join(layout::BROWSER))
 }
 
-pub fn validate(metadata: &Value, frontend: &Path) -> Result<Value> {
-    let packages = metadata["packages"]
-        .as_array()
-        .context("Cargo metadata packages")?;
-    let nodes = metadata["resolve"]["nodes"]
-        .as_array()
-        .context("Cargo metadata resolve nodes")?;
-    let by_id = packages
+/// Validate an external Cargo metadata value against the integrated CSR policy.
+pub fn validate(value: &Value, frontend: &Path) -> Result<Value> {
+    let metadata = metadata(value)?;
+    let by_id: BTreeMap<_, _> = metadata
+        .packages
         .iter()
-        .map(|p| Ok((p["id"].as_str().context("Cargo package id")?, p)))
-        .collect::<Result<BTreeMap<_, _>>>()?;
-    let root = browser_root(metadata, frontend)?["id"]
-        .as_str()
-        .context("Browser package id")?;
-    let node_ids = nodes
+        .map(|package| (package.id, package))
+        .collect();
+    let nodes: BTreeMap<_, _> = metadata
+        .resolve
+        .nodes
         .iter()
-        .map(|p| Ok((p["id"].as_str().context("Cargo node id")?, p)))
-        .collect::<Result<BTreeMap<_, _>>>()?;
+        .map(|node| (node.id, node))
+        .collect();
+    let root = browser_root(&metadata, frontend)?.id;
     let mut reachable = BTreeSet::new();
     let mut pending = vec![root];
     while let Some(id) = pending.pop() {
         if !reachable.insert(id) {
             continue;
         }
-        let node = node_ids
+        let node = nodes
             .get(id)
-            .context("Missing resolved dependency node")?;
-        for dependency in node["dependencies"]
-            .as_array()
-            .context("Dependency node edges")?
-        {
-            pending.push(dependency.as_str().context("Dependency id")?);
+            .ok_or_else(|| GraphError::MissingNode(id.into()))?;
+        pending.extend(node.dependencies.iter().copied());
+    }
+    let repository = canonicalize(
+        frontend
+            .ancestors()
+            .nth(Path::new(layout::BROWSER).components().count())
+            .ok_or(GraphError::RepositoryLayout)?,
+    )?;
+    let integrated = repository.join(layout::INTERFACE);
+    let mut facade = Vec::new();
+    for id in &reachable {
+        let package = by_id
+            .get(id)
+            .ok_or_else(|| GraphError::MissingPackage((*id).into()))?;
+        if package.name == "blog-interface" {
+            facade.push(*package);
         }
     }
-    let repository = frontend
-        .ancestors()
-        .nth(Path::new(layout::BROWSER).components().count())
-        .context("Repository directory")?
-        .canonicalize()?;
-    let integrated = repository.join(layout::INTERFACE);
-    let facade = reachable
-        .iter()
-        .filter_map(|id| {
-            by_id
-                .get(id)
-                .filter(|p| p["name"] == "blog-interface")
-                .copied()
-        })
-        .collect::<Vec<_>>();
-    ensure!(
-        facade.len() == 1,
-        "CSR requires exactly one integrated blog-interface facade"
-    );
-    ensure!(
-        facade[0]["source"].is_null()
-            && Path::new(
-                facade[0]["manifest_path"]
-                    .as_str()
-                    .context("Facade manifest")?
-            )
-            .canonicalize()?
-                == integrated.join("Cargo.toml").canonicalize()?,
-        "blog-interface must resolve to the integrated facade source"
-    );
+    let [facade] = facade.as_slice() else {
+        return Err(GraphError::FacadeCount);
+    };
+    if facade.source.is_some()
+        || canonicalize(Path::new(facade.manifest_path))?
+            != canonicalize(&integrated.join("Cargo.toml"))?
+    {
+        return Err(GraphError::FacadeSource);
+    }
     let mut selected = Vec::new();
     for (name, directory) in [("blog-dom", "dom"), ("blog-component-macros", "macros")] {
         let candidates = reachable
@@ -380,96 +441,74 @@ pub fn validate(metadata: &Value, frontend: &Path) -> Result<Value> {
             .filter_map(|id| {
                 by_id
                     .get(id)
-                    .filter(|p| p["name"] == name)
-                    .map(|p| (*id, *p))
+                    .filter(|package| package.name == name)
+                    .map(|package| (*id, *package))
             })
             .collect::<Vec<_>>();
-        ensure!(
-            candidates.len() == 1,
-            "CSR requires exactly one integrated {name}; found {}",
-            candidates.len()
-        );
-        let (id, package) = candidates[0];
+        let [(id, package)] = candidates.as_slice() else {
+            return Err(GraphError::IntegratedCount {
+                name,
+                actual: candidates.len(),
+            });
+        };
         let expected = integrated.join(directory).join("Cargo.toml");
-        let actual = Path::new(
-            package["manifest_path"]
-                .as_str()
-                .context("Selected package manifest")?,
-        );
-        ensure!(
-            package["source"].is_null() && actual.canonicalize()? == expected.canonicalize()?,
-            "{name} must resolve to the project-maintained CSR source"
-        );
-        let features = node_ids[id]["features"]
-            .as_array()
-            .context("Resolved package features")?
-            .iter()
-            .map(|v| v.as_str().context("Feature name"))
-            .collect::<Result<BTreeSet<_>>>()?;
+        let actual = Path::new(package.manifest_path);
+        if package.source.is_some() || canonicalize(actual)? != canonicalize(&expected)? {
+            return Err(GraphError::IntegratedSource(name));
+        }
+        let features: BTreeSet<_> = nodes[id].features.iter().copied().collect();
         let allowed = BTreeSet::from(["csr", "default"]);
-        ensure!(
-            features.contains("csr") && features.is_subset(&allowed),
-            "{name} only permits the supported csr feature; selected {features:?}"
-        );
+        if !features.contains("csr") || !features.is_subset(&allowed) {
+            return Err(GraphError::IntegratedFeatures {
+                name,
+                features: features.into_iter().map(str::to_owned).collect(),
+            });
+        }
         if features.contains("default") {
-            let manifest: toml::Value =
-                toml::from_str(&String::from_utf8(inventory::read(actual)?)?)?;
+            let manifest = inventory::manifest(actual)?;
             let defaults = manifest
                 .get("features")
                 .and_then(|value| value.get("default"))
                 .and_then(toml::Value::as_array);
-            ensure!(
-                defaults
-                    .is_some_and(|values| values.len() == 1 && values[0].as_str() == Some("csr")),
-                "{name} default must be an alias for csr alone"
-            );
+            if !defaults
+                .is_some_and(|values| values.len() == 1 && values[0].as_str() == Some("csr"))
+            {
+                return Err(GraphError::DefaultFeatures(name));
+            }
         }
-        let host_macro = package["targets"]
-            .as_array()
-            .context("Package targets")?
-            .iter()
-            .any(|target| {
-                target["kind"]
-                    .as_array()
-                    .is_some_and(|kinds| kinds.iter().any(|kind| kind == "proc-macro"))
-            });
-        ensure!(
-            host_macro == (name == "blog-component-macros"),
-            "Integrated runtime/proc-macro target roles changed"
-        );
-        selected.push(json!({"name":name,"version":package["version"],"path":inventory::relative(expected.strip_prefix(&repository)?)?,"features":features,"role":if host_macro {"host-proc-macro"} else {"browser"}}));
+        let host_macro = package.host_macro();
+        if host_macro != (name == "blog-component-macros") {
+            return Err(GraphError::TargetRole);
+        }
+        selected.push(json!({"name":name,"version":package.version,"path":inventory::relative(expected.strip_prefix(&repository).expect("invariant: integrated package is inside repository"))?,"features":features,"role":if host_macro {"host-proc-macro"} else {"browser"}}));
     }
     for id in reachable {
-        let package = by_id[id];
+        let package = by_id
+            .get(id)
+            .ok_or_else(|| GraphError::MissingPackage(id.into()))?;
         local_manifest(package, &repository)?;
-        let name = package["name"].as_str().context("Package name")?;
-        ensure!(
-            !matches!(
-                name,
-                "leptos"
-                    | "leptos_macro"
-                    | "server_fn"
-                    | "server_fn_macro"
-                    | "leptos_server"
-                    | "hydration_context"
-                    | "leptos_config"
-            ),
-            "Server/hydration package unexpectedly selected in CSR graph: {name}"
-        );
+        let name = package.name;
+        if matches!(
+            name,
+            "leptos"
+                | "leptos_macro"
+                | "server_fn"
+                | "server_fn_macro"
+                | "leptos_server"
+                | "hydration_context"
+                | "leptos_config"
+        ) {
+            return Err(GraphError::UnsupportedPackage(name.into()));
+        }
         if matches!(
             name,
             "blog-interface-reactivity" | "blog-interface-view-tree"
-        ) {
-            let features = node_ids[id]["features"]
-                .as_array()
-                .context("Dependency features")?;
-            ensure!(
-                !features.iter().any(|feature| matches!(
-                    feature.as_str(),
-                    Some("ssr" | "hydrate" | "hydration" | "islands")
-                )),
-                "{name} selected a server/hydration feature"
-            );
+        ) && nodes[id]
+            .features
+            .iter()
+            .any(|feature| matches!(*feature, "ssr" | "hydrate" | "hydration" | "islands"))
+        {
+            return Err(GraphError::ServerFeature(name.into()));
         }
     }
     Ok(

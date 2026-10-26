@@ -16,7 +16,7 @@ use self::letter::LetterSettings;
 use self::links::Links;
 use self::moderation::{Moderation, ModerationKind};
 use self::site::SiteSettings;
-use self::taxonomy::Taxonomy;
+use self::taxonomy::{Taxonomy, TaxonomyKind};
 use crate::common::{hash_signal, href, navigate, t};
 use blog_interface::children::ToChildren;
 use blog_interface::component::component_props_builder;
@@ -256,11 +256,15 @@ fn render_page(route: Route) -> AnyView {
             Page::Dashboard => View::new(Dashboard()).into_any(),
             Page::Articles => View::new(Articles()).into_any(),
             Page::Categories => View::new(Taxonomy(
-                component_props_builder(&Taxonomy).labels(false).build(),
+                component_props_builder(&Taxonomy)
+                    .kind(TaxonomyKind::Categories)
+                    .build(),
             ))
             .into_any(),
             Page::Labels => View::new(Taxonomy(
-                component_props_builder(&Taxonomy).labels(true).build(),
+                component_props_builder(&Taxonomy)
+                    .kind(TaxonomyKind::Labels)
+                    .build(),
             ))
             .into_any(),
             Page::Notes => View::new(crate::editor::Notes()).into_any(),

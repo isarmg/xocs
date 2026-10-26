@@ -1,5 +1,7 @@
 use super::*;
+use anyhow::Result;
 use axum::{Router, body::Bytes, http::StatusCode};
+use std::io;
 use std::sync::{Arc, Mutex};
 
 #[tokio::test]
@@ -193,4 +195,27 @@ async fn deadline_cancels_a_pending_upload_before_response_headers() -> Result<(
     );
     server.abort();
     Ok(())
+}
+
+#[test]
+fn connection_lists_accept_empty_elements_but_reject_invalid_tokens() {
+    use std::error::Error;
+    for hop in [ProxyHop::Client, ProxyHop::Upstream] {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            header::CONNECTION,
+            header::HeaderValue::from_static(", x-private, ,"),
+        );
+        headers.insert("x-private", header::HeaderValue::from_static("hop value"));
+        strip_connection_headers(&mut headers, hop).unwrap();
+        assert!(!headers.contains_key("x-private"));
+        assert!(!headers.contains_key(header::CONNECTION));
+        headers.insert(
+            header::CONNECTION,
+            header::HeaderValue::from_static("bad name"),
+        );
+        let error = strip_connection_headers(&mut headers, hop).unwrap_err();
+        assert!(matches!(error, ProxyError::ConnectionName { .. }));
+        assert!(error.source().is_some());
+    }
 }

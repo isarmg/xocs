@@ -89,11 +89,7 @@ fn rejected(status: StatusCode, reason: &'static str, extensions: &Extensions) -
     let mut envelope = super::failure(code, message);
     envelope.retryable = status == StatusCode::REQUEST_TIMEOUT;
     envelope.details.insert("reason".into(), reason.into());
-    envelope.request_id = extensions.get::<RequestId>().cloned().or_else(|| {
-        extensions
-            .get::<String>()
-            .and_then(|id| RequestId::new(id).ok())
-    });
+    envelope.request_id = extensions.get::<RequestId>().cloned();
     let mut response = error_response(status, envelope);
     if status == StatusCode::REQUEST_TIMEOUT {
         // The unfinished HTTP/1 request body must not keep the connection open.

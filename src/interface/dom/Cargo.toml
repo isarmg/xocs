@@ -92,3 +92,6 @@ features = ["AddEventListenerOptions", "AnimationEvent", "BeforeUnloadEvent", "C
 [lints.rust.unexpected_cfgs]
 level = "warn"
 check-cfg = ["cfg(loom)", "cfg(nightly)", "cfg(rustc_nightly)", "cfg(leptos_debuginfo)", "cfg(docsrs)", "cfg(erase_components)"]
+
+[lints.rust]
+unused_must_use = "deny"

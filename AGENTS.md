@@ -1,125 +1,50 @@
-# Rust 编码规范：不要写过度防御性代码
+# Rust 编码与项目约束
 
-你是资深 Rust 工程师。下面的规则优先于你“让代码更健壮”的默认倾向。
-Rust 的类型系统和所有权已经排除了大量错误，不要用运行时检查重复它们。
-“健壮”的含义是：对真实会发生的外部失败有正确处理，而不是对每个值重复检查。
+完整方案见 [RUST_CODING_RULES.md](RUST_CODING_RULES.md)。修改本仓库时遵循以下规则；完整方案中的通用示例按本项目约束应用。
 
-## 一、总原则
+## 项目约束
 
-1. 只在信任边界验证输入一次。信任边界：HTTP/RPC 请求、文件与网络读入、环境变量与配置、命令行参数、外部进程与第三方服务的返回值、FFI。
-2. 验证结果用类型表达。用 `FromStr` / `TryFrom` / `#[serde(try_from = "...")]` / `NonZero*` / 私有字段加智能构造函数，把原始 `String`、数字解析成带约束的类型。核心代码只接收这些类型。
-3. 内部代码信任类型和调用约定，不要在私有函数里重复检查调用方已保证的条件。
-4. 违反不变量是 bug：用 `expect("invariant: ...")`、`assert!`、`debug_assert!`、`unreachable!("原因")` 让它立刻暴露，不要返回默认值掩盖。
-5. 错误要么在能做决策的那一层处理，要么用 `?` 向上传播。只在最外层（边界、main）记录一次日志。
-6. 不写当前需求用不到的代码：不加只有一个实现的 trait，不加没人用的参数、泛型、配置项，不为不存在的调用方写兼容分支，不给两个字段的结构体写 Builder。
-7. 两种写法同样正确时，选更短的。
+- 业务源码放在 `src/`，测试实现和专用输入放在 `test/`；使用 `#[path]` 连接私有单元测试，不把测试实现迁回业务文件。
+- 使用 edition 2024 和 Rust 1.99.0。原生仅支持 Linux AMD64 GNU/glibc；浏览器使用 WASM。
+- 依赖是本仓库维护的实现，保持职责划分、本地路径、唯一 workspace 和 Cargo.lock。原始归档、来源身份和许可证保存在 `compliance/`，审计按原始身份执行。
+- 只支持当前代码与数据格式；不新增旧版本迁移、兼容分支或未使用的配置、参数、trait、泛型。
+- 优先可维护性。两种实现同样正确时选择更短、更直接的实现；性能改动先测量，并保留行为证据。
+- 文档描述当前接口、架构、配置与使用方法；改进记录和维护过程由 Git 与 GitHub Releases 承担。
 
-## 二、禁止的写法
+## 信任边界与类型
 
-- `let _ = result;`、`.ok()` 后丢弃、`if let Ok(x) = ...` 忽略 Err 分支。
-- 对必然存在的数据用 `unwrap_or_default()`、`unwrap_or(0)`、`unwrap_or_else(|| 默认值)`。不要给“空值无效”的领域类型 `derive(Default)`。
-- `map_err(|_| ...)` 和 `map_err(|e| e.to_string())` 丢掉错误来源。库代码里不用 `Box<dyn Error>` 和 anyhow，用 thiserror 枚举，并用 `#[from]` / `#[source]` 保留来源。
-- 错误码用字符串字面量。用枚举。
-- 记日志之后又返回同一个错误（重复上报）。
-- 在 for 循环前判断 `is_empty()`；`is_some()` 之后再 `unwrap()`。用 `if let` / `let else` / `ok_or`。
-- match 里的 `_ => {}` 或 `_ => unreachable!()`。穷尽列出变体，让编译器在新增变体时报错。
-- 只读访问也 `clone()`；到处 `Arc<Mutex<_>>`；参数取 `Vec<T>` / `String` 而实际只读。参数用 `&T`、`&[T]`、`&str`。
-- 对内部计数、已被上界约束的整数使用 `checked_*` 和 `try_from`。
-- 每个调用点单独写锁中毒处理。全项目统一策略：`lock().expect("... poisoned")` 或使用 parking_lot。不用 `try_lock` 自旋。
-- 每个函数都套 `catch_unwind`、timeout、重试。`catch_unwind` 只放在请求边界；超时放在 I/O 边界；重试只针对明确的瞬时错误，有次数和时长上限且操作幂等。
-- 用字符串表示有限状态并做字面量比较。用枚举，在序列化层统一格式。
-- 大段注释解释“为什么不信任”或“这里不做什么”。注释只写代码无法表达的原因。
-- 在业务函数里夹带测试 hook、故障注入。放到 `#[cfg(feature = "...")]` 之后。
-- 为了“防御”而加 `unsafe` 或 `#[allow(...)]`。
+1. HTTP、文件与网络、配置与环境、命令行、外部进程、第三方服务、FFI，以及启动/恢复时首次读取的持久化数据，在入口解析并验证一次。
+2. 用私有字段 newtype、`FromStr`、`TryFrom`、serde、`NonZero` 或枚举表达约束。内部函数接收已验证类型，不再重复检查相同条件。
+3. 只读操作使用借用；需要存储或跨任务转移时才取得所有权。不为读取少数字段复制完整列表或状态。
+4. 有限状态与行为模式使用枚举；状态数据放在对应变体中。业务上必须存在的字段不使用 `Option`，无效空值类型不实现 `Default`。
+5. 私有资源的持有描述符和已完成的验证可以在同一次操作中复用。涉及未知调用方、外部可变内容、进程间交接或数据库独立打开的检查仍留在相应边界。
+6. 权限可能在等待期间撤销，数据可能并发变化；提交事务时的授权与版本核验具有独立职责，必须保留。
 
-## 三、必须保留的检查（不要因为本规范而删除）
+## 错误与不变量
 
-- 外部输入的长度、范围、格式；读外部流时用 `take(MAX + 1)` 判断超限。
-- 来自外部的数值的 `checked_add` / `checked_mul` / `try_from`。
-- 鉴权、授权、路径穿越（规范化后确认仍在根目录内）、注入、`deny_unknown_fields`、请求频率和并发上限。
-- 每一个 `io::Result`、网络调用、`spawn_blocking` 的 `JoinError`；磁盘满、文件消失、并发修改。不要“先检查存在再打开”，直接打开并处理错误。
-- unsafe 的前置条件（SAFETY 注释加 `debug_assert!`）。
-- 面向未知调用方的公开库 API 的参数检查。
+1. 外部失败使用按操作或模块划分的具名 `thiserror` 枚举，保留 `#[source]` / `#[from]`。同一源类型对应多个 I/O 操作时，明确标出失败步骤，不以源类型推断业务含义。
+2. `anyhow` 只用于命令入口等最外层汇总。第三方动态错误经过明确适配边界，不扩散为库的通用返回类型。不新增巨型错误枚举、通用 Context trait 或异常包装框架。
+3. 只有能作出决策的一层处理错误，其余用 `?`。在请求边界、命令入口或后台任务顶层记录一次；错误来源与敏感数据不进入公开响应。
+4. 禁止吞掉 `Result`、丢失错误来源、记日志后又返回相同错误。业务明确允许忽略的结果应就地解释原因；实际消费的可选解析结果与丢弃整个结果区分处理。
+5. 自己的 bug 用 `expect("invariant: ...")`、`assert!` 或有原因的 `unreachable!` 暴露；不使用默认值、饱和运算或静默成功掩盖。外部 I/O 失败返回错误，不用 panic。
+6. 匹配本仓库的有限枚举时穷尽列出变体。外部 `#[non_exhaustive]` 枚举保留语言要求的通配分支。
+7. 内部计数和已由上界约束的数字直接运算；外部 offset、length、count、size 继续使用 `checked_*` / `try_from`。饱和运算仅用于确实需要截断的语义。
+8. 标准库锁中毒统一使用 `expect("... poisoned")`；不在各调用点恢复默认状态，不用 `try_lock` 自旋。
+9. 可能失败的清理提供显式完成或释放入口，`Drop` 作为兜底。持久化完成前显式处理写入、flush、文件同步、发布和目录同步结果。
 
-## 四、写每个检查之前，先回答三个问题
+## 必须保留的保障
 
-1. 这个值从哪里来？外部输入，还是本程序内部产生的？
-2. 上游或类型是否已经保证了这个条件？
-3. 如果条件不成立，原因是外部世界，还是我们自己的 bug？
+- 外部长度、范围和格式限制，流读取使用 `take(MAX + 1)` 或等价的受限读取。
+- 鉴权、授权、路径穿越、注入防护、未知请求字段拒绝，以及内存、队列、连接与并发上限。
+- 真实磁盘、文件消失、网络、进程和 `JoinError` 失败；直接执行操作并处理错误，不先做存在性探测。
+- 原子写入与持久化顺序，以及启动/恢复校验。
+- unsafe 的明确前置条件与 SAFETY 说明。不为消除检查新增 unsafe 或 lint 抑制。
+- 生命周期取消、幂等收据和事务一致性。超时只放在 I/O 或必要锁等待边界；重试仅用于有次数和总时长上限的幂等瞬时失败。
 
-外部原因 → 返回具体的错误；自己的 bug → expect/assert 立刻失败；上游已保证 → 不写。
+## 实施与交付
 
-## 五、示例
+写检查前确认：值从哪里来、已有何种保证、失败是外部事件还是 bug、谁能够决定如何处理。先读调用链，再消除重复验证；不按关键词机械清零。
 
-坏：内部函数重复校验，并对“找不到”静默成功。
+只修改任务需要的部分。测试行为与边界，使用临时文件、SQLite 和回环 HTTP 等真实依赖；测试不依赖内部调用次数。性能改动提供可复核的测量，完整验证入口见[开发说明](docs/development.md)。
 
-```rust
-fn rename(&mut self, id: &str, name: &str) -> Result<()> {
-    if id.is_empty() || name.is_empty() || name.len() > 255 { return Err(bad()); }
-    let Some(f) = self.map.get_mut(id) else { return Ok(()); };
-    f.name = name.to_string(); Ok(())
-}
-```
-
-好：
-
-```rust
-fn rename(&mut self, id: &FileId, name: FileName) -> Result<(), RenameError> {
-    let f = self.map.get_mut(id).ok_or(RenameError::NotFound)?;
-    f.name = name; Ok(())
-}
-```
-
-坏：默认值掩盖不变量被破坏。
-
-```rust
-let size = versions.get(&p.version_id).map(|v| v.size).unwrap_or_default();
-```
-
-好：
-
-```rust
-let size = versions.get(&p.version_id)
-    .expect("invariant: every placement references an existing version").size;
-```
-
-坏：吞错误并返回默认值。
-
-```rust
-fn file_len(p: &Path) -> u64 {
-    match std::fs::metadata(p) { Ok(m) => m.len(), Err(e) => { error!("{e}"); 0 } }
-}
-```
-
-好：
-
-```rust
-fn file_len(p: &Path) -> io::Result<u64> { Ok(std::fs::metadata(p)?.len()) }
-```
-
-## 六、输出要求
-
-- 优先写最短、最直接的正确实现。
-- 确实需要额外检查时，只保留一处，并用一行注释说明它防的是什么外部情况。
-- 交付代码后附“边界说明”：信任边界在哪、验证在哪里做、哪些地方依赖类型保证。
-- 需求缺少关键信息（例如不清楚输入来自哪里）时，先问我，不要用防御代码覆盖所有可能。
-- 修改已有代码时，只改我要求的部分，不要顺手给没改动的部分加检查。
-
-## Rust coding rules: no over-defensive code
-
-These override your default urge to “make code robust”. The type system and ownership already rule out many errors; don't re-check them at runtime.
-
-1. Validate input once, at trust boundaries only (HTTP/RPC, file/network reads, env/config, CLI args, external responses, FFI).
-2. Parse, don't validate: `FromStr` / `TryFrom` / `#[serde(try_from)]` / `NonZero*` / newtypes with private fields. Core code takes only those types.
-3. Internal code trusts types and caller contracts. Never re-check what a type already guarantees.
-4. A broken invariant is a bug: `expect("invariant: ..")` / `assert!` / `debug_assert!` / `unreachable!()`. Never mask with a default.
-5. Handle an error only where a real decision exists, else `?`. Log once at the outermost layer, never log-and-return.
-6. No speculative code: single-impl traits, unused generics/params/config, builders for tiny structs.
-
-Never write: `let _ = result`, `.ok()` discards, `unwrap_or_default()` on data that must exist, `map_err(|_| ..)`, `Box<dyn Error>` / anyhow in libraries, string error codes, `_ => {}` or `_ => unreachable!()` in matches that can be exhaustive, is_empty() before a for loop, is_some() then unwrap(), clones for read-only access, checked_* on internal counters, per-call-site lock-poison handling, catch_unwind/timeout/retry wrappers everywhere, string-typed states, long “why we don't trust this” comments.
-
-Keep: length/range/format limits on external input (`take(MAX+1)`), checked_*/try_from on externally supplied numbers, authn/authz, path traversal, injection, `deny_unknown_fields`, resource limits, every real io/network failure, TOCTOU-safe opens.
-
-Before each check ask: where does the value come from, is it already guaranteed, is failure an external event or our bug?
-
-Prefer the shortest correct code. After the code, state where the trust boundaries are and where validation happens.
+交付时附“边界说明”：信任边界、验证位置、内部依赖的类型保证，以及验证结果和真实限制。

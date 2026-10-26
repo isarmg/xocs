@@ -317,7 +317,7 @@ async fn health(State(pool): State<SqlitePool>) -> Response {
 }
 
 async fn readiness(State(pool): State<SqlitePool>) -> Response {
-    let ready = sqlx::query("SELECT 1").execute(&pool).await.is_ok();
+    let ready = database_ready(&pool).await;
     (
         if ready {
             StatusCode::OK
@@ -327,6 +327,41 @@ async fn readiness(State(pool): State<SqlitePool>) -> Response {
         Json(serde_json::json!({"ready":ready})),
     )
         .into_response()
+}
+
+#[derive(Debug)]
+enum DatabaseProbeFailure {
+    Database,
+    Io,
+    PoolClosed,
+    PoolTimedOut,
+    WorkerCrashed,
+    Driver,
+}
+
+pub(crate) async fn database_ready(pool: &SqlitePool) -> bool {
+    match sqlx::query("SELECT 1").execute(pool).await {
+        Ok(_) => true,
+        Err(error) => {
+            let (failure, io_kind, database_kind) = match &error {
+                sqlx::Error::Database(source) => {
+                    (DatabaseProbeFailure::Database, None, Some(source.kind()))
+                }
+                sqlx::Error::Io(source) => (DatabaseProbeFailure::Io, Some(source.kind()), None),
+                sqlx::Error::PoolClosed => (DatabaseProbeFailure::PoolClosed, None, None),
+                sqlx::Error::PoolTimedOut => (DatabaseProbeFailure::PoolTimedOut, None, None),
+                sqlx::Error::WorkerCrashed => (DatabaseProbeFailure::WorkerCrashed, None, None),
+                _ => (DatabaseProbeFailure::Driver, None, None),
+            };
+            tracing::warn!(
+                ?failure,
+                ?io_kind,
+                ?database_kind,
+                "database health probe failed"
+            );
+            false
+        }
+    }
 }
 
 async fn admin_gate(State(state): State<AppState>, request: Request, next: Next) -> Response {

@@ -253,6 +253,12 @@ pub enum Error {
     DestinationExists(PathBuf),
     #[error("directory inventory budget exceeded")]
     BudgetExceeded,
+    #[error("file length is negative: {path:?}")]
+    InvalidFileLength {
+        path: PathBuf,
+        #[source]
+        source: std::num::TryFromIntError,
+    },
     #[error("{operation}; temporary-file cleanup also failed: {cleanup}")]
     Cleanup {
         #[source]

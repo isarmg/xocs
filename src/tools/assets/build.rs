@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 #[path = "src/layout.rs"]
 #[allow(dead_code)]
 mod layout;

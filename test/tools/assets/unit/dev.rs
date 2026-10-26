@@ -1,4 +1,5 @@
 use super::*;
+use anyhow::Result;
 
 #[test]
 fn proxy_accepts_both_loopback_address_families() {
@@ -90,24 +91,27 @@ async fn lock_contention_is_retryable_even_when_the_source_is_unchanged() -> Res
             .contains("Another asset build owns")
     );
     let now = std::time::Instant::now();
-    let mut watcher = WatchState::new(Ok("unchanged".into()));
-    watcher.finished(Ok("unchanged".into()), outcome, now);
+    let mut watcher = WatchState::new(Signature::Ready("unchanged".into()));
+    watcher.finished(Signature::Ready("unchanged".into()), outcome, now);
     drop(owner);
-    assert!(watcher.observe(Ok("unchanged".into()), now + Duration::from_millis(400)));
+    assert!(watcher.observe(
+        Signature::Ready("unchanged".into()),
+        now + Duration::from_millis(400)
+    ));
     Ok(())
 }
 
 #[test]
 fn startup_edits_are_not_adopted_as_already_built() {
     let now = std::time::Instant::now();
-    let mut watcher = WatchState::new(Ok("before initial build".into()));
+    let mut watcher = WatchState::new(Signature::Ready("before initial build".into()));
     watcher.finished(
-        Ok("edited during initial build".into()),
+        Signature::Ready("edited during initial build".into()),
         BuildOutcome::Settled,
         now,
     );
     assert!(watcher.observe(
-        Ok("edited during initial build".into()),
+        Signature::Ready("edited during initial build".into()),
         now + Duration::from_millis(400)
     ));
 }
@@ -268,4 +272,26 @@ async fn wasm_encoding_refusal_never_falls_back_to_forbidden_identity() -> Resul
         .await?;
     assert_eq!(missing.status(), StatusCode::NOT_FOUND);
     Ok(())
+}
+
+#[test]
+fn unavailable_sources_wait_for_recovery_without_scheduling_a_failed_build() {
+    let missing = std::path::PathBuf::from("missing-source");
+    let error = SignatureError::Inventory(inventory::InventoryError::Read {
+        path: missing,
+        source: std::io::Error::from(std::io::ErrorKind::NotFound),
+    });
+    let unavailable = Signature::Unavailable(Arc::new(error));
+    let now = std::time::Instant::now();
+    let mut watcher = WatchState::new(Signature::Ready("previous".into()));
+    assert!(!watcher.observe(unavailable.clone(), now));
+    assert!(!watcher.observe(unavailable, now + Duration::from_secs(1)));
+    assert!(!watcher.observe(
+        Signature::Ready("recovered".into()),
+        now + Duration::from_secs(2)
+    ));
+    assert!(watcher.observe(
+        Signature::Ready("recovered".into()),
+        now + Duration::from_millis(2400)
+    ));
 }

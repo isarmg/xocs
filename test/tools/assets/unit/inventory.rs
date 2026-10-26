@@ -1,4 +1,25 @@
 use super::*;
+use anyhow::Result;
+
+#[test]
+fn source_read_and_receipt_errors_preserve_their_operation_and_source() -> Result<()> {
+    let directory = tempfile::tempdir()?;
+    let missing = directory.path().join("missing.json");
+    let error = read(&missing).unwrap_err();
+    let InventoryError::Read { path, source } = error else {
+        panic!("missing source should report the read operation");
+    };
+    assert_eq!(path, missing);
+    assert_eq!(source.kind(), io::ErrorKind::NotFound);
+    let malformed = directory.path().join("ORIGIN.json");
+    fs::write(&malformed, b"{")?;
+    assert!(matches!(
+        maintained_source(directory.path(), directory.path()),
+        Err(InventoryError::Receipt { path, source }) if path == malformed && source.is_eof()
+    ));
+    Ok(())
+}
+
 #[test]
 fn maintained_sources_allow_edits_but_preserve_original_evidence_and_license() -> Result<()> {
     let root = tempfile::tempdir()?;
@@ -292,13 +313,13 @@ fn complete_source_receipts_are_compact_in_public_assets_and_bind_every_file() -
     }
     let mut snapshot = json!({"patched_inputs":packages,"foundation_inputs":all});
     let runtime = json!({"source_inputs":all,"graph":{"packages":[]}});
-    let public = public_provenance(&snapshot, &runtime)?;
+    let public = public_provenance(&snapshot, &runtime);
     assert!(serde_json::to_vec(&snapshot)?.len() > 512 * 1024);
     assert!(serde_json::to_vec(&public)?.len() < 512 * 1024);
     assert_eq!(public["source_packages"].as_object().unwrap().len(), 400);
     assert_eq!(public["foundation_inventory"]["file_count"], 20000);
     snapshot["patched_inputs"]["src/foundation/pkg0-1"]["src/module0.rs"] = json!("2".repeat(64));
-    let changed = public_provenance(&snapshot, &runtime)?;
+    let changed = public_provenance(&snapshot, &runtime);
     assert_ne!(
         public["source_snapshot_sha256"],
         changed["source_snapshot_sha256"]

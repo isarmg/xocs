@@ -1,14 +1,69 @@
 //! Source-bound native server builds without a JavaScript launcher.
 use crate::{layout, process};
-use anyhow::{Context, Result, ensure};
+mod error;
+pub use error::NativeBuildError;
+type Result<T> = std::result::Result<T, NativeBuildError>;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::BTreeSet,
     fs,
-    io::Read,
+    io::{self, Read, Write},
     path::{Path, PathBuf},
     process::Command,
 };
+
+/// Compilation profile and source binding accepted by the native producer.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum NativeMode {
+    Development,
+    Candidate,
+    Release,
+}
+
+impl NativeMode {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Development => "development",
+            Self::Candidate => "candidate",
+            Self::Release => "release",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, thiserror::Error)]
+#[error("native build mode must be development, candidate or release")]
+pub struct InvalidNativeMode;
+
+impl std::str::FromStr for NativeMode {
+    type Err = InvalidNativeMode;
+
+    fn from_str(value: &str) -> std::result::Result<Self, Self::Err> {
+        match value {
+            "development" => Ok(Self::Development),
+            "candidate" => Ok(Self::Candidate),
+            "release" => Ok(Self::Release),
+            _ => Err(InvalidNativeMode),
+        }
+    }
+}
+
+/// Stages selected by a native build command.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BuildSelection {
+    All,
+    Web,
+    Rust,
+}
+
+/// Parsed native command options.
+#[derive(Clone, Copy, Debug)]
+pub struct BuildRequest<'a> {
+    pub config_path: Option<&'a str>,
+    pub mode: NativeMode,
+    pub selection: BuildSelection,
+    pub requested_revision: Option<&'a str>,
+}
 
 const TARGET: &str = "x86_64-unknown-linux-gnu";
 
@@ -59,7 +114,7 @@ struct Identity {
     web_assets_sha256: String,
     source_dirty: bool,
     source_tree_sha256: String,
-    build_mode: String,
+    build_mode: NativeMode,
     schema_sha256: String,
     core_source_sha256: String,
 }
@@ -72,6 +127,31 @@ struct Receipt {
     identity_sha256: String,
     inventory: Inventory,
     identity: Identity,
+}
+
+#[derive(Deserialize)]
+#[serde(tag = "reason", rename_all = "kebab-case")]
+enum CargoMessage {
+    CompilerMessage {
+        message: CompilerDiagnostic,
+    },
+    CompilerArtifact {
+        target: CompilerTarget,
+        executable: Option<PathBuf>,
+    },
+    BuildScriptExecuted {},
+    BuildFinished {},
+}
+
+#[derive(Deserialize)]
+struct CompilerDiagnostic {
+    rendered: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct CompilerTarget {
+    name: String,
+    kind: Vec<String>,
 }
 
 fn digest(bytes: &[u8]) -> String {
@@ -98,135 +178,174 @@ fn name(value: &str) -> bool {
 }
 
 fn path(root: &Path, relative: &str) -> Result<PathBuf> {
-    ensure!(
-        crate::inventory::relative(Path::new(relative))? == relative,
-        "Build path must be canonical and relative"
-    );
+    crate::inventory::relative(Path::new(relative))?;
     Ok(root.join(relative))
 }
 
 fn read(file: &Path, maximum: u64) -> Result<Vec<u8>> {
     crate::inventory::physical(file)?;
-    let before = fs::symlink_metadata(file)?;
-    ensure!(
-        before.is_file() && !before.file_type().is_symlink() && before.len() <= maximum,
-        "Build artifact must be a bounded regular file: {}",
-        file.display()
-    );
-    let mut handle = fs::File::open(file)?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::MetadataExt;
-        let opened = handle.metadata()?;
-        ensure!(
-            opened.ino() == before.ino() && opened.dev() == before.dev(),
-            "Build artifact changed while opening"
-        );
+    let before =
+        fs::symlink_metadata(file).map_err(|source| NativeBuildError::InspectArtifact {
+            path: file.to_owned(),
+            source,
+        })?;
+    if !before.is_file() || before.file_type().is_symlink() || before.len() > maximum {
+        return Err(NativeBuildError::InvalidArtifact(file.to_owned()));
     }
-    let mut bytes = Vec::with_capacity(usize::try_from(before.len())?);
-    (&mut handle).take(maximum + 1).read_to_end(&mut bytes)?;
-    let after = handle.metadata()?;
-    ensure!(
-        bytes.len() as u64 == before.len()
-            && after.len() == before.len()
-            && after.modified()? == before.modified()?,
-        "Build artifact changed while reading"
-    );
+    let mut handle = fs::File::open(file).map_err(|source| NativeBuildError::OpenArtifact {
+        path: file.to_owned(),
+        source,
+    })?;
+    use std::os::unix::fs::MetadataExt;
+    let opened = handle
+        .metadata()
+        .map_err(|source| NativeBuildError::InspectOpenedArtifact {
+            path: file.to_owned(),
+            source,
+        })?;
+    if opened.ino() != before.ino() || opened.dev() != before.dev() {
+        return Err(NativeBuildError::ArtifactChanged(file.to_owned()));
+    }
+    let mut bytes = Vec::with_capacity(before.len() as usize);
+    (&mut handle)
+        .take(maximum + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|source| NativeBuildError::ReadArtifact {
+            path: file.to_owned(),
+            source,
+        })?;
+    let after = handle
+        .metadata()
+        .map_err(|source| NativeBuildError::InspectOpenedArtifact {
+            path: file.to_owned(),
+            source,
+        })?;
+    let before_modified = before
+        .modified()
+        .map_err(|source| NativeBuildError::ArtifactTime {
+            path: file.to_owned(),
+            source,
+        })?;
+    let after_modified = after
+        .modified()
+        .map_err(|source| NativeBuildError::ArtifactTime {
+            path: file.to_owned(),
+            source,
+        })?;
+    if bytes.len() as u64 != before.len()
+        || after.len() != before.len()
+        || after_modified != before_modified
+    {
+        return Err(NativeBuildError::ArtifactChanged(file.to_owned()));
+    }
     Ok(bytes)
 }
 
 fn private_receipt_directory() -> Result<tempfile::TempDir> {
-    let mut builder = tempfile::Builder::new();
-    builder.prefix("blog-rust-web-build-");
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        // tempfile 3.27 otherwise inherits the process umask. The foundation
-        // deliberately requires an exact private 0700 receipt directory.
-        builder.permissions(fs::Permissions::from_mode(0o700));
-    }
-    Ok(builder.tempdir()?)
+    use std::os::unix::fs::PermissionsExt;
+    let directory = std::env::temp_dir();
+    tempfile::Builder::new()
+        .prefix("blog-rust-web-build-")
+        .permissions(fs::Permissions::from_mode(0o700))
+        .tempdir_in(&directory)
+        .map_err(|source| NativeBuildError::CreateReceiptDirectory {
+            path: directory,
+            source,
+        })
 }
 
 fn git(root: &Path, args: &[&str]) -> Result<String> {
-    Ok(String::from_utf8(process::run(
+    let bytes = process::run(
         Command::new("git").args(args).current_dir(root),
         process::Policy::git(4 * 1024 * 1024),
         "Query local Git identity",
-    )?)?
-    .trim()
-    .to_owned())
+    )
+    .map_err(NativeBuildError::GitCommand)?;
+    Ok(String::from_utf8(bytes)
+        .map_err(NativeBuildError::GitEncoding)?
+        .trim()
+        .to_owned())
+}
+
+fn canonicalize(path: &Path) -> Result<PathBuf> {
+    path.canonicalize()
+        .map_err(|source| NativeBuildError::Canonicalize {
+            path: path.to_owned(),
+            source,
+        })
 }
 
 fn verify_assets(inventory: &Inventory, dist: &Path, binary: &[u8]) -> Result<()> {
-    ensure!(
-        inventory.format == "blog-browser-assets-v1"
-            && !inventory.files.is_empty()
-            && inventory.files.len() <= 16384,
-        "Invalid compiled Web inventory"
-    );
+    if inventory.format != "blog-browser-assets-v1"
+        || inventory.files.is_empty()
+        || inventory.files.len() > 16384
+    {
+        return Err(NativeBuildError::InvalidInventory);
+    }
     let mut actual: BTreeSet<_> = crate::inventory::files(dist)?.into_keys().collect();
     let mut previous = "";
     for asset in &inventory.files {
-        ensure!(
-            asset.path.as_str() > previous && sha(&asset.sha256) && !asset.content_type.is_empty(),
-            "Invalid compiled asset entry"
-        );
+        if asset.path.as_str() <= previous || !sha(&asset.sha256) || asset.content_type.is_empty() {
+            return Err(NativeBuildError::InvalidAssetEntry);
+        }
         let source = path(dist, &asset.path)?;
         let bytes = read(&source, 256 * 1024 * 1024)?;
-        ensure!(
-            bytes.len() as u64 == asset.size
-                && digest(&bytes) == asset.sha256
-                && actual.remove(&asset.path),
-            "Compiled Web bytes differ: {}",
-            asset.path
-        );
-        ensure!(
-            memchr::memmem::find(binary, &bytes).is_some(),
-            "Executable omitted compiled Web bytes: {}",
-            asset.path
-        );
+        if bytes.len() as u64 != asset.size
+            || digest(&bytes) != asset.sha256
+            || !actual.remove(&asset.path)
+        {
+            return Err(NativeBuildError::AssetBytes(asset.path.clone()));
+        }
+        if memchr::memmem::find(binary, &bytes).is_none() {
+            return Err(NativeBuildError::MissingEmbeddedAsset(asset.path.clone()));
+        }
         previous = &asset.path;
     }
-    ensure!(
-        actual.is_empty(),
-        "Compiled executable inventory omitted Web output"
-    );
+    if !actual.is_empty() {
+        return Err(NativeBuildError::UnlistedAssets);
+    }
     Ok(())
 }
 
 /// Verify an existing receipt without running the candidate executable.
 pub fn verify(binary: &Path, dist: &Path, receipt_file: &Path) -> Result<()> {
     let encoded = read(receipt_file, 16 * 1024 * 1024)?;
-    let receipt: Receipt = serde_json::from_slice(&encoded)?;
-    ensure!(
-        serde_json::to_vec(&receipt)? == encoded && receipt.format == "blog-assets-receipt-v1",
-        "Receipt is not canonical current-format JSON"
-    );
-    ensure!(
-        sha(&receipt.binary_sha256)
-            && sha(&receipt.inventory_sha256)
-            && sha(&receipt.identity_sha256),
-        "Invalid receipt digest"
-    );
-    let inventory = serde_json::to_vec(&receipt.inventory)?;
-    let identity = serde_json::to_vec(&receipt.identity)?;
-    ensure!(
-        digest(&inventory) == receipt.inventory_sha256
-            && digest(&identity) == receipt.identity_sha256
-            && receipt.identity.web_assets_sha256 == receipt.inventory_sha256,
-        "Receipt metadata digest mismatch"
-    );
+    let receipt: Receipt =
+        serde_json::from_slice(&encoded).map_err(|source| NativeBuildError::DecodeReceipt {
+            path: receipt_file.to_owned(),
+            source,
+        })?;
+    if serde_json::to_vec(&receipt).expect("invariant: receipt fields serialize to JSON") != encoded
+        || receipt.format != "blog-assets-receipt-v1"
+    {
+        return Err(NativeBuildError::NoncanonicalReceipt);
+    }
+    if !sha(&receipt.binary_sha256)
+        || !sha(&receipt.inventory_sha256)
+        || !sha(&receipt.identity_sha256)
+    {
+        return Err(NativeBuildError::InvalidReceiptDigest);
+    }
+    let inventory = serde_json::to_vec(&receipt.inventory)
+        .expect("invariant: receipt fields serialize to JSON");
+    let identity =
+        serde_json::to_vec(&receipt.identity).expect("invariant: receipt fields serialize to JSON");
+    if digest(&inventory) != receipt.inventory_sha256
+        || digest(&identity) != receipt.identity_sha256
+        || receipt.identity.web_assets_sha256 != receipt.inventory_sha256
+    {
+        return Err(NativeBuildError::ReceiptMetadataDigest);
+    }
     validate_identity(&receipt.identity)?;
     let bytes = read(binary, 1024 * 1024 * 1024)?;
-    ensure!(
-        digest(&bytes) == receipt.binary_sha256
-            && memchr::memmem::find(&bytes, &inventory).is_some()
-            && memchr::memmem::find(&bytes, receipt.inventory_sha256.as_bytes()).is_some()
-            && memchr::memmem::find(&bytes, &identity).is_some()
-            && memchr::memmem::find(&bytes, receipt.identity_sha256.as_bytes()).is_some(),
-        "Executable differs from its binary-bound receipt"
-    );
+    if !(digest(&bytes) == receipt.binary_sha256
+        && memchr::memmem::find(&bytes, &inventory).is_some()
+        && memchr::memmem::find(&bytes, receipt.inventory_sha256.as_bytes()).is_some()
+        && memchr::memmem::find(&bytes, &identity).is_some()
+        && memchr::memmem::find(&bytes, receipt.identity_sha256.as_bytes()).is_some())
+    {
+        return Err(NativeBuildError::BinaryReceiptMismatch);
+    }
     verify_assets(&receipt.inventory, dist, &bytes)
 }
 
@@ -242,13 +361,15 @@ pub struct SourceStamp {
 }
 
 pub fn source_stamp(root: &Path) -> Result<SourceStamp> {
-    ensure!(
-        Path::new(&git(root, &["rev-parse", "--show-toplevel"])?).canonicalize()?
-            == root.canonicalize()?,
-        "Source stamp requires the project's own checkout"
-    );
+    if canonicalize(Path::new(&git(root, &["rev-parse", "--show-toplevel"])?))?
+        != canonicalize(root)?
+    {
+        return Err(NativeBuildError::SourceCheckout);
+    }
     let current = git(root, &["rev-parse", "HEAD"])?;
-    ensure!(revision(&current), "Source HEAD must be a full revision");
+    if !revision(&current) {
+        return Err(NativeBuildError::SourceRevision);
+    }
     let output = process::run(
         Command::new("git")
             .args([
@@ -261,7 +382,8 @@ pub fn source_stamp(root: &Path) -> Result<SourceStamp> {
             .current_dir(root),
         process::Policy::git(64 * 1024 * 1024),
         "List local Git source inputs",
-    )?;
+    )
+    .map_err(NativeBuildError::GitSourceInputs)?;
     let generated_prefixes = [
         "target/".to_owned(),
         "dist/".into(),
@@ -279,7 +401,7 @@ pub fn source_stamp(root: &Path) -> Result<SourceStamp> {
         .split(|byte| *byte == 0)
         .filter(|name| !name.is_empty())
     {
-        let name = std::str::from_utf8(name)?;
+        let name = std::str::from_utf8(name).map_err(NativeBuildError::GitSourceName)?;
         crate::inventory::relative(Path::new(name))?;
         let relative = Path::new(name);
         if relative.ancestors().any(|ancestor| {
@@ -304,20 +426,19 @@ pub fn source_stamp(root: &Path) -> Result<SourceStamp> {
         let info = match fs::symlink_metadata(&path) {
             Ok(info) => info,
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
-            Err(error) => return Err(error.into()),
+            Err(source) => {
+                return Err(NativeBuildError::InspectSource {
+                    path: path.clone(),
+                    source,
+                });
+            }
         };
-        ensure!(
-            !info.file_type().is_symlink(),
-            "Source stamp forbids symbolic links: {name}"
-        );
+        if info.file_type().is_symlink() {
+            return Err(NativeBuildError::SourceSymlink(name));
+        }
         let bytes = crate::inventory::read(&path)?;
-        #[cfg(unix)]
-        let executable = {
-            use std::os::unix::fs::PermissionsExt;
-            fs::metadata(&path)?.permissions().mode() & 0o111 != 0
-        };
-        #[cfg(not(unix))]
-        let executable = false;
+        use std::os::unix::fs::PermissionsExt;
+        let executable = info.permissions().mode() & 0o111 != 0;
         files.insert(
             name,
             serde_json::json!({"sha256":crate::inventory::sha(&bytes),"executable":executable}),
@@ -327,74 +448,75 @@ pub fn source_stamp(root: &Path) -> Result<SourceStamp> {
         source_revision: current,
         source_dirty: !git(root, &["status", "--porcelain=v1", "--untracked-files=all"])?
             .is_empty(),
-        source_tree_sha256: crate::inventory::sha(&serde_json::to_vec(&files)?),
+        source_tree_sha256: crate::inventory::sha(
+            &serde_json::to_vec(&files).expect("invariant: source stamp maps serialize to JSON"),
+        ),
     })
 }
 
 fn validate_identity(identity: &Identity) -> Result<()> {
-    ensure!(
-        identity.format == "blog-build-v1"
-            && name(&identity.product)
-            && identity.target == TARGET
-            && sha(&identity.web_assets_sha256)
-            && sha(&identity.source_tree_sha256)
-            && sha(&identity.schema_sha256)
-            && sha(&identity.core_source_sha256)
-            && matches!(
-                identity.build_mode.as_str(),
-                "development" | "candidate" | "release"
-            )
-            && (identity.build_mode != "release" || !identity.source_dirty),
-        "Invalid compiled build identity"
-    );
-    ensure!(
-        identity.source_revision == "unbound" || revision(&identity.source_revision),
-        "Invalid source revision"
-    );
-    ensure!(
-        regex::Regex::new(r"^\d+\.\d+\.\d+(?:[-+][a-zA-Z0-9.-]+)?$")?.is_match(&identity.version),
-        "Invalid product version"
-    );
+    if identity.format != "blog-build-v1"
+        || !name(&identity.product)
+        || identity.target != TARGET
+        || !sha(&identity.web_assets_sha256)
+        || !sha(&identity.source_tree_sha256)
+        || !sha(&identity.schema_sha256)
+        || !sha(&identity.core_source_sha256)
+    {
+        return Err(NativeBuildError::InvalidIdentity);
+    }
+    match identity.build_mode {
+        NativeMode::Development => {
+            if identity.source_revision != "unbound" {
+                return Err(NativeBuildError::InvalidIdentityRevision);
+            }
+        }
+        NativeMode::Candidate | NativeMode::Release => {
+            if !revision(&identity.source_revision) {
+                return Err(NativeBuildError::InvalidIdentityRevision);
+            }
+            if identity.build_mode == NativeMode::Release && identity.source_dirty {
+                return Err(NativeBuildError::DirtyRelease);
+            }
+        }
+    }
+    let version_pattern = regex::Regex::new(r"^\d+\.\d+\.\d+(?:[-+][a-zA-Z0-9.-]+)?$")
+        .expect("invariant: product version regex is valid");
+    if !version_pattern.is_match(&identity.version) {
+        return Err(NativeBuildError::InvalidVersion);
+    }
     Ok(())
 }
 
 /// Build frontend and backend, then bind the exact emitted resources to the executable.
-pub fn build(
-    options: &crate::Options,
-    config_path: Option<&str>,
-    mode: &str,
-    web_only: bool,
-    rust_only: bool,
-    requested_revision: Option<&str>,
-) -> Result<PathBuf> {
-    ensure!(
-        cfg!(all(
-            target_os = "linux",
-            target_arch = "x86_64",
-            target_env = "gnu"
-        )),
-        "Native Server builds require Linux x86_64 GNU"
-    );
-    ensure!(
-        matches!(mode, "development" | "candidate" | "release") && !(web_only && rust_only),
-        "Invalid native build mode"
-    );
+pub fn build(options: &crate::Options, request: BuildRequest<'_>) -> Result<PathBuf> {
+    let BuildRequest {
+        config_path,
+        mode,
+        selection,
+        requested_revision,
+    } = request;
     let root = &options.root;
     let owner = crate::BuildLock::acquire(root)?;
     let config_file = path(root, config_path.unwrap_or("blog-assets.json"))?;
-    let config: Config = serde_json::from_slice(&read(&config_file, 64 * 1024)?)?;
-    ensure!(
-        config.format == 1 && name(&config.rust.package) && name(&config.rust.binary),
-        "Invalid Server build declaration"
-    );
+    let config: Config =
+        serde_json::from_slice(&read(&config_file, 64 * 1024)?).map_err(|source| {
+            NativeBuildError::DecodeConfig {
+                path: config_file,
+                source,
+            }
+        })?;
+    if config.format != 1 || !name(&config.rust.package) || !name(&config.rust.binary) {
+        return Err(NativeBuildError::InvalidConfig);
+    }
     let variable = &config.rust.source_revision_env;
-    ensure!(
-        (variable == "SOURCE_REVISION" || variable.ends_with("_SOURCE_REVISION"))
-            && variable
-                .bytes()
-                .all(|b| b.is_ascii_uppercase() || b.is_ascii_digit() || b == b'_'),
-        "Invalid source identity environment name"
-    );
+    if !((variable == "SOURCE_REVISION" || variable.ends_with("_SOURCE_REVISION"))
+        && variable
+            .bytes()
+            .all(|b| b.is_ascii_uppercase() || b.is_ascii_digit() || b == b'_'))
+    {
+        return Err(NativeBuildError::InvalidRevisionVariable);
+    }
     let web = root.join(layout::WEB);
     let manifest = path(root, &config.rust.manifest)?;
     let default_dist = path(&web, &config.web.dist)?;
@@ -404,27 +526,24 @@ pub fn build(
     };
     let dist = crate::distribution(&selected)?;
     let stamp = source_stamp(root)?;
-    let source = if mode != "development" {
-        ensure!(
-            requested_revision.is_none_or(|value| value == stamp.source_revision),
-            "Requested source differs from the actual HEAD"
-        );
-        ensure!(
-            mode != "release" || !stamp.source_dirty,
-            "Release requires clean source"
-        );
+    let source = if mode != NativeMode::Development {
+        if requested_revision.is_some_and(|value| value != stamp.source_revision) {
+            return Err(NativeBuildError::RequestedRevision);
+        }
+        if mode == NativeMode::Release && stamp.source_dirty {
+            return Err(NativeBuildError::DirtyRelease);
+        }
         stamp.source_revision.clone()
     } else {
-        ensure!(
-            requested_revision.is_none_or(|value| value == "unbound"),
-            "Development source must be unbound"
-        );
+        if requested_revision.is_some_and(|value| value != "unbound") {
+            return Err(NativeBuildError::DevelopmentRevision);
+        }
         "unbound".into()
     };
-    if !rust_only {
+    if selection != BuildSelection::Rust {
         crate::build_locked(&selected, &owner)?;
     }
-    if web_only {
+    if selection == BuildSelection::Web {
         return Ok(dist);
     }
     let receipt_directory = private_receipt_directory()?;
@@ -449,8 +568,8 @@ pub fn build(
         .env("BLOG_SOURCE_REVISION", &source)
         .env("BLOG_SOURCE_DIRTY", stamp.source_dirty.to_string())
         .env("BLOG_SOURCE_TREE_SHA256", &stamp.source_tree_sha256)
-        .env("BLOG_BUILD_MODE", mode);
-    if mode != "development" {
+        .env("BLOG_BUILD_MODE", mode.as_str());
+    if mode != NativeMode::Development {
         command.arg("--release");
     }
     if std::env::var_os("CARGO_BUILD_JOBS").is_none() {
@@ -463,37 +582,49 @@ pub fn build(
         &mut command,
         process::Policy::build(64 * 1024 * 1024),
         "Build native server",
-    )?;
+    )
+    .map_err(NativeBuildError::Compilation)?;
     let mut binaries = BTreeSet::new();
     for line in output
         .split(|b| *b == b'\n')
         .filter(|line| !line.is_empty())
     {
-        let message: serde_json::Value = serde_json::from_slice(line)?;
-        if message["reason"] == "compiler-message"
-            && let Some(rendered) = message["message"]["rendered"].as_str()
-        {
-            eprint!("{rendered}");
-        }
-        if message["reason"] == "compiler-artifact"
-            && message["target"]["name"] == config.rust.binary
-            && message["target"]["kind"]
-                .as_array()
-                .is_some_and(|v| v.iter().any(|k| k == "bin"))
-            && let Some(file) = message["executable"].as_str()
-        {
-            ensure!(
-                fs::symlink_metadata(file)?.is_file(),
-                "Compiler reported a non-regular executable"
-            );
-            binaries.insert(PathBuf::from(file).canonicalize()?);
+        let message: CargoMessage =
+            serde_json::from_slice(line).map_err(NativeBuildError::CompilerMessage)?;
+        match message {
+            CargoMessage::CompilerMessage { message } => {
+                if let Some(rendered) = message.rendered {
+                    write!(io::stderr().lock(), "{rendered}")
+                        .map_err(NativeBuildError::CompilerDiagnostic)?;
+                }
+            }
+            CargoMessage::CompilerArtifact { target, executable } => {
+                if target.name == config.rust.binary
+                    && target.kind.iter().any(|kind| kind == "bin")
+                    && let Some(file) = executable
+                {
+                    if !fs::symlink_metadata(&file)
+                        .map_err(|source| NativeBuildError::InspectArtifact {
+                            path: file.clone(),
+                            source,
+                        })?
+                        .is_file()
+                    {
+                        return Err(NativeBuildError::InvalidExecutable);
+                    }
+                    binaries.insert(canonicalize(&file)?);
+                }
+            }
+            CargoMessage::BuildScriptExecuted {} | CargoMessage::BuildFinished {} => {}
         }
     }
-    ensure!(
-        binaries.len() == 1,
-        "Compiler did not report exactly one executable"
-    );
-    let binary = binaries.pop_first().context("Compiler executable")?;
+
+    if binaries.len() != 1 {
+        return Err(NativeBuildError::ExecutableCount);
+    }
+    let binary = binaries
+        .pop_first()
+        .expect("invariant: compiler reported exactly one executable");
     let inventory_bytes = read(
         &receipt_directory
             .path()
@@ -506,34 +637,37 @@ pub fn build(
             .join(format!("{}-build-identity.json", config.rust.package)),
         16 * 1024 * 1024,
     )?;
-    let inventory: Inventory = serde_json::from_slice(&inventory_bytes)?;
-    let identity: Identity = serde_json::from_slice(&identity_bytes)?;
+    let inventory: Inventory =
+        serde_json::from_slice(&inventory_bytes).map_err(NativeBuildError::DecodeInventory)?;
+    let identity: Identity =
+        serde_json::from_slice(&identity_bytes).map_err(NativeBuildError::DecodeIdentity)?;
     validate_identity(&identity)?;
-    ensure!(
-        serde_json::to_vec(&inventory)? == inventory_bytes
-            && serde_json::to_vec(&identity)? == identity_bytes,
-        "Compiled build metadata is not canonical JSON"
-    );
-    ensure!(
-        identity.product == config.rust.package
-            && identity.source_revision == source
-            && identity.source_dirty == stamp.source_dirty
-            && identity.source_tree_sha256 == stamp.source_tree_sha256
-            && identity.build_mode == mode
-            && identity.web_assets_sha256 == digest(&inventory_bytes),
-        "Compiled identity differs from requested source"
-    );
+    if serde_json::to_vec(&inventory).expect("invariant: inventory fields serialize to JSON")
+        != inventory_bytes
+        || serde_json::to_vec(&identity).expect("invariant: identity fields serialize to JSON")
+            != identity_bytes
+    {
+        return Err(NativeBuildError::NoncanonicalMetadata);
+    }
+    if !(identity.product == config.rust.package
+        && identity.source_revision == source
+        && identity.source_dirty == stamp.source_dirty
+        && identity.source_tree_sha256 == stamp.source_tree_sha256
+        && identity.build_mode == mode
+        && identity.web_assets_sha256 == digest(&inventory_bytes))
+    {
+        return Err(NativeBuildError::CompiledIdentityMismatch);
+    }
     let binary_bytes = read(&binary, 1024 * 1024 * 1024)?;
-    ensure!(
-        memchr::memmem::find(&binary_bytes, &inventory_bytes).is_some()
-            && memchr::memmem::find(&binary_bytes, identity.web_assets_sha256.as_bytes()).is_some(),
-        "Executable omitted its compiled inventory"
-    );
+    if memchr::memmem::find(&binary_bytes, &inventory_bytes).is_none()
+        || memchr::memmem::find(&binary_bytes, identity.web_assets_sha256.as_bytes()).is_none()
+    {
+        return Err(NativeBuildError::MissingEmbeddedInventory);
+    }
     verify_assets(&inventory, &dist, &binary_bytes)?;
-    ensure!(
-        source_stamp(root)? == stamp,
-        "Source changed during native build"
-    );
+    if source_stamp(root)? != stamp {
+        return Err(NativeBuildError::SourceChanged);
+    }
     let receipt = Receipt {
         format: "blog-assets-receipt-v1".into(),
         binary_sha256: digest(&binary_bytes),
@@ -546,59 +680,123 @@ pub fn build(
         "{}.blog-assets.json",
         binary
             .file_name()
-            .context("Binary filename")?
+            .expect("invariant: canonical executable has a filename")
             .to_string_lossy()
     ));
-    if let Ok(info) = fs::symlink_metadata(&destination) {
-        ensure!(
-            info.is_file() && !info.file_type().is_symlink(),
-            "Unsafe existing receipt"
-        );
-    }
-    let mut temporary =
-        tempfile::NamedTempFile::new_in(binary.parent().context("Binary directory")?)?;
-    std::io::Write::write_all(&mut temporary, &serde_json::to_vec(&receipt)?)?;
-    temporary.as_file().sync_all()?;
-    temporary.persist(&destination)?;
+    validate_destination(&destination)?;
+    publish_bytes(
+        &destination,
+        &serde_json::to_vec(&receipt).expect("invariant: receipt fields serialize to JSON"),
+    )?;
     verify(&binary, &dist, &destination)?;
     if let Some(export) = std::env::var_os("BLOG_BUILD_METADATA_DIR") {
         let export = PathBuf::from(export);
-        ensure!(
-            export.is_absolute(),
-            "Metadata export requires an absolute directory"
-        );
-        fn create_export_directory(directory: &Path) -> Result<()> {
-            let ancestor = directory
-                .ancestors()
-                .find(|path| path.exists())
-                .context("Metadata export ancestor")?;
-            crate::inventory::physical(ancestor)?;
-            fs::create_dir_all(directory)?;
-            crate::inventory::physical(directory)
+        if !export.is_absolute() {
+            return Err(NativeBuildError::RelativeExport);
         }
         create_export_directory(&export)?;
         for source in crate::inventory::walk(receipt_directory.path())? {
-            let relative = source.strip_prefix(receipt_directory.path())?;
-            crate::inventory::relative(relative)?;
+            let relative = source
+                .strip_prefix(receipt_directory.path())
+                .expect("invariant: receipt traversal stays within its temporary directory");
             let output = export.join(relative);
-            let parent = output.parent().context("Metadata export parent")?;
+            let parent = output
+                .parent()
+                .expect("invariant: metadata export remains beneath its directory");
             create_export_directory(parent)?;
-            if output.try_exists()? {
-                ensure!(
-                    fs::symlink_metadata(&output)?.is_file(),
-                    "Unsafe metadata export output"
-                );
-                crate::inventory::physical(&output)?;
-            }
-            let bytes = crate::inventory::read(&source)?;
-            let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
-            std::io::Write::write_all(&mut temporary, &bytes)?;
-            temporary.as_file().sync_all()?;
-            temporary.persist(&output)?;
+            validate_destination(&output)?;
+            publish_bytes(&output, &crate::inventory::read(&source)?)?;
         }
     }
-    eprintln!("Embedded Web verified; receipt {}", destination.display());
     Ok(binary)
+}
+
+fn validate_destination(destination: &Path) -> Result<()> {
+    match fs::symlink_metadata(destination) {
+        Ok(info) => {
+            if !info.is_file() || info.file_type().is_symlink() {
+                return Err(NativeBuildError::UnsafeDestination(destination.to_owned()));
+            }
+            crate::inventory::physical(destination)?;
+        }
+        Err(source) if source.kind() == io::ErrorKind::NotFound => {}
+        Err(source) => {
+            return Err(NativeBuildError::InspectDestination {
+                path: destination.to_owned(),
+                source,
+            });
+        }
+    }
+    Ok(())
+}
+
+fn publish_bytes(destination: &Path, bytes: &[u8]) -> Result<()> {
+    let parent = destination
+        .parent()
+        .expect("invariant: native output has a parent directory");
+    let mut temporary = tempfile::NamedTempFile::new_in(parent).map_err(|source| {
+        NativeBuildError::StageReceipt {
+            path: parent.to_owned(),
+            source,
+        }
+    })?;
+    temporary
+        .write_all(bytes)
+        .map_err(|source| NativeBuildError::WriteReceipt {
+            path: destination.to_owned(),
+            source,
+        })?;
+    temporary
+        .as_file()
+        .sync_all()
+        .map_err(|source| NativeBuildError::SyncReceipt {
+            path: destination.to_owned(),
+            source,
+        })?;
+    temporary
+        .persist(destination)
+        .map_err(|source| NativeBuildError::PersistReceipt {
+            path: destination.to_owned(),
+            source,
+        })?;
+    fs::File::open(parent)
+        .map_err(|source| NativeBuildError::OpenReceiptDirectory {
+            path: parent.to_owned(),
+            source,
+        })?
+        .sync_all()
+        .map_err(|source| NativeBuildError::SyncReceiptDirectory {
+            path: parent.to_owned(),
+            source,
+        })?;
+    Ok(())
+}
+
+fn create_export_directory(directory: &Path) -> Result<()> {
+    let mut ancestor = directory;
+    loop {
+        match fs::symlink_metadata(ancestor) {
+            Ok(_) => break,
+            Err(source) if source.kind() == io::ErrorKind::NotFound => {
+                ancestor = ancestor
+                    .parent()
+                    .expect("invariant: absolute export path has a filesystem root");
+            }
+            Err(source) => {
+                return Err(NativeBuildError::InspectDestination {
+                    path: ancestor.to_owned(),
+                    source,
+                });
+            }
+        }
+    }
+    crate::inventory::physical(ancestor)?;
+    fs::create_dir_all(directory).map_err(|source| NativeBuildError::CreateExportDirectory {
+        path: directory.to_owned(),
+        source,
+    })?;
+    crate::inventory::physical(directory)?;
+    Ok(())
 }
 
 #[cfg(test)]

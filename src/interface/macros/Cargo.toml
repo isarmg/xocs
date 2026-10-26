@@ -39,3 +39,6 @@ features = ["full", "extra-traits"]
 [dependencies.unicode-segmentation]
 package = "blog-text-text-boundaries"
 path = "../../foundation/text/text-boundaries"
+
+[lints]
+workspace = true

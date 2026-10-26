@@ -59,3 +59,20 @@ async fn failed_workers_keep_the_join_error_without_exposing_panic_details() {
             .contains("private-worker-detail")
     );
 }
+
+#[tokio::test]
+async fn database_readiness_reports_closed_pool_without_exposing_a_diagnostic() {
+    let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+    assert!(database_ready(&pool).await);
+    pool.close().await;
+    assert!(!database_ready(&pool).await);
+    let response = readiness(State(pool)).await;
+    assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+    let bytes = axum::body::to_bytes(response.into_body(), 4096)
+        .await
+        .unwrap();
+    assert_eq!(
+        serde_json::from_slice::<serde_json::Value>(&bytes).unwrap(),
+        serde_json::json!({"ready": false})
+    );
+}
