@@ -145,6 +145,7 @@ jobs:
               node ../../test/browser/public-layout.mjs
               node ../../test/browser/public-recovery.mjs
               node ../../test/browser/anonymous-comments.mjs
+              node ../../test/browser/pending-comment-binding.mjs
               ;;
             *) exit 1 ;;
           esac

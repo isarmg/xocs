@@ -180,9 +180,12 @@ fn validate_link(input: &LinkInput) -> Result<(), AppError> {
     }
     Ok(())
 }
-async fn load_link(state: &AppState, id: i64) -> ApiResult<AdminLink> {
-    Ok(Json(sqlx::query_as("SELECT id,title,classify,cover,url,introduction,type AS link_type,status,create_time FROM resource_path WHERE id=?")
-        .bind(id).fetch_optional(&state.pool).await.map_err(db_error)?.ok_or_else(absent)?))
+async fn load_link(
+    connection: &mut sqlx::SqliteConnection,
+    id: i64,
+) -> Result<AdminLink, AppError> {
+    sqlx::query_as("SELECT id,title,classify,cover,url,introduction,type AS link_type,status,create_time FROM resource_path WHERE id=?")
+        .bind(id).fetch_optional(connection).await.map_err(db_error)?.ok_or_else(absent)
 }
 pub(super) async fn create_link(
     State(state): State<AppState>,
@@ -194,8 +197,9 @@ pub(super) async fn create_link(
     let id = sqlx::query("INSERT INTO resource_path(title,classify,cover,url,introduction,type,status) VALUES(?,?,?,?,?,?,?)")
         .bind(input.title).bind(input.classify).bind(input.cover).bind(input.url).bind(input.introduction).bind(input.link_type.as_str()).bind(i64::from(input.status))
         .execute(&mut *transaction).await.map_err(db_error)?.last_insert_rowid();
+    let link = load_link(&mut transaction, id).await?;
     transaction.commit().await.map_err(db_error)?;
-    load_link(&state, id).await
+    Ok(Json(link))
 }
 pub(super) async fn update_link(
     State(state): State<AppState>,
@@ -211,8 +215,9 @@ pub(super) async fn update_link(
     if changed.rows_affected() == 0 {
         return Err(absent());
     }
+    let link = load_link(&mut transaction, id).await?;
     transaction.commit().await.map_err(db_error)?;
-    load_link(&state, id).await
+    Ok(Json(link))
 }
 pub(super) async fn change_link_status(
     State(state): State<AppState>,
@@ -230,8 +235,9 @@ pub(super) async fn change_link_status(
     if changed.rows_affected() == 0 {
         return Err(absent());
     }
+    let link = load_link(&mut transaction, id).await?;
     transaction.commit().await.map_err(db_error)?;
-    load_link(&state, id).await
+    Ok(Json(link))
 }
 pub(super) async fn delete_link(
     State(state): State<AppState>,

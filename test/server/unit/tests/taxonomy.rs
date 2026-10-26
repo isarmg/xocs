@@ -572,7 +572,7 @@ async fn article_receipt_survives_database_reopen_with_initial_fingerprint() {
         StatusCode::OK
     );
     close_fixture_pool(&pool).await;
-    let reopened = open_database(&dir.path().join("site.sqlite"), false)
+    let reopened = open_database(&dir.path().join("site.sqlite"))
         .await
         .unwrap();
     let after: (Vec<u8>, i64) = sqlx::query_as(

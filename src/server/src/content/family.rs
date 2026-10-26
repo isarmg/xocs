@@ -98,19 +98,20 @@ fn validate_family(input: &FamilyInput) -> Result<(), AppError> {
     }
     Ok(())
 }
-async fn load_family(state: &AppState, id: i64) -> ApiResult<AdminFamily> {
-    let author = crate::site_author_id(&state.pool).await?;
-    Ok(Json(
-        sqlx::query_as::<_, AdminFamily>(sqlx::AssertSqlSafe(format!(
-            "{FAMILY_SQL} WHERE id=? AND {FAMILY_OWNER}"
-        )))
-        .bind(id)
-        .bind(author)
-        .fetch_optional(&state.pool)
-        .await
-        .map_err(db_error)?
-        .ok_or_else(absent)?,
-    ))
+async fn load_family(
+    connection: &mut sqlx::SqliteConnection,
+    id: i64,
+    author: i64,
+) -> Result<AdminFamily, AppError> {
+    sqlx::query_as::<_, AdminFamily>(sqlx::AssertSqlSafe(format!(
+        "{FAMILY_SQL} WHERE id=? AND {FAMILY_OWNER}"
+    )))
+    .bind(id)
+    .bind(author)
+    .fetch_optional(connection)
+    .await
+    .map_err(db_error)?
+    .ok_or_else(absent)
 }
 pub(super) async fn create_family(
     State(state): State<AppState>,
@@ -136,8 +137,9 @@ pub(super) async fn create_family(
         .bind(input.bg_cover).bind(input.man_cover).bind(input.woman_cover).bind(input.man_name).bind(input.woman_name).bind(input.timing)
         .bind(input.countdown_title).bind(input.countdown_time).bind(input.family_info).bind(i64::from(input.status))
         .execute(&mut *transaction).await.map_err(db_error)?.last_insert_rowid();
+    let family = load_family(&mut transaction, id, author).await?;
     transaction.commit().await.map_err(db_error)?;
-    load_family(&state, id).await
+    Ok(Json(family))
 }
 pub(super) async fn update_family(
     State(state): State<AppState>,
@@ -155,8 +157,9 @@ pub(super) async fn update_family(
     if changed.rows_affected() == 0 {
         return Err(absent());
     }
+    let family = load_family(&mut transaction, id, author).await?;
     transaction.commit().await.map_err(db_error)?;
-    load_family(&state, id).await
+    Ok(Json(family))
 }
 pub(super) async fn delete_family(
     State(state): State<AppState>,

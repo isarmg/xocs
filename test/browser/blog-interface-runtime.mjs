@@ -71,7 +71,7 @@ for(const engine of [chromium,firefox]){
   await page.getByRole('heading',{name:'Add article',exact:true}).click();await expect(category).toHaveAttribute('aria-expanded','false');
   await category.click();await page.evaluate(()=>window.dispatchEvent(new Event('blur')));await expect(category).toHaveAttribute('aria-expanded','false');
   await page.setViewportSize({width:1280,height:900});await category.click();await expect(categoryPanel).toBeVisible();
-  await page.evaluate(()=>{location.hash='categories';});await expect(page.getByRole('heading',{name:'Categories',exact:true})).toBeVisible();
+  await page.evaluate(()=>{location.hash='categories';});await expect(page.getByRole('region',{name:'Categories',exact:true})).toBeVisible();
   await page.evaluate(()=>{window.dispatchEvent(new Event('resize'));document.dispatchEvent(new Event('scroll'));window.dispatchEvent(new Event('blur'));document.body.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));});
   await expect(page.locator('.blog-select-panel:popover-open')).toHaveCount(0);
   await page.evaluate(()=>{location.hash='new';});await expect(category).toBeVisible();await expect(category).toHaveAttribute('aria-expanded','false');

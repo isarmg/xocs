@@ -236,3 +236,38 @@ async fn repeated_initialization_preserves_database_without_staging_leaks() {
     }
     blog::maintenance::check(root.path()).await.unwrap();
 }
+
+#[tokio::test]
+async fn offline_failures_release_the_instance_lock_without_repairing_storage() {
+    let root = configured_root();
+    blog::maintenance::initialize(root.path(), "admin", "InitialPassphrase123")
+        .await
+        .unwrap();
+    let database = root.path().join("state/site.sqlite");
+    let before = fs::read(&database).unwrap();
+    fs::rename(root.path().join("media"), root.path().join("media.saved")).unwrap();
+    fs::write(root.path().join("media"), b"refuse unsafe media storage").unwrap();
+    let directory =
+        blog_application::state_file::PrivateStateDirectory::open(root.path().join("state"))
+            .unwrap();
+
+    let failures = [
+        blog::maintenance::initialize(root.path(), "admin", "MustNotReplace123").await,
+        blog::maintenance::check(root.path()).await,
+        blog::maintenance::reset_password(root.path(), "admin", "ReplacementPassphrase123").await,
+    ];
+    for failure in failures {
+        assert!(matches!(
+            failure,
+            Err(blog::Error::Filesystem(
+                blog_application::fs_safety::Error::Io(_)
+            ))
+        ));
+        directory.try_instance_lock().unwrap().release().unwrap();
+        assert_eq!(fs::read(&database).unwrap(), before);
+        assert_eq!(
+            fs::read(root.path().join("media")).unwrap(),
+            b"refuse unsafe media storage"
+        );
+    }
+}

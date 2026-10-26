@@ -11,14 +11,6 @@ pub(super) fn Articles() -> impl IntoView {
         format!("/api/v1/content/articles?page={}&size=15", page.get())
     }));
     let action = Action::new();
-    Effect::new(move |_| {
-        if let Some(v) = data.value.get() {
-            let last = ((v.total + v.size - 1) / v.size).max(1) as u64;
-            if page.get_untracked() > last {
-                page.set(last);
-            }
-        }
-    });
     View::new(
         blog_interface::html::section()
             .aria_label(t("文章管理", "Articles"))

@@ -31,7 +31,6 @@ async fn main() -> std::process::ExitCode {
                 | blog::Error::Runtime(_)
                 | blog::Error::Log(_)
                 | blog::Error::Tracing(_)
-                | blog::Error::CreateDatabase(_)
                 | blog::Error::ReadDatabaseDescriptor(_)
                 | blog::Error::ReadDatabasePath(_)
                 | blog::Error::CreateInitializationStaging(_)

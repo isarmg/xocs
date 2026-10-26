@@ -197,17 +197,23 @@ async fn connect(
 }
 
 fn pool_connect_error(error: sqlx::Error) -> Error {
-    if let sqlx::Error::Io(source) = error {
-        let kind = source.kind();
-        if let Some(inner) = source.into_inner() {
-            return match inner.downcast::<ConnectionLimitError>() {
-                Ok(error) => Error::ConnectionLimits(*error),
-                Err(inner) => Error::Sqlx(sqlx::Error::Io(io::Error::new(kind, inner))),
-            };
-        }
-        return Error::Sqlx(sqlx::Error::Io(io::Error::from(kind)));
+    let sqlx::Error::Io(source) = error else {
+        return Error::Sqlx(error);
+    };
+    if source
+        .get_ref()
+        .is_none_or(|inner| !inner.is::<ConnectionLimitError>())
+    {
+        return Error::Sqlx(sqlx::Error::Io(source));
     }
-    Error::Sqlx(error)
+    let inner = source
+        .into_inner()
+        .expect("invariant: connection limit error has a boxed source");
+    Error::ConnectionLimits(
+        *inner
+            .downcast::<ConnectionLimitError>()
+            .expect("invariant: boxed connection limit error type was checked"),
+    )
 }
 
 /// Require the complete integrity-check result to be the single value `ok`.

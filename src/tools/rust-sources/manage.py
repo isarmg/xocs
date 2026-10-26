@@ -847,17 +847,18 @@ def preserve(previous, current):
 
 def atomic_write(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile(dir=path.parent, prefix='.' + path.name + '.', delete=False) as stream:
-        temporary = Path(stream.name)
-        try:
+    stream = tempfile.NamedTemporaryFile(dir=path.parent, prefix='.' + path.name + '.', delete=False)
+    temporary = Path(stream.name)
+    try:
+        with stream:
             stream.write(value)
             stream.flush()
             os.fsync(stream.fileno())
-        except BaseException:
-            temporary.unlink(missing_ok=True)
-            raise
-    temporary.chmod(0o644)
-    temporary.replace(path)
+        temporary.chmod(0o644)
+        temporary.replace(path)
+    except BaseException:
+        temporary.unlink(missing_ok=True)
+        raise
 
 
 def refresh(root):

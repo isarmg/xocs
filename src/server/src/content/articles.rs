@@ -754,10 +754,10 @@ pub(super) async fn create_article(
                     "文章请求已使用或文章已删除",
                 ));
             }
+            let article =
+                load_article(&mut *transaction, id, ArticleAudience::Administrator).await?;
             transaction.commit().await.map_err(db_error)?;
-            return Ok(Json(
-                load_article(&state.pool, id, ArticleAudience::Administrator).await?,
-            ));
+            return Ok(Json(article));
         }
     }
     let author = crate::site_author_id(&mut *transaction).await?;
@@ -778,10 +778,9 @@ pub(super) async fn create_article(
         .await
         .map_err(db_error)?;
     }
+    let article = load_article(&mut *transaction, id, ArticleAudience::Administrator).await?;
     transaction.commit().await.map_err(db_error)?;
-    Ok(Json(
-        load_article(&state.pool, id, ArticleAudience::Administrator).await?,
-    ))
+    Ok(Json(article))
 }
 
 async fn hash_article_password(
@@ -844,10 +843,9 @@ pub(super) async fn update_article(
         .bind(input.sort_id).bind(input.label_id).bind(input.article_cover).bind(input.article_title).bind(input.article_content).bind(input.video_url)
         .bind(i64::from(input.view_status)).bind(i64::from(input.recommend_status)).bind(i64::from(input.comment_status)).bind(i64::from(input.view_status)).bind(password).bind(input.tips).bind(id)
         .execute(&mut *transaction).await.map_err(db_error)?;
+    let article = load_article(&mut *transaction, id, ArticleAudience::Administrator).await?;
     transaction.commit().await.map_err(db_error)?;
-    Ok(Json(
-        load_article(&state.pool, id, ArticleAudience::Administrator).await?,
-    ))
+    Ok(Json(article))
 }
 
 pub(super) async fn delete_article(

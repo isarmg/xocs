@@ -49,6 +49,7 @@ pub trait Attribute: NextAttribute + Send {
 }
 
 /// An attribute key can be used to remove an attribute from an element.
+#[derive(PartialEq, Eq)]
 pub enum NamedAttributeKey {
     /// An ordinary attribute.
     Attribute(Cow<'static, str>),
@@ -56,6 +57,18 @@ pub enum NamedAttributeKey {
     Property(Cow<'static, str>),
     /// The `inner_html` pseudo-attribute.
     InnerHtml,
+}
+
+impl NamedAttributeKey {
+    pub(crate) fn remove(&self, el: &crate::view_tree::renderer::types::Element) {
+        use crate::view_tree::renderer::Rndr;
+
+        match self {
+            Self::Attribute(key) => Rndr::remove_attribute(el, key),
+            Self::Property(key) => Rndr::set_property(el, key, &wasm_bindgen::JsValue::UNDEFINED),
+            Self::InnerHtml => Rndr::set_inner_html(el, ""),
+        }
+    }
 }
 
 /// Adds another attribute to this one, returning a new attribute.

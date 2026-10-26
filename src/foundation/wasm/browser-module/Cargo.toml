@@ -31,6 +31,10 @@ publish = false
 name = "blog_wasm_browser_module"
 path = "src/lib.rs"
 
+[[test]]
+name = "termination-contracts"
+path = "../../../../test/foundation/wasm/browser-module/integration/termination_contracts.rs"
+
 [dependencies.anyhow]
 path = "../../diagnostics/error-context"
 package = "blog-diagnostics-error-context"

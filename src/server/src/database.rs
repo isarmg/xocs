@@ -9,12 +9,7 @@ use sqlx::{
     SqlitePool,
     sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions},
 };
-use std::{
-    fs::{self, OpenOptions},
-    os::unix::fs::OpenOptionsExt,
-    path::Path,
-    time::Duration,
-};
+use std::{fs, path::Path, time::Duration};
 
 // Articles permit 2,000,000 bytes of content. Leave room for the rest of the
 // encoded row while bounding each native SQLite value and statement.
@@ -23,27 +18,18 @@ const CONNECTION_LIMITS: blog_application::sqlite::ConnectionLimits =
         .with_max_sql_bytes(256 * 1024)
         .with_max_vm_operations(100_000);
 
-pub(crate) async fn open_database(path: &Path, create: bool) -> Result<SqlitePool, Error> {
-    open_database_with_limit(path, create, 8).await
+pub(crate) async fn open_database(path: &Path) -> Result<SqlitePool, Error> {
+    open_database_with_limit(path, 8).await
 }
 
 pub(crate) async fn open_database_with_limit(
     path: &Path,
-    create: bool,
     max_connections: u32,
 ) -> Result<SqlitePool, Error> {
     let parent = path
         .parent()
         .expect("invariant: database has a parent directory");
     let directory = blog_application::state_file::PrivateStateDirectory::open(parent)?;
-    if create {
-        OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .mode(0o600)
-            .open(path)
-            .map_err(Error::CreateDatabase)?;
-    }
     let descriptor = directory.open_existing(
         path.file_name()
             .expect("invariant: database has a filename"),
@@ -106,7 +92,7 @@ pub(crate) async fn initialize_new_database(
         .tempfile_in(root)
         .map_err(Error::CreateInitializationStaging)?;
     let staging = temporary.path().to_path_buf();
-    let pool = open_database_with_limit(&staging, false, 1).await?;
+    let pool = open_database_with_limit(&staging, 1).await?;
     let result = async {
         initialize(&pool, username, password).await?;
         let (busy, _, _): (i64, i64, i64) = sqlx::query_as("PRAGMA wal_checkpoint(TRUNCATE)")

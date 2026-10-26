@@ -155,3 +155,49 @@ fn directory_rename_keeps_appends_and_rotation_on_the_held_directory() {
         );
     }
 }
+
+#[test]
+fn dropping_writer_releases_the_lease_even_while_a_descriptor_alias_survives() {
+    let (directory, sink, _) = fixture();
+    // A concurrent process spawn can inherit this description until exec.
+    let inherited = sink.directory.file.try_clone().unwrap();
+    drop(sink);
+    let replacement = RotatingLogFile::open(
+        directory.path(),
+        "events",
+        LogRetention {
+            file_bytes: MAX_RECORD_BYTES as u64,
+            archives: 2,
+        },
+    )
+    .unwrap();
+    drop(inherited);
+    assert!(matches!(
+        RotatingLogFile::open(directory.path(), "events", LogRetention::default()),
+        Err(LogError::WriterLock(_))
+    ));
+    drop(replacement);
+    RotatingLogFile::open(directory.path(), "events", LogRetention::default()).unwrap();
+}
+
+#[test]
+fn explicit_writer_release_hands_off_ownership_while_a_descriptor_alias_survives() {
+    let (directory, sink, _) = fixture();
+    let inherited = sink.directory.file.try_clone().unwrap();
+    sink.release().unwrap();
+    let replacement = RotatingLogFile::open(
+        directory.path(),
+        "events",
+        LogRetention {
+            file_bytes: MAX_RECORD_BYTES as u64,
+            archives: 2,
+        },
+    )
+    .unwrap();
+    drop(inherited);
+    assert!(matches!(
+        RotatingLogFile::open(directory.path(), "events", LogRetention::default()),
+        Err(LogError::WriterLock(_))
+    ));
+    replacement.release().unwrap();
+}

@@ -144,28 +144,43 @@ where
     B: Attribute,
     A: Attribute,
 {
-    type State = Either<A::State, B::State>;
+    type State = EitherAttributeState<A::State, B::State>;
     type Cloneable = Either<A::Cloneable, B::Cloneable>;
     type CloneableOwned = Either<A::CloneableOwned, B::CloneableOwned>;
 
     fn build(self, el: &crate::view_tree::renderer::types::Element) -> Self::State {
-        match self {
+        let keys = self.keys();
+        let active = match self {
             Either::Left(left) => Either::Left(left.build(el)),
             Either::Right(right) => Either::Right(right.build(el)),
+        };
+        EitherAttributeState {
+            el: el.clone(),
+            keys,
+            active: Some(active),
         }
     }
 
     fn rebuild(self, state: &mut Self::State) {
-        match self {
-            Either::Left(left) => {
-                if let Some(state) = state.as_left_mut() {
-                    left.rebuild(state)
-                }
+        let keys = self.keys();
+        match (self, &mut state.active) {
+            (Either::Left(left), Some(Either::Left(old))) if keys == state.keys => {
+                left.rebuild(old);
             }
-            Either::Right(right) => {
-                if let Some(state) = state.as_right_mut() {
-                    right.rebuild(state)
+            (Either::Right(right), Some(Either::Right(old))) if keys == state.keys => {
+                right.rebuild(old);
+            }
+            (new, _) => {
+                drop(state.active.take());
+                while let Some(key) = state.keys.last() {
+                    key.remove(&state.el);
+                    drop(state.keys.pop());
                 }
+                state.keys = keys;
+                state.active = Some(match new {
+                    Either::Left(left) => Either::Left(left.build(&state.el)),
+                    Either::Right(right) => Either::Right(right.build(&state.el)),
+                });
             }
         }
     }
@@ -190,6 +205,15 @@ where
             Either::Right(right) => right.keys(),
         }
     }
+}
+
+/// Retained state for an [`enum@Either`] attribute.
+pub struct EitherAttributeState<A, B> {
+    el: crate::view_tree::renderer::types::Element,
+    keys: Vec<NamedAttributeKey>,
+    // Removing the previous branch leaves no active attribute until the new
+    // build succeeds. A host exception can leave this empty for a later rebuild.
+    active: Option<Either<A, B>>,
 }
 
 impl<A, B> DomView for Either<A, B>

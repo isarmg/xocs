@@ -6,6 +6,46 @@ use blog_assets_compiler::{
 use std::{borrow::Cow, panic::catch_unwind};
 
 #[test]
+fn browser_query_numbers_do_not_wrap_or_panic() {
+    for query in [
+        "last 65536 node versions",
+        "last 65537 node versions",
+        "last 999999999999999999999999 versions",
+        "since 4294969320",
+        "since 2147483648",
+        "since -2147483648",
+        "since -2147483649",
+        "since 2024-4294967297-2",
+        "since 2024-1-4294967297",
+    ] {
+        let result = catch_unwind(|| browser_targets::resolve(&[query], &Opts::default()));
+        assert!(result.is_ok(), "panicked on {query}");
+        assert!(result.unwrap().is_err(), "accepted {query}");
+    }
+    assert!(
+        !browser_targets::resolve(&["last 65535 node versions"], &Opts::default())
+            .unwrap()
+            .is_empty()
+    );
+}
+
+#[test]
+fn since_defaults_only_omitted_date_components() {
+    let opts = Opts::default();
+    let full = browser_targets::resolve(&["since 2024-1-1"], &opts).unwrap();
+    assert!(!full.is_empty());
+    for query in ["since 2024", "since +2024", "since 2024-1"] {
+        assert_eq!(browser_targets::resolve(&[query], &opts).unwrap(), full);
+    }
+    for query in ["since 2024-", "since 2024--2", "since 2024-1-"] {
+        assert!(
+            browser_targets::resolve(&[query], &opts).is_err(),
+            "accepted {query}"
+        );
+    }
+}
+
+#[test]
 fn malformed_node_versions_are_rejected_without_zero_defaults() {
     use std::error::Error as _;
 

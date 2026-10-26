@@ -159,6 +159,12 @@ async fn save_sections(
         .await
         .map_err(db_error)?;
     }
+    let sections = sqlx::query_as(
+        "SELECT id,title,kind,sort_id,priority,enabled FROM home_sections ORDER BY priority,id",
+    )
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(db_error)?;
     tx.commit().await.map_err(db_error)?;
-    admin_sections(State(state)).await
+    Ok(Json(sections))
 }

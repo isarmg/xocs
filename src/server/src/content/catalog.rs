@@ -76,16 +76,15 @@ pub(super) async fn create_category(
         .await
         .map_err(db_error)?
         .last_insert_rowid();
+    let category = sqlx::query_as(
+        "SELECT id,sort_name,sort_description,priority,0 AS article_count FROM sort WHERE id=?",
+    )
+    .bind(id)
+    .fetch_one(&mut *transaction)
+    .await
+    .map_err(db_error)?;
     transaction.commit().await.map_err(db_error)?;
-    Ok(Json(
-        sqlx::query_as(
-            "SELECT id,sort_name,sort_description,priority,0 AS article_count FROM sort WHERE id=?",
-        )
-        .bind(id)
-        .fetch_one(&state.pool)
-        .await
-        .map_err(db_error)?,
-    ))
+    Ok(Json(category))
 }
 pub(super) async fn update_category(
     State(state): State<AppState>,
@@ -109,14 +108,13 @@ pub(super) async fn update_category(
     if changed.rows_affected() == 0 {
         return Err(absent());
     }
+    let category = sqlx::query_as("SELECT id,sort_name,sort_description,priority,(SELECT COUNT(*) FROM article a WHERE a.sort_id=sort.id AND a.deleted=0 AND (a.view_status=1 OR a.password IS NOT NULL)) AS article_count FROM sort WHERE id=?")
+        .bind(id)
+        .fetch_one(&mut *transaction)
+        .await
+        .map_err(db_error)?;
     transaction.commit().await.map_err(db_error)?;
-    Ok(Json(
-        sqlx::query_as("SELECT id,sort_name,sort_description,priority,(SELECT COUNT(*) FROM article a WHERE a.sort_id=sort.id AND a.deleted=0 AND (a.view_status=1 OR a.password IS NOT NULL)) AS article_count FROM sort WHERE id=?")
-            .bind(id)
-            .fetch_one(&state.pool)
-            .await
-            .map_err(db_error)?,
-    ))
+    Ok(Json(category))
 }
 pub(super) async fn delete_category(
     State(state): State<AppState>,

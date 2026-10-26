@@ -25,6 +25,8 @@ const server = createServer((request, response) => {
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const base = `http://127.0.0.1:${server.address().port}`;
+const transitionFailures = [];
+const timerCleanupFailures = [];
 try {
   for (const engine of [chromium, firefox]) {
     const browser = await engine.launch();
@@ -126,6 +128,87 @@ try {
         }
         if (mode !== 'registration') assert.equal(result.callbackAlive, true, 'Failed removal must leave a registered WASM callback callable');
       }
+      const transitions = await page.evaluate(() => {
+        customElements.define('dom-attribute-probe', class extends HTMLElement {
+          static observedAttributes = ['data-first', 'data-second'];
+          attributeChangedCallback() { this.dispatchEvent(new MouseEvent('click')); }
+        });
+        return [
+          'either-right', 'either-left', 'either-dynamic-key', 'erased-type', 'erased-same-key',
+          'erased-dynamic-key', 'erased-retained-keys', 'erased-property',
+          'erased-inner-html', 'erased-listener', 'either-property',
+          'either-inner-html', 'either-listener', 'vector-listener',
+        ].map(operation => {
+          const element = document.createElement('dom-attribute-probe');
+          let called = 0;
+          fixture.attribute_transition(operation, element, () => { called++; });
+          const first = element.getAttribute('data-first');
+          const second = element.getAttribute('data-second');
+          let passed;
+          switch (operation) {
+            case 'either-right':
+            case 'either-left': passed = first === null; break;
+            case 'erased-type': passed = first === null && second === ''; break;
+            case 'erased-same-key': passed = first === 'new'; break;
+            case 'either-dynamic-key':
+            case 'erased-dynamic-key': passed = first === null && second === 'same'; break;
+            case 'erased-retained-keys': passed = first === null && second === null; break;
+            case 'either-property':
+            case 'erased-property': passed = element.contractProperty === undefined; break;
+            case 'either-inner-html':
+            case 'erased-inner-html': passed = element.childNodes.length === 0; break;
+            case 'vector-listener':
+            case 'either-listener':
+            case 'erased-listener': passed = called === 0 && second === 'new'; break;
+          }
+          return { operation, passed, first, second, called };
+        });
+      });
+      for (const result of transitions) {
+        if (!result.passed) transitionFailures.push({ engine: engine.name(), ...result });
+      }
+      console.log(`${engine.name()}: attribute transitions ${JSON.stringify(transitions)}`);
+      assert.deepEqual(await page.evaluate(async () => {
+        const results = [];
+        for (const operation of ['either', 'erased']) {
+          const element = document.createElement('div');
+          await fixture.reactive_attribute_transition(operation, element);
+          results.push({ operation, value: element.getAttribute('data-reactive') });
+        }
+        return results;
+      }), [{ operation: 'either', value: null }, { operation: 'erased', value: null }], 'A removed reactive attribute must stay removed after its signal changes');
+      assert.equal(await page.evaluate(() => {
+        const element = document.createElement('dom-attribute-probe');
+        const remove = element.removeAttribute;
+        const source = new DOMException('attribute vector removal', 'InvalidStateError');
+        let called = 0;
+        element.removeAttribute = () => { throw source; };
+        let error;
+        try { fixture.attribute_transition('vector-listener', element, () => { called++; }); }
+        catch (caught) { error = caught; }
+        finally { element.removeAttribute = remove; }
+        element.dispatchEvent(new MouseEvent('click'));
+        return error === source && called === 0;
+      }), true, 'A failed vector key removal must preserve its source and cancel every old listener first');
+      const timerCleanup = await page.evaluate(() => ['timeout', 'interval', 'timeout-range', 'interval-range'].map(operation => {
+        const method = operation.startsWith('timeout') ? 'setTimeout' : 'setInterval';
+        const original = window[method];
+        const source = new DOMException('timer cleanup', 'InvalidStateError');
+        let dropped = 0;
+        let error;
+        window[method] = () => { throw source; };
+        try { fixture.timer_failure_cleanup(operation, () => { dropped++; }); }
+        catch (caught) { error = caught; }
+        finally { window[method] = original; }
+        const expectedError = operation.endsWith('-range')
+          ? error instanceof RangeError && error.message === 'timer delay exceeds i32 milliseconds'
+          : error === source;
+        return { operation, expectedError, dropped };
+      }));
+      for (const result of timerCleanup) {
+        if (!result.expectedError || result.dropped !== 1) timerCleanupFailures.push({ engine: engine.name(), ...result });
+      }
+      console.log(`${engine.name()}: timer registration cleanup ${JSON.stringify(timerCleanup)}`);
       console.log(`${engine.name()}: timer failure sources and ranges, window listener RAII, explicit cleanup and destructor failure contracts passed`);
       await page.close();
     } finally {
@@ -135,3 +218,5 @@ try {
 } finally {
   await new Promise(resolve => server.close(resolve));
 }
+assert.deepEqual(transitionFailures, [], 'Attribute transitions must remove the old effect, listener and DOM keys before building the new state');
+assert.deepEqual(timerCleanupFailures, [], 'Failed timer registration must drop its Rust callback capture once and preserve the original host error');

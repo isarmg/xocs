@@ -2,7 +2,7 @@ use super::{Attribute, NextAttribute};
 use crate::view_tree::{
     erased::{Erased, ErasedLocal},
     html::attribute::NamedAttributeKey,
-    renderer::{dom::Element, Rndr},
+    renderer::dom::Element,
 };
 use std::{any::TypeId, fmt::Debug, mem};
 
@@ -36,6 +36,22 @@ pub struct AnyAttributeState {
     state: ErasedLocal,
     el: crate::view_tree::renderer::types::Element,
     keys: Vec<NamedAttributeKey>,
+}
+
+impl AnyAttributeState {
+    fn drop_value(&mut self) {
+        self.type_id = TypeId::of::<()>();
+        // Cancel callbacks and reactive writes before DOM removal can invoke
+        // custom-element callbacks, or a new attribute begins building.
+        drop(mem::replace(&mut self.state, ErasedLocal::new(())));
+    }
+
+    fn clear_keys(&mut self) {
+        while let Some(key) = self.keys.last() {
+            key.remove(&self.el);
+            drop(self.keys.pop());
+        }
+    }
 }
 
 /// Converts an [`Attribute`] into [`AnyAttribute`].
@@ -109,9 +125,13 @@ impl Attribute for AnyAttribute {
     }
 
     fn rebuild(self, state: &mut Self::State) {
-        if self.type_id == state.type_id {
+        let keys = self.keys();
+        if self.type_id == state.type_id && keys == state.keys {
             (self.rebuild)(self.value, state)
         } else {
+            state.drop_value();
+            state.clear_keys();
+            state.keys = keys;
             let new = self.build(&state.el);
             *state = new;
         }
@@ -153,22 +173,16 @@ impl Attribute for Vec<AnyAttribute> {
 
     fn rebuild(self, state: &mut Self::State) {
         let (el, state) = state;
-        for old in mem::take(state) {
-            for key in old.keys {
-                match key {
-                    NamedAttributeKey::InnerHtml => {
-                        Rndr::set_inner_html(&old.el, "");
-                    }
-                    NamedAttributeKey::Property(prop_name) => {
-                        Rndr::set_property(&old.el, &prop_name, &wasm_bindgen::JsValue::UNDEFINED);
-                    }
-                    NamedAttributeKey::Attribute(key) => {
-                        Rndr::remove_attribute(&old.el, &key);
-                    }
-                }
-            }
+        for old in state.iter_mut() {
+            old.drop_value();
         }
-        *state = self.into_iter().map(|s| s.build(el)).collect();
+        for old in state.iter_mut() {
+            old.clear_keys();
+        }
+        state.clear();
+        for attr in self {
+            state.push(attr.build(el));
+        }
     }
 
     fn into_cloneable(self) -> Self::Cloneable {

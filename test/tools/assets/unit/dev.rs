@@ -199,6 +199,48 @@ async fn static_head_etag_and_traversal() -> Result<()> {
     assert_ne!(escaped.status(), StatusCode::OK);
     Ok(())
 }
+
+#[tokio::test]
+async fn absolute_decoded_paths_are_rejected_before_joining_the_distribution() -> Result<()> {
+    use tower::ServiceExt;
+
+    let directory = tempfile::tempdir()?;
+    std::fs::write(directory.path().join("a.js"), "export const a=1")?;
+    for (base, rejected, accepted) in [
+        ("/", ["//private", "/%2Fprivate"], "/a.js"),
+        (
+            "/blog/",
+            ["/blog//private", "/blog/%2Fprivate"],
+            "/blog/a.js",
+        ),
+    ] {
+        let app = Arc::new(App {
+            dist: directory.path().into(),
+            base: base.into(),
+            proxies: Vec::new(),
+            client: proxy::Client::new(Duration::from_secs(300)),
+            status: Arc::new(RwLock::new(BuildStatus::default())),
+        });
+        let router = Router::new().fallback(handler).with_state(app);
+        for path in rejected {
+            let response = router
+                .clone()
+                .oneshot(Request::builder().uri(path).body(Body::empty())?)
+                .await?;
+            assert_ne!(response.status(), StatusCode::OK, "{path}");
+        }
+        let response = router
+            .oneshot(Request::builder().uri(accepted).body(Body::empty())?)
+            .await?;
+        assert_eq!(response.status(), StatusCode::OK, "{accepted}");
+        assert_eq!(
+            axum::body::to_bytes(response.into_body(), 1024).await?,
+            "export const a=1"
+        );
+    }
+    Ok(())
+}
+
 #[tokio::test]
 async fn wasm_encoding_refusal_never_falls_back_to_forbidden_identity() -> Result<()> {
     use tower::ServiceExt;

@@ -44,14 +44,21 @@ pub(super) async fn create_guest_tree_hole(
     {
         return Err(invalid("留言不能为空、不能超过 60 个字，也不能包含图片"));
     }
+    let mut transaction = state
+        .pool
+        .begin_with("BEGIN IMMEDIATE")
+        .await
+        .map_err(db_error)?;
     let id = sqlx::query("INSERT INTO tree_hole(message) VALUES(?)")
         .bind(message)
-        .execute(&state.pool)
+        .execute(&mut *transaction)
         .await
         .map_err(db_error)?
         .last_insert_rowid();
-    Ok(Json(sqlx::query_as("SELECT t.id,t.user_id,u.username,t.avatar,t.message,t.image_path,t.create_time FROM tree_hole t LEFT JOIN user u ON u.id=t.user_id WHERE t.id=?")
-        .bind(id).fetch_one(&state.pool).await.map_err(db_error)?))
+    let entry = sqlx::query_as("SELECT t.id,t.user_id,u.username,t.avatar,t.message,t.image_path,t.create_time FROM tree_hole t LEFT JOIN user u ON u.id=t.user_id WHERE t.id=?")
+        .bind(id).fetch_one(&mut *transaction).await.map_err(db_error)?;
+    transaction.commit().await.map_err(db_error)?;
+    Ok(Json(entry))
 }
 
 pub(super) async fn content_tree_hole(

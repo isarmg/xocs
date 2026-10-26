@@ -92,6 +92,40 @@ fn administrative_atomic_files_keep_service_owner_and_refuse_unsafe_targets() {
 }
 
 #[test]
+fn administrative_publication_refuses_changed_authority_and_unsafe_staging() {
+    use crate::fs_safety::NoClobberPublish;
+    let temporary = tempfile::tempdir().unwrap();
+    let path = temporary.path().join("state");
+    let runtime = PrivateDirectory::create(&path).unwrap();
+    let directory = PrivateDirectory::open_for_administration(&path).unwrap();
+    let source = RelativePath::new("staging").unwrap();
+    let destination = RelativePath::new("published").unwrap();
+    AtomicFile::replace(&runtime, &source, b"original").unwrap();
+
+    fs::set_permissions(path.join("staging"), fs::Permissions::from_mode(0o640)).unwrap();
+    assert!(matches!(
+        NoClobberPublish::publish(&directory, &source, &destination),
+        Err(Error::UnsafePermissions(_))
+    ));
+    assert_eq!(fs::read(path.join("staging")).unwrap(), b"original");
+    assert!(!path.join("published").exists());
+
+    fs::set_permissions(path.join("staging"), fs::Permissions::from_mode(0o600)).unwrap();
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o750)).unwrap();
+    assert!(matches!(
+        NoClobberPublish::publish(&directory, &source, &destination),
+        Err(Error::UnsafePermissions(_))
+    ));
+    assert_eq!(fs::read(path.join("staging")).unwrap(), b"original");
+    assert!(!path.join("published").exists());
+
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o700)).unwrap();
+    NoClobberPublish::publish(&directory, &source, &destination).unwrap();
+    assert_eq!(fs::read(path.join("published")).unwrap(), b"original");
+    assert!(!path.join("staging").exists());
+}
+
+#[test]
 fn rejecting_private_directory_does_not_chmod_a_symlink_target_or_existing_directory() {
     let temp = tempfile::tempdir().unwrap();
     let victim = temp.path().join("victim");

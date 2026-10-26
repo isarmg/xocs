@@ -19,8 +19,10 @@ cargo test --locked --offline -p blog-assets -p blog-encoding-compression --test
 cargo test --locked --offline -p blog-format-parser-combinators --test numeric-contracts
 cargo test --locked --offline -p blog-format-json-schema --test serialization-contracts
 cargo test --locked --offline -p blog-wasm-module-transform --test emission-contracts
+cargo test --locked --offline -p blog-wasm-browser-module --test termination-contracts
 cargo test --locked --offline -p blog-storage-sqlite-access --lib
 cargo test --locked --offline -p blog-interface -p blog-dom --lib --tests
+bash test/interface/dom/erasure-contracts.sh
 cargo test --locked --offline -p blog-collections-concurrent-slab --lib
 cargo test --locked --offline -p blog-sync-notification --lib
 cargo test --locked --offline -p blog-sync-atomic-lock --lib

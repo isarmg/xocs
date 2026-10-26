@@ -1,6 +1,24 @@
 use super::*;
 use std::os::unix::fs::symlink;
 
+#[test]
+fn connection_error_adapter_preserves_native_io_error_codes() {
+    let directory = tempfile::tempdir().unwrap();
+    let source = File::open(directory.path().join("missing.sqlite")).unwrap_err();
+    let expected = source.raw_os_error().unwrap();
+    let failure = snapshot_connect_error(sqlx::Error::Io(source));
+    let SnapshotError::Sqlx(sqlx::Error::Io(source)) = failure else {
+        panic!("an unrelated connection I/O error must retain its variant");
+    };
+    assert_eq!(source.raw_os_error(), Some(expected));
+    assert!(matches!(
+        snapshot_connect_error(sqlx::Error::Io(io::Error::other(
+            crate::sqlite::ConnectionLimitError::NotApplied
+        ))),
+        SnapshotError::ConnectionLimits(crate::sqlite::ConnectionLimitError::NotApplied)
+    ));
+}
+
 #[tokio::test]
 async fn unavailable_temporary_root_preserves_its_filesystem_error() {
     use std::{error::Error as _, os::unix::fs::PermissionsExt};

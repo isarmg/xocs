@@ -19,6 +19,16 @@ async fn setup() -> (tempfile::TempDir, Router, SqlitePool) {
     setup_with_pool_limit(8).await
 }
 
+fn create_empty_database(path: &std::path::Path) {
+    use std::os::unix::fs::OpenOptionsExt;
+    std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .open(path)
+        .unwrap();
+}
+
 async fn setup_with_pool_limit(limit: u32) -> (tempfile::TempDir, Router, SqlitePool) {
     setup_with_password_slots(limit, Arc::new(tokio::sync::Semaphore::new(2))).await
 }
@@ -30,7 +40,8 @@ async fn setup_with_password_slots(
     let dir = tempfile::tempdir().unwrap();
     std::fs::set_permissions(dir.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
     let db = dir.path().join("site.sqlite");
-    let pool = crate::database::open_database_with_limit(&db, true, limit)
+    create_empty_database(&db);
+    let pool = crate::database::open_database_with_limit(&db, limit)
         .await
         .unwrap();
     initialize(
@@ -881,7 +892,7 @@ async fn comment_submission_retries_survive_concurrency_restart_and_deletion() {
     drop(submit_message_comment(&app, None, &comment_request_id(2), "Lost response").await);
     drop(app);
     close_fixture_pool(&pool).await;
-    let pool = open_database(&dir.path().join("site.sqlite"), false)
+    let pool = open_database(&dir.path().join("site.sqlite"))
         .await
         .unwrap();
     let app = router(

@@ -1,6 +1,9 @@
 use super::*;
 use serde_json::{Value, json};
 
+#[path = "commit_responses.rs"]
+mod commit_responses;
+
 async fn session(app: &Router) -> (String, String) {
     let response = app
         .clone()
@@ -1366,7 +1369,7 @@ async fn news_publish_retries_preserve_identity_and_deliberate_repeats() {
     .await
     .unwrap();
     close_fixture_pool(&pool).await;
-    let reopened = open_database(&directory.path().join("site.sqlite"), false)
+    let reopened = open_database(&directory.path().join("site.sqlite"))
         .await
         .unwrap();
     let after: Vec<(String, Vec<u8>, Option<i64>)> = sqlx::query_as(
@@ -1572,7 +1575,7 @@ async fn note_receipts_validate_keys_and_commit_atomically_then_survive_database
     assert_eq!(response.status(), StatusCode::OK);
     let saved = body_json(response).await;
     close_fixture_pool(&pool).await;
-    let pool = open_database(&directory.path().join("site.sqlite"), false)
+    let pool = open_database(&directory.path().join("site.sqlite"))
         .await
         .unwrap();
     let app = router(

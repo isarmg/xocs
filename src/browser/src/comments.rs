@@ -2,7 +2,8 @@ use crate::common::*;
 use blog_interface::component::component_props_builder;
 use blog_interface::prelude::*;
 use blog_interface::thread_bound::SendWrapper;
-use serde_json::{Value, json};
+use serde::{Deserialize, Deserializer, Serialize};
+use serde_json::Value;
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum CommentKind {
     Article,
@@ -27,26 +28,97 @@ fn commenter(v: &Value) -> String {
         name
     }
 }
-pub fn valid_submission(v: &Value) -> bool {
-    let id = text(v, "request_id");
-    let b = id.as_bytes();
-    b.len() == 36
-        && b[14] == b'4'
-        && [8, 13, 18, 23].iter().all(|i| b[*i] == b'-')
-        && b.iter().enumerate().all(|(i, c)| {
-            [8, 13, 18, 23].contains(&i) || c.is_ascii_digit() || (b'a'..=b'f').contains(c)
+
+#[derive(Clone, Serialize)]
+struct PendingSubmission {
+    request_id: String,
+    content: String,
+    parent_comment_id: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    article_id: Option<i64>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PendingFields {
+    request_id: String,
+    content: String,
+    #[serde(deserialize_with = "required_parent")]
+    parent_comment_id: Option<i64>,
+    #[serde(default, deserialize_with = "present_article")]
+    article_id: Option<i64>,
+}
+
+fn required_parent<'de, D: Deserializer<'de>>(d: D) -> Result<Option<i64>, D::Error> {
+    Option::<i64>::deserialize(d)
+}
+
+fn present_article<'de, D: Deserializer<'de>>(d: D) -> Result<Option<i64>, D::Error> {
+    i64::deserialize(d).map(Some)
+}
+
+impl PendingSubmission {
+    fn parse(raw: &str, target: Option<i64>) -> Result<Self, PendingError> {
+        struct PendingObject;
+        impl<'de> serde::de::Visitor<'de> for PendingObject {
+            type Value = PendingFields;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("a pending comment object")
+            }
+
+            fn visit_map<M: serde::de::MapAccess<'de>>(
+                self,
+                map: M,
+            ) -> Result<Self::Value, M::Error> {
+                PendingFields::deserialize(serde::de::value::MapAccessDeserializer::new(map))
+            }
+        }
+        let mut decoder = serde_json::Deserializer::from_str(raw);
+        let PendingFields {
+            request_id,
+            content,
+            parent_comment_id,
+            article_id,
+        } = decoder.deserialize_map(PendingObject)?;
+        decoder.end()?;
+        let valid_request = request_id.len() == 36
+            && request_id
+                .bytes()
+                .enumerate()
+                .all(|(index, byte)| match index {
+                    8 | 13 | 18 | 23 => byte == b'-',
+                    14 => byte == b'4',
+                    19 => matches!(byte, b'8' | b'9' | b'a' | b'b'),
+                    _ => byte.is_ascii_digit() || matches!(byte, b'a'..=b'f'),
+                });
+        let valid_id = |id: i64| (1..=9_007_199_254_740_991).contains(&id);
+        if !valid_request
+            || content.trim().is_empty()
+            || content.chars().count() > 1024
+            || parent_comment_id.is_some_and(|id| !valid_id(id))
+            || article_id.is_some_and(|id| !valid_id(id))
+            || article_id != target
+        {
+            return Err(PendingError::InvalidSubmission);
+        }
+        Ok(Self {
+            request_id,
+            content,
+            parent_comment_id,
+            article_id,
         })
-        && b"89ab".contains(&b[19])
-        && v["content"].as_str().is_some_and(|s| !s.trim().is_empty())
-        && v.get("parent_comment_id").is_some_and(|v| {
-            v.is_null()
-                || v.as_u64()
-                    .is_some_and(|i| i > 0 && i <= 9_007_199_254_740_991)
-        })
-        && v.get("article_id").is_none_or(|v| {
-            v.as_u64()
-                .is_some_and(|i| i > 0 && i <= 9_007_199_254_740_991)
-        })
+    }
+
+    fn json(&self) -> Value {
+        serde_json::to_value(self)
+            .expect("invariant: a comment submission contains only JSON primitives")
+    }
+
+    fn stored_json(&self) -> String {
+        serde_json::to_string(self)
+            .expect("invariant: a comment submission contains only JSON primitives")
+    }
 }
 #[derive(Debug, thiserror::Error)]
 enum PendingError {
@@ -72,19 +144,11 @@ fn clear_pending(key: &str) -> Result<(), PendingError> {
     storage()?.remove_item(key).map_err(PendingError::Browser)
 }
 
-fn read_pending(key: &str) -> Result<Option<Value>, PendingError> {
+fn read_pending(key: &str, target: Option<i64>) -> Result<Option<PendingSubmission>, PendingError> {
     let Some(raw) = storage()?.get_item(key).map_err(PendingError::Browser)? else {
         return Ok(None);
     };
-    let v = serde_json::from_str(&raw)?;
-    if !valid_submission(&v) {
-        return Err(PendingError::InvalidSubmission);
-    }
-    let mut normalized = json!({"request_id":v["request_id"],"content":v["content"],"parent_comment_id":v["parent_comment_id"]});
-    if let Some(article) = v.get("article_id") {
-        normalized["article_id"] = article.clone();
-    }
-    Ok(Some(normalized))
+    PendingSubmission::parse(&raw, target).map(Some)
 }
 #[component]
 pub(crate) fn Comments(
@@ -93,8 +157,12 @@ pub(crate) fn Comments(
     #[prop(optional)] title: String,
 ) -> impl IntoView {
     let path = kind.endpoint();
+    let target = match kind {
+        CommentKind::Article => Some(article_id),
+        CommentKind::Message | CommentKind::Love => None,
+    };
     let key = format!("blog.comment-submission:{path}:{article_id}");
-    let (restored, unavailable) = match read_pending(&key) {
+    let (restored, unavailable) = match read_pending(&key, target) {
         Ok(pending) => (pending, false),
         Err(_) => (None, true),
     };
@@ -103,7 +171,7 @@ pub(crate) fn Comments(
     let draft = RwSignal::new(
         pending
             .get_untracked()
-            .map(|v| text(&v, "content"))
+            .map(|v| v.content)
             .unwrap_or_default(),
     );
     let reply = RwSignal::new(None::<Value>);
@@ -340,30 +408,29 @@ pub(crate) fn Comments(
                         let (submission, retry) = match pending.get_untracked() {
                             Some(submission) => (submission, true),
                             None => {
-                                let mut submission = json!({
-                                    "request_id": web_sys::window().expect("invariant: the application is mounted in a browser window").crypto().expect("invariant: the application window exposes browser crypto").random_uuid(),
-                                    "content": draft.get_untracked().trim(),
-                                    "parent_comment_id": reply.get_untracked().map(|v| v["id"].clone()),
-                                });
-                                if kind == CommentKind::Article {
-                                    submission["article_id"] = json!(article_id);
+                                let content = draft.get_untracked().trim().to_owned();
+                                if content.is_empty() {
+                                    return;
                                 }
+                                if content.chars().count() > 1024 {
+                                    failure.set(t(
+                                        "评论正文须为 1–1024 个字符",
+                                        "Comment content must contain 1–1024 characters",
+                                    ));
+                                    return;
+                                }
+                                let submission = PendingSubmission {
+                                    request_id: web_sys::window().expect("invariant: the application is mounted in a browser window").crypto().expect("invariant: the application window exposes browser crypto").random_uuid(),
+                                    content,
+                                    parent_comment_id: reply.get_untracked().map(|v| num(&v, "id")),
+                                    article_id: target,
+                                };
                                 (submission, false)
                             }
                         };
-                        if text(&submission, "content").is_empty() {
-                            return;
-                        }
-                        if !retry && text(&submission, "content").chars().count() > 1024 {
-                            failure.set(t(
-                                "评论正文须为 1–1024 个字符",
-                                "Comment content must contain 1–1024 characters",
-                            ));
-                            return;
-                        }
                         if storage()
                             .and_then(|s| {
-                                s.set_item(&key.get_value(), &submission.to_string())
+                                s.set_item(&key.get_value(), &submission.stored_json())
                                     .map_err(PendingError::Browser)
                             })
                             .is_err()
@@ -382,7 +449,7 @@ pub(crate) fn Comments(
                             let result = request(
                                 path,
                                 "POST",
-                                Some(submission.clone()),
+                                Some(submission.json()),
                                 RequestOptions {
                                     signal: Some(signal.clone()),
                                     ..Default::default()
@@ -395,7 +462,7 @@ pub(crate) fn Comments(
                             match result {
                                 Ok(v)
                                     if text(&v, "comment_content")
-                                        == text(&submission, "content").trim() =>
+                                        == submission.content.trim() =>
                                 {
                                     storage_failure.set(clear_pending(&key.get_value()).is_err());
                                     pending.set(None);

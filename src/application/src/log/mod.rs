@@ -718,6 +718,8 @@ pub enum LogError {
     UnsafeStorage,
     #[error("failed to acquire the exclusive log writer lease")]
     WriterLock(#[source] io::Error),
+    #[error("failed to release the exclusive log writer lease")]
+    WriterRelease(#[source] io::Error),
     #[error("failed to append a log record and restore the previous length; rollback: {rollback}")]
     AppendRollback {
         #[source]

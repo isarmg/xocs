@@ -418,13 +418,15 @@ fn Reading(article: ArticleModel) -> impl IntoView {
             .document()
             .expect("invariant: the application window owns its document");
         let current = headings
-            .get_value()
-            .into_iter()
-            .rfind(|h| {
-                doc.get_element_by_id(&h.id)
-                    .is_some_and(|e| e.get_bounding_client_rect().top() <= 150.)
+            .with_value(|headings| {
+                headings
+                    .iter()
+                    .rfind(|h| {
+                        doc.get_element_by_id(&h.id)
+                            .is_some_and(|e| e.get_bounding_client_rect().top() <= 150.)
+                    })
+                    .map(|h| h.id.clone())
             })
-            .map(|h| h.id)
             .unwrap_or_default();
         active.set(current);
     };

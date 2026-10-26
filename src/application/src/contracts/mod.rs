@@ -316,9 +316,7 @@ pub struct StateContract {
 impl StateContract {
     /// Parse and validate one current state-contract JSON document.
     pub fn from_slice(bytes: &[u8]) -> Result<Self, ParseError> {
-        let value: Self = serde_json::from_slice(bytes)?;
-        value.validate()?;
-        Ok(value)
+        Ok(serde_json::from_slice(bytes)?)
     }
 
     pub fn validate(&self) -> Result<(), ValidationError> {
@@ -365,9 +363,7 @@ pub struct ReleaseIdentity {
 impl ReleaseIdentity {
     /// Parse and validate one current release-identity JSON document.
     pub fn from_slice(bytes: &[u8]) -> Result<Self, ParseError> {
-        let value: Self = serde_json::from_slice(bytes)?;
-        value.validate()?;
-        Ok(value)
+        Ok(serde_json::from_slice(bytes)?)
     }
 
     pub fn validate(&self) -> Result<(), ValidationError> {
@@ -456,9 +452,7 @@ pub struct BackupManifest {
 impl BackupManifest {
     /// Parse and validate one current backup-manifest JSON document.
     pub fn from_slice(bytes: &[u8]) -> Result<Self, ParseError> {
-        let value: Self = serde_json::from_slice(bytes)?;
-        value.validate()?;
-        Ok(value)
+        Ok(serde_json::from_slice(bytes)?)
     }
 
     pub fn validate(&self) -> Result<(), ValidationError> {

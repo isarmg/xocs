@@ -460,6 +460,7 @@ pub(super) fn no_clobber_publish(
     source: &RelativePath,
     destination: &RelativePath,
 ) -> Result<(), Error> {
+    verify_administration(directory)?;
     let source = entry_name(source)?;
     let destination = entry_name(destination)?;
     let file = File::from(
@@ -472,6 +473,7 @@ pub(super) fn no_clobber_publish(
         .map_err(io::Error::from)?,
     );
     let identity = regular_single_link(&file, Path::new(source))?;
+    validate_administrative_file(directory, &identity, Path::new(source))?;
     file.sync_all()?;
     rename_no_clobber(directory, source, destination)?;
     finish_publish(directory, destination, &identity)

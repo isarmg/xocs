@@ -207,6 +207,38 @@ fn malformed_archive_index_retains_the_parse_error() {
 
 #[cfg(unix)]
 #[test]
+fn rotation_refuses_archive_aliases_outside_its_canonical_retention_names() {
+    use std::{fs, os::unix::fs::PermissionsExt};
+    for custom in [false, true] {
+        for alias in ["01", "+1", "001"] {
+            let directory = tempfile::tempdir().unwrap();
+            fs::set_permissions(directory.path(), fs::Permissions::from_mode(0o700)).unwrap();
+            let name = if custom {
+                format!("events.log.{alias}")
+            } else {
+                format!("events.{alias}.jsonl")
+            };
+            let path = directory.path().join(name);
+            let original = vec![b'x'; MAX_RECORD_BYTES + 1];
+            fs::write(&path, &original).unwrap();
+            fs::set_permissions(&path, fs::Permissions::from_mode(0o600)).unwrap();
+            let retention = LogRetention {
+                file_bytes: MAX_RECORD_BYTES as u64,
+                archives: 2,
+            };
+            let result = if custom {
+                RotatingLogFile::open_file(directory.path().join("events.log"), retention)
+            } else {
+                RotatingLogFile::open(directory.path(), "events", retention)
+            };
+            assert!(matches!(result, Err(LogError::UnsafeStorage)), "{path:?}");
+            assert_eq!(fs::read(&path).unwrap(), original);
+        }
+    }
+}
+
+#[cfg(unix)]
+#[test]
 fn a_dedicated_log_directory_has_one_writer_across_overlapping_archive_names() {
     use std::{fs, os::unix::fs::PermissionsExt};
     let directory = tempfile::tempdir().unwrap();

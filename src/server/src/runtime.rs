@@ -42,7 +42,7 @@ pub(crate) async fn run(root: &Path) -> Result<(), Error> {
     let instance_lock = config::runtime_lock(settings)?;
     let pool = match async {
         validate_existing_database(&database, &settings.root.join("run")).await?;
-        open_database(&database, false).await
+        open_database(&database).await
     }
     .await
     {

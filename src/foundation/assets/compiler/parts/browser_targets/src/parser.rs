@@ -210,7 +210,7 @@ impl<'a> Parser<'a> {
             if !b.is_ascii_digit() {
                 break;
             }
-            n = n.wrapping_mul(10).wrapping_add((b - b'0') as u16);
+            n = n.checked_mul(10)?.checked_add(u16::from(b - b'0'))?;
             self.pos += 1;
         }
         Some(n)
@@ -227,7 +227,7 @@ impl<'a> Parser<'a> {
             if !b.is_ascii_digit() {
                 break;
             }
-            n = n.wrapping_mul(10).wrapping_add((b - b'0') as u32);
+            n = n.checked_mul(10)?.checked_add(u32::from(b - b'0'))?;
             self.pos += 1;
         }
         Some(n)
@@ -258,8 +258,8 @@ impl<'a> Parser<'a> {
         if !neg {
             self.eat(b'+');
         }
-        let n = self.parse_u32()?.cast_signed();
-        Some(if neg { -n } else { n })
+        let n = i64::from(self.parse_u32()?);
+        i32::try_from(if neg { -n } else { n }).ok()
     }
 
     /// Scan an optionally signed decimal number (e.g. `-1`, `2.5`, `.5`).
@@ -530,24 +530,21 @@ impl<'a> Parser<'a> {
 
     fn parse_since(&mut self) -> Option<QueryAtom<'a>> {
         let start = self.pos;
-        if !self.match_keyword(b"since") {
-            self.pos = start;
-            return None;
-        }
-        // Exactly one whitespace character, like the upstream `since` regex.
-        if !(self.eat(b' ') || self.eat(b'\t')) {
-            self.pos = start;
-            return None;
-        }
+        let result = (|| {
+            self.match_keyword(b"since").then_some(())?;
+            // Exactly one whitespace character, like the upstream `since` regex.
+            (self.eat(b' ') || self.eat(b'\t')).then_some(())?;
 
-        let Some(year) = self.parse_i32() else {
-            self.pos = start;
-            return None;
-        };
-        let month = if self.eat(b'-') { self.parse_u32() } else { None };
-        let day = if self.eat(b'-') { self.parse_u32() } else { None };
+            let year = self.parse_i32()?;
+            let month = if self.eat(b'-') { self.parse_u32()? } else { 1 };
+            let day = if self.eat(b'-') { self.parse_u32()? } else { 1 };
 
-        Some(QueryAtom::Since { year, month: month.unwrap_or(1), day: day.unwrap_or(1) })
+            Some(QueryAtom::Since { year, month, day })
+        })();
+        if result.is_none() {
+            self.pos = start;
+        }
+        result
     }
 
     fn parse_supports_only(&mut self) -> Option<QueryAtom<'a>> {

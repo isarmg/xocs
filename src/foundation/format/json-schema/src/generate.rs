@@ -518,9 +518,8 @@ impl SchemaGenerator {
 
         let object = schema.ensure_object();
 
-        if let Ok(example) = serde_json::to_value(value) {
-            object.insert("examples".into(), vec![example].into());
-        }
+        let example = serde_json::to_value(value)?;
+        object.insert("examples".into(), vec![example].into());
 
         if let Some(meta_schema) = self.settings.meta_schema.as_deref() {
             object.insert("$schema".into(), meta_schema.into());
@@ -550,9 +549,8 @@ impl SchemaGenerator {
 
         let object = schema.ensure_object();
 
-        if let Ok(example) = serde_json::to_value(value) {
-            object.insert("examples".into(), vec![example].into());
-        }
+        let example = serde_json::to_value(value)?;
+        object.insert("examples".into(), vec![example].into());
 
         if let Some(meta_schema) = core::mem::take(&mut self.settings.meta_schema) {
             object.insert("$schema".into(), meta_schema.into());

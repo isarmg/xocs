@@ -1,6 +1,81 @@
-use blog_format_json_schema::{json_schema, JsonSchema, Schema, SchemaGenerator};
-use serde::{ser::SerializeMap, Serialize, Serializer};
-use std::borrow::Cow;
+use blog_format_json_schema::{JsonSchema, Schema, SchemaGenerator, json_schema};
+use serde::{Serialize, Serializer, ser::SerializeMap};
+use std::{borrow::Cow, collections::BTreeMap};
+
+#[test]
+fn fragment_pointers_preserve_invalid_percent_escapes() {
+    let mut schema = json_schema!({
+        "$defs": {
+            "%+1": { "title": "literal" },
+            "\u{1}": { "title": "control" },
+        }
+    });
+    assert_eq!(schema.pointer("#/$defs/%+1").unwrap()["title"], "literal");
+    assert_eq!(schema.pointer("#/$defs/%01").unwrap()["title"], "control");
+    assert_eq!(schema.pointer("#/$defs/%25+1").unwrap()["title"], "literal");
+    schema.pointer_mut("#/$defs/%+1").unwrap()["title"] = "changed".into();
+    assert_eq!(schema.as_value()["$defs"]["%+1"]["title"], "changed");
+    assert_eq!(schema.as_value()["$defs"]["\u{1}"]["title"], "control");
+}
+
+#[test]
+fn collected_map_schema_rejects_invalid_json_keys() {
+    let invalid = BTreeMap::from([([1u8, 2], 3u8)]);
+    assert!(
+        SchemaGenerator::default()
+            .root_schema_for_value(&invalid)
+            .is_err()
+    );
+    assert!(
+        SchemaGenerator::default()
+            .into_root_schema_for_value(&invalid)
+            .is_err()
+    );
+
+    let valid = BTreeMap::from([(42u8, 3u8)]);
+    let schema = SchemaGenerator::default()
+        .into_root_schema_for_value(&valid)
+        .unwrap();
+    assert_eq!(schema.as_value()["examples"][0]["42"], 3);
+}
+
+enum CollectedValue {
+    Unit,
+    Failure,
+}
+
+impl Serialize for CollectedValue {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Self::Unit => serializer.serialize_unit(),
+            Self::Failure => Err(serde::ser::Error::custom("example serialization failed")),
+        }
+    }
+}
+
+struct UnrepresentableExample;
+
+impl Serialize for UnrepresentableExample {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_map([
+            ("first", CollectedValue::Unit),
+            ("second", CollectedValue::Failure),
+        ])
+    }
+}
+
+#[test]
+fn root_schema_generation_propagates_example_serialization_errors() {
+    for result in [
+        SchemaGenerator::default().root_schema_for_value(&UnrepresentableExample),
+        SchemaGenerator::default().into_root_schema_for_value(&UnrepresentableExample),
+    ] {
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "example serialization failed"
+        );
+    }
+}
 
 struct Entries;
 
@@ -98,7 +173,9 @@ fn map_schema_uses_json_key_rules() {
         .into_root_schema_for_value(&SingleEntry(42u8))
         .unwrap();
     assert_eq!(numeric.as_value()["properties"]["42"]["type"], "integer");
-    assert!(SchemaGenerator::default()
-        .into_root_schema_for_value(&SingleEntry([1u8, 2]))
-        .is_err());
+    assert!(
+        SchemaGenerator::default()
+            .into_root_schema_for_value(&SingleEntry([1u8, 2]))
+            .is_err()
+    );
 }

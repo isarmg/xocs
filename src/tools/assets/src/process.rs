@@ -12,6 +12,7 @@ use std::{
     },
     process::{Child, Command, ExitStatus, Stdio},
     sync::{
+        Arc,
         atomic::{AtomicBool, Ordering},
         mpsc::{self, Receiver, RecvTimeoutError, SyncSender},
     },
@@ -165,13 +166,25 @@ enum Event {
     Failed(Stream, io::Error),
 }
 
-fn reader(mut pipe: impl Read, stream: Stream, sender: SyncSender<Event>) {
+fn reader(
+    mut pipe: impl Read,
+    stream: Stream,
+    sender: SyncSender<Event>,
+    stopping: Arc<AtomicBool>,
+) {
     let mut buffer = [0; CHUNK];
     loop {
+        if stopping.load(Ordering::Acquire) {
+            return;
+        }
         let event = match pipe.read(&mut buffer) {
             Ok(0) => Event::Closed(stream),
             Ok(count) => Event::Bytes(stream, buffer[..count].to_vec()),
             Err(error) if error.kind() == io::ErrorKind::Interrupted => continue,
+            Err(error) if error.kind() == io::ErrorKind::WouldBlock => {
+                thread::park_timeout(POLL);
+                continue;
+            }
             Err(error) => Event::Failed(stream, error),
         };
         let finished = !matches!(event, Event::Bytes(..));
@@ -317,6 +330,7 @@ struct Running {
     status: Option<ExitStatus>,
     receiver: Option<Receiver<Event>>,
     readers: Vec<JoinHandle<()>>,
+    stop_readers: Arc<AtomicBool>,
 }
 
 impl Running {
@@ -340,17 +354,27 @@ impl Running {
             status: None,
             receiver: Some(receiver),
             readers: Vec::new(),
+            stop_readers: Arc::new(AtomicBool::new(false)),
         };
         let stdout = running
             .child
             .stdout
             .take()
             .expect("invariant: child stdout is piped");
+        // These read ends are owned here; their flags do not affect the child's
+        // write ends. Readers must be able to stop even when a daemon keeps a writer.
+        rustix::fs::fcntl_setfl(&stdout, OFlags::NONBLOCK).map_err(|source| {
+            ProcessError::System {
+                operation: "Set command stdout nonblocking",
+                source,
+            }
+        })?;
         let stdout_sender = sender.clone();
+        let stopping = Arc::clone(&running.stop_readers);
         running.readers.push(
             thread::Builder::new()
                 .name("command-stdout".into())
-                .spawn(move || reader(stdout, Stream::Stdout, stdout_sender))
+                .spawn(move || reader(stdout, Stream::Stdout, stdout_sender, stopping))
                 .map_err(|source| ProcessError::Io {
                     operation: "Start stdout reader",
                     source,
@@ -361,10 +385,17 @@ impl Running {
             .stderr
             .take()
             .expect("invariant: child stderr is piped");
+        rustix::fs::fcntl_setfl(&stderr, OFlags::NONBLOCK).map_err(|source| {
+            ProcessError::System {
+                operation: "Set command stderr nonblocking",
+                source,
+            }
+        })?;
+        let stopping = Arc::clone(&running.stop_readers);
         running.readers.push(
             thread::Builder::new()
                 .name("command-stderr".into())
-                .spawn(move || reader(stderr, Stream::Stderr, sender))
+                .spawn(move || reader(stderr, Stream::Stderr, sender, stopping))
                 .map_err(|source| ProcessError::Io {
                     operation: "Start stderr reader",
                     source,
@@ -478,6 +509,10 @@ impl Running {
     fn cleanup(&mut self) -> Result<()> {
         // Release bounded-channel writers before joining, including on overflow.
         self.receiver.take();
+        self.stop_readers.store(true, Ordering::Release);
+        for reader in &self.readers {
+            reader.thread().unpark();
+        }
         let stopped = self.stop();
         let mut reader_failed = false;
         for reader in self.readers.drain(..) {

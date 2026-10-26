@@ -196,16 +196,13 @@ async fn respond(app: Arc<App>, request: Request) -> Result<Response> {
     let relative = decoded
         .strip_prefix(&app.base)
         .unwrap_or(decoded.trim_start_matches('/'));
-    let mut source = app.dist.join(if relative.is_empty() {
+    let resource = if relative.is_empty() {
         "index.html"
     } else {
         relative
-    });
-    inventory::relative(
-        source
-            .strip_prefix(&app.dist)
-            .expect("invariant: source was joined below the distribution"),
-    )?;
+    };
+    inventory::relative(Path::new(resource))?;
+    let mut source = app.dist.join(resource);
     let wasm = source.extension().is_some_and(|value| value == "wasm");
     let accepted = header::accepted_encodings(request.headers());
     let compressed_path = PathBuf::from(format!("{}.gz", source.display()));

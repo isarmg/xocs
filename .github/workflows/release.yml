@@ -111,6 +111,7 @@ jobs:
           node ../../test/browser/public-layout.mjs
           node ../../test/browser/public-recovery.mjs
           node ../../test/browser/anonymous-comments.mjs
+          node ../../test/browser/pending-comment-binding.mjs
 
       - name: End-to-end smoke test
         env:

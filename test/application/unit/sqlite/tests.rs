@@ -1,5 +1,23 @@
 use super::*;
 
+#[test]
+fn connection_error_adapter_preserves_native_io_error_codes() {
+    let directory = tempfile::tempdir().unwrap();
+    let source = std::fs::File::open(directory.path().join("missing.sqlite")).unwrap_err();
+    let expected = source.raw_os_error().unwrap();
+    let failure = pool_connect_error(sqlx::Error::Io(source));
+    let Error::Sqlx(sqlx::Error::Io(source)) = failure else {
+        panic!("an unrelated connection I/O error must retain its variant");
+    };
+    assert_eq!(source.raw_os_error(), Some(expected));
+    assert!(matches!(
+        pool_connect_error(sqlx::Error::Io(io::Error::other(
+            ConnectionLimitError::NotApplied
+        ))),
+        Error::ConnectionLimits(ConnectionLimitError::NotApplied)
+    ));
+}
+
 fn test_identity(schema_sha256: String) -> Result<SchemaIdentity, SchemaIdentityError> {
     SchemaIdentity::new("test-product", "0.3.0", 1, schema_sha256)
 }

@@ -153,6 +153,62 @@ fn parent_exit_cleans_up_pipe_holding_descendants() {
 }
 
 #[test]
+fn timeout_stops_readers_when_a_descendant_leaves_the_owned_process_group() {
+    let temporary = tempfile::tempdir().unwrap();
+    let marker = temporary.path().join("detached");
+    let script = concat!(
+        "import os,pathlib,sys,time\n",
+        "p=pathlib.Path(sys.argv[1])\n",
+        "if os.fork()==0:\n",
+        " os.setsid()\n",
+        " started=pathlib.Path('/proc/self/stat').read_text().rsplit(') ',1)[1].split()[19]\n",
+        " p.write_text(str(os.getpid())+' '+started)\n",
+        " time.sleep(2)\n",
+        " os._exit(0)\n",
+        "while not p.exists(): time.sleep(.001)\n",
+        "os._exit(0)\n",
+    );
+    let started = Instant::now();
+    let error = run(
+        python(script).arg(&marker),
+        Policy {
+            timeout: Duration::from_millis(200),
+            ..policy()
+        },
+        "detached pipe holder fixture",
+    )
+    .unwrap_err();
+    let elapsed = started.elapsed();
+    // The fixture owns only this recorded process instance. A real daemon is
+    // outside the runner's process group and is never chased by production cleanup.
+    let identity = fs::read_to_string(marker).unwrap();
+    let (pid, process_start) = identity.split_once(' ').unwrap();
+    if let Ok(stat) = fs::read_to_string(format!("/proc/{pid}/stat")) {
+        let fields = stat
+            .rsplit_once(") ")
+            .unwrap()
+            .1
+            .split_whitespace()
+            .collect::<Vec<_>>();
+        if fields[0] != "Z" && fields[19] == process_start {
+            rustix::process::kill_process(
+                Pid::from_raw(pid.parse().unwrap()).unwrap(),
+                Signal::KILL,
+            )
+            .unwrap();
+        }
+    }
+    assert!(matches!(
+        error,
+        ProcessError::Command { source, .. } if matches!(source.as_ref(), ProcessError::Timeout)
+    ));
+    assert!(
+        elapsed < Duration::from_secs(1),
+        "reader cleanup took {elapsed:?}"
+    );
+}
+
+#[test]
 fn live_output_shares_regular_file_offsets_with_parent_writes() {
     let temporary = tempfile::tempdir().unwrap();
     let log = temporary.path().join("combined.log");

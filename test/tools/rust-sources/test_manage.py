@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Adversarial provenance and empty-home resolution checks for source management."""
 import hashlib
+import errno
 import importlib.util
 import io
 import json
@@ -17,6 +18,63 @@ spec = importlib.util.spec_from_file_location('blog_source_manager', (Path(__fil
 manage = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(manage)
 PLATFORM_SOURCE = (Path(__file__).resolve().parents[3] / 'src/tools/assets/src/platform_contract.rs').read_text()
+
+
+class AtomicPublication(unittest.TestCase):
+    def test_failed_replace_removes_staging_and_preserves_destination(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            destination = root / 'receipt.json'
+            destination.mkdir()
+            original = destination / 'retain.txt'
+            original.write_bytes(b'original directory contents')
+            with self.assertRaises(IsADirectoryError):
+                manage.atomic_write(destination, b'replacement receipt')
+            self.assertEqual(list(root.iterdir()), [destination])
+            self.assertEqual(original.read_bytes(), b'original directory contents')
+
+    def test_close_failure_preserves_target_and_removes_staging(self):
+        original_temporary_file = manage.tempfile.NamedTemporaryFile
+        original_fsync = manage.os.fsync
+        error = OSError(errno.EIO, 'fixture close failure')
+        synchronized = False
+        before_close = {}
+
+        def fsync(descriptor):
+            nonlocal synchronized
+            original_fsync(descriptor)
+            synchronized = True
+
+        class FailedClose:
+            def __init__(self, *args, **kwargs):
+                self.stream = original_temporary_file(*args, **kwargs)
+                self.name = self.stream.name
+
+            def __getattr__(self, name):
+                return getattr(self.stream, name)
+
+            def __enter__(self):
+                return self.stream.__enter__()
+
+            def __exit__(self, *exception):
+                if exception[0] is not None:
+                    return self.stream.__exit__(*exception)
+                before_close.update(contents=Path(self.name).read_bytes(), synchronized=synchronized)
+                self.stream.__exit__(*exception)
+                raise error
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            destination = root / 'receipt.json'
+            destination.write_bytes(b'old receipt')
+            with patch.object(manage.tempfile, 'NamedTemporaryFile', FailedClose), \
+                    patch.object(manage.os, 'fsync', side_effect=fsync):
+                with self.assertRaises(OSError) as raised:
+                    manage.atomic_write(destination, b'new receipt')
+            self.assertEqual(before_close, dict(contents=b'new receipt', synchronized=True))
+            self.assertIs(raised.exception, error)
+            self.assertEqual(destination.read_bytes(), b'old receipt')
+            self.assertEqual(list(root.iterdir()), [destination])
 
 
 class Sources(unittest.TestCase):

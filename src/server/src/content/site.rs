@@ -33,15 +33,25 @@ pub(super) struct AdminSite {
     media: sqlx::types::Json<media::SiteMedia>,
 }
 pub(super) async fn admin_site(State(state): State<AppState>) -> ApiResult<AdminSite> {
-    let author = crate::site_author_id(&state.pool).await?;
+    let mut transaction = state.pool.begin().await.map_err(db_error)?;
+    let author = crate::site_author_id(&mut *transaction).await?;
     let author_name: Option<String> = sqlx::query_scalar("SELECT username FROM user WHERE id=?")
         .bind(author)
-        .fetch_one(&state.pool)
+        .fetch_one(&mut *transaction)
         .await
         .map_err(db_error)?;
-    Ok(Json(sqlx::query_as::<_,AdminSite>("SELECT ? AS author_name,web_name,web_title,notices,background_image,avatar,random_cover,media FROM web_info ORDER BY id LIMIT 1")
-        .bind(author_name.as_deref().unwrap_or_default())
-        .fetch_optional(&state.pool).await.map_err(db_error)?.unwrap_or(AdminSite{author_name:author_name.unwrap_or_default(),web_name:None,web_title:None,notices:None,background_image:None,avatar:None,random_cover:None,media:Default::default()})))
+    let site = load_admin_site(&mut transaction, author_name.unwrap_or_default()).await?;
+    transaction.commit().await.map_err(db_error)?;
+    Ok(Json(site))
+}
+
+async fn load_admin_site(
+    connection: &mut sqlx::SqliteConnection,
+    author_name: String,
+) -> Result<AdminSite, AppError> {
+    Ok(sqlx::query_as::<_,AdminSite>("SELECT ? AS author_name,web_name,web_title,notices,background_image,avatar,random_cover,media FROM web_info ORDER BY id LIMIT 1")
+        .bind(&author_name)
+        .fetch_optional(connection).await.map_err(db_error)?.unwrap_or(AdminSite{author_name,web_name:None,web_title:None,notices:None,background_image:None,avatar:None,random_cover:None,media:Default::default()}))
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -64,7 +74,7 @@ pub(super) async fn update_site(
     media::normalize_url(&mut input.background_image)?;
     media::normalize_url(&mut input.avatar)?;
     media::normalize_covers(&mut input.random_cover)?;
-    let author_name = input.author_name.trim();
+    let author_name = input.author_name.trim().to_owned();
     if author_name.is_empty()
         || author_name.chars().count() > 100
         || input.web_name.trim().is_empty()
@@ -83,7 +93,7 @@ pub(super) async fn update_site(
     let author = crate::site_author_id(&mut *transaction).await?;
     let name_used: bool =
         sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM user WHERE username=? AND id<>?)")
-            .bind(author_name)
+            .bind(&author_name)
             .bind(author)
             .fetch_one(&mut *transaction)
             .await
@@ -92,7 +102,7 @@ pub(super) async fn update_site(
         return Err(AppError::Public(HttpStatus::Conflict, "作者展示名已被使用"));
     }
     sqlx::query("UPDATE user SET username=?,update_time=CURRENT_TIMESTAMP WHERE id=?")
-        .bind(author_name)
+        .bind(&author_name)
         .bind(author)
         .execute(&mut *transaction)
         .await
@@ -110,6 +120,7 @@ pub(super) async fn update_site(
             .bind(input.web_name).bind(input.web_title).bind(input.notices).bind(input.background_image).bind(input.avatar).bind(input.random_cover).bind(sqlx::types::Json(input.media))
             .execute(&mut *transaction).await.map_err(db_error)?;
     }
+    let site = load_admin_site(&mut transaction, author_name).await?;
     transaction.commit().await.map_err(db_error)?;
-    admin_site(State(state)).await
+    Ok(Json(site))
 }

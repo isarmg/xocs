@@ -5,7 +5,8 @@ async fn genuine_v3_schema_is_rejected_without_changing_any_database_bytes() {
     let directory = tempfile::tempdir().unwrap();
     std::fs::set_permissions(directory.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
     let database = directory.path().join("site.sqlite");
-    let pool = open_database(&database, true).await.unwrap();
+    create_empty_database(&database);
+    let pool = open_database(&database).await.unwrap();
     // Frozen product DDL from b10064e8b15fc44698feb10bab7d810b3d0179a4.
     let ddl = format!(
         "{};\n{}\n{}",

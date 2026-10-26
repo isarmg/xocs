@@ -91,12 +91,11 @@ pub fn run(
         }
     }
 
-    let terminated_addr = match get_terminated_addr(module) {
-        Ok(addr) => addr,
-        // __instance_terminated is only emitted with panic=unwind.
-        // If it's missing (e.g. panic=abort with C++ exception handling
-        // instructions from embind/libcxx), skip catch wrapper generation.
-        Err(_) => return Ok(()),
+    // __instance_terminated is only emitted with panic=unwind.
+    // If it's missing (e.g. panic=abort with C++ exception handling
+    // instructions from embind/libcxx), skip catch wrapper generation.
+    let Some(terminated_addr) = get_terminated_addr(module)? else {
+        return Ok(());
     };
     let memory = crate::wasm_conventions::get_memory(module)?;
 
@@ -200,20 +199,21 @@ pub(crate) fn get_or_import_js_tag(module: &mut Module) -> TagId {
 
 /// Look up the `__instance_terminated` exported global and return its i32
 /// constant value (the address of the termination flag in linear memory).
-fn get_terminated_addr(module: &Module) -> Result<i32, Error> {
-    let global_id = module
+fn get_terminated_addr(module: &Module) -> Result<Option<i32>, Error> {
+    let Some(export) = module
         .exports
         .iter()
         .find(|e| e.name == "__instance_terminated")
-        .and_then(|e| match e.item {
-            walrus::ExportItem::Global(g) => Some(g),
-            _ => None,
-        })
-        .ok_or_else(|| {
-            anyhow::anyhow!("__instance_terminated global required for catch wrappers")
-        })?;
+    else {
+        return Ok(None);
+    };
+    let walrus::ExportItem::Global(global_id) = export.item else {
+        anyhow::bail!("__instance_terminated must be a local i32 constant global");
+    };
     match &module.globals.get(global_id).kind {
-        walrus::GlobalKind::Local(walrus::ConstExpr::Value(walrus::ir::Value::I32(v))) => Ok(*v),
+        walrus::GlobalKind::Local(walrus::ConstExpr::Value(walrus::ir::Value::I32(v))) => {
+            Ok(Some(*v))
+        }
         _ => anyhow::bail!("__instance_terminated must be a local i32 constant global"),
     }
 }

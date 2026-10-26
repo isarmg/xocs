@@ -207,17 +207,23 @@ async fn open_snapshot_pool(
 }
 
 fn snapshot_connect_error(error: sqlx::Error) -> SnapshotError {
-    if let sqlx::Error::Io(source) = error {
-        let kind = source.kind();
-        if let Some(inner) = source.into_inner() {
-            return match inner.downcast::<crate::sqlite::ConnectionLimitError>() {
-                Ok(error) => SnapshotError::ConnectionLimits(*error),
-                Err(inner) => SnapshotError::Sqlx(sqlx::Error::Io(io::Error::new(kind, inner))),
-            };
-        }
-        return SnapshotError::Sqlx(sqlx::Error::Io(io::Error::from(kind)));
+    let sqlx::Error::Io(source) = error else {
+        return SnapshotError::Sqlx(error);
+    };
+    if source
+        .get_ref()
+        .is_none_or(|inner| !inner.is::<crate::sqlite::ConnectionLimitError>())
+    {
+        return SnapshotError::Sqlx(sqlx::Error::Io(source));
     }
-    SnapshotError::Sqlx(error)
+    let inner = source
+        .into_inner()
+        .expect("invariant: connection limit error has a boxed source");
+    SnapshotError::ConnectionLimits(
+        *inner
+            .downcast::<crate::sqlite::ConnectionLimitError>()
+            .expect("invariant: boxed connection limit error type was checked"),
+    )
 }
 
 fn sidecar(path: &Path, suffix: &str) -> PathBuf {

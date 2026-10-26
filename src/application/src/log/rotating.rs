@@ -12,7 +12,7 @@ use std::{
 };
 
 pub struct RotatingLogFile {
-    directory: File,
+    directory: DirectoryLease,
     stem: String,
     active_name: String,
     custom_name: bool,
@@ -20,6 +20,40 @@ pub struct RotatingLogFile {
     bytes: u64,
     state: WriteState,
     retention: LogRetention,
+}
+
+struct DirectoryLease {
+    file: File,
+    held: bool,
+}
+
+impl DirectoryLease {
+    fn acquire(file: File) -> Result<Self, LogError> {
+        flock(&file, FlockOperation::NonBlockingLockExclusive)
+            .map_err(|source| LogError::WriterLock(io::Error::from(source)))?;
+        Ok(Self { file, held: true })
+    }
+
+    fn release(&mut self) -> Result<(), LogError> {
+        if self.held {
+            self.file.unlock().map_err(LogError::WriterRelease)?;
+            self.held = false;
+        }
+        Ok(())
+    }
+}
+
+impl Drop for DirectoryLease {
+    fn drop(&mut self) {
+        if let Err(error) = self.release() {
+            // A sink may be dropped while its logger is locked. Stderr is the
+            // final diagnostic sink; its own failure cannot be reported further.
+            drop(writeln!(
+                io::stderr().lock(),
+                "log writer lease release failed: {error}"
+            ));
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -105,12 +139,11 @@ impl RotatingLogFile {
         }
         // Active names and archive names can overlap across constructors.
         // One lease for the dedicated directory owns the entire namespace.
-        flock(&directory, FlockOperation::NonBlockingLockExclusive)
-            .map_err(|source| LogError::WriterLock(io::Error::from(source)))?;
+        let directory = DirectoryLease::acquire(directory)?;
         // Refuse a configuration that silently strands archives from an older
         // larger policy. Operators must change retention through an explicit
         // cleanup action, rather than normal startup deleting extra files.
-        let mut entries = rustix::fs::Dir::read_from(&directory).map_err(io::Error::from)?;
+        let mut entries = rustix::fs::Dir::read_from(&directory.file).map_err(io::Error::from)?;
         while let Some(entry) = entries.read() {
             let entry = entry.map_err(io::Error::from)?;
             let name = entry.file_name().to_str().ok();
@@ -123,14 +156,14 @@ impl RotatingLogFile {
                         name.strip_suffix(".jsonl")
                     }
                 });
-            if let Some(index) = index {
-                let index: u8 = index.parse().map_err(LogError::ArchiveIndex)?;
-                if index == 0 || index > retention.archives {
+            if let Some(spelling) = index {
+                let index: u8 = spelling.parse().map_err(LogError::ArchiveIndex)?;
+                if index == 0 || index > retention.archives || spelling != index.to_string() {
                     return Err(LogError::UnsafeStorage);
                 }
             }
         }
-        let file = open_private(&directory, active_name, false)?;
+        let file = open_private(&directory.file, active_name, false)?;
         let bytes = file.metadata()?.len();
         if bytes > retention.file_bytes {
             return Err(LogError::InvalidLimits);
@@ -160,6 +193,15 @@ impl RotatingLogFile {
         self.write_line(&line)
     }
 
+    /// Hand off writer ownership after completing all writes. Appended records
+    /// retain the normal log durability policy; Drop also releases the lease.
+    ///
+    /// # Errors
+    /// Returns [`LogError::WriterRelease`] if the descriptor cannot be unlocked.
+    pub fn release(mut self) -> Result<(), LogError> {
+        self.directory.release()
+    }
+
     pub(super) fn write_line(&mut self, line: &LogLine) -> Result<(), LogError> {
         let line = line.0.as_slice();
         self.finish_rotation()?;
@@ -187,7 +229,7 @@ impl RotatingLogFile {
     fn rotate(&mut self) -> Result<(), LogError> {
         self.file.sync_all()?;
         match unlinkat(
-            &self.directory,
+            &self.directory.file,
             self.archive_path(self.retention.archives),
             AtFlags::empty(),
         ) {
@@ -207,9 +249,9 @@ impl RotatingLogFile {
                 WriteState::MoveArchives { next: 0 } => WriteState::ArchiveActive,
                 WriteState::MoveArchives { next } => {
                     match renameat(
-                        &self.directory,
+                        &self.directory.file,
                         self.archive_path(next),
-                        &self.directory,
+                        &self.directory.file,
                         self.archive_path(next + 1),
                     ) {
                         Ok(()) | Err(rustix::io::Errno::NOENT) => {}
@@ -219,9 +261,9 @@ impl RotatingLogFile {
                 }
                 WriteState::ArchiveActive => {
                     renameat(
-                        &self.directory,
+                        &self.directory.file,
                         &self.active_name,
-                        &self.directory,
+                        &self.directory.file,
                         self.archive_path(1),
                     )
                     .map_err(io::Error::from)?;
@@ -229,12 +271,12 @@ impl RotatingLogFile {
                 }
                 WriteState::CreateActive => {
                     // Keep the archived descriptor until creation succeeds.
-                    self.file = open_private(&self.directory, &self.active_name, true)?;
+                    self.file = open_private(&self.directory.file, &self.active_name, true)?;
                     self.bytes = 0;
                     WriteState::SyncDirectory
                 }
                 WriteState::SyncDirectory => {
-                    self.directory.sync_all()?;
+                    self.directory.file.sync_all()?;
                     WriteState::Active
                 }
                 WriteState::Failed => return Err(LogError::WriterFailed),
@@ -251,7 +293,7 @@ impl RotatingLogFile {
     }
     fn archive_metadata(&self, index: u8) -> Result<Option<Metadata>, LogError> {
         match openat(
-            &self.directory,
+            &self.directory.file,
             self.archive_path(index),
             OFlags::RDONLY | OFlags::NOFOLLOW | OFlags::NONBLOCK | OFlags::CLOEXEC,
             Mode::empty(),

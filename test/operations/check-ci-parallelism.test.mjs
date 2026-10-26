@@ -37,11 +37,18 @@ test('server and browser groups are independent and preserve every gate', () => 
     'bash test/run-maintained.sh',
   ]) assert.ok(server.includes(command), `missing server check: ${command}`);
   const expected = [
-    'language', 'admin-layout', 'configured-media', 'article-video', 'account-settings', 'admin-cleanup',
-    'management', 'contract-fixes', 'admin-recovery', 'blog-interface-runtime', 'async-state', 'transport-lifecycle', 'startup-failure', 'rust-native-domain', 'public-footer', 'public-layout', 'style-contract', 'public-recovery', 'anonymous-comments',
+    'language', 'admin-layout', 'corner-candidates', 'configured-media', 'article-video', 'account-settings', 'admin-cleanup',
+    'management', 'contract-fixes', 'admin-recovery', 'blog-interface-runtime', 'async-state', 'transport-lifecycle', 'startup-failure', 'rust-native-domain', 'public-footer', 'public-layout', 'style-contract', 'public-recovery', 'anonymous-comments', 'pending-comment-binding',
   ];
   const actual = [...browser.matchAll(/node \.\.\/\.\.\/test\/browser\/([a-z-]+)\.mjs/g)].map(match => match[1]);
   assert.deepEqual(actual.sort(), expected.sort());
+  for (const command of [
+    'bash ../../test/interface/dom/browser/build.sh',
+    'node ../../test/interface/dom/browser/helper-contracts.mjs ../../target/verification/anti-defensive-review/dom-fixture/pkg',
+    'node ../../test/interface/dom/browser/dom-errors.mjs',
+    'bash ../../test/interface/browser/build.sh',
+    'node ../../test/interface/browser/corner-listener-lifecycle.mjs',
+  ]) assert.ok(browser.includes(command), `missing public interface consumer: ${command}`);
   assert.equal(browser.match(/npm run test:unit/g)?.length, 1);
   assert.match(browser, /TEST_GROUP: \$\{\{ matrix.group \}\}/);
   for (const block of [server, browser]) {
@@ -82,14 +89,14 @@ test('both matrix branches execute every UI script exactly once', () => {
   assert.ok(run, 'missing browser matrix shell');
   const directory = mkdtempSync(join(tmpdir(), 'blog-ci-dispatch-'));
   try {
-    for (const tool of ['node', 'npm']) {
+    for (const tool of ['node', 'npm', 'bash']) {
       const path = join(directory, tool);
       writeFileSync(path, '#!/bin/sh\nprintf "%s\\n" "$*"\n');
       chmodSync(path, 0o755);
     }
     const actual = [];
     for (const group of ['admin', 'public']) {
-      const result = spawnSync('bash', ['-c', run], {
+      const result = spawnSync('/bin/bash', ['-c', run], {
         encoding: 'utf8',
         env: {...process.env, PATH: `${directory}:${process.env.PATH}`, TEST_GROUP: group},
       });
@@ -99,27 +106,50 @@ test('both matrix branches execute every UI script exactly once', () => {
     }
     assert.deepEqual(actual.sort(), [
       'run test:unit', '../../test/browser/language.mjs', '../../test/browser/admin-layout.mjs',
+      '../../test/browser/corner-candidates.mjs',
+      '../../test/interface/dom/browser/build.sh',
+      '../../test/interface/dom/browser/helper-contracts.mjs ../../target/verification/anti-defensive-review/dom-fixture/pkg',
+      '../../test/interface/dom/browser/dom-errors.mjs',
+      '../../test/interface/browser/build.sh',
+      '../../test/interface/browser/corner-listener-lifecycle.mjs',
       '../../test/browser/configured-media.mjs',
       '../../test/browser/article-video.mjs',
       '../../test/browser/account-settings.mjs', '../../test/browser/admin-cleanup.mjs', '../../test/browser/management.mjs',
       '../../test/browser/contract-fixes.mjs', '../../test/browser/admin-recovery.mjs', '../../test/browser/blog-interface-runtime.mjs', '../../test/browser/async-state.mjs', '../../test/browser/transport-lifecycle.mjs', '../../test/browser/startup-failure.mjs', '../../test/browser/rust-native-domain.mjs',
-      '../../test/browser/public-footer.mjs', '../../test/browser/public-layout.mjs', '../../test/browser/style-contract.mjs', '../../test/browser/public-recovery.mjs', '../../test/browser/anonymous-comments.mjs',
+      '../../test/browser/public-footer.mjs', '../../test/browser/public-layout.mjs', '../../test/browser/style-contract.mjs', '../../test/browser/public-recovery.mjs', '../../test/browser/anonymous-comments.mjs', '../../test/browser/pending-comment-binding.mjs',
     ].sort());
-    const unknown = spawnSync('bash', ['-c', run], {
+    const unknown = spawnSync('/bin/bash', ['-c', run], {
       encoding: 'utf8',
       env: {...process.env, PATH: `${directory}:${process.env.PATH}`, TEST_GROUP: 'unknown'},
     });
     assert.equal(unknown.status, 1);
     assert.equal(unknown.stdout, '');
     // Every new Rust/WASM regression gate must propagate failures.
-    for (const script of ['rust-native-domain', 'startup-failure', 'async-state', 'configured-media', 'article-video', 'admin-recovery', 'public-recovery', 'style-contract']) {
+    for (const script of ['rust-native-domain', 'startup-failure', 'async-state', 'configured-media', 'article-video', 'admin-recovery', 'public-recovery', 'style-contract', 'corner-candidates', 'pending-comment-binding']) {
       writeFileSync(join(directory, 'node'), `#!/bin/sh\nif [ "$*" = "../../test/browser/${script}.mjs" ]; then exit 9; fi\nprintf "%s\\n" "$*"\n`);
-      const failed = spawnSync('bash', ['-c', run], {
+      const failed = spawnSync('/bin/bash', ['-c', run], {
         encoding: 'utf8',
-        env: {...process.env, PATH: `${directory}:${process.env.PATH}`, TEST_GROUP: script === 'public-recovery' ? 'public' : 'admin'},
+        env: {...process.env, PATH: `${directory}:${process.env.PATH}`, TEST_GROUP: ['public-recovery', 'pending-comment-binding'].includes(script) ? 'public' : 'admin'},
       });
       assert.ifError(failed.error);
       assert.equal(failed.status, 9, script);
+    }
+    for (const [tool, args] of [
+      ['bash', '../../test/interface/dom/browser/build.sh'],
+      ['node', '../../test/interface/dom/browser/helper-contracts.mjs ../../target/verification/anti-defensive-review/dom-fixture/pkg'],
+      ['node', '../../test/interface/dom/browser/dom-errors.mjs'],
+      ['bash', '../../test/interface/browser/build.sh'],
+      ['node', '../../test/interface/browser/corner-listener-lifecycle.mjs'],
+    ]) {
+      for (const fixtureTool of ['node', 'bash']) {
+        writeFileSync(join(directory, fixtureTool), `#!/bin/sh\nif [ "${fixtureTool}" = "${tool}" ] && [ "$*" = "${args}" ]; then exit 9; fi\nprintf "%s\\n" "$*"\n`);
+      }
+      const failed = spawnSync('/bin/bash', ['-c', run], {
+        encoding: 'utf8',
+        env: {...process.env, PATH: `${directory}:${process.env.PATH}`, TEST_GROUP: 'admin'},
+      });
+      assert.ifError(failed.error);
+      assert.equal(failed.status, 9, args);
     }
   } finally {
     rmSync(directory, {recursive: true, force: true});
@@ -130,7 +160,7 @@ test('both matrix branches execute every UI script exactly once', () => {
 // gates as branch CI, including the startup failure/timeout tests.
 test('release executes every browser CI gate exactly once', () => {
   const release = readFileSync(new URL('../../.github/workflows/release.yml', import.meta.url), 'utf8');
-  const scripts = text => [...text.matchAll(/node \.\.\/\.\.\/test\/browser\/([a-z-]+)\.mjs/g)]
+  const scripts = text => [...text.matchAll(/(?:node|bash) \.\.\/\.\.\/test\/([a-z/-]+\.(?:mjs|sh))/g)]
     .map(match => match[1]).sort();
   assert.deepEqual(scripts(release), scripts(browser));
   assert.equal(release.match(/npm run test:unit/g)?.length, 1);

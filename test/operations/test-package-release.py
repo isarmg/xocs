@@ -3,6 +3,7 @@
 import hashlib
 import errno
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -11,6 +12,7 @@ import shutil
 import struct
 import tarfile
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 from urllib.parse import urlsplit
@@ -312,6 +314,61 @@ class PackageIntegrity(unittest.TestCase):
             with patch.object(installer.os, 'removexattr', side_effect=OSError(code, 'fixture')):
                 with self.assertRaises(OSError):
                     installer.clear_inherited_acls(123)
+
+    def test_installer_closes_directories_after_validation_and_acl_failures(self):
+        spec = importlib.util.spec_from_file_location('blog_installer', ROOT / 'src/tools/packaging/install.py')
+        installer = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(installer)
+        open_directory = self.package.open_directory
+
+        def descriptors():
+            result = set()
+            for value in os.listdir('/proc/self/fd'):
+                descriptor = int(value)
+                try:
+                    os.fstat(descriptor)
+                except OSError as error:
+                    if error.errno != errno.EBADF:
+                        raise
+                else:
+                    result.add(descriptor)
+            return result
+
+        for failure in ('existing-root', 'missing-config', 'acl-failure'):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as temporary:
+                work = Path(temporary)
+                source, root, config = work / 'package', work / 'instance', work / 'config.json'
+                source.mkdir()
+                self.fixture(source)
+                if failure == 'existing-root':
+                    root.mkdir()
+                if failure != 'missing-config':
+                    config.write_text('{}')
+                before = descriptors()
+                try:
+                    # Use real directory descriptors and package verification.
+                    # Host privilege/account provisioning are outside this failure test.
+                    with patch.object(installer.os, 'geteuid', return_value=0), \
+                            patch.object(installer.package, 'open_directory',
+                                         side_effect=lambda path, **_flags: open_directory(path)), \
+                            patch.object(installer, 'account', return_value=SimpleNamespace(pw_gid=os.getgid())), \
+                            patch.object(installer.sys, 'stdin', SimpleNamespace(buffer=io.BytesIO(b''))):
+                        if failure == 'acl-failure':
+                            error = OSError(errno.EIO, 'fixture ACL failure')
+                            with patch.object(installer, 'clear_inherited_acls', side_effect=error):
+                                with self.assertRaises(OSError) as raised:
+                                    installer.install(source, root, config, 'admin', fixture=True)
+                            self.assertIs(raised.exception, error)
+                            self.assertTrue(root.is_dir(), 'retain partial installation for inspection')
+                        else:
+                            expected = ValueError if failure == 'existing-root' else FileNotFoundError
+                            with self.assertRaises(expected):
+                                installer.install(source, root, config, 'admin', fixture=True)
+                    self.assertEqual(descriptors(), before)
+                finally:
+                    # A failing regression run must not itself retain the leaked descriptors.
+                    for descriptor in descriptors() - before:
+                        os.close(descriptor)
 
     def test_installer_rejects_writable_or_unowned_parent_chain(self):
         import os

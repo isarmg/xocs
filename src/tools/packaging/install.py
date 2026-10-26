@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Install a verified Blog package into a fresh root without overwriting state."""
 import argparse
+from contextlib import ExitStack
 import errno
 import grp
 import json
@@ -74,78 +75,81 @@ def install(source, root, config, username, *, fixture=False):
     if not re.fullmatch(r'/[A-Za-z0-9_./-]+', str(root)) or '..' in root.parts or root == Path('/'):
         raise ValueError('installation root must be a normalized absolute path without spaces')
     validate_service_root(root, fixture=fixture)
-    parent_descriptor = package.open_directory(root.parent, trusted=True)
-    if root.exists() or root.is_symlink() or root == source or source in root.parents:
-        raise ValueError('installation requires a fresh root outside the package')
-    package.physical_directory(config.parent)
-    configuration = package.loads(package.read_regular(config, 1024 * 1024))
-    if not isinstance(configuration, dict):
-        raise ValueError('configuration must be an object')
-    # The installer declares exactly these writable directories in systemd.
-    # Advanced external layouts can be provisioned explicitly with blog-setup.
-    for name, expected in [('data_dir', root / 'state'), ('media', root / 'media')]:
-        if name in configuration and configuration[name] is not None and configuration[name] != str(expected):
-            raise ValueError('installer configuration must keep state and media within its root')
-    identity = account()
-    unit_path = Path('/etc/systemd/system/blog.service')
-    if not fixture:
-        for directory in ('/etc/systemd/system', '/run/systemd/system', '/run/systemd/transient',
-                          '/usr/local/lib/systemd/system', '/usr/lib/systemd/system', '/lib/systemd/system'):
-            unit = Path(directory) / 'blog.service'
-            dropin = unit.with_name(unit.name + '.d')
-            if any(path.exists() or path.is_symlink() for path in (unit, dropin)):
-                raise ValueError('an existing Blog systemd unit must be preserved')
-    password = sys.stdin.buffer.read(4097)
-    if len(password) > 4096:
-        raise ValueError('password input exceeds its bound')
-    # Keep inherited ACL entries masked while the empty root is secured. Its
-    # default ACL must be removed before config and private state are created.
-    os.mkdir(root.name, mode=0o700, dir_fd=parent_descriptor)
-    root_descriptor = os.open(root.name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
-                              dir_fd=parent_descriptor)
-    clear_inherited_acls(root_descriptor)
-    os.fchmod(root_descriptor, 0o750)
-    os.fchown(root_descriptor, 0, identity.pw_gid)
-    created_root = os.fstat(root_descriptor)
-    def verify_root():
-        current = root.lstat()
-        if (current.st_dev, current.st_ino) != (created_root.st_dev, created_root.st_ino):
-            raise ValueError('installation root changed identity')
-        package.trusted_directory(root)
-    verify_root()
-    for directory in ('bin', 'libexec', 'share'):
-        (root / directory).mkdir(mode=0o755)
-        (root / directory).chmod(0o755)
-    # Copy only previously checked regular bytes; links and unmanifested files
-    # never enter the installed immutable tree.
-    for entry in manifest['files']:
-        target = root / entry['path']
-        target.parent.mkdir(mode=0o755, parents=True, exist_ok=True)
-        for directory in (target.parent, *target.parent.parents):
-            if directory == root:
-                break
-            directory.chmod(0o755)
+    with ExitStack() as resources:
+        parent_descriptor = package.open_directory(root.parent, trusted=True)
+        resources.callback(os.close, parent_descriptor)
+        if root.exists() or root.is_symlink() or root == source or source in root.parents:
+            raise ValueError('installation requires a fresh root outside the package')
+        package.physical_directory(config.parent)
+        configuration = package.loads(package.read_regular(config, 1024 * 1024))
+        if not isinstance(configuration, dict):
+            raise ValueError('configuration must be an object')
+        # The installer declares exactly these writable directories in systemd.
+        # Advanced external layouts can be provisioned explicitly with blog-setup.
+        for name, expected in [('data_dir', root / 'state'), ('media', root / 'media')]:
+            if name in configuration and configuration[name] is not None and configuration[name] != str(expected):
+                raise ValueError('installer configuration must keep state and media within its root')
+        identity = account()
+        unit_path = Path('/etc/systemd/system/blog.service')
+        if not fixture:
+            for directory in ('/etc/systemd/system', '/run/systemd/system', '/run/systemd/transient',
+                              '/usr/local/lib/systemd/system', '/usr/lib/systemd/system', '/lib/systemd/system'):
+                unit = Path(directory) / 'blog.service'
+                dropin = unit.with_name(unit.name + '.d')
+                if any(path.exists() or path.is_symlink() for path in (unit, dropin)):
+                    raise ValueError('an existing Blog systemd unit must be preserved')
+        password = sys.stdin.buffer.read(4097)
+        if len(password) > 4096:
+            raise ValueError('password input exceeds its bound')
+        # Keep inherited ACL entries masked while the empty root is secured. Its
+        # default ACL must be removed before config and private state are created.
+        os.mkdir(root.name, mode=0o700, dir_fd=parent_descriptor)
+        root_descriptor = os.open(root.name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
+                                  dir_fd=parent_descriptor)
+        resources.callback(os.close, root_descriptor)
+        clear_inherited_acls(root_descriptor)
+        os.fchmod(root_descriptor, 0o750)
+        os.fchown(root_descriptor, 0, identity.pw_gid)
+        created_root = os.fstat(root_descriptor)
+        def verify_root():
+            current = root.lstat()
+            if (current.st_dev, current.st_ino) != (created_root.st_dev, created_root.st_ino):
+                raise ValueError('installation root changed identity')
+            package.trusted_directory(root)
         verify_root()
-        write(target, package.read_regular(source / entry['path'], package.MAX_BYTES), entry['mode'])
-    for name in (package.MANIFEST, package.CHECKSUM):
-        write(root / name, package.read_regular(source / name), 0o644)
-    if package.verify_installed(root) != manifest:
-        raise ValueError('package source changed during installation')
-    (root / 'config').mkdir(mode=0o750)
-    (root / 'config').chmod(0o750)
-    os.chown(root / 'config', 0, identity.pw_gid)
-    write(root / 'config/config.json', (json.dumps(configuration) + '\n').encode(), 0o640, 0, identity.pw_gid)
-    for name in ('state', 'media', 'logs', 'run'):
-        (root / name).mkdir(mode=0o700)
-        (root / name).chmod(0o700)
-        os.chown(root / name, identity.pw_uid, identity.pw_gid)
-    command = ['runuser', '-u', ACCOUNT, '--', str(root / 'libexec/blog-setup'), '--root', str(root)]
-    subprocess.run([*command, 'initialize', '--username', username], input=password,
-                   env=package.offline_environment(), check=True)
-    subprocess.run([*command, 'check'], stdin=subprocess.DEVNULL,
-                   env=package.offline_environment(), check=True)
-    if not fixture:
-        unit = f'''[Unit]
+        for directory in ('bin', 'libexec', 'share'):
+            (root / directory).mkdir(mode=0o755)
+            (root / directory).chmod(0o755)
+        # Copy only previously checked regular bytes; links and unmanifested files
+        # never enter the installed immutable tree.
+        for entry in manifest['files']:
+            target = root / entry['path']
+            target.parent.mkdir(mode=0o755, parents=True, exist_ok=True)
+            for directory in (target.parent, *target.parent.parents):
+                if directory == root:
+                    break
+                directory.chmod(0o755)
+            verify_root()
+            write(target, package.read_regular(source / entry['path'], package.MAX_BYTES), entry['mode'])
+        for name in (package.MANIFEST, package.CHECKSUM):
+            write(root / name, package.read_regular(source / name), 0o644)
+        if package.verify_installed(root) != manifest:
+            raise ValueError('package source changed during installation')
+        (root / 'config').mkdir(mode=0o750)
+        (root / 'config').chmod(0o750)
+        os.chown(root / 'config', 0, identity.pw_gid)
+        write(root / 'config/config.json', (json.dumps(configuration) + '\n').encode(), 0o640, 0, identity.pw_gid)
+        for name in ('state', 'media', 'logs', 'run'):
+            (root / name).mkdir(mode=0o700)
+            (root / name).chmod(0o700)
+            os.chown(root / name, identity.pw_uid, identity.pw_gid)
+        command = ['runuser', '-u', ACCOUNT, '--', str(root / 'libexec/blog-setup'), '--root', str(root)]
+        subprocess.run([*command, 'initialize', '--username', username], input=password,
+                       env=package.offline_environment(), check=True)
+        subprocess.run([*command, 'check'], stdin=subprocess.DEVNULL,
+                       env=package.offline_environment(), check=True)
+        if not fixture:
+            unit = f'''[Unit]
 Description=Blog
 After=network.target
 
@@ -166,13 +170,11 @@ ReadWritePaths={root}/state {root}/media {root}/logs {root}/run
 [Install]
 WantedBy=multi-user.target
 '''
-        package.trusted_directory(unit_path.parent)
+            package.trusted_directory(unit_path.parent)
+            verify_root()
+            write(unit_path, unit.encode(), 0o644)
+            subprocess.run(['systemctl', 'daemon-reload'], stdin=subprocess.DEVNULL, check=True)
         verify_root()
-        write(unit_path, unit.encode(), 0o644)
-        subprocess.run(['systemctl', 'daemon-reload'], stdin=subprocess.DEVNULL, check=True)
-    verify_root()
-    os.close(root_descriptor)
-    os.close(parent_descriptor)
     print('Blog installed. The server has not been started or enabled.')
 
 

@@ -58,6 +58,7 @@ pub fn percent_decode(s: &str) -> Option<Cow<'_, str>> {
         for segment in segments {
             if let Some(decoded_byte) = segment
                 .get(0..2)
+                .filter(|digits| digits.bytes().all(|byte| byte.is_ascii_hexdigit()))
                 .and_then(|p| u8::from_str_radix(p, 16).ok())
             {
                 buf.push(decoded_byte);
