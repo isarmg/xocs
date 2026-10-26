@@ -1,6 +1,24 @@
 use super::*;
 use serde_json::json;
 
+#[test]
+fn article_route_keys_reject_invalid_or_unsafe_numbers() {
+    for (raw, expected) in [("1", 1), ("9007199254740991", 9_007_199_254_740_991)] {
+        assert_eq!(ArticleId::parse(raw).unwrap().get(), expected);
+    }
+    for raw in [
+        "",
+        "word",
+        "0",
+        "-1",
+        "1/2",
+        "9007199254740992",
+        "9223372036854775808",
+    ] {
+        assert!(ArticleId::parse(raw).is_none(), "{raw}");
+    }
+}
+
 fn site_payload() -> serde_json::Value {
     serde_json::from_str(include_str!("site.json")).unwrap()
 }

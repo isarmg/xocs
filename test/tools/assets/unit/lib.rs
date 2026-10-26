@@ -289,3 +289,38 @@ fn non_unicode_distribution_is_rejected_before_artifact_publication() -> Result<
     assert!(!output.exists());
     Ok(())
 }
+
+#[test]
+fn distribution_checks_authored_paths_against_the_physical_product_root() -> Result<()> {
+    let fixture = tempfile::tempdir()?;
+    let root = fixture.path().join("product");
+    fs::create_dir(&root)?;
+    fs::create_dir(fixture.path().join("alias"))?;
+    for directory in ["src", "docs", "test", "compliance"] {
+        fs::create_dir(root.join(directory))?;
+    }
+    let aliased_root = fixture.path().join("alias/../product");
+    for directory in ["src", "docs", "test", "compliance"] {
+        let options = Options {
+            root: aliased_root.clone(),
+            offline: true,
+            debug: false,
+            dist: Some(root.join(directory)),
+        };
+        assert!(
+            matches!(
+                distribution(&options),
+                Err(DistributionError::AuthoredDirectory)
+            ),
+            "an aliased root must still protect {directory}"
+        );
+    }
+    let options = Options {
+        root: aliased_root,
+        offline: true,
+        debug: false,
+        dist: Some(root.join("generated")),
+    };
+    assert_eq!(distribution(&options)?, root.join("generated"));
+    Ok(())
+}

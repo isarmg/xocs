@@ -1355,7 +1355,10 @@ where
         let mut res = Output::default();
         for c in parsed.as_bstr() {
             let nibble = *c as char;
-            let nibble = nibble.to_digit(16).unwrap_or(0) as u8;
+            let nibble = nibble
+                .to_digit(16)
+                .expect("invariant: the parsed slice contains only ASCII hexadecimal digits")
+                as u8;
             let nibble = Output::from(nibble);
             res = (res << Output::from(4)) + nibble;
         }

@@ -19,6 +19,12 @@ pub enum Error {
         validation: Box<blog_application::sqlite::Error>,
         rollback: sqlx::Error,
     },
+    #[error("service operation failed and state lock release also failed")]
+    StateRelease {
+        #[source]
+        operation: Box<Self>,
+        release: blog_application::state_file::Error,
+    },
     #[error(transparent)]
     Database(#[from] sqlx::Error),
     #[error(transparent)]
@@ -33,8 +39,20 @@ pub enum Error {
     Log(#[from] blog_application::log::LogError),
     #[error("initialize tracing collector")]
     Tracing(#[from] tracing::collector::util::TryInitError),
-    #[error("I/O operation failed")]
-    Io(#[from] std::io::Error),
+    #[error("create database file")]
+    CreateDatabase(#[source] std::io::Error),
+    #[error("read opened database metadata")]
+    ReadDatabaseDescriptor(#[source] std::io::Error),
+    #[error("read database path metadata after opening")]
+    ReadDatabasePath(#[source] std::io::Error),
+    #[error("create initialization staging database")]
+    CreateInitializationStaging(#[source] std::io::Error),
+    #[error("read web entry metadata")]
+    ReadWebEntry(#[source] std::io::Error),
+    #[error("install process signal listeners")]
+    InstallProcessSignals(#[source] std::io::Error),
+    #[error("bind HTTP listeners")]
+    BindListeners(#[source] std::io::Error),
     #[error("current timestamp exceeds its numeric range")]
     TimestampRange(#[from] std::num::TryFromIntError),
     #[error("system clock precedes Unix epoch")]

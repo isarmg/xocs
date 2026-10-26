@@ -42,14 +42,16 @@ impl<'a> StructInfo<'a> {
             .map(|generic_param| match generic_param {
                 syn::GenericParam::Type(type_param) => {
                     let ident = type_param.ident.to_token_stream();
-                    syn::parse2(ident).unwrap()
+                    syn::parse2(ident)
+                        .expect("invariant: a parsed generic identifier is a valid argument")
                 }
                 syn::GenericParam::Lifetime(lifetime_def) => {
                     syn::GenericArgument::Lifetime(lifetime_def.lifetime.clone())
                 }
                 syn::GenericParam::Const(const_param) => {
                     let ident = const_param.ident.to_token_stream();
-                    syn::parse2(ident).unwrap()
+                    syn::parse2(ident)
+                        .expect("invariant: a parsed generic identifier is a valid argument")
                 }
             })
             .collect()
@@ -60,12 +62,10 @@ impl<'a> StructInfo<'a> {
         fields: impl Iterator<Item = &'a syn::Field>,
     ) -> syn::Result<StructInfo<'a>> {
         let builder_attr = TypeBuilderAttr::new(&ast.attrs)?;
-        let builder_name = builder_attr
-            .builder_type
-            .common
-            .get_name()
-            .map(|name| strip_raw_ident_prefix(name.to_string()))
-            .unwrap_or_else(|| strip_raw_ident_prefix(format!("{}Builder", ast.ident)));
+        let builder_name = match builder_attr.builder_type.common.get_name() {
+            Some(name) => syn::parse2(name)?,
+            None => format_ident!("{}Builder", ast.ident),
+        };
         Ok(StructInfo {
             vis: &ast.vis,
             name: &ast.ident,
@@ -75,7 +75,7 @@ impl<'a> StructInfo<'a> {
                 .map(|(i, f)| FieldInfo::new(i, f, builder_attr.field_defaults.clone()))
                 .collect::<Result<_, _>>()?,
             builder_attr,
-            builder_name: syn::Ident::new(&builder_name, proc_macro2::Span::call_site()),
+            builder_name,
         })
     }
 
@@ -146,11 +146,12 @@ impl<'a> StructInfo<'a> {
                         if is_first {
                             is_first = false;
                         } else {
-                            write!(&mut result, ", ").unwrap();
+                            result.push_str(", ");
                         }
-                        write!(&mut result, "`.{}(...)`", field.name).unwrap();
+                        write!(&mut result, "`.{}(...)`", field.name)
+                            .expect("invariant: formatting into a String cannot fail");
                         if field.builder_attr.default.is_some() {
-                            write!(&mut result, "(optional)").unwrap();
+                            result.push_str("(optional)");
                         }
                     }
                     result
@@ -341,38 +342,31 @@ impl<'a> StructInfo<'a> {
                 )
             });
 
-        let strip_option_fallback =
-            field
-                .builder_attr
-                .setter
-                .strip_option
-                .as_ref()
-                .and_then(|strip_option| {
-                    if let Some(ref fallback) = strip_option.fallback {
-                        Some((
-                            fallback.clone(),
-                            quote!(#field_name: #field_type),
-                            quote!(#arg_expr),
-                        ))
-                    } else if strip_option.fallback_prefix.is_none()
-                        && strip_option.fallback_suffix.is_none()
-                    {
-                        None
-                    } else {
-                        let method = strip_raw_ident_prefix(field_name.to_string());
-                        let prefix = strip_option.fallback_prefix.as_deref().unwrap_or_default();
-                        let suffix = strip_option.fallback_suffix.as_deref().unwrap_or_default();
-                        let fallback_name = syn::Ident::new(
-                            &format!("{}{}{}", prefix, method, suffix),
-                            field_name.span(),
-                        );
-                        Some((
-                            fallback_name,
-                            quote!(#field_name: #field_type),
-                            quote!(#arg_expr),
-                        ))
-                    }
-                });
+        let strip_option_fallback = if let Some(strip) = &field.builder_attr.setter.strip_option {
+            let name = if let Some(name) = &strip.fallback {
+                Some(name.clone())
+            } else if strip.fallback_prefix.is_some() || strip.fallback_suffix.is_some() {
+                let method = strip_raw_ident_prefix(field_name.to_string());
+                let prefix = strip.fallback_prefix.as_deref().unwrap_or_default();
+                let suffix = strip.fallback_suffix.as_deref().unwrap_or_default();
+                let mut identifier = syn::parse_str::<syn::Ident>(&format!(
+                    "{prefix}{method}{suffix}"
+                ))
+                .map_err(|_| {
+                    Error::new(
+                        field_name.span(),
+                        "fallback setter name must be a valid Rust identifier",
+                    )
+                })?;
+                identifier.set_span(field_name.span());
+                Some(identifier)
+            } else {
+                None
+            };
+            name.map(|name| (name, quote!(#field_name: #field_type), quote!(#arg_expr)))
+        } else {
+            None
+        };
 
         let (method_generics, param_list, arg_expr, method_where_clause) =
             if field.builder_attr.setter.strip_bool.is_some() {
@@ -415,17 +409,14 @@ impl<'a> StructInfo<'a> {
                 (quote!(), quote!(#field_name: #arg_type), arg_expr, quote!())
             };
 
-        let repeated_fields_error_type_name = syn::Ident::new(
-            &format!(
-                "{}_Error_Repeated_field_{}",
-                builder_name,
-                strip_raw_ident_prefix(field_name.to_string())
-            ),
-            proc_macro2::Span::call_site(),
+        let repeated_fields_error_type_name = format_ident!(
+            "{}_Error_Repeated_field_{}",
+            builder_name,
+            strip_raw_ident_prefix(field_name.to_string())
         );
         let repeated_fields_error_message = format!("Repeated field {}", field_name);
 
-        let method_name = field.setter_method_name();
+        let method_name = field.setter_method_name()?;
 
         let strip_option_fallback_method = if let Some((method_name, param_list, arg_expr)) =
             strip_option_fallback
@@ -525,14 +516,16 @@ impl<'a> StructInfo<'a> {
             .map(|generic_param| match generic_param {
                 syn::GenericParam::Type(type_param) => {
                     let ident = type_param.ident.to_token_stream();
-                    syn::parse2(ident).unwrap()
+                    syn::parse2(ident)
+                        .expect("invariant: a parsed generic identifier is a valid argument")
                 }
                 syn::GenericParam::Lifetime(lifetime_def) => {
                     syn::GenericArgument::Lifetime(lifetime_def.lifetime.clone())
                 }
                 syn::GenericParam::Const(const_param) => {
                     let ident = const_param.ident.to_token_stream();
-                    syn::parse2(ident).unwrap()
+                    syn::parse2(ident)
+                        .expect("invariant: a parsed generic identifier is a valid argument")
                 }
             })
             .collect();
@@ -574,13 +567,10 @@ impl<'a> StructInfo<'a> {
         builder_generics.push(syn::GenericArgument::Type(builder_generics_tuple.into()));
         let (impl_generics, _, where_clause) = generics.split_for_impl();
 
-        let early_build_error_type_name = syn::Ident::new(
-            &format!(
-                "{}_Error_Missing_required_field_{}",
-                builder_name,
-                strip_raw_ident_prefix(field_name.to_string())
-            ),
-            proc_macro2::Span::call_site(),
+        let early_build_error_type_name = format_ident!(
+            "{}_Error_Missing_required_field_{}",
+            builder_name,
+            strip_raw_ident_prefix(field_name.to_string())
         );
         let early_build_error_message = format!("Missing required field {}", field_name);
 

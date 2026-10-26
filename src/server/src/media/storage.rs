@@ -1,11 +1,14 @@
 //! Content-addressed publication and reconciliation of the deletion journal.
-use axum::body::Bytes;
+use blog_application::fs_safety::PrivateDirectory;
 use serde::Serialize;
-use sha2::{Digest, Sha256};
 use sqlx::SqlitePool;
+use std::sync::Arc;
 
-use super::formats::{MediaKind, is_media_filename};
-use crate::{AppError, AppState, db_error, invalid};
+use super::{
+    MediaUpload,
+    formats::{MediaFilename, MediaKind},
+};
+use crate::{AppError, AppState, db_error};
 
 #[derive(Serialize)]
 pub(super) struct UploadedMedia {
@@ -17,32 +20,29 @@ pub(super) struct UploadedMedia {
 
 pub(super) async fn save(
     state: &AppState,
-    body: Bytes,
+    connection: &mut sqlx::SqliteConnection,
+    upload: MediaUpload,
     owner: i64,
-    kind: MediaKind,
-    original_name: Option<String>,
 ) -> Result<UploadedMedia, AppError> {
+    let MediaUpload {
+        body,
+        filename,
+        original_name,
+    } = upload;
+    let format = filename.format();
+    let kind = format.kind();
     let limit = kind.max_bytes();
-    if body.is_empty() || body.len() > limit {
-        return Err(invalid("媒体大小无效"));
-    }
-    let format = kind
-        .detect(&body)
-        .ok_or_else(|| invalid(kind.invalid_format_message()))?;
-    let extension = format.extension();
     let mime_type = format.mime_type();
-    let hash = hex::encode(Sha256::digest(&body));
-    let filename = format!("{hash}.{extension}");
-    let path = format!("/media/{filename}");
+    let path = filename.path();
     let directory = state.media.clone();
     let size = body.len();
     tokio::task::spawn_blocking(move || -> Result<(), blog_application::fs_safety::Error> {
         let directory = blog_application::fs_safety::PrivateDirectory::open_existing(directory)?;
-        let name = blog_application::fs_safety::EntryName::new(filename)?;
-        match blog_application::fs_safety::AtomicFile::create(&directory, &name, &body) {
+        let name = filename.entry_name();
+        match blog_application::fs_safety::AtomicFile::create(&directory, name, &body) {
             Ok(()) => Ok(()),
             Err(blog_application::fs_safety::Error::DestinationExists(_)) => {
-                let existing = directory.read_bounded(&name, limit)?;
+                let existing = directory.read_bounded(name, limit)?;
                 if existing.as_slice() != body.as_ref() {
                     return Err(blog_application::fs_safety::Error::IdentityChanged(
                         name.as_path().to_path_buf(),
@@ -61,10 +61,10 @@ pub(super) async fn save(
     sqlx::query("INSERT INTO resource(user_id,type,path,size,original_name,mime_type,status,store_type) VALUES(?,?,?,?,?,?,1,'local') ON CONFLICT(path) DO NOTHING")
         .bind(owner).bind(kind.resource_type())
         .bind(&path).bind(size as i64).bind(original_name.as_deref()).bind(mime_type)
-        .execute(&state.pool).await.map_err(db_error)?;
+        .execute(&mut *connection).await.map_err(db_error)?;
     let id: i64 = sqlx::query_scalar("SELECT id FROM resource WHERE path=?")
         .bind(&path)
-        .fetch_one(&state.pool)
+        .fetch_one(connection)
         .await
         .map_err(db_error)?;
     Ok(UploadedMedia {
@@ -83,22 +83,21 @@ pub(super) const DELETE_PREFIX: &str = ".blog-delete-";
 
 pub(super) async fn reconcile_deletion(
     pool: &SqlitePool,
-    media: &std::path::Path,
-    filename: &str,
+    directory: &Arc<PrivateDirectory>,
+    filename: &MediaFilename,
 ) -> Result<(), AppError> {
-    let path = format!("/media/{filename}");
+    let path = filename.path();
     let retained: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM resource WHERE path=?)")
         .bind(path)
         .fetch_one(pool)
         .await
         .map_err(db_error)?;
-    let media = media.to_path_buf();
-    let filename = filename.to_owned();
+    let directory = Arc::clone(directory);
+    let filename = filename.clone();
     tokio::task::spawn_blocking(move || -> Result<(), blog_application::fs_safety::Error> {
-        use blog_application::fs_safety::{EntryName, NoClobberPublish, PrivateDirectory};
-        let directory = PrivateDirectory::open_existing(media)?;
-        let original = EntryName::new(&filename)?;
-        let quarantine = EntryName::new(format!("{DELETE_PREFIX}{filename}"))?;
+        use blog_application::fs_safety::NoClobberPublish;
+        let original = filename.entry_name();
+        let quarantine = filename.deletion_name();
         if retained {
             match NoClobberPublish::publish(
                 &directory,
@@ -112,7 +111,7 @@ pub(super) async fn reconcile_deletion(
                         .max_bytes()
                         .max(MediaKind::Video.max_bytes());
                     let pending = directory.read_bounded(&quarantine, max_bytes)?;
-                    let published = directory.read_bounded(&original, max_bytes)?;
+                    let published = directory.read_bounded(original, max_bytes)?;
                     if pending != published {
                         return Err(blog_application::fs_safety::Error::IdentityChanged(
                             original.as_path().to_path_buf(),
@@ -137,11 +136,26 @@ pub(super) async fn reconcile_deletion(
     .map_err(AppError::from)
 }
 
+pub(super) async fn recover_failed_deletion(
+    pool: &SqlitePool,
+    directory: &Arc<PrivateDirectory>,
+    filename: &MediaFilename,
+    operation: AppError,
+) -> AppError {
+    match reconcile_deletion(pool, directory, filename).await {
+        Ok(()) => operation,
+        Err(recovery) => AppError::DeletionRecovery {
+            operation: Box::new(operation),
+            recovery: Box::new(recovery),
+        },
+    }
+}
+
 pub(crate) async fn recover_deletions(
     pool: &SqlitePool,
     media: &std::path::Path,
 ) -> Result<(), AppError> {
-    let directory = blog_application::fs_safety::PrivateDirectory::open_existing(media)?;
+    let directory = Arc::new(PrivateDirectory::open_existing(media)?);
     for entry in directory.files(blog_application::fs_safety::InventoryLimits {
         max_entries: 100_000,
         max_total_bytes: 1_000_000_000_000,
@@ -149,15 +163,14 @@ pub(crate) async fn recover_deletions(
         let Some(name) = entry
             .name
             .as_os_str()
-            .to_str()
-            .and_then(|name| name.strip_prefix(DELETE_PREFIX))
+            .as_encoded_bytes()
+            .strip_prefix(DELETE_PREFIX.as_bytes())
         else {
             continue;
         };
-        if !is_media_filename(name) {
-            return Err(AppError::InvalidDeletionJournal);
-        }
-        reconcile_deletion(pool, media, name).await?;
+        let name = std::str::from_utf8(name).map_err(AppError::DeletionJournalEncoding)?;
+        let filename = MediaFilename::parse(name).ok_or(AppError::InvalidDeletionJournal)?;
+        reconcile_deletion(pool, &directory, &filename).await?;
     }
     Ok(())
 }

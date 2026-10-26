@@ -455,6 +455,32 @@ fn invalid_coordinates_budgets_parameters_and_offsets_are_rejected() {
 }
 
 #[test]
+fn geometry_errors_identify_the_rejected_external_parameter() {
+    assert!(matches!(
+        profile(f64::NAN),
+        Err(GeometryError::NonFinite("t"))
+    ));
+    assert!(matches!(profile(-0.01), Err(GeometryError::ParameterRange)));
+    assert!(matches!(
+        create(0.0, 120.0, 10.0, 0.05),
+        Err(GeometryError::Dimensions)
+    ));
+    assert!(matches!(
+        create(200.0, f64::INFINITY, 10.0, 0.05),
+        Err(GeometryError::NonFinite("height"))
+    ));
+    let geometry = create(200.0, 120.0, 42.0, 0.05).unwrap();
+    assert!(matches!(
+        offset_path(&geometry, -100.0),
+        Err(GeometryError::EmptyInset)
+    ));
+    assert!(matches!(
+        offset_path(&geometry, -geometry.radius),
+        Err(GeometryError::InsetRadius)
+    ));
+}
+
+#[test]
 fn svg_decimal_format_preserves_javascript_rounding_and_negative_zero() {
     for (input, expected) in [
         (0.0, "0"),

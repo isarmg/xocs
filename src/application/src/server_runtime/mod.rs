@@ -265,7 +265,7 @@ struct TaskRegistration {
     criticality: TaskCriticality,
     task: Box<SupervisedTask>,
 }
-type SupervisedTask = dyn FnOnce(watch::Receiver<bool>) -> Pin<Box<dyn Future<Output = Result<(), String>> + Send>>
+type SupervisedTask = dyn FnOnce(watch::Receiver<bool>) -> Pin<Box<dyn Future<Output = std::io::Result<()>> + Send>>
     + Send;
 
 pub struct ServerRuntimeBuilder {
@@ -308,13 +308,19 @@ impl ServerRuntime {
                 let task_state = match outcome {
                     Ok(Ok(())) if *shutdown_requested.borrow() => TaskState::Stopped,
                     Ok(Ok(())) => TaskState::Completed,
-                    Ok(Err(_)) => TaskState::Failed,
+                    Ok(Err(error)) => {
+                        tracing::error!(event = "common.task.failed", task = %registration.name,
+                            io_kind = ?error.kind(), "supervised task failed");
+                        TaskState::Failed
+                    }
                     Err(_) => TaskState::Panicked,
                 };
                 let mut guard = state.write().await;
-                if let Some(snapshot) = guard.tasks.get_mut(&registration.name) {
-                    snapshot.state = task_state;
-                }
+                guard
+                    .tasks
+                    .get_mut(&registration.name)
+                    .expect("invariant: every supervised task has a registered state")
+                    .state = task_state;
                 if !guard.health().live {
                     task_handle.shutdown();
                 }
@@ -444,7 +450,7 @@ impl ServerRuntimeBuilder {
     ) -> Self
     where
         F: FnOnce(watch::Receiver<bool>) -> Fut + Send + 'static,
-        Fut: Future<Output = Result<(), String>> + Send + 'static,
+        Fut: Future<Output = std::io::Result<()>> + Send + 'static,
     {
         self.tasks.push(TaskRegistration {
             name: name.into(),
@@ -550,11 +556,8 @@ where
     Store: crate::admin_core::AdministratorStore + 'static,
 {
     let product_id = product_id.into();
-    let auth = crate::admin_axum::administrator_router(
-        product_id.clone(),
-        mode,
-        Arc::clone(&administrator),
-    )?;
+    let auth =
+        crate::admin_axum::administrator_router(product_id, mode, Arc::clone(&administrator))?;
     let state = PlatformState { handle };
     let runtime = Router::new()
         .route(LIVENESS_PATH, get(liveness))
@@ -771,7 +774,7 @@ pub enum Error {
     #[error("all HTTP listeners stopped unexpectedly")]
     ListenersStopped,
     #[error("product state could not close cleanly")]
-    StateCloseFailed,
+    StateCloseFailed(#[source] crate::state_file::Error),
     #[error(transparent)]
     ShutdownIncomplete(#[from] ShutdownFailure),
 }

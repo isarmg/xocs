@@ -23,16 +23,17 @@ where
     F: FnOnce() -> V + 'static,
     V: IntoView + 'static,
 {
-    mount_application(root_id, app, false);
+    mount_application(root_id, app, None);
 }
 
-/// Mount a Server view with the shared Rust corner controller.
-pub fn mount_server<F, V>(root_id: &str, app: F)
+/// Mount a Server view, decorating the product's explicit surface roles.
+/// The selector includes all candidate roles, including currently hidden surfaces.
+pub fn mount_server<F, V>(root_id: &str, app: F, surfaces: &'static str)
 where
     F: FnOnce() -> V + 'static,
     V: IntoView + 'static,
 {
-    mount_application(root_id, app, true);
+    mount_application(root_id, app, Some(surfaces));
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -42,7 +43,7 @@ thread_local! {
     static SERVER_CORNERS: std::cell::RefCell<Option<server_corners::ServerCornersController>> = const { std::cell::RefCell::new(None) };
 }
 
-fn mount_application<F, V>(root_id: &str, app: F, server_corners: bool)
+fn mount_application<F, V>(root_id: &str, app: F, corner_surfaces: Option<&'static str>)
 where
     F: FnOnce() -> V + 'static,
     V: IntoView + 'static,
@@ -85,12 +86,12 @@ where
             html.set_attribute("data-blog-appearance", "content-blocks")?;
             html.set_attribute("data-blog-selection", "underline")?;
             #[cfg(target_arch = "wasm32")]
-            if server_corners {
-                let controller = crate::server_corners::start(&document)?;
+            if let Some(surfaces) = corner_surfaces {
+                let controller = crate::server_corners::start(&document, surfaces)?;
                 SERVER_CORNERS.with(|value| *value.borrow_mut() = Some(controller));
             }
             #[cfg(not(target_arch = "wasm32"))]
-            let _ = server_corners;
+            let _ = corner_surfaces;
             html.set_attribute("data-blog-fonts", "ready")?;
             html.set_attribute("data-blog-runtime", "blog-interface")?;
             document.dispatch_event(&web_sys::Event::new("blog-startup-ready")?)?;
@@ -102,7 +103,9 @@ where
             if let Some(document) = web_sys::window().and_then(|window| window.document())
                 && let Ok(event) = web_sys::Event::new("blog-startup-failed")
             {
-                let _ = document.dispatch_event(&event);
+                document
+                    .dispatch_event(&event)
+                    .expect("invariant: an initialized startup failure event can be dispatched");
             }
         }
     });

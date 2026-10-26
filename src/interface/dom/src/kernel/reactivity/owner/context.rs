@@ -3,6 +3,7 @@ use crate::reactivity::owner::Owner;
 use std::{
     any::{Any, TypeId},
     collections::VecDeque,
+    sync::Arc,
 };
 
 impl Owner {
@@ -20,88 +21,65 @@ impl Owner {
 
     fn take_context<T: 'static>(&self) -> Option<T> {
         let ty = TypeId::of::<T>();
-        let mut inner = self.inner.write().or_poisoned();
-        let contexts = &mut inner.contexts;
-        if let Some(context) = contexts.remove(&ty) {
-            context.downcast::<T>().ok().map(|n| *n)
-        } else {
-            let mut parent = inner.parent.as_ref().and_then(|p| p.upgrade());
-            while let Some(ref this_parent) = parent.clone() {
-                let mut this_parent = this_parent.write().or_poisoned();
-                let contexts = &mut this_parent.contexts;
-                let value = contexts.remove(&ty);
-                let downcast = value.and_then(|context| context.downcast::<T>().ok());
-                if let Some(value) = downcast {
-                    return Some(*value);
-                } else {
-                    parent = this_parent.parent.as_ref().and_then(|p| p.upgrade());
-                }
+        let mut current = Some(Arc::clone(&self.inner));
+        while let Some(owner) = current {
+            let mut inner = owner.write().or_poisoned();
+            if let Some(context) = inner.contexts.remove(&ty) {
+                return Some(
+                    *context
+                        .downcast::<T>()
+                        .expect("invariant: context value matches its TypeId"),
+                );
             }
-            None
+            current = inner.parent.as_ref().and_then(|parent| parent.upgrade());
         }
+        None
     }
 
     fn with_context<T: 'static, R>(&self, cb: impl FnOnce(&T) -> R) -> Option<R> {
         let ty = TypeId::of::<T>();
-        let inner = self.inner.read().or_poisoned();
-        let contexts = &inner.contexts;
-        let reference = if let Some(context) = contexts.get(&ty) {
-            context.downcast_ref::<T>()
-        } else {
-            let mut parent = inner.parent.as_ref().and_then(|p| p.upgrade());
-            while let Some(ref this_parent) = parent.clone() {
-                let this_parent = this_parent.read().or_poisoned();
-                let contexts = &this_parent.contexts;
-                let value = contexts.get(&ty);
-                let downcast = value.and_then(|context| context.downcast_ref::<T>());
-                if let Some(value) = downcast {
-                    return Some(cb(value));
-                } else {
-                    parent = this_parent.parent.as_ref().and_then(|p| p.upgrade());
-                }
+        let mut current = Some(Arc::clone(&self.inner));
+        while let Some(owner) = current {
+            let inner = owner.read().or_poisoned();
+            if let Some(context) = inner.contexts.get(&ty) {
+                let value = context
+                    .downcast_ref::<T>()
+                    .expect("invariant: context value matches its TypeId");
+                return Some(cb(value));
             }
-
-            None
-        };
-        reference.map(cb)
+            current = inner.parent.as_ref().and_then(|parent| parent.upgrade());
+        }
+        None
     }
 
     fn update_context<T: 'static, R>(&self, cb: impl FnOnce(&mut T) -> R) -> Option<R> {
         let ty = TypeId::of::<T>();
-        let mut inner = self.inner.write().or_poisoned();
-        let contexts = &mut inner.contexts;
-        let reference = if let Some(context) = contexts.get_mut(&ty) {
-            context.downcast_mut::<T>()
-        } else {
-            let mut parent = inner.parent.as_ref().and_then(|p| p.upgrade());
-            while let Some(ref this_parent) = parent.clone() {
-                let mut this_parent = this_parent.write().or_poisoned();
-                let contexts = &mut this_parent.contexts;
-                let value = contexts.get_mut(&ty);
-                let downcast = value.and_then(|context| context.downcast_mut::<T>());
-                if let Some(value) = downcast {
-                    return Some(cb(value));
-                } else {
-                    parent = this_parent.parent.as_ref().and_then(|p| p.upgrade());
-                }
+        let mut current = Some(Arc::clone(&self.inner));
+        while let Some(owner) = current {
+            let mut inner = owner.write().or_poisoned();
+            if let Some(context) = inner.contexts.get_mut(&ty) {
+                let value = context
+                    .downcast_mut::<T>()
+                    .expect("invariant: context value matches its TypeId");
+                return Some(cb(value));
             }
-            None
-        };
-        reference.map(cb)
+            current = inner.parent.as_ref().and_then(|parent| parent.upgrade());
+        }
+        None
     }
 
     /// Searches for items stored in context in either direction, either among parents or among
     /// descendants.
     pub fn use_context_bidirectional<T: Clone + 'static>(&self) -> Option<T> {
-        self.use_context()
-            .unwrap_or_else(|| self.find_context_in_children())
+        self.use_context::<T>()
+            .or_else(|| self.find_context_in_children::<T>())
     }
 
     fn find_context_in_children<T: Clone + 'static>(&self) -> Option<T> {
         let ty = TypeId::of::<T>();
         let inner = self.inner.read().or_poisoned();
         let mut to_search = VecDeque::new();
-        to_search.extend(inner.children.clone());
+        to_search.extend(inner.children.iter().cloned());
         drop(inner);
 
         while let Some(next) = to_search.pop_front() {
@@ -109,10 +87,15 @@ impl Owner {
                 let child = child.read().or_poisoned();
                 let contexts = &child.contexts;
                 if let Some(context) = contexts.get(&ty) {
-                    return context.downcast_ref::<T>().cloned();
+                    return Some(
+                        context
+                            .downcast_ref::<T>()
+                            .expect("invariant: context value matches its TypeId")
+                            .clone(),
+                    );
                 }
 
-                to_search.extend(child.children.clone());
+                to_search.extend(child.children.iter().cloned());
             }
         }
 

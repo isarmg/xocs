@@ -67,3 +67,7 @@ package = "blog-wasm-module-encoder"
 path = "../module-decoder"
 package = "blog-wasm-module-decoder"
 
+[[test]]
+name = "emission-contracts"
+path = "../../../../test/foundation/wasm/module-transform/integration/emission_contracts.rs"
+

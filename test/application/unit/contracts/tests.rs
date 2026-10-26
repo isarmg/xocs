@@ -53,8 +53,8 @@ fn administrator_auth_matches_every_shared_fixture() {
 }
 
 #[test]
-fn administrator_session_cannot_serialize_an_invalid_public_value() {
-    let mut session = AdministratorSession::new(
+fn administrator_session_is_validated_at_construction_and_preserves_its_wire_format() {
+    let session = AdministratorSession::new(
         "018f1f4b-7a5d-7b5f-8d31-123456789abc",
         "admin",
         "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
@@ -65,16 +65,28 @@ fn administrator_session_cannot_serialize_an_invalid_public_value() {
         json!(ADMINISTRATOR_ROLE)
     );
 
-    session.authenticated = false;
-    assert!(serde_json::to_value(&session).is_err());
-
-    session.authenticated = true;
-    session.username = "Admin".to_owned();
-    assert!(serde_json::to_value(&session).is_err());
-
-    session.username = "admin".to_owned();
-    session.csrf_token = "noncanonical-token-shape".to_owned();
-    assert!(serde_json::to_value(&session).is_err());
+    assert_eq!(session.username(), "admin");
+    assert_eq!(
+        serde_json::from_value::<AdministratorSession>(serde_json::to_value(&session).unwrap())
+            .unwrap(),
+        session,
+    );
+    for (field, invalid) in [
+        ("authenticated", json!(false)),
+        ("user_id", json!("invalid id")),
+        ("username", json!("Admin")),
+        ("role", json!("viewer")),
+        ("role", json!({"admin":null})),
+        ("csrf_token", json!("noncanonical-token-shape")),
+        ("unknown", json!(true)),
+    ] {
+        let mut wire = serde_json::to_value(&session).unwrap();
+        wire[field] = invalid;
+        assert!(serde_json::from_value::<AdministratorSession>(wire).is_err());
+    }
+    assert!(AdministratorSession::new("invalid id", "admin", session.csrf_token()).is_err());
+    assert!(AdministratorSession::new(session.user_id(), "Admin", session.csrf_token()).is_err());
+    assert!(AdministratorSession::new(session.user_id(), "admin", "invalid-token").is_err());
 }
 
 #[test]
@@ -178,7 +190,7 @@ fn semantic_boundaries_match_the_json_schemas() {
     };
     release.validate().unwrap();
 
-    let mut invalid_revision = release.clone();
+    let mut invalid_revision = release;
     invalid_revision.source_revision = "A".repeat(40);
     assert!(matches!(
         invalid_revision.validate(),

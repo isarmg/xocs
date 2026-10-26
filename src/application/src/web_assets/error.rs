@@ -1,6 +1,6 @@
-use std::{env, io, path::PathBuf};
+use std::{env, fmt, io, path::PathBuf};
 
-#[derive(Debug, thiserror::Error)]
+#[derive(thiserror::Error)]
 pub enum Error {
     #[error("web asset I/O failed")]
     Io(#[from] io::Error),
@@ -81,3 +81,24 @@ pub enum Error {
     #[error("release requires clean source")]
     DirtyRelease,
 }
+
+impl fmt::Debug for Error {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Self::Environment { name, .. } = self {
+            return formatter
+                .debug_struct("Environment")
+                .field("name", name)
+                .finish_non_exhaustive();
+        }
+        let mut diagnostic = formatter.debug_tuple("WebAssetError");
+        diagnostic.field(&format_args!("{self}"));
+        if let Some(source) = std::error::Error::source(self) {
+            diagnostic.field(&source);
+        }
+        diagnostic.finish()
+    }
+}
+
+#[cfg(test)]
+#[path = "../../../../test/application/unit/web_assets/error.rs"]
+mod tests;

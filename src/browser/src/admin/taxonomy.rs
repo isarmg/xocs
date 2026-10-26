@@ -1,8 +1,9 @@
-use crate::common::{Action, Feedback, Field, list, load, num, t, text};
+use crate::common::{Action, Feedback, Field, list, load, nullable_num, num, t, text};
 use blog_interface::component::component_props_builder;
 use blog_interface::components::notify;
 use blog_interface::prelude::*;
 use serde_json::{Value, json};
+use std::collections::BTreeMap;
 
 #[derive(Clone, Copy)]
 pub(super) enum TaxonomyKind {
@@ -35,6 +36,22 @@ pub(super) fn Taxonomy(kind: TaxonomyKind) -> impl IntoView {
             String::new()
         }
     }));
+    let category_names = Memo::new(move |_| {
+        categories.value.with(|value| {
+            let mut names = BTreeMap::new();
+            if let Some(categories) = value {
+                for category in categories
+                    .as_array()
+                    .expect("invariant: categories passed the list response contract")
+                {
+                    names
+                        .entry(num(category, "id"))
+                        .or_insert_with(|| text(category, "sort_name"));
+                }
+            }
+            names
+        })
+    });
     let form = RwSignal::new(json!({"name":"","description":"","priority":0,"sort_id":0}));
     let editing = RwSignal::new(None::<i64>);
     let priority = RwSignal::new("0".to_string());
@@ -58,9 +75,7 @@ pub(super) fn Taxonomy(kind: TaxonomyKind) -> impl IntoView {
         }
         let current = form.get_untracked();
         if labels
-            && !list(categories.value.get_untracked())
-                .iter()
-                .any(|category| num(category, "id") == num(&current, "sort_id"))
+            && !category_names.with_untracked(|names| names.contains_key(&num(&current, "sort_id")))
         {
             return;
         }
@@ -84,8 +99,10 @@ pub(super) fn Taxonomy(kind: TaxonomyKind) -> impl IntoView {
                         "优先级须为 -9007199254740991 至 9007199254740991 之间的整数。",
                         "Priority must be a whole number between -9007199254740991 and 9007199254740991.",
                     ));
-                    if let Some(input) = priority_input.get_untracked() {
-                        let _ = input.focus();
+                    if let Some(input) = priority_input.get_untracked()
+                        && let Err(error) = input.focus()
+                    {
+                        web_sys::console::warn_2(&"Unable to move browser focus".into(), &error);
                     }
                     return;
                 }
@@ -133,13 +150,11 @@ pub(super) fn Taxonomy(kind: TaxonomyKind) -> impl IntoView {
                     },
                 )),
                 blog_interface::html::td().child(if labels {
-                    list(categories.value.get())
-                        .iter()
-                        .find(|c| num(c, "id") == num(&item, "sort_id"))
-                        .map(|c| text(c, "sort_name"))
+                    category_names
+                        .with(|names| names.get(&num(&item, "sort_id")).cloned())
                         .unwrap_or_default()
                 } else {
-                    num(&item, "priority").to_string()
+                    nullable_num(&item, "priority").unwrap_or(0).to_string()
                 }),
                 blog_interface::html::td().child(
                     blog_interface::html::div()
@@ -149,13 +164,18 @@ pub(super) fn Taxonomy(kind: TaxonomyKind) -> impl IntoView {
                                 .class("blog-button")
                                 .on(blog_interface::ev::click, move |_| {
                                     editing.set(Some(id));
-                                    priority.set(num(&edit, "priority").to_string());
+                                    let (sort_id, rank) = match kind {
+                                        TaxonomyKind::Categories => {
+                                            (0, nullable_num(&edit, "priority").unwrap_or(0))
+                                        }
+                                        TaxonomyKind::Labels => (num(&edit, "sort_id"), 0),
+                                    };
+                                    priority.set(rank.to_string());
                                     validation.set(String::new());
                                     form.set(json!({ "name" : text(& edit, if labels
                     { "label_name" } else { "sort_name" }), "description" : text(&
                     edit, if labels { "label_description" } else { "sort_description"
-                    }), "priority" : num(& edit, "priority"), "sort_id" : num(& edit,
-                    "sort_id") }));
+                    }), "priority" : rank, "sort_id" : sort_id }));
                                 }),
                             blog_interface::html::button()
                                 .child(t("删除", "Delete"))
@@ -163,8 +183,7 @@ pub(super) fn Taxonomy(kind: TaxonomyKind) -> impl IntoView {
                                 .disabled(move || deletion.busy.get())
                                 .on(blog_interface::ev::click, move |_| {
                                     if save.busy.get_untracked()
-                                        || !web_sys::window()
-                                            .unwrap()
+                                        || !web_sys::window().expect("invariant: the application is mounted in a browser window")
                                             .confirm_with_message(&if labels {
                                                 t("确定删除这个标签？", "Delete this tag?")
                                             } else {
@@ -309,7 +328,7 @@ pub(super) fn Taxonomy(kind: TaxonomyKind) -> impl IntoView {
                                                         .change(Callback::new(move |v: String| {
                                                             form.update(|f| {
                                                                 f["sort_id"] = json!(
-                                                                    v.parse::<i64>().unwrap_or(0)
+                                                                    v.parse::<i64>().expect("invariant: category selector options are integer IDs")
                                                                 )
                                                             })
                                                         }))

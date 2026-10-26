@@ -8,7 +8,7 @@ fn hex(bytes: impl AsRef<[u8]>) -> String {
     use std::fmt::Write;
     let mut output = String::new();
     for byte in bytes.as_ref() {
-        write!(output, "{byte:02x}").unwrap();
+        write!(output, "{byte:02x}").expect("writing hexadecimal into a String is infallible");
     }
     output
 }

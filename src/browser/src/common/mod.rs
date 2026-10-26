@@ -41,22 +41,53 @@ pub(crate) fn text(v: &Value, k: &str) -> String {
 }
 
 pub(crate) fn num(v: &Value, k: &str) -> i64 {
-    v.get(k).and_then(Value::as_i64).unwrap_or(0)
+    v[k].as_i64()
+        .expect("invariant: a required integer passed the response contract or form initialization")
+}
+
+pub(crate) fn nullable_num(v: &Value, k: &str) -> Option<i64> {
+    let value = v
+        .get(k)
+        .expect("invariant: a required nullable integer field is present");
+    if value.is_null() {
+        None
+    } else {
+        Some(num(v, k))
+    }
 }
 
 pub(crate) fn flag(v: &Value, k: &str) -> bool {
-    v[k].as_bool().unwrap_or_else(|| v[k].as_i64() == Some(1))
+    match v
+        .get(k)
+        .expect("invariant: a flag passed the response contract or form initialization")
+    {
+        Value::Bool(value) => *value,
+        Value::Number(value) => {
+            value
+                .as_i64()
+                .expect("invariant: response flags are binary integers")
+                == 1
+        }
+        // Nullable publication status is displayed as unpublished.
+        Value::Null => false,
+        Value::String(_) | Value::Array(_) | Value::Object(_) => {
+            unreachable!("invariant: a response or form flag is boolean, binary or null")
+        }
+    }
 }
 
 pub(crate) fn rows(v: &Value, k: &str) -> Vec<Value> {
-    v.get(k)
-        .and_then(Value::as_array)
-        .cloned()
-        .unwrap_or_default()
+    v[k].as_array()
+        .expect("invariant: list items passed the response contract")
+        .clone()
 }
 
 pub(crate) fn list(v: Option<Value>) -> Vec<Value> {
-    v.and_then(|v| v.as_array().cloned()).unwrap_or_default()
+    match v {
+        None => Vec::new(),
+        Some(Value::Array(items)) => items,
+        Some(_) => unreachable!("invariant: an available list passed the response contract"),
+    }
 }
 
 pub(crate) fn table_time(value: &str) -> String {

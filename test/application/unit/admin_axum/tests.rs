@@ -245,7 +245,7 @@ async fn verified_access_log_metadata_survives_logout_without_credentials() {
         .insert(header::COOKIE, cookie.parse().unwrap());
     logout.headers_mut().insert(
         crate::admin_auth::CSRF_HEADER,
-        data.csrf_token.parse().unwrap(),
+        data.csrf_token().parse().unwrap(),
     );
     let response = router.clone().oneshot(logout).await.unwrap();
     assert_eq!(response.status(), StatusCode::NO_CONTENT);
@@ -413,5 +413,5 @@ async fn successful_login_uses_admin_cookie_and_contract() {
     assert!(cookie.ends_with("; Path=/; HttpOnly; SameSite=Strict"));
     let body = to_bytes(response.into_body(), 8 * 1024).await.unwrap();
     let session: crate::contracts::AdministratorSession = serde_json::from_slice(&body).unwrap();
-    assert_eq!(session.username, "admin");
+    assert_eq!(session.username(), "admin");
 }

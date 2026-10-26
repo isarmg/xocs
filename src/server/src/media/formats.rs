@@ -1,5 +1,61 @@
 //! Accepted media formats, upload profiles and bounded container inspection.
 
+use blog_application::fs_safety::EntryName;
+
+#[derive(Clone, Debug)]
+pub(super) struct MediaFilename {
+    name: EntryName,
+    format: MediaFormat,
+}
+
+impl MediaFilename {
+    pub(super) fn parse(name: &str) -> Option<Self> {
+        let format = MediaFormat::from_filename(name)?;
+        Some(Self {
+            name: EntryName::new(name)
+                .expect("invariant: canonical media filenames are single directory entries"),
+            format,
+        })
+    }
+
+    pub(super) fn from_digest(digest: [u8; 32], format: MediaFormat) -> Self {
+        let name = format!("{}.{}", hex::encode(digest), format.extension());
+        Self {
+            name: EntryName::new(name)
+                .expect("invariant: digest and media extension form a single directory entry"),
+            format,
+        }
+    }
+
+    pub(super) fn as_str(&self) -> &str {
+        self.name
+            .as_os_str()
+            .to_str()
+            .expect("invariant: media filenames contain only ASCII")
+    }
+
+    pub(super) fn entry_name(&self) -> &EntryName {
+        &self.name
+    }
+
+    pub(super) fn format(&self) -> MediaFormat {
+        self.format
+    }
+
+    pub(super) fn path(&self) -> String {
+        format!("/media/{}", self.as_str())
+    }
+
+    pub(super) fn deletion_name(&self) -> EntryName {
+        EntryName::new(format!(
+            "{}{}",
+            super::storage::DELETE_PREFIX,
+            self.as_str()
+        ))
+        .expect("invariant: deletion prefix preserves a canonical media directory entry")
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum MediaKind {
     Image,
@@ -108,7 +164,7 @@ fn image_type(bytes: &[u8]) -> Option<MediaFormat> {
     if bytes.starts_with(b"GIF87a") || bytes.starts_with(b"GIF89a") {
         return Some(MediaFormat::Gif);
     }
-    if bytes.len() >= 12 && bytes.starts_with(b"RIFF") && &bytes[8..12] == b"WEBP" {
+    if bytes.starts_with(b"RIFF") && bytes.get(8..12) == Some(b"WEBP") {
         return Some(MediaFormat::Webp);
     }
     None
@@ -129,19 +185,16 @@ fn video_type(bytes: &[u8]) -> Option<MediaFormat> {
 
 fn mp4_box<'a>(bytes: &'a [u8], budget: &mut usize) -> Option<(&'a [u8], &'a [u8], &'a [u8])> {
     *budget = budget.checked_sub(1)?;
-    let size = u32::from_be_bytes(bytes.get(..4)?.try_into().ok()?);
+    let size = u32::from_be_bytes(*bytes.first_chunk::<4>()?);
     let kind = bytes.get(4..8)?;
     let (header, size) = match size {
         0 => (8, bytes.len()),
         1 => (
             16,
-            usize::try_from(u64::from_be_bytes(bytes.get(8..16)?.try_into().ok()?)).ok()?,
+            usize::try_from(u64::from_be_bytes(*bytes.get(8..)?.first_chunk::<8>()?)).ok()?,
         ),
         size => (8, size as usize),
     };
-    if size < header {
-        return None;
-    }
     Some((kind, bytes.get(header..size)?, bytes.get(size..)?))
 }
 
@@ -154,10 +207,8 @@ fn mp4_track(bytes: &[u8], depth: u8, budget: &mut usize) -> Option<bool> {
         match (depth, kind) {
             (0, b"trak") | (1, b"mdia") => video |= mp4_track(payload, depth + 1, budget)?,
             (2, b"hdlr") => {
-                if payload.len() < 24 {
-                    return None;
-                }
-                video |= payload.get(8..12) == Some(b"vide");
+                let header = payload.first_chunk::<24>()?;
+                video |= &header[8..12] == b"vide";
             }
             _ => {}
         }
@@ -257,7 +308,7 @@ fn ebml_element<'a>(bytes: &'a [u8], budget: &mut usize) -> Option<(u64, &'a [u8
         if !matches!(id, 0x1853_8067 | 0x1f43_b675) {
             return None;
         }
-        bytes.len().checked_sub(header)?
+        bytes.get(header..)?.len()
     } else {
         usize::try_from(size).ok()?
     };

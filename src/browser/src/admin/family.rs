@@ -180,8 +180,7 @@ pub(super) fn FamilySettings() -> impl IntoView {
                                                         .class("blog-button blog-danger")
                                                         .r#type("button")
                                                         .on(blog_interface::ev::click, move |_| {
-                                                            if web_sys::window()
-                                                                .unwrap()
+                                                            if web_sys::window().expect("invariant: the application is mounted in a browser window")
                                                                 .confirm_with_message(&t(
                                                                     "确定删除家的资料？",
                                                                     "Delete your home details?",

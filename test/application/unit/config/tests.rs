@@ -1,6 +1,54 @@
 use super::*;
 use serde::Deserialize;
 
+#[test]
+fn parser_and_file_errors_keep_sources_outside_safe_diagnostics() {
+    use std::error::Error as _;
+    let syntax = strict::parse_json(b"{\"private-input\":", ConfigSource::File).unwrap_err();
+    assert!(
+        syntax
+            .source()
+            .unwrap()
+            .source()
+            .unwrap()
+            .is::<serde_json::Error>()
+    );
+    let mapping = [EnvMapping {
+        variable: "APP_WORKERS",
+        path: "/workers",
+        kind: EnvValueKind::UnsignedInteger,
+    }];
+    let integer = read_environment(&mapping, |_| Some("private-input".into())).unwrap_err();
+    assert!(
+        integer
+            .source()
+            .unwrap()
+            .source()
+            .unwrap()
+            .is::<std::num::ParseIntError>()
+    );
+    let directory = tempfile::tempdir().unwrap();
+    let missing = read_private_file(&directory.path().join("private-input.json")).unwrap_err();
+    assert_eq!(missing.reason, Reason::MissingFile);
+    let cause = missing
+        .source()
+        .unwrap()
+        .source()
+        .unwrap()
+        .downcast_ref::<std::io::Error>()
+        .unwrap();
+    assert_eq!(cause.kind(), std::io::ErrorKind::NotFound);
+    for failure in [syntax, integer, missing] {
+        assert!(!failure.to_string().contains("private-input"));
+        assert!(!format!("{failure:?}").contains("private-input"));
+        assert!(
+            !serde_json::to_string(&failure.envelope())
+                .unwrap()
+                .contains("private-input")
+        );
+    }
+}
+
 #[derive(Debug)]
 struct ValidatedSecret;
 impl<'de> Deserialize<'de> for ValidatedSecret {

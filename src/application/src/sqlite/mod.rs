@@ -115,7 +115,7 @@ impl PoolOptions {
         if let Some(limits) = self.connection_limits {
             limits
                 .validate()
-                .map_err(|_| PoolOptionsError::InvalidConnectionLimits)?;
+                .map_err(PoolOptionsError::InvalidConnectionLimits)?;
         }
         Ok(())
     }
@@ -135,21 +135,23 @@ pub async fn open_existing(
 ) -> Result<SqlitePool, Error> {
     options.validate()?;
     let database_path = database_path.as_ref();
-    match database_path.try_exists() {
-        Ok(true) => {}
-        Ok(false) => {
-            return Err(Error::DatabaseDoesNotExist {
-                path: database_path.to_path_buf(),
-            });
-        }
-        Err(source) => {
-            return Err(Error::InspectDatabase {
+    match connect(database_path, false, options).await {
+        Err(Error::Sqlx(source))
+            if source
+                .as_database_error()
+                .is_some_and(|error| error.code().as_deref() == Some("14"))
+                && std::fs::metadata(database_path)
+                    .is_err_and(|error| error.kind() == io::ErrorKind::NotFound) =>
+        {
+            // Inspect only a failed SQLITE_CANTOPEN to provide a specific
+            // diagnostic. SQLite's open result remains the error source.
+            Err(Error::DatabaseDoesNotExist {
                 path: database_path.to_path_buf(),
                 source,
-            });
+            })
         }
+        result => result,
     }
-    connect(database_path, false, options).await
 }
 
 /// Open a SQLite file, explicitly allowing SQLite to create it when missing.
@@ -452,7 +454,7 @@ async fn read_metadata_rows(
     Ok(metadata)
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Error)]
+#[derive(Debug, Error)]
 pub enum PoolOptionsError {
     #[error("max_connections must be greater than zero")]
     ZeroMaxConnections,
@@ -466,7 +468,7 @@ pub enum PoolOptionsError {
     #[error("acquire_timeout must be greater than zero")]
     ZeroAcquireTimeout,
     #[error("connection limits are outside the supported bounds")]
-    InvalidConnectionLimits,
+    InvalidConnectionLimits(#[source] ConnectionLimitError),
 }
 
 #[derive(Debug, Error)]
@@ -474,10 +476,12 @@ pub enum Error {
     #[error(transparent)]
     InvalidPoolOptions(#[from] PoolOptionsError),
     #[error("SQLite database does not exist: {path}", path = .path.display())]
-    DatabaseDoesNotExist { path: PathBuf },
-    #[error("cannot inspect SQLite database {path}: {source}", path = .path.display())]
-    InspectDatabase { path: PathBuf, source: io::Error },
-    #[error("SQLite operation failed: {0}")]
+    DatabaseDoesNotExist {
+        path: PathBuf,
+        #[source]
+        source: sqlx::Error,
+    },
+    #[error("SQLite operation failed")]
     Sqlx(#[from] sqlx::Error),
     #[error(transparent)]
     ConnectionLimits(#[from] ConnectionLimitError),

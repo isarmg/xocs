@@ -161,8 +161,12 @@ pub(super) fn LetterSettings() -> impl IntoView {
                                             .and_then(|node| {
                                                 node.dyn_into::<web_sys::HtmlElement>().ok()
                                             })
+                                            && let Err(error) = field.focus()
                                         {
-                                            let _ = field.focus();
+                                            web_sys::console::warn_2(
+                                                &"Unable to move browser focus".into(),
+                                                &error,
+                                            );
                                         }
                                     } else {
                                         validation.set(String::new());

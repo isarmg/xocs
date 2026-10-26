@@ -75,7 +75,15 @@ fn contextual_range(source: &str, start: usize, end: usize) -> (usize, usize) {
                 }
             }
             Event::Rule => protect(&range),
-            _ => {}
+            Event::Text(_)
+            | Event::Code(_)
+            | Event::InlineMath(_)
+            | Event::DisplayMath(_)
+            | Event::Html(_)
+            | Event::FootnoteReference(_)
+            | Event::SoftBreak
+            | Event::HardBreak
+            | Event::TaskListMarker(_) => {}
         }
     }
     destination.map_or((start, end), |at| (at, at))
@@ -96,7 +104,17 @@ fn standalone_video_at(source: &str, start: usize, end: usize) -> bool {
                 depth += 1;
             }
             Event::End(_) => depth -= 1,
-            _ => {}
+            Event::Text(_)
+            | Event::Code(_)
+            | Event::InlineMath(_)
+            | Event::DisplayMath(_)
+            | Event::Html(_)
+            | Event::InlineHtml(_)
+            | Event::FootnoteReference(_)
+            | Event::SoftBreak
+            | Event::HardBreak
+            | Event::Rule
+            | Event::TaskListMarker(_) => {}
         }
     }
     false

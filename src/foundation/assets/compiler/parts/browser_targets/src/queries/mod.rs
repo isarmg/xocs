@@ -33,6 +33,7 @@ mod maintained_node;
 mod node_accurate;
 mod node_bounded_range;
 mod node_unbounded_range;
+mod node_version;
 mod op_mini;
 mod percentage;
 mod percentage_by_region;

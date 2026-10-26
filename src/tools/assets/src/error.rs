@@ -57,6 +57,12 @@ pub enum DistributionError {
     AuthoredDirectory,
     #[error("distribution needs a parent directory and directory name")]
     MissingName,
+    #[error("canonicalize distribution product root {path:?}")]
+    CanonicalizeRoot {
+        path: PathBuf,
+        #[source]
+        source: io::Error,
+    },
     #[error("distribution path must be UTF-8: {0:?}")]
     NonUnicodeOutput(PathBuf),
     #[error("create distribution parent {path:?}")]

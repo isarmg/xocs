@@ -2,6 +2,33 @@ use super::*;
 use crate::admin_core::LOGIN_ATTEMPTS_MAX;
 use std::fs::OpenOptions;
 
+#[tokio::test]
+async fn unavailable_database_keeps_the_sqlite_failure_as_its_source() {
+    use crate::admin_core::AdministratorStore;
+    use std::error::Error as _;
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect("sqlite::memory:")
+        .await
+        .unwrap();
+    pool.close().await;
+    let store = super::super::SqliteAdministratorStore::new(pool);
+    let failure = store.authentication_state().await.unwrap_err();
+    assert!(matches!(
+        &failure,
+        AuthenticationStateError::Store(super::super::Error::Sqlx(sqlx::Error::PoolClosed))
+    ));
+    assert!(matches!(
+        failure
+            .source()
+            .unwrap()
+            .source()
+            .unwrap()
+            .downcast_ref::<sqlx::Error>(),
+        Some(sqlx::Error::PoolClosed)
+    ));
+}
+
 #[tokio::test(start_paused = true)]
 async fn registry_is_bounded_and_preserves_dropped_unexpired_scopes() {
     let mut registry = Registry::default();

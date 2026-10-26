@@ -23,7 +23,7 @@ async fn readiness_requires_checks_and_critical_exit_stops_runtime() {
     let runtime = ServerRuntime::builder(descriptor())
         .register_health_check("database", Arc::new(Ready))
         .register_background_task("worker", TaskCriticality::Critical, |_shutdown| async {
-            Err("stopped".into())
+            Err(std::io::Error::other("stopped"))
         })
         .build()
         .await
@@ -354,7 +354,7 @@ async fn http_lifecycle_propagates_critical_worker_failure() {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let runtime = ServerRuntime::builder(descriptor())
         .register_background_task("failed", TaskCriticality::Critical, |_| async {
-            Err("failure".into())
+            Err(std::io::Error::other("failure"))
         })
         .build()
         .await
@@ -400,10 +400,10 @@ async fn panicking_task_factory_is_recorded_and_stops_critical_runtime() {
 async fn degrading_and_best_effort_exits_do_not_stop_the_service() {
     let runtime = ServerRuntime::builder(descriptor())
         .register_background_task("maintenance", TaskCriticality::Degrading, |_| async {
-            Err("failure".into())
+            Err(std::io::Error::other("failure"))
         })
         .register_background_task("optional", TaskCriticality::BestEffort, |_| async {
-            Err("failure".into())
+            Err(std::io::Error::other("failure"))
         })
         .build()
         .await

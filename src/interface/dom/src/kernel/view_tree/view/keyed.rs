@@ -464,7 +464,7 @@ fn apply_diff<T, VFS, V>(
             if let Some(Some((_, state))) = children.get_next_closest_mounted_sibling(to) {
                 state.insert_before_this_or_marker(parent, &mut each_item, Some(marker.as_ref()))
             } else {
-                each_item.try_mount(parent, Some(marker.as_ref()));
+                each_item.mount(parent, Some(marker.as_ref()));
             }
         }
 
@@ -483,11 +483,11 @@ fn apply_diff<T, VFS, V>(
                     if let Some(Some((_, state))) = children.get_next_closest_mounted_sibling(at) {
                         state.insert_before_this_or_marker(parent, &mut item, Some(marker.as_ref()))
                     } else {
-                        item.try_mount(parent, Some(marker.as_ref()));
+                        item.mount(parent, Some(marker.as_ref()));
                     }
                 }
                 DiffOpAddMode::Append => {
-                    item.try_mount(parent, Some(marker.as_ref()));
+                    item.mount(parent, Some(marker.as_ref()));
                 }
             }
         }

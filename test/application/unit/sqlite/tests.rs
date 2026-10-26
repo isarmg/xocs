@@ -234,7 +234,7 @@ async fn pool_limits_apply_to_replacement_connections_and_invalid_creation_is_re
         )
         .await,
         Err(Error::InvalidPoolOptions(
-            PoolOptionsError::InvalidConnectionLimits
+            PoolOptionsError::InvalidConnectionLimits(_)
         ))
     ));
     assert!(!missing.exists());

@@ -9,7 +9,9 @@ mod platform_contract;
 mod schema_definition;
 use std::{env, fs, path::PathBuf};
 
-fn main() {
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+
+fn main() -> Result<()> {
     platform_contract::check();
     println!("cargo:rerun-if-env-changed=BLOG_WEB_DIST");
     println!("cargo:rerun-if-env-changed=BLOG_BUILD_METADATA_DIR");
@@ -19,21 +21,25 @@ fn main() {
         .and_then(|path| path.parent())
         .expect("repository root")
         .to_path_buf();
-    let source_digest = core_source_sha256(&root.join("src/application"));
+    let source_digest = core_source_sha256(&root.join("src/application"))?;
     println!("cargo:rustc-env=BLOG_CORE_SOURCE_SHA256={source_digest}");
     let web = env::var_os("BLOG_WEB_DIST")
         .map(PathBuf::from)
         .unwrap_or_else(|| root.join("src/web/dist"));
     let target = env::var("TARGET").expect("Cargo build target");
-    let revision = env::var("BLOG_SOURCE_REVISION").unwrap_or_else(|_| "unbound".into());
-    assert!(
-        revision == "unbound"
-            || (revision.len() == 40
-                && revision
-                    .bytes()
-                    .all(|b| b.is_ascii_digit() || matches!(b, b'a'..=b'f'))),
-        "BLOG_SOURCE_REVISION must be unbound or a full lowercase Git commit"
-    );
+    let revision = match env::var("BLOG_SOURCE_REVISION") {
+        Ok(revision) => revision,
+        Err(env::VarError::NotPresent) => "unbound".into(),
+        Err(error @ env::VarError::NotUnicode(_)) => return Err(error.into()),
+    };
+    if revision != "unbound"
+        && !(revision.len() == 40
+            && revision
+                .bytes()
+                .all(|byte| byte.is_ascii_digit() || matches!(byte, b'a'..=b'f')))
+    {
+        return Err("BLOG_SOURCE_REVISION must be unbound or a full lowercase Git commit".into());
+    }
     println!("cargo:rustc-env=BLOG_BUILD_TARGET={target}");
     println!("cargo:rustc-env=BLOG_SOURCE_REVISION={revision}");
     println!("cargo:rerun-if-changed=schema/product.sql");
@@ -47,42 +53,36 @@ fn main() {
         PathBuf::from(env::var_os("OUT_DIR").expect("Cargo output directory"))
             .join("blog-current-schema.sql"),
         &schema,
-    )
-    .expect("write current composed schema");
+    )?;
     // This is trusted DDL composed from owned source constants, never input.
-    let fingerprint = blog_application::sqlite::fingerprint_trusted_ddl(&[&schema])
-        .expect("fingerprint current Blog DDL");
+    let fingerprint = blog_application::sqlite::fingerprint_trusted_ddl(&[&schema])?;
     println!("cargo:rustc-env=BLOG_SCHEMA_SHA256={fingerprint}");
-    blog_application::web_assets::build::generate(web, &fingerprint, &source_digest)
-        .expect("build embedded Blog Web assets and native identity");
-    emit_offline_metadata(&fingerprint);
+    blog_application::web_assets::build::generate(web, &fingerprint, &source_digest)?;
+    emit_offline_metadata(&fingerprint, &schema, revision)
 }
 
-fn emit_offline_metadata(schema_hash: &str) {
+fn emit_offline_metadata(schema_hash: &str, ddl: &str, revision: String) -> Result<()> {
     use blog_application::contracts::{
         StateContract, StateResource, StateResourceKind, StateSchemaIdentity,
     };
     use sha2::{Digest, Sha256};
     let Some(destination) = env::var_os("BLOG_BUILD_METADATA_DIR") else {
-        return;
+        return Ok(());
     };
     let destination = PathBuf::from(destination);
-    assert!(
-        destination.is_absolute() && destination.is_dir(),
-        "explicit metadata directory required"
-    );
-    let revision =
-        env::var("BLOG_SOURCE_REVISION").expect("source-bound metadata requires source revision");
+    if !destination.is_absolute() || !fs::metadata(&destination)?.is_dir() {
+        return Err("explicit metadata directory required".into());
+    }
     // An unbound development build has Web identity and inventory, but cannot
     // truthfully export source-bound installation or release contracts.
     if revision == "unbound" {
-        return;
+        return Ok(());
     }
     let schema = schema_definition::identity(schema_hash).expect("current schema");
     let contract = StateContract {
         contract_version: blog_application::contracts::STATE_CONTRACT_VERSION,
         application: "blog".into(),
-        application_version: env::var("CARGO_PKG_VERSION").unwrap(),
+        application_version: env!("CARGO_PKG_VERSION").into(),
         source_revision: revision.clone(),
         schema: Some(StateSchemaIdentity {
             revision: schema.schema_revision,
@@ -114,73 +114,69 @@ fn emit_offline_metadata(schema_hash: &str) {
         external_requirements: vec![],
         companion_contracts: vec![],
     };
-    contract.validate().expect("state contract");
-    let bytes = serde_json::to_vec(&contract).unwrap();
+    let bytes = serde_json::to_vec(&contract)?;
     let digest = Sha256::digest(&bytes)
         .iter()
         .map(|byte| format!("{byte:02x}"))
         .collect::<String>();
     let identity = blog_application::contracts::ReleaseIdentity {
         product: "blog".into(),
-        version: env::var("CARGO_PKG_VERSION").unwrap(),
+        version: env!("CARGO_PKG_VERSION").into(),
         source_revision: revision,
         target: blog_application::server_target::SERVER_TARGET_TRIPLE.into(),
         state_contract_sha256: digest,
     };
-    identity.validate().expect("bound release identity");
-    let ddl = std::fs::read_to_string(
-        PathBuf::from(env::var_os("OUT_DIR").unwrap()).join("blog-current-schema.sql"),
-    )
-    .expect("read exact current composed DDL");
-    installation_definition::emit(&destination, &identity, &schema, &ddl);
+    installation_definition::emit(&destination, &identity, &schema, ddl)?;
     fs::write(
         destination.join("blog-identity.json"),
-        serde_json::to_vec(&identity).unwrap(),
-    )
-    .unwrap();
+        serde_json::to_vec(&identity)?,
+    )?;
     fs::write(
         destination.join("blog-schema.json"),
-        serde_json::to_vec(&schema).unwrap(),
-    )
-    .unwrap();
-    fs::write(destination.join("blog-state-contract.json"), bytes).unwrap();
+        serde_json::to_vec(&schema)?,
+    )?;
+    fs::write(destination.join("blog-state-contract.json"), bytes)?;
     fs::copy(
-        PathBuf::from(env::var_os("OUT_DIR").unwrap()).join("blog-browser-assets.rs.manifest.json"),
+        PathBuf::from(env::var_os("OUT_DIR").expect("invariant: Cargo supplies OUT_DIR"))
+            .join("blog-browser-assets.rs.manifest.json"),
         destination.join("blog-browser-assets.json"),
-    )
-    .unwrap();
+    )?;
+    Ok(())
 }
 
-fn core_source_sha256(directory: &std::path::Path) -> String {
+fn core_source_sha256(directory: &std::path::Path) -> Result<String> {
     use sha2::{Digest, Sha256};
-    fn collect(directory: &std::path::Path, files: &mut Vec<PathBuf>) {
-        for entry in fs::read_dir(directory).expect("read owned support sources") {
-            let path = entry.expect("read support source entry").path();
-            if path.is_dir() {
-                collect(&path, files);
+    fn collect(directory: &std::path::Path, files: &mut Vec<PathBuf>) -> std::io::Result<()> {
+        for entry in fs::read_dir(directory)? {
+            let entry = entry?;
+            let path = entry.path();
+            if entry.file_type()?.is_dir() {
+                collect(&path, files)?;
             } else {
                 files.push(path);
             }
         }
+        Ok(())
     }
     let mut files = Vec::new();
-    collect(directory, &mut files);
-    files.sort();
+    collect(directory, &mut files)?;
+    files.sort_unstable();
     let mut hash = Sha256::new();
     for path in files {
         println!("cargo:rerun-if-changed={}", path.display());
         hash.update(
             path.strip_prefix(directory)
-                .unwrap()
+                .expect("invariant: collected source paths are below their source root")
                 .to_string_lossy()
                 .as_bytes(),
         );
         hash.update([0]);
-        hash.update(fs::read(&path).expect("read support source bytes"));
+        hash.update(fs::read(&path)?);
         hash.update([0]);
     }
-    hash.finalize()
+    Ok(hash
+        .finalize()
         .iter()
         .map(|byte| format!("{byte:02x}"))
-        .collect()
+        .collect())
 }

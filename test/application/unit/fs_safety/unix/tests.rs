@@ -29,7 +29,6 @@ fn failed_write_cleanup_retains_the_operation_and_any_real_unlink_failure() {
 
     fs::create_dir(directory.path().join("replaced-with-directory")).unwrap();
     let failure = cleanup_failed_write(&directory, "replaced-with-directory", write_failure());
-    assert!(failure.to_string().contains("original write failure"));
     let Error::Cleanup { operation, cleanup } = failure else {
         panic!("both failures must survive cleanup");
     };

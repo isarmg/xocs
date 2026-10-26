@@ -8,7 +8,9 @@ fn event(id: &str, action: SecurityAction, administrator_id: &Identifier) -> Sec
         outcome: AuditOutcome::Success,
         actor_administrator_id: Some(administrator_id.clone()),
         subject_digest: None,
-        request_id: Some("request-1".into()),
+        request_id: Some(
+            crate::error::RequestId::new("request-1").expect("fixture request ID is valid"),
+        ),
         detail_json: "{}".into(),
         occurred_at_micros: 10,
     }
@@ -27,6 +29,65 @@ fn session(administrator_id: &Identifier, id: &str, byte: u8) -> SessionRecord {
         absolute_expires_at_micros: 200,
         revoked_at_micros: None,
     }
+}
+
+#[tokio::test]
+async fn transaction_authorization_uses_current_revocation_expiry_and_account_state()
+-> Result<(), Box<dyn std::error::Error>> {
+    use crate::admin_core::{AdministratorService, LoginContext, SESSION_IDLE_MICROS};
+    let store = crate::testkit::administrator_fixture("admin", "correct horse battery").await;
+    let service = AdministratorService::with_isolated_test_budget(store);
+    let login = service
+        .login(
+            "admin",
+            "correct horse battery",
+            &LoginContext {
+                request_id: None,
+                now_micros: 10,
+            },
+        )
+        .await?;
+    let identity = service
+        .authenticate_session(&login.session_token, 10)
+        .await?;
+    let store = service.store();
+    let mut connection = store.pool().acquire().await?;
+    assert!(session_authorized_on_connection(&mut connection, &identity, 10).await?);
+    let idle_expiry = 10 + SESSION_IDLE_MICROS;
+    assert!(session_authorized_on_connection(&mut connection, &identity, idle_expiry - 1).await?);
+    assert!(!session_authorized_on_connection(&mut connection, &identity, idle_expiry).await?);
+    assert!(matches!(
+        session_authorized_on_connection(&mut connection, &identity, u64::MAX).await,
+        Err(Error::IntegerRange)
+    ));
+    drop(connection);
+
+    for (mutation, now) in [
+        ("UPDATE _common_admin_sessions SET revoked_at_micros=11", 11),
+        (
+            "UPDATE _common_admin_sessions SET csrf_hash=zeroblob(32)",
+            11,
+        ),
+        (
+            "UPDATE _common_admin_sessions SET absolute_expires_at_micros=100, idle_expires_at_micros=100",
+            100,
+        ),
+        ("UPDATE _common_administrators SET active=0", 11),
+        (
+            "UPDATE _common_administrators SET session_version=session_version+1",
+            11,
+        ),
+    ] {
+        let mut transaction = store.pool().begin_with("BEGIN IMMEDIATE").await?;
+        sqlx::query(mutation).execute(&mut *transaction).await?;
+        assert!(!session_authorized_on_connection(&mut transaction, &identity, now).await?);
+        transaction.rollback().await?;
+    }
+    let mut transaction = store.pool().begin_with("BEGIN IMMEDIATE").await?;
+    assert!(session_authorized_on_connection(&mut transaction, &identity, 11).await?);
+    transaction.rollback().await?;
+    store.pool().close().await;
+    Ok(())
 }
 
 #[tokio::test]

@@ -58,16 +58,13 @@ async fn authorize<Store: AdministratorStore + 'static>(
     .await?;
     Ok(AdministratorManagementContext {
         identity,
-        request_id: id.map(|id| id.to_string()),
+        request_id: id,
         now_micros: now_micros()?,
     })
 }
 
 fn context_id(context: &AdministratorManagementContext) -> Option<RequestId> {
-    context
-        .request_id
-        .as_ref()
-        .map(|id| RequestId::new(id.clone()).expect("authorization validated request id"))
+    context.request_id.clone()
 }
 
 async fn input<T: serde::de::DeserializeOwned>(
@@ -75,9 +72,7 @@ async fn input<T: serde::de::DeserializeOwned>(
     admission: &body::BodyAdmission,
     id: Option<&RequestId>,
 ) -> Result<T, Box<Response>> {
-    let bytes = admission
-        .read(request, body::Scope::Management, true, id)
-        .await?;
+    let bytes = admission.read(request, body::Scope::Management, id).await?;
     serde_json::from_slice(&bytes).map_err(|_| Box::new(invalid(id)))
 }
 

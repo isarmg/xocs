@@ -81,9 +81,9 @@ fn linux_local_timezone_observes_transition_rules() {
 
 fn local(month: u32, day: u32, hour: u32) -> NaiveDateTime {
     NaiveDate::from_ymd_opt(2024, month, day)
-        .unwrap()
+        .expect("invariant: transition fixtures use valid 2024 calendar dates")
         .and_hms_opt(hour, 0, 0)
-        .unwrap()
+        .expect("invariant: transition fixtures use valid whole hours")
 }
 
 fn check_local_transitions(case: &str) {

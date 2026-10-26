@@ -1,8 +1,104 @@
 use blog_assets_compiler::{
     borrowed_text::{CowUtils, Pattern},
+    browser_targets::{self, Error as BrowserTargetsError, Opts},
     byte_count,
 };
 use std::{borrow::Cow, panic::catch_unwind};
+
+#[test]
+fn malformed_node_versions_are_rejected_without_zero_defaults() {
+    use std::error::Error as _;
+
+    for ignore_unknown_versions in [false, true] {
+        let opts = Opts {
+            ignore_unknown_versions,
+            ..Opts::default()
+        };
+        for query in [
+            "node 0.65536",
+            "node 20.65536.0",
+            "node 20.0.65536",
+            "node 20..0",
+            "node >= 65536",
+        ] {
+            let error = browser_targets::resolve(&[query], &opts).unwrap_err();
+            assert!(matches!(
+                error,
+                BrowserTargetsError::InvalidNodejsVersion { .. }
+            ));
+            assert!(error.source().is_some());
+        }
+        assert!(browser_targets::resolve(&["node 20.0.0.0"], &opts).is_err());
+    }
+}
+
+#[test]
+fn optional_node_components_and_unknown_version_policy_are_preserved() {
+    let opts = Opts::default();
+    for query in ["node 20", "node 20.0", "node 20.0.0"] {
+        let versions = browser_targets::resolve(&[query], &opts).unwrap();
+        assert_eq!(versions.len(), 1);
+        assert_eq!(versions[0].name(), "node");
+        assert!(versions[0].version().starts_with("20."));
+    }
+    assert!(matches!(
+        browser_targets::resolve(&["node 65535"], &opts),
+        Err(BrowserTargetsError::UnknownNodejsVersion(_))
+    ));
+    let opts = Opts {
+        ignore_unknown_versions: true,
+        ..Opts::default()
+    };
+    assert!(
+        browser_targets::resolve(&["node 65535"], &opts)
+            .unwrap()
+            .is_empty()
+    );
+}
+
+#[test]
+fn node_range_endpoints_reject_invalid_components_and_extra_segments() {
+    use std::error::Error as _;
+
+    for query in [
+        "node 0.65536 - 20",
+        "node 0 - 20.65536",
+        "node 0.0.65536 - 20",
+        "node 0 - 20..1",
+        "node >= 20..0",
+    ] {
+        let error = browser_targets::resolve(&[query], &Opts::default()).unwrap_err();
+        assert!(matches!(
+            error,
+            BrowserTargetsError::InvalidNodejsVersion { .. }
+        ));
+        assert!(error.source().is_some());
+    }
+    for query in ["node >= 20.0.0.0", "node 0.0.0.0 - 20", "node 0 - 20.0.0.0"] {
+        assert!(
+            browser_targets::resolve(&[query], &Opts::default()).is_err(),
+            "accepted {query}"
+        );
+    }
+}
+
+#[test]
+fn node_range_comparisons_keep_optional_component_semantics() {
+    let opts = Opts::default();
+    let bounded = browser_targets::resolve(&["node 20.0 - 20.1"], &opts).unwrap();
+    assert!(!bounded.is_empty());
+    for version in &bounded {
+        assert!(version.version().starts_with("20.0.") || version.version().starts_with("20.1."));
+    }
+    assert_eq!(
+        browser_targets::resolve(&["node 20.0.99 - 20.1.99"], &opts).unwrap(),
+        bounded
+    );
+    assert_eq!(
+        browser_targets::resolve(&["node >= 20"], &opts).unwrap(),
+        browser_targets::resolve(&["node >= 20.0.0"], &opts).unwrap()
+    );
+}
 
 struct CustomMatches(Vec<(usize, &'static str)>);
 

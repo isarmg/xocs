@@ -56,11 +56,6 @@ impl Scope {
 }
 
 impl BodyAdmission {
-    #[cfg(test)]
-    pub(super) fn isolated() -> Self {
-        Self(Arc::new(Semaphore::new(ADMIN_BODY_READERS_GLOBAL)))
-    }
-
     fn acquire(&self, id: Option<&RequestId>) -> Result<SemaphorePermit<'_>, Box<Response>> {
         match self.0.try_acquire() {
             Ok(permit) => Ok(permit),
@@ -86,12 +81,9 @@ impl BodyAdmission {
         &self,
         request: Request,
         scope: Scope,
-        json: bool,
         id: Option<&RequestId>,
     ) -> Result<Bytes, Box<Response>> {
-        if json {
-            require_json_content_type(request.headers(), scope, id)?;
-        }
+        require_json_content_type(request.headers(), scope, id)?;
         let _permit = self.acquire(id)?;
         read_bounded(request.into_body(), scope, id).await
     }

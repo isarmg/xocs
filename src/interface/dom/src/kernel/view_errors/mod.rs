@@ -25,7 +25,7 @@ pub struct Error(Arc<dyn error::Error + Send + Sync>);
 impl Error {
     /// Converts the wrapper into the inner reference-counted error.
     pub fn into_inner(self) -> Arc<dyn error::Error + Send + Sync> {
-        Arc::clone(&self.0)
+        self.0
     }
 }
 

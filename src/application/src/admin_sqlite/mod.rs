@@ -66,6 +66,30 @@ pub async fn insert_administrator_on_connection(
     Ok(())
 }
 
+/// Revalidate a previously authenticated identity in the caller's transaction.
+/// Acquire the write transaction and read its current time before calling this
+/// for a mutation, so waiting cannot preserve a revoked or expired session.
+///
+/// # Errors
+/// Returns an error when the timestamp cannot be persisted or SQLite fails.
+pub async fn session_authorized_on_connection(
+    connection: &mut SqliteConnection,
+    identity: &crate::admin_core::AuthenticatedIdentity,
+    now_micros: u64,
+) -> Result<bool, Error> {
+    let timestamp = to_i64(now_micros)?;
+    Ok(sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM _common_admin_sessions s JOIN _common_administrators a ON a.administrator_id=s.administrator_id WHERE s.session_id=? AND s.administrator_id=? AND s.csrf_hash=? AND s.revoked_at_micros IS NULL AND s.idle_expires_at_micros>? AND s.absolute_expires_at_micros>? AND a.active=1 AND a.session_version=s.administrator_session_version)",
+    )
+    .bind(identity.session_id().as_str())
+    .bind(identity.administrator_id().as_str())
+    .bind(identity.csrf_hash().as_slice())
+    .bind(timestamp)
+    .bind(timestamp)
+    .fetch_one(connection)
+    .await?)
+}
+
 #[derive(Clone, Debug)]
 pub struct SqliteAdministratorStore {
     pool: SqlitePool,
@@ -157,7 +181,7 @@ impl AdministratorStore for SqliteAdministratorStore {
         &self,
     ) -> Result<
         Arc<crate::admin_core::AuthenticationState>,
-        crate::admin_core::AuthenticationStateError,
+        crate::admin_core::AuthenticationStateError<Error>,
     > {
         if let Some(state) = self.authentication.get() {
             return Ok(state.clone());
@@ -458,7 +482,12 @@ async fn insert_audit(
                 .as_ref()
                 .map(<[u8; DIGEST_BYTES]>::as_slice),
         )
-        .bind(event.request_id.as_deref())
+        .bind(
+            event
+                .request_id
+                .as_ref()
+                .map(crate::error::RequestId::as_str),
+        )
         .bind(&event.detail_json)
         .bind(to_i64(event.occurred_at_micros)?)
         .execute(&mut **transaction)
@@ -505,7 +534,7 @@ pub enum Error {
     ExpectedSingleActiveAdministrator,
     #[error("only one administrator is allowed")]
     AdministratorAlreadyExists,
-    #[error(transparent)]
+    #[error("administrator SQLite operation failed")]
     Sqlx(#[from] sqlx::Error),
     #[error(transparent)]
     Core(#[from] crate::admin_core::Error),
@@ -519,6 +548,12 @@ pub enum Error {
     SessionNotActive,
     #[error("stored administrator/session data violates the current contract")]
     InvalidStoredRecord,
+    #[error("failed to open the authentication database identity")]
+    OpenAuthenticationDatabase(#[source] std::io::Error),
+    #[error("failed to inspect the authentication database identity")]
+    InspectAuthenticationDatabase(#[source] std::io::Error),
+    #[error("system clock is before the Unix epoch")]
+    Clock(#[source] std::time::SystemTimeError),
     #[error("integer is outside the SQLite signed 64-bit range")]
     IntegerRange,
     #[error("audit action differs: expected {expected:?}, found {actual:?}")]

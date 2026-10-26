@@ -86,7 +86,8 @@ pub fn initialize() {
     if let Some(document) = window.document()
         && let Some(root) = document.document_element()
     {
-        let _ = root.set_attribute("lang", &locale());
+        root.set_attribute("lang", &locale())
+            .expect("invariant: lang is a valid attribute name");
     }
     if let Ok(url) = Url::new(&window.location().href().unwrap_or_default())
         && url
@@ -96,8 +97,12 @@ pub fn initialize() {
             .and_then(supported)
             .is_some()
         && let Ok(Some(storage)) = window.local_storage()
+        && let Err(error) = storage.set_item("sarmg.admin.language", &locale())
     {
-        let _ = storage.set_item("sarmg.admin.language", &locale());
+        web_sys::console::debug_2(
+            &"Language preference remains limited to this document".into(),
+            &error,
+        );
     }
 }
 
@@ -107,7 +112,9 @@ pub fn switch_language() {
     {
         url.search_params()
             .set("lang", if locale() == "zh-CN" { "en" } else { "zh-CN" });
-        let _ = window.location().assign(&url.href());
+        if let Err(error) = window.location().assign(&url.href()) {
+            web_sys::console::warn_2(&"Unable to switch the page language".into(), &error);
+        }
     }
 }
 

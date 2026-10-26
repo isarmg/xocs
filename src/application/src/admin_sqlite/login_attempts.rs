@@ -40,7 +40,7 @@ impl Registry {
         scope: Scope,
         owner: &Arc<SqliteConnectOptions>,
         database_identity_pin: Option<File>,
-    ) -> Result<Arc<AuthenticationState>, AuthenticationStateError> {
+    ) -> Result<Arc<AuthenticationState>, AuthenticationStateError<super::Error>> {
         if let Some(entry) = self.entries.get_mut(&scope) {
             entry.owner = Arc::downgrade(owner);
             return Ok(entry.state.clone());
@@ -71,12 +71,12 @@ impl Registry {
 
 pub(super) async fn state_for_pool(
     pool: &SqlitePool,
-) -> Result<Arc<AuthenticationState>, AuthenticationStateError> {
+) -> Result<Arc<AuthenticationState>, AuthenticationStateError<super::Error>> {
     let filename: String =
         sqlx::query_scalar("SELECT file FROM pragma_database_list WHERE name='main'")
             .fetch_one(pool)
             .await
-            .map_err(|_| AuthenticationStateError::Unavailable)?;
+            .map_err(|cause| AuthenticationStateError::Store(super::Error::Sqlx(cause)))?;
     let owner = pool.connect_options();
     let (scope, database_identity_pin) = if filename.is_empty() {
         (Scope::Memory(Arc::as_ptr(&owner) as usize), None)
@@ -87,12 +87,15 @@ pub(super) async fn state_for_pool(
             rustix::fs::Mode::empty(),
         )
         .map(File::from)
-        .map_err(|_| AuthenticationStateError::Unavailable)?;
-        let metadata = file
-            .metadata()
-            .map_err(|_| AuthenticationStateError::Unavailable)?;
-        let named = std::fs::symlink_metadata(&filename)
-            .map_err(|_| AuthenticationStateError::Unavailable)?;
+        .map_err(|cause| {
+            AuthenticationStateError::Store(super::Error::OpenAuthenticationDatabase(cause.into()))
+        })?;
+        let metadata = file.metadata().map_err(|cause| {
+            AuthenticationStateError::Store(super::Error::InspectAuthenticationDatabase(cause))
+        })?;
+        let named = std::fs::symlink_metadata(&filename).map_err(|cause| {
+            AuthenticationStateError::Store(super::Error::InspectAuthenticationDatabase(cause))
+        })?;
         if !metadata.is_file()
             || !named.is_file()
             || (metadata.dev(), metadata.ino()) != (named.dev(), named.ino())

@@ -9,7 +9,7 @@ where
     T: DefinedAt,
 {
     fn defined_at(&self) -> Option<&'static Location<'static>> {
-        self.as_ref().map(DefinedAt::defined_at).unwrap_or(None)
+        self.as_ref().and_then(DefinedAt::defined_at)
     }
 }
 

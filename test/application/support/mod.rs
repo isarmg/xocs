@@ -291,7 +291,7 @@ where
     let cookie = cookie.split(';').next().unwrap();
     let bytes = to_bytes(response.into_body(), 8192).await.unwrap();
     let login_session: AdministratorSession = serde_json::from_slice(&bytes).unwrap();
-    assert_eq!(login_session.username, ADMINISTRATOR_USERNAME);
+    assert_eq!(login_session.username(), ADMINISTRATOR_USERNAME);
 
     for duplicate_field_lines in [false, true] {
         let mut duplicate = request(Method::GET, ADMIN_SESSION_PATH, Body::empty());
@@ -324,7 +324,7 @@ where
     assert_eq!(response.status(), StatusCode::OK);
     let bytes = to_bytes(response.into_body(), 8192).await.unwrap();
     let session: AdministratorSession = serde_json::from_slice(&bytes).unwrap();
-    assert_eq!(session.csrf_token, login_session.csrf_token);
+    assert_eq!(session.csrf_token(), login_session.csrf_token());
     let restore_request = || {
         let mut value = request(Method::GET, ADMIN_SESSION_PATH, Body::empty());
         value
@@ -337,7 +337,7 @@ where
         assert_eq!(response.status(), StatusCode::OK);
         let restored: AdministratorSession =
             serde_json::from_slice(&to_bytes(response.into_body(), 8192).await.unwrap()).unwrap();
-        assert_eq!(restored.csrf_token, session.csrf_token);
+        assert_eq!(restored.csrf_token(), session.csrf_token());
     }
     let mut logout = request(Method::POST, ADMIN_LOGOUT_PATH, Body::empty());
     logout
@@ -356,7 +356,7 @@ where
         .insert(header::COOKIE, HeaderValue::from_str(cookie).unwrap());
     logout.headers_mut().insert(
         "x-csrf-token",
-        HeaderValue::from_str(&session.csrf_token).unwrap(),
+        HeaderValue::from_str(session.csrf_token()).unwrap(),
     );
     let response = send(logout).await;
     assert_eq!(response.status(), StatusCode::NO_CONTENT);

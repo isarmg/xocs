@@ -11,7 +11,7 @@ pub async fn seed_administrator(
     now: u64,
 ) -> Result<(), super::Error> {
     let account = AdministratorRecord {
-        administrator_id: Identifier::new(blog_application::admin_auth::random_token()?)?,
+        administrator_id: Identifier::generate()?,
         username: username.to_owned(),
         password_hash: password.hash()?,
         active: true,
@@ -25,7 +25,7 @@ pub async fn seed_administrator(
         .create_administrator(
             account,
             SecurityAuditEvent {
-                event_id: Identifier::new(blog_application::admin_auth::random_token()?)?,
+                event_id: Identifier::generate()?,
                 action: SecurityAction::AdministratorCreated,
                 outcome: AuditOutcome::Success,
                 actor_administrator_id: None,

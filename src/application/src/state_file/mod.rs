@@ -372,7 +372,6 @@ impl InstanceLock {
     /// Unlocking the open file description also covers descriptors inherited
     /// briefly by concurrently spawned processes before their exec boundary.
     pub fn release(mut self) -> Result<(), Error> {
-        self.verify_identity()?;
         self._instance.unlock()
     }
 }
@@ -403,7 +402,7 @@ fn open_physical_directory(path: &Path) -> Result<File, Error> {
             Component::Normal(name) => {
                 directory = openat(&directory, name, flags, Mode::empty()).map_err(fail)?
             }
-            _ => {
+            Component::Prefix(_) | Component::CurDir | Component::ParentDir => {
                 return Err(Error::InvalidChildName {
                     name: path.to_path_buf(),
                 });
@@ -550,11 +549,11 @@ pub enum Error {
     StateDirectoryNotAbsolute { path: PathBuf },
     #[error("state file name must be one normal direct child: {name}", name = .name.display())]
     InvalidChildName { name: PathBuf },
-    #[error("cannot inspect state path {path}: {source}", path = .path.display())]
+    #[error("cannot inspect state path {path}", path = .path.display())]
     InspectPath { path: PathBuf, source: io::Error },
-    #[error("cannot create private state directory {path}: {source}", path = .path.display())]
+    #[error("cannot create private state directory {path}", path = .path.display())]
     CreateDirectory { path: PathBuf, source: io::Error },
-    #[error("cannot securely open state file {path}: {source}", path = .path.display())]
+    #[error("cannot securely open state file {path}", path = .path.display())]
     OpenFile { path: PathBuf, source: io::Error },
     #[error("state path is not a real directory: {path}", path = .path.display())]
     NotDirectory { path: PathBuf },
@@ -580,7 +579,7 @@ pub enum Error {
         expected: FileIdentity,
         actual: FileIdentity,
     },
-    #[error("{kind:?} lock is unavailable: {source}")]
+    #[error("{kind:?} lock is unavailable")]
     LockUnavailable { kind: LockKind, source: io::Error },
 }
 

@@ -4,7 +4,7 @@
 //! captured CSS values separate from the live declaration also prevents layout
 //! reads from being interleaved with paint writes in the controller.
 
-use super::geometry::{self, Geometry};
+use super::geometry::{self, Geometry, GeometryError};
 use std::{cell::RefCell, collections::BTreeMap, collections::VecDeque};
 
 const SIDES: [&str; 4] = ["top", "right", "bottom", "left"];
@@ -335,7 +335,7 @@ pub(super) fn decoration(
     layers: &[Shadow],
     has_background_image: bool,
     foreground: bool,
-) -> Result<Option<Decoration>, String> {
+) -> Result<Option<Decoration>, GeometryError> {
     let key = GeometryKey {
         width: geometry.width,
         height: geometry.height,
@@ -398,7 +398,7 @@ pub(super) fn decoration(
     Ok(result)
 }
 
-fn paint(geometry: &Geometry, css: &PaintKey) -> Result<Option<Decoration>, String> {
+fn paint(geometry: &Geometry, css: &PaintKey) -> Result<Option<Decoration>, GeometryError> {
     let width = geometry.width;
     let height = geometry.height;
     let extent = geometry.extent;

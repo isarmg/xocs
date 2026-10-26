@@ -8,6 +8,23 @@
 //! definitions as the decoded reactive state.
 use serde::{Deserialize, Deserializer, Serialize};
 
+/// An article route key that fits the JSON API's positive safe-integer range.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ArticleId(i64);
+
+impl ArticleId {
+    pub fn parse(raw: &str) -> Option<Self> {
+        raw.parse::<i64>()
+            .ok()
+            .filter(|id| (1..=9_007_199_254_740_991).contains(id))
+            .map(Self)
+    }
+
+    pub fn get(self) -> i64 {
+        self.0
+    }
+}
+
 // With `deserialize_with`, Serde reports a missing field instead of supplying
 // Option's implicit None. The deserializer still accepts an explicit JSON null.
 fn required_nullable_string<'de, D: Deserializer<'de>>(d: D) -> Result<Option<String>, D::Error> {

@@ -1,6 +1,6 @@
 //! Administrator-controlled runtime configuration, read without source writes.
 
-use super::{ConfigError, ConfigSource, MAX_CONFIG_BYTES, Reason};
+use super::{ConfigCause, ConfigError, ConfigSource, MAX_CONFIG_BYTES, Reason};
 use rustix::fs::{AtFlags, Mode, OFlags, open, openat, statat};
 use std::{
     fs::{File, Metadata},
@@ -19,6 +19,11 @@ fn io_error(cause: rustix::io::Errno) -> ConfigError {
         rustix::io::Errno::LOOP | rustix::io::Errno::NOTDIR => Reason::UnsafeFile,
         _ => Reason::ReadFailed,
     })
+    .with_cause(ConfigCause::OpenFile(cause.into()))
+}
+
+fn inspect_error(cause: std::io::Error) -> ConfigError {
+    error(Reason::ReadFailed).with_cause(ConfigCause::InspectFile(cause))
 }
 
 fn directory_stamp(metadata: &Metadata) -> (u64, u64, u32, u32, u32) {
@@ -58,7 +63,10 @@ fn no_additional_acl(file: &File, directory: bool) -> Result<(), ConfigError> {
         match rustix::fs::getxattr(&physical, attribute, &mut [0u8; 1]) {
             Err(rustix::io::Errno::NODATA | rustix::io::Errno::NOTSUP) => (),
             Ok(_) | Err(rustix::io::Errno::RANGE) => return Err(error(Reason::UnsafeFile)),
-            Err(_) => return Err(error(Reason::ReadFailed)),
+            Err(cause) => {
+                return Err(error(Reason::ReadFailed)
+                    .with_cause(ConfigCause::ReadAccessControl(cause.into())));
+            }
         }
     }
     Ok(())
@@ -98,7 +106,7 @@ pub fn read_managed_file(
     let mut directories = vec![(root, None)];
     for component in &components[1..components.len() - 1] {
         let Component::Normal(name) = component else {
-            unreachable!()
+            unreachable!("invariant: configuration path components were parsed as normal names")
         };
         let parent = &directories.last().expect("root descriptor exists").0;
         let next = File::from(openat(parent, *name, flags, Mode::empty()).map_err(io_error)?);
@@ -106,9 +114,7 @@ pub fn read_managed_file(
     }
     let mut stamps = Vec::with_capacity(directories.len());
     for (index, (directory, _)) in directories.iter().enumerate() {
-        let metadata = directory
-            .metadata()
-            .map_err(|_| error(Reason::ReadFailed))?;
+        let metadata = directory.metadata().map_err(inspect_error)?;
         let mode = metadata.mode() & 0o7777;
         let owner_allowed =
             metadata.uid() == 0 || (allow_development_owner && metadata.uid() == caller);
@@ -128,7 +134,7 @@ pub fn read_managed_file(
     }
     let directory = &directories.last().expect("root descriptor exists").0;
     let Component::Normal(name) = components.last().expect("file component exists") else {
-        unreachable!()
+        unreachable!("invariant: a configuration path ends in a normal file name")
     };
     let mut file = File::from(
         openat(
@@ -139,7 +145,7 @@ pub fn read_managed_file(
         )
         .map_err(io_error)?,
     );
-    let before = file.metadata().map_err(|_| error(Reason::ReadFailed))?;
+    let before = file.metadata().map_err(inspect_error)?;
     let parent = stamps.last().expect("parent stamp exists");
     let mode = before.mode() & 0o7777;
     let managed = parent.2 == 0 && before.uid() == 0 && matches!(mode, 0o600 | 0o640);
@@ -160,12 +166,13 @@ pub fn read_managed_file(
     (&mut file)
         .take(MAX_CONFIG_BYTES as u64 + 1)
         .read_to_end(&mut bytes)
-        .map_err(|_| error(Reason::ReadFailed))?;
+        .map_err(|cause| error(Reason::ReadFailed).with_cause(ConfigCause::ReadFile(cause)))?;
     if bytes.len() > MAX_CONFIG_BYTES {
         return Err(error(Reason::LimitExceeded));
     }
-    let after = file.metadata().map_err(|_| error(Reason::ReadFailed))?;
-    let named = statat(directory, *name, AtFlags::SYMLINK_NOFOLLOW).map_err(io_error)?;
+    let after = file.metadata().map_err(inspect_error)?;
+    let named = statat(directory, *name, AtFlags::SYMLINK_NOFOLLOW)
+        .map_err(|cause| inspect_error(cause.into()))?;
     if file_stamp(&before) != file_stamp(&after)
         || named.st_dev != before.dev()
         || named.st_ino != before.ino()
@@ -185,11 +192,12 @@ pub fn read_managed_file(
     no_additional_acl(&file, false)?;
     no_additional_acl(directory, true)?;
     for (index, (held, name)) in directories.iter().enumerate() {
-        let now = held.metadata().map_err(|_| error(Reason::ReadFailed))?;
+        let now = held.metadata().map_err(inspect_error)?;
         let named = if let Some(name) = name {
-            statat(&directories[index - 1].0, *name, AtFlags::SYMLINK_NOFOLLOW).map_err(io_error)?
+            statat(&directories[index - 1].0, *name, AtFlags::SYMLINK_NOFOLLOW)
+                .map_err(|cause| inspect_error(cause.into()))?
         } else {
-            rustix::fs::stat("/").map_err(io_error)?
+            rustix::fs::stat("/").map_err(|cause| inspect_error(cause.into()))?
         };
         let named_stamp = (
             named.st_dev,

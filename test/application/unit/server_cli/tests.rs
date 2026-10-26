@@ -1,5 +1,24 @@
 use super::*;
 
+#[tokio::test]
+async fn response_service_identity_is_parsed_before_router_installation() {
+    use axum::{Router, body::Body, http::Request, middleware, routing::get};
+    use tower::ServiceExt;
+    assert!(ServiceIdentity::new("invalid\nservice").is_err());
+    let app =
+        Router::new()
+            .route("/", get(|| async { "ok" }))
+            .layer(middleware::from_fn_with_state(
+                ServiceIdentity::new("example-service").unwrap(),
+                service_identity_middleware,
+            ));
+    let response = app.oneshot(Request::new(Body::empty())).await.unwrap();
+    assert_eq!(
+        response.headers()[SERVICE_IDENTITY_HEADER],
+        "example-service"
+    );
+}
+
 #[test]
 fn filesystem_failures_keep_machine_semantics_and_hide_diagnostics() {
     use crate::state_file::{Error, LockKind};
@@ -38,6 +57,14 @@ fn filesystem_failures_keep_machine_semantics_and_hide_diagnostics() {
     );
     assert!(snapshot_error(&SnapshotError::Busy).retryable);
     assert!(!snapshot_error(&SnapshotError::InvalidDatabase).retryable);
+    let temporary = SnapshotError::TemporaryRoot(
+        crate::fs_safety::PrivateDirectory::open_existing(private.path().join("SECRET-missing"))
+            .unwrap_err(),
+    );
+    let envelope = snapshot_error(&temporary);
+    assert_eq!(envelope.code.as_str(), "snapshot.unsafe_source");
+    assert!(!envelope.retryable);
+    assert!(!serde_json::to_string(&envelope).unwrap().contains("SECRET"));
 }
 
 #[tokio::test]

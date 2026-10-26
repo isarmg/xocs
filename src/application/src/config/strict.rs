@@ -1,7 +1,7 @@
 //! Serde's field definitions remain authoritative. Rejecting ignored values
 //! makes unknown fields strict even when a product omits deny_unknown_fields.
 
-use crate::config::{ConfigError, ConfigSource, MAX_CONFIG_BYTES, Reason, child_path};
+use crate::config::{ConfigCause, ConfigError, ConfigSource, MAX_CONFIG_BYTES, Reason, child_path};
 use serde::{
     Deserialize, Deserializer,
     de::{
@@ -33,7 +33,7 @@ pub(super) fn parse_json(bytes: &[u8], source: ConfigSource) -> Result<Value, Co
         };
         result.line = Some(error.line());
         result.column = Some(error.column());
-        result
+        result.with_cause(ConfigCause::ParseJson(error))
     })
 }
 
@@ -112,32 +112,35 @@ impl<'de> Visitor<'de> for UniqueSeed {
 #[derive(Debug)]
 pub(super) struct DataError {
     reason: Reason,
-    path: Option<String>,
-    relative: bool,
+    path: ErrorPath,
+}
+
+#[derive(Debug)]
+enum ErrorPath {
+    Unlocated,
+    Relative(String),
+    Absolute(String),
 }
 
 impl DataError {
     fn reason(reason: Reason) -> Self {
         Self {
             reason,
-            path: None,
-            relative: false,
+            path: ErrorPath::Unlocated,
         }
     }
     fn field(reason: Reason, field: &str) -> Self {
         Self {
             reason,
-            path: Some(child_path("", field)),
-            relative: true,
+            path: ErrorPath::Relative(child_path("", field)),
         }
     }
     fn at(mut self, path: &str) -> Self {
-        if self.relative {
-            self.path = Some(format!("{path}{}", self.path.take().unwrap_or_default()));
-            self.relative = false;
-        } else if self.path.is_none() {
-            self.path = Some(path.into());
-        }
+        self.path = match self.path {
+            ErrorPath::Unlocated => ErrorPath::Absolute(path.into()),
+            ErrorPath::Relative(suffix) => ErrorPath::Absolute(format!("{path}{suffix}")),
+            ErrorPath::Absolute(path) => ErrorPath::Absolute(path),
+        };
         self
     }
 }
@@ -182,7 +185,13 @@ pub(super) fn deserialize<T: DeserializeOwned>(
         value,
         path: String::new(),
     })
-    .map_err(|error| ConfigError::new(error.reason, error.path.unwrap_or_default(), source))
+    .map_err(|error| {
+        let path = match error.path {
+            ErrorPath::Unlocated => String::new(),
+            ErrorPath::Relative(path) | ErrorPath::Absolute(path) => path,
+        };
+        ConfigError::new(error.reason, path, source)
+    })
 }
 
 struct Node {
@@ -258,7 +267,13 @@ impl<'de> Deserializer<'de> for Node {
                     path: path.clone(),
                 })
             }
-            _ => return Err(DataError::reason(Reason::TypeMismatch).at(&path)),
+            Value::Null
+            | Value::Bool(_)
+            | Value::Number(_)
+            | Value::Array(_)
+            | Value::Object(_) => {
+                return Err(DataError::reason(Reason::TypeMismatch).at(&path));
+            }
         };
         result.map_err(|error: DataError| error.at(&path))
     }
@@ -331,7 +346,7 @@ impl<'de> MapAccess<'de> for Object {
             .map_err(|error: DataError| {
                 // Serde's deny_unknown_fields error already includes this key.
                 // Other key conversion failures still belong to the key itself.
-                if error.relative {
+                if matches!(error.path, ErrorPath::Relative(_)) {
                     error.at(&self.path)
                 } else {
                     error.at(&path)

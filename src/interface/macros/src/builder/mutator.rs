@@ -32,24 +32,23 @@ impl ApplyMeta for MutatorAttribute {
             ));
         }
 
-        match expr.key_value()?.parse_value()? {
-            Expr::Array(syn::ExprArray { elems, .. }) => self.requires.extend(
-                elems
-                    .into_iter()
-                    .map(|expr| match expr {
-                        Expr::Path(path) if path.path.get_ident().is_some() => {
-                            Ok(path.path.get_ident().cloned().expect("should be ident"))
-                        }
-                        expr => Err(Error::new_spanned(expr, "Expected field name")),
-                    })
-                    .collect::<Result<Vec<_>, _>>()?,
-            ),
-            expr => {
-                return Err(Error::new_spanned(
-                    expr,
-                    "Only list of field names [field1, field2, …] supported",
-                ));
-            }
+        let value = expr.key_value()?.parse_value()?;
+        let Expr::Array(syn::ExprArray { elems, .. }) = value else {
+            return Err(Error::new_spanned(
+                value,
+                "Only list of field names [field1, field2, …] supported",
+            ));
+        };
+        for expr in elems {
+            let Expr::Path(path) = expr else {
+                return Err(Error::new_spanned(expr, "Expected field name"));
+            };
+            let name = path
+                .path
+                .get_ident()
+                .cloned()
+                .ok_or_else(|| Error::new_spanned(path, "Expected field name"))?;
+            self.requires.insert(name);
         }
         Ok(())
     }

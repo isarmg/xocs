@@ -15,6 +15,10 @@ cargo test --locked --offline -p blog-runtime-io-poller --test linux_poll
 cargo test --locked --offline -p blog-runtime-task-scheduler --test async-fd-contracts
 cargo test --locked --offline -p blog-runtime-task-scheduler --doc 'io::async_fd::AsyncFd<T>::register'
 cargo test --locked --offline -p blog-assets-compiler --test native-calendar --test compiler-safety
+cargo test --locked --offline -p blog-assets -p blog-encoding-compression --test contracts
+cargo test --locked --offline -p blog-format-parser-combinators --test numeric-contracts
+cargo test --locked --offline -p blog-format-json-schema --test serialization-contracts
+cargo test --locked --offline -p blog-wasm-module-transform --test emission-contracts
 cargo test --locked --offline -p blog-storage-sqlite-access --lib
 cargo test --locked --offline -p blog-interface -p blog-dom --lib --tests
 cargo test --locked --offline -p blog-collections-concurrent-slab --lib

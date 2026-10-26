@@ -1,6 +1,6 @@
 use crate::common::{
-    Action, Feedback, FilePicker, Lightbox, ListState, Pager, load, num, rows, safe_url, t,
-    table_time, text, tr,
+    Action, Feedback, FilePicker, Lightbox, ListState, Pager, load, nullable_num, num, rows,
+    safe_url, t, table_time, text, tr,
 };
 use blog_interface::component::component_props_builder;
 use blog_interface::components::notify;
@@ -29,8 +29,7 @@ fn moderation_author(item: &Value, message: bool) -> String {
     if !username.is_empty() {
         return username;
     }
-    let user = num(item, "user_id");
-    if user > 0 {
+    if let Some(user) = nullable_num(item, "user_id") {
         if message {
             tr("用户 {0}", "User {0}", &[user.to_string()])
         } else {
@@ -78,7 +77,7 @@ pub(super) fn Moderation(kind: ModerationKind) -> impl IntoView {
             .child( text(& item,
             "resource_type")),
             blog_interface::html::td()
-            .child( num(& item, "size")),
+            .child( nullable_num(& item, "size").unwrap_or(0)),
             blog_interface::html::td()
             .child( safe_url(& path, false)
             .map(| u | View::new(
@@ -181,7 +180,7 @@ pub(super) fn Moderation(kind: ModerationKind) -> impl IntoView {
                     | | action.busy.get() || upload.busy.get() || (kind ==
                     ModerationKind::Files && path2.is_empty()))
                     .on(blog_interface::ev::click, move | _ | { if !
-                    web_sys::window().unwrap().confirm_with_message(& match kind {
+                    web_sys::window().expect("invariant: the application is mounted in a browser window").confirm_with_message(& match kind {
                     ModerationKind::Comments =>
                     t("删除这条评论？如果是顶层评论，会同时删除该楼层的全部回复。",
                     "Delete this comment? If it is a top-level comment, all replies in its thread will also be deleted."),

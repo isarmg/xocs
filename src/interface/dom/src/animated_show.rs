@@ -58,7 +58,7 @@ pub fn AnimatedShow(
                 move || show.set(false),
                 hide_delay,
             )
-            .expect("set timeout in AnimatedShow");
+            .unwrap_or_else(|error| wasm_bindgen::throw_val(error));
             handle.set_value(Some(h));
         }
     });

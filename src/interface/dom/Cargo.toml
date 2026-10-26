@@ -11,6 +11,12 @@ description = "CSR DOM, reactive state and browser lifecycle kernel"
 [lib]
 name = "blog_dom"
 path = "src/lib.rs"
+
+[[example]]
+name = "dom-contracts"
+path = "../../../test/interface/dom/browser/fixture.rs"
+crate-type = ["cdylib"]
+
 [features]
 default = ["csr"]
 csr = ["blog_component_macros/csr"]

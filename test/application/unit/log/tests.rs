@@ -146,6 +146,91 @@ fn record_and_query_budgets_reject_unbounded_inputs_without_partial_output() {
     ));
 }
 
+#[test]
+fn invalid_log_values_preserve_parse_sources_without_echoing_input() {
+    use std::error::Error as _;
+    let record = LogRecord::common("example", CommonEvent::RuntimeStarted).unwrap();
+    let request_id = record
+        .clone()
+        .with_request_id("review sentinel")
+        .unwrap_err();
+    assert!(
+        request_id
+            .source()
+            .unwrap()
+            .is::<crate::error::InvalidRequestId>()
+    );
+    assert!(!request_id.to_string().contains("sentinel"));
+    let error_code = record.with_error_code("review sentinel").unwrap_err();
+    assert!(
+        error_code
+            .source()
+            .unwrap()
+            .is::<crate::error::InvalidErrorCode>()
+    );
+    assert!(!error_code.to_string().contains("sentinel"));
+
+    let decode = query(
+        &b"{\"review-sentinel\":}\n"[..],
+        LogFilter::default(),
+        QueryLimits::default(),
+    )
+    .unwrap_err();
+    assert!(decode.source().unwrap().is::<serde_json::Error>());
+    assert!(!decode.to_string().contains("sentinel"));
+    let timestamp = query(
+        &b""[..],
+        LogFilter {
+            since: Some("review-sentinelZ"),
+            ..LogFilter::default()
+        },
+        QueryLimits::default(),
+    )
+    .unwrap_err();
+    assert!(timestamp.source().unwrap().is::<chrono::ParseError>());
+    assert!(!timestamp.to_string().contains("sentinel"));
+}
+
+#[cfg(unix)]
+#[test]
+fn malformed_archive_index_retains_the_parse_error() {
+    use std::{error::Error as _, fs, os::unix::fs::PermissionsExt};
+    let directory = tempfile::tempdir().unwrap();
+    fs::set_permissions(directory.path(), fs::Permissions::from_mode(0o700)).unwrap();
+    fs::write(directory.path().join("events.review-sentinel.jsonl"), b"").unwrap();
+    let error = RotatingLogFile::open(directory.path(), "events", LogRetention::default())
+        .err()
+        .unwrap();
+    assert!(error.source().unwrap().is::<std::num::ParseIntError>());
+    assert!(!error.to_string().contains("sentinel"));
+}
+
+#[cfg(unix)]
+#[test]
+fn a_dedicated_log_directory_has_one_writer_across_overlapping_archive_names() {
+    use std::{fs, os::unix::fs::PermissionsExt};
+    let directory = tempfile::tempdir().unwrap();
+    fs::set_permissions(directory.path(), fs::Permissions::from_mode(0o700)).unwrap();
+    let retention = LogRetention {
+        file_bytes: MAX_RECORD_BYTES as u64,
+        archives: 2,
+    };
+    let first = RotatingLogFile::open(directory.path(), "events", retention).unwrap();
+    assert!(matches!(
+        RotatingLogFile::open_file(directory.path().join("events.1.jsonl"), retention),
+        Err(LogError::WriterLock(_))
+    ));
+    drop(first);
+    let second =
+        RotatingLogFile::open_file(directory.path().join("events.1.jsonl"), retention).unwrap();
+    assert!(matches!(
+        RotatingLogFile::open(directory.path(), "events", retention),
+        Err(LogError::WriterLock(_))
+    ));
+    drop(second);
+    RotatingLogFile::open(directory.path(), "events", retention).unwrap();
+}
+
 #[cfg(unix)]
 #[test]
 fn file_rotation_has_bounded_capacity_one_writer_and_safe_path_failures() {

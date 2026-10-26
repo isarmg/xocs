@@ -12,7 +12,7 @@
     "preview": "cargo +1.99.0 run --quiet --locked --offline --manifest-path ../../Cargo.toml -p blog-assets -- preview --product-root ../.. --bind 127.0.0.1:4173",
     "test:unit": "npm run check:toolchain && npm run test:blog-interface && node --test ../../test/browser/browser-fixtures.test.mjs",
     "test:language": "npm run build && node ../../test/browser/language.mjs",
-    "test:admin": "npm run build && node ../../test/browser/admin-layout.mjs && node ../../test/browser/style-contract.mjs && node ../../test/browser/account-settings.mjs && node ../../test/browser/admin-recovery.mjs && node ../../test/browser/article-video.mjs",
+    "test:admin": "npm run build && node ../../test/browser/admin-layout.mjs && node ../../test/browser/style-contract.mjs && node ../../test/browser/corner-candidates.mjs && node ../../test/browser/account-settings.mjs && node ../../test/browser/admin-recovery.mjs && node ../../test/browser/article-video.mjs",
     "test:public": "npm run build && node ../../test/browser/public-layout.mjs && node ../../test/browser/anonymous-comments.mjs && node ../../test/browser/public-recovery.mjs",
     "build:blog-interface": "cargo +1.99.0 run --quiet --locked --offline --manifest-path ../../Cargo.toml -p blog-assets -- build --product-root ../.. --offline",
     "check:blog-interface": "cargo +1.99.0 run --quiet --locked --offline --manifest-path ../../Cargo.toml -p blog-assets -- check --product-root ../.. --offline",

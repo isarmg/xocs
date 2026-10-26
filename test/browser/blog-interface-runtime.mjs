@@ -60,6 +60,21 @@ for(const engine of [chromium,firefox]){
   await page.emulateMedia({colorScheme:'light'});await expect(page.locator('html')).toHaveAttribute('data-theme','light');await page.getByRole('button',{name:'Switch to dark mode',exact:true}).click();
   await page.emulateMedia({colorScheme:'dark'});await page.emulateMedia({colorScheme:'light'});await expect(page.locator('html')).toHaveAttribute('data-theme','dark');await expect(page.getByRole('button',{name:'Switch to light mode',exact:true})).toBeVisible();await page.getByRole('button',{name:'Switch to light mode',exact:true}).click();
   const category=page.getByRole('combobox',{name:'Category',exact:true});
+  // Popup listeners follow its open lifetime, including an in-document unmount.
+  const categoryPanel=page.getByRole('listbox',{name:'Category',exact:true});
+  await category.click();await expect(categoryPanel).toBeVisible();
+  await page.setViewportSize({width:1100,height:800});await settle(page);
+  const triggerBox=await category.boundingBox(),panelBox=await categoryPanel.boundingBox();
+  assert.ok(Math.abs(triggerBox.x-panelBox.x)<2,'An open selector follows its anchor after resize');
+  await page.getByLabel('Title',{exact:true}).focus();await expect(category).toHaveAttribute('aria-expanded','false');
+  await category.click();await expect(categoryPanel).toBeVisible();
+  await page.getByRole('heading',{name:'Add article',exact:true}).click();await expect(category).toHaveAttribute('aria-expanded','false');
+  await category.click();await page.evaluate(()=>window.dispatchEvent(new Event('blur')));await expect(category).toHaveAttribute('aria-expanded','false');
+  await page.setViewportSize({width:1280,height:900});await category.click();await expect(categoryPanel).toBeVisible();
+  await page.evaluate(()=>{location.hash='categories';});await expect(page.getByRole('heading',{name:'Categories',exact:true})).toBeVisible();
+  await page.evaluate(()=>{window.dispatchEvent(new Event('resize'));document.dispatchEvent(new Event('scroll'));window.dispatchEvent(new Event('blur'));document.body.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));});
+  await expect(page.locator('.blog-select-panel:popover-open')).toHaveCount(0);
+  await page.evaluate(()=>{location.hash='new';});await expect(category).toBeVisible();await expect(category).toHaveAttribute('aria-expanded','false');
   await category.focus();await category.press('ArrowDown');await expect(category).toHaveAttribute('aria-expanded','true');
   await category.press('End');await category.press('Enter');await expect(page.locator('.editor-form select').nth(0)).toHaveValue('3');
   await category.press('Home');await category.press('Escape');await expect(page.locator('.editor-form select').nth(0)).toHaveValue('3');

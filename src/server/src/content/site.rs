@@ -1,3 +1,4 @@
+use blog_application::admin_core::AuthenticatedIdentity;
 use blog_application::error::HttpStatus;
 mod media;
 
@@ -56,6 +57,7 @@ pub(super) struct SiteInput {
 }
 pub(super) async fn update_site(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     crate::ContractJson(mut input): crate::ContractJson<SiteInput>,
 ) -> ApiResult<AdminSite> {
     input.media.normalize()?;
@@ -77,11 +79,7 @@ pub(super) async fn update_site(
     {
         return Err(invalid("站点信息无效"));
     }
-    let mut transaction = state
-        .pool
-        .begin_with("BEGIN IMMEDIATE")
-        .await
-        .map_err(db_error)?;
+    let mut transaction = crate::content::begin_mutation(&state.pool, &identity).await?;
     let author = crate::site_author_id(&mut *transaction).await?;
     let name_used: bool =
         sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM user WHERE username=? AND id<>?)")

@@ -20,73 +20,74 @@ pub struct ReadingMarkup {
 }
 pub fn reading_markup(content: &str, copy: &str, image: &str, section: &str) -> ReadingMarkup {
     let html = markdown_html(content);
-    let Some(doc) = web_sys::window().and_then(|w| w.document()) else {
-        return ReadingMarkup {
-            html,
-            headings: vec![],
-        };
-    };
-    let Ok(holder) = doc.create_element("div") else {
-        return ReadingMarkup {
-            html,
-            headings: vec![],
-        };
-    };
+    let doc = web_sys::window()
+        .and_then(|w| w.document())
+        .expect("invariant: reading markup is built in the mounted browser document");
+    let holder = doc
+        .create_element("div")
+        .expect("invariant: div is a valid HTML element name");
     // Only escaped Markdown and the renderer's fixed, URL-validated video
     // elements enter this detached tree; authored HTML never becomes markup.
     holder.set_inner_html(&html);
     let mut headings = Vec::new();
-    if let Ok(nodes) = holder.query_selector_all("h2,h3,h4") {
-        for index in 0..nodes.length() {
-            let Some(node) = nodes
-                .item(index)
-                .and_then(|n| n.dyn_into::<web_sys::Element>().ok())
-            else {
-                continue;
-            };
-            let id = format!("section-{}", index + 1);
-            node.set_id(&id);
-            let title = node.text_content().unwrap_or_default().trim().to_owned();
-            headings.push(Heading {
-                id,
-                title: if title.is_empty() {
-                    format!("{section} {}", index + 1)
-                } else {
-                    title
-                },
-                level: node.tag_name()[1..].parse().unwrap_or(2),
-            });
-        }
+    let nodes = holder
+        .query_selector_all("h2,h3,h4")
+        .expect("invariant: heading selectors are valid CSS");
+    for index in 0..nodes.length() {
+        let node = nodes
+            .item(index)
+            .expect("invariant: the static heading list contains each index")
+            .unchecked_into::<web_sys::Element>();
+        let id = format!("section-{}", index + 1);
+        node.set_id(&id);
+        let title = node.text_content().unwrap_or_default().trim().to_owned();
+        headings.push(Heading {
+            id,
+            title: if title.is_empty() {
+                format!("{section} {}", index + 1)
+            } else {
+                title
+            },
+            level: node.tag_name()[1..]
+                .parse()
+                .expect("invariant: the selected heading level is 2, 3 or 4"),
+        });
     }
-    if let Ok(nodes) = holder.query_selector_all("pre") {
-        for index in 0..nodes.length() {
-            if let Some(pre) = nodes
-                .item(index)
-                .and_then(|n| n.dyn_into::<web_sys::Element>().ok())
-                && let Ok(button) = doc.create_element("button")
-            {
-                let _ = button.set_attribute("type", "button");
-                button.set_class_name("article-copy-code");
-                button.set_text_content(Some(copy));
-                let _ = pre.prepend_with_node_1(&button);
-            }
-        }
+    let nodes = holder
+        .query_selector_all("pre")
+        .expect("invariant: the code block selector is valid CSS");
+    for index in 0..nodes.length() {
+        let pre = nodes
+            .item(index)
+            .expect("invariant: the static code block list contains each index")
+            .unchecked_into::<web_sys::Element>();
+        let button = doc
+            .create_element("button")
+            .expect("invariant: button is a valid HTML element name")
+            .unchecked_into::<web_sys::HtmlButtonElement>();
+        button.set_type("button");
+        button.set_class_name("article-copy-code");
+        button.set_text_content(Some(copy));
+        pre.prepend_with_node_1(&button)
+            .expect("invariant: a new button can be inserted into its detached code block");
     }
-    if let Ok(nodes) = holder.query_selector_all("img") {
-        for index in 0..nodes.length() {
-            if let Some(img) = nodes
-                .item(index)
-                .and_then(|n| n.dyn_into::<web_sys::Element>().ok())
-            {
-                let _ = img.set_attribute("role", "button");
-                let _ = img.set_attribute("tabindex", "0");
-                let alt = img
-                    .get_attribute("alt")
-                    .filter(|s| !s.is_empty())
-                    .unwrap_or_else(|| section.into());
-                let _ = img.set_attribute("aria-label", &format!("{image}{alt}"));
-            }
-        }
+    let nodes = holder
+        .query_selector_all("img")
+        .expect("invariant: the image selector is valid CSS");
+    for index in 0..nodes.length() {
+        let img = nodes
+            .item(index)
+            .expect("invariant: the static image list contains each index")
+            .unchecked_into::<web_sys::HtmlElement>();
+        img.set_attribute("role", "button")
+            .expect("invariant: role is a valid attribute name");
+        img.set_tab_index(0);
+        let alt = img
+            .get_attribute("alt")
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| section.into());
+        img.set_attribute("aria-label", &format!("{image}{alt}"))
+            .expect("invariant: aria-label is a valid attribute name");
     }
     ReadingMarkup {
         html: holder.inner_html(),
@@ -121,16 +122,21 @@ pub fn observe_sliding(viewport: &web_sys::Element) -> Option<SlidingObserver> {
                 return;
             }
             let distance = (label.scroll_width() - viewport.client_width()).max(0) as f64;
-            let _ = viewport
+            viewport
                 .style()
-                .set_property("--title-travel", &format!("{distance}px"));
-            let _ = viewport.style().set_property(
-                "--title-duration",
-                &format!("{}s", (distance / 28. + 3.).max(6.)),
-            );
-            let _ = viewport
+                .set_property("--title-travel", &format!("{distance}px"))
+                .expect("invariant: the sliding title owns a writable style declaration");
+            viewport
+                .style()
+                .set_property(
+                    "--title-duration",
+                    &format!("{}s", (distance / 28. + 3.).max(6.)),
+                )
+                .expect("invariant: the sliding title owns a writable style declaration");
+            viewport
                 .class_list()
-                .toggle_with_force("is-overflowing", distance > 0.);
+                .toggle_with_force("is-overflowing", distance > 0.)
+                .expect("invariant: is-overflowing is a valid class token");
         }
     };
     let callback = {
@@ -146,7 +152,9 @@ pub fn observe_sliding(viewport: &web_sys::Element) -> Option<SlidingObserver> {
         .and_then(|d| d.fonts().ready().ok())
     {
         blog_interface::task::spawn_local(async move {
-            let _ = wasm_bindgen_futures::JsFuture::from(ready).await;
+            if let Err(error) = wasm_bindgen_futures::JsFuture::from(ready).await {
+                web_sys::console::debug_2(&"Measuring title with fallback fonts".into(), &error);
+            }
             measure();
         });
     }
@@ -292,10 +300,11 @@ pub fn install_document_policies() {
             {
                 url.search_params()
                     .set("lang", &blog_interface::i18n::locale());
-                let _ = link.set_attribute(
+                link.set_attribute(
                     "href",
                     &format!("{}{}{}", url.pathname(), url.search(), url.hash()),
-                );
+                )
+                .expect("invariant: href is a valid attribute name");
             }
         },
     )

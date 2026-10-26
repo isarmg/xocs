@@ -100,6 +100,293 @@ fn letter(visible: bool) -> Value {
     json!({"recipient":"Partner","sender":"Owner","content":"First line\nSecond line <literal>","is_public":visible})
 }
 
+struct PausedAdministratorBody {
+    entered: Option<tokio::sync::oneshot::Sender<()>>,
+    release: tokio::sync::oneshot::Receiver<axum::body::Bytes>,
+    sent: bool,
+}
+
+impl http_body::Body for PausedAdministratorBody {
+    type Data = axum::body::Bytes;
+    type Error = std::convert::Infallible;
+
+    fn poll_frame(
+        mut self: std::pin::Pin<&mut Self>,
+        context: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Result<http_body::Frame<Self::Data>, Self::Error>>> {
+        use std::{future::Future, task::Poll};
+
+        if let Some(entered) = self.entered.take() {
+            entered.send(()).expect("body observer remains available");
+        }
+        if self.sent {
+            return Poll::Ready(None);
+        }
+        match std::pin::Pin::new(&mut self.release).poll(context) {
+            Poll::Pending => Poll::Pending,
+            Poll::Ready(bytes) => {
+                self.sent = true;
+                Poll::Ready(Some(Ok(http_body::Frame::data(
+                    bytes.expect("test releases the paused request body"),
+                ))))
+            }
+        }
+    }
+}
+
+async fn pause_administrator_request(
+    app: &Router,
+    session: &(String, String),
+    path: &str,
+    content_type: &str,
+) -> (
+    tokio::task::JoinHandle<Response>,
+    tokio::sync::oneshot::Sender<axum::body::Bytes>,
+) {
+    let (entered, observed) = tokio::sync::oneshot::channel();
+    let (release, resume) = tokio::sync::oneshot::channel();
+    let request = Request::builder()
+        .method("POST")
+        .uri(path)
+        .header(header::HOST, "127.0.0.1:18881")
+        .header(header::ORIGIN, "http://127.0.0.1:18881")
+        .header("sec-fetch-site", "same-origin")
+        .header(header::COOKIE, &session.0)
+        .header("x-csrf-token", &session.1)
+        .header(header::CONTENT_TYPE, content_type)
+        .body(Body::new(PausedAdministratorBody {
+            entered: Some(entered),
+            release: resume,
+            sent: false,
+        }))
+        .unwrap();
+    let app = app.clone();
+    let task = tokio::spawn(async move { app.oneshot(request).await.unwrap() });
+    // A request body is consumed only after the route's authentication gate.
+    tokio::time::timeout(std::time::Duration::from_secs(5), observed)
+        .await
+        .expect("administrator request reaches body extraction")
+        .expect("administrator request announces body extraction");
+    (task, release)
+}
+
+#[tokio::test]
+async fn content_mutations_recheck_revocable_authority_after_request_body_waits() {
+    for change in [
+        "UPDATE _common_admin_sessions SET revoked_at_micros=1",
+        "UPDATE _common_admin_sessions SET idle_expires_at_micros=created_at_micros+1",
+        "UPDATE _common_administrators SET active=0",
+        "UPDATE _common_administrators SET session_version=session_version+1",
+    ] {
+        let (_directory, app, pool) = setup().await;
+        let session = session(&app).await;
+        let (request, release) = pause_administrator_request(
+            &app,
+            &session,
+            "/api/v1/content/categories",
+            "application/json",
+        )
+        .await;
+        sqlx::query(change).execute(&pool).await.unwrap();
+        release
+            .send(json!({"name":"Rejected category"}).to_string().into())
+            .unwrap();
+        let response = request.await.unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED, "{change}");
+        assert_eq!(
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM sort")
+                .fetch_one(&pool)
+                .await
+                .unwrap(),
+            0,
+            "{change}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn media_upload_rechecks_authority_before_publishing_a_file_or_resource() {
+    use sha2::{Digest, Sha256};
+
+    let (directory, app, pool) = setup().await;
+    let session = session(&app).await;
+    let (request, release) =
+        pause_administrator_request(&app, &session, "/api/v1/content/upload", "image/png").await;
+    sqlx::query("UPDATE _common_admin_sessions SET revoked_at_micros=1")
+        .execute(&pool)
+        .await
+        .unwrap();
+    let bytes = b"\x89PNG\r\n\x1a\nrevoked upload";
+    release.send(bytes.as_slice().into()).unwrap();
+    assert_eq!(request.await.unwrap().status(), StatusCode::UNAUTHORIZED);
+    assert!(
+        !directory
+            .path()
+            .join(format!("{}.png", hex::encode(Sha256::digest(bytes))))
+            .exists()
+    );
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM resource")
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+        0
+    );
+}
+
+#[tokio::test]
+async fn article_mutation_rechecks_authority_after_waiting_for_a_database_writer() {
+    let (_directory, app, pool) = setup_with_pool_limit(2).await;
+    let session = session(&app).await;
+    sqlx::raw_sql("INSERT INTO sort(id,sort_name) VALUES(1,'Category'); INSERT INTO label(id,sort_id,label_name) VALUES(1,1,'Label');")
+        .execute(&pool).await.unwrap();
+    let (request, release) = pause_administrator_request(
+        &app,
+        &session,
+        "/api/v1/content/articles",
+        "application/json",
+    )
+    .await;
+    let mut writer = pool.begin_with("BEGIN IMMEDIATE").await.unwrap();
+    sqlx::query("UPDATE _common_administrators SET session_version=session_version+1")
+        .execute(&mut *writer)
+        .await
+        .unwrap();
+    release
+        .send(
+            json!({"article_title":"Rejected article","article_content":"Body","sort_id":1,"label_id":1,"view_status":true,"recommend_status":false,"comment_status":true})
+                .to_string().into(),
+        )
+        .unwrap();
+    tokio::time::timeout(std::time::Duration::from_secs(5), async {
+        while pool.num_idle() != 0 {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .expect("article request waits for the held database writer");
+    assert!(!request.is_finished());
+    writer.commit().await.unwrap();
+    assert_eq!(request.await.unwrap().status(), StatusCode::UNAUTHORIZED);
+    for table in ["article", "article_submission"] {
+        assert_eq!(
+            sqlx::query_scalar::<_, i64>(sqlx::AssertSqlSafe(format!(
+                "SELECT COUNT(*) FROM {table}"
+            )))
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+            0,
+            "{table}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn malformed_reply_floor_is_rejected_without_creating_a_thread_or_receipt() {
+    let (_directory, app, pool) = setup().await;
+    sqlx::raw_sql(
+        "INSERT INTO comment(id,source,type,parent_comment_id,floor_comment_id,comment_content) VALUES
+         (1,0,'message',0,NULL,'Root'),(2,0,'message',1,NULL,'Malformed reply');",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    let response = anonymous_post(
+        &app,
+        "/api/v1/message-comments",
+        json!({"content":"Another reply","parent_comment_id":2}),
+    )
+    .await;
+    assert_eq!(response.status(), StatusCode::CONFLICT);
+    let counts: (i64, i64) = sqlx::query_as(
+        "SELECT (SELECT COUNT(*) FROM comment),(SELECT COUNT(*) FROM comment_submission)",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(counts, (2, 0));
+}
+
+#[tokio::test]
+async fn validated_letter_limits_cover_worst_case_json_escaping() {
+    let (_directory, app, pool) = setup().await;
+    let session = session(&app).await;
+    let content = json!({
+        "recipient":"\0".repeat(100),
+        "sender":"\0".repeat(100),
+        "content":"\0".repeat(16_384),
+        "is_public":false,
+    });
+    let response = admin(
+        &app,
+        &session,
+        "PUT",
+        "/api/v1/content/letter",
+        content.clone(),
+    )
+    .await;
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(body_json(response).await, content);
+    let stored: String = sqlx::query_scalar("SELECT content FROM wei_yan WHERE type='letter'")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert!(stored.len() < 128 * 1024);
+    let response = admin(&app, &session, "GET", "/api/v1/content/letter", Value::Null).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(body_json(response).await, content);
+}
+
+#[tokio::test]
+async fn home_section_targets_are_parsed_before_replacing_the_existing_sections() {
+    let (_directory, app, pool) = setup().await;
+    let session = session(&app).await;
+    sqlx::query("INSERT INTO sort(id,sort_name) VALUES(1,'Category')")
+        .execute(&pool)
+        .await
+        .unwrap();
+    let before = public(&app, "/api/v1/home-sections").await;
+    for (kind, sort_id) in [
+        ("latest", json!(1)),
+        ("recommended", json!(1)),
+        ("category", Value::Null),
+        ("category", json!(999)),
+        ("unknown", Value::Null),
+    ] {
+        let response = admin(
+            &app,
+            &session,
+            "PUT",
+            "/api/v1/content/home-sections",
+            json!([{"title":"Section","kind":kind,"sort_id":sort_id,"priority":0,"enabled":true}]),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "{kind}");
+        assert_eq!(public(&app, "/api/v1/home-sections").await, before);
+    }
+    let response = admin(
+        &app,
+        &session,
+        "PUT",
+        "/api/v1/content/home-sections",
+        json!([
+            {"title":" Latest ","kind":"latest","sort_id":null,"priority":0,"enabled":true},
+            {"title":"Recommended","kind":"recommended","sort_id":null,"priority":1,"enabled":true},
+            {"title":"Category","kind":"category","sort_id":1,"priority":2,"enabled":true},
+        ]),
+    )
+    .await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let sections = body_json(response).await;
+    assert_eq!(sections[0]["title"], "Latest");
+    assert_eq!(sections[0]["kind"], "latest");
+    assert!(sections[0]["sort_id"].is_null());
+    assert_eq!(sections[1]["kind"], "recommended");
+    assert_eq!(sections[2]["kind"], "category");
+    assert_eq!(sections[2]["sort_id"], 1);
+}
+
 #[tokio::test]
 async fn link_kinds_are_parsed_at_request_boundaries_before_database_writes() {
     let (_directory, app, pool) = setup().await;

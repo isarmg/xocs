@@ -199,12 +199,27 @@ pub fn distribution(options: &Options) -> std::result::Result<PathBuf, Distribut
                 .dist,
         ),
     };
+    resolve_distribution(&options.root, output)
+}
+
+fn resolve_distribution(
+    root: &Path,
+    output: PathBuf,
+) -> std::result::Result<PathBuf, DistributionError> {
+    inventory::physical(root)?;
+    let normalized_root =
+        root.canonicalize()
+            .map_err(|source| DistributionError::CanonicalizeRoot {
+                path: root.to_owned(),
+                source,
+            })?;
+    let root = normalized_root.as_path();
     let output = if output.is_absolute() {
         output
     } else {
-        options.root.join(output)
+        root.join(output)
     };
-    validate_distribution(&options.root, &output)?;
+    validate_distribution(root, &output)?;
     let parent = output.parent().ok_or(DistributionError::MissingName)?;
     let name = output.file_name().ok_or(DistributionError::MissingName)?;
     fs::create_dir_all(parent).map_err(|source| DistributionError::CreateParent {
@@ -219,7 +234,7 @@ pub fn distribution(options: &Options) -> std::result::Result<PathBuf, Distribut
             source,
         })?
         .join(name);
-    validate_distribution(&options.root, &output)?;
+    validate_distribution(root, &output)?;
     if output.to_str().is_none() {
         return Err(DistributionError::NonUnicodeOutput(output));
     }
@@ -245,18 +260,17 @@ impl CargoAction {
 
 pub fn cargo_action(options: &Options, action: CargoAction) -> Result<()> {
     graph::resolve(options)?;
+    run_cargo_action(options, action, &graph::browser_package(&options.root)?)
+}
+
+fn run_cargo_action(options: &Options, action: CargoAction, package: &str) -> Result<()> {
     let mut command = Command::new("cargo");
     command
         .arg(format!("+{RUST}"))
         .arg(action.as_str())
         .args(["--manifest-path"])
         .arg(options.root.join("Cargo.toml"))
-        .args([
-            "--package",
-            &graph::browser_package(&options.root)?,
-            "--locked",
-            "--offline",
-        ])
+        .args(["--package", package, "--locked", "--offline"])
         .current_dir(&options.root);
     if action != CargoAction::Test {
         command.args(["--target", TARGET]);
@@ -506,17 +520,23 @@ pub(crate) fn build_locked(options: &Options, owner: &BuildLock) -> Result<Value
     let web = options.root.join(layout::WEB);
     let manifest = options.root.join(layout::BROWSER).join("Cargo.toml");
     let declaration = inventory::manifest(&manifest)?;
-    let package = declaration["package"]["name"]
+    let package_name = declaration["package"]["name"]
         .as_str()
-        .ok_or(BuildError::MissingPackage)?
-        .replace('-', "_");
+        .ok_or(BuildError::MissingPackage)?;
+    let package = package_name.replace('-', "_");
     let config = assets::Config::read(&web)?;
     let runtime_root = if config.web.runtime_root == assets::RuntimeRoot::Product {
         options.root.clone()
     } else {
         web.clone()
     };
-    let dist = distribution(options)?;
+    let dist = resolve_distribution(
+        &options.root,
+        options
+            .dist
+            .clone()
+            .unwrap_or_else(|| config.web.dist.clone().into()),
+    )?;
     validate_generated(&web.join("pkg"))?;
     validate_generated(&dist)?;
     let inventory_path = env::var_os("BLOG_FRONTEND_METADATA_FILE")
@@ -536,7 +556,7 @@ pub(crate) fn build_locked(options: &Options, owner: &BuildLock) -> Result<Value
         "lockfile": "Cargo.lock",
         "source_snapshot_sha256": inventory::sha(&serde_json::to_vec(&before).expect("invariant: a JSON source snapshot serializes to bytes")),
     });
-    cargo_action(options, CargoAction::Build)?;
+    run_cargo_action(options, CargoAction::Build, package_name)?;
     if inventory::snapshot(&options.root)? != before {
         return Err(BuildError::SourceChanged(BuildPhase::BrowserCompilation));
     }
@@ -567,7 +587,20 @@ pub(crate) fn build_locked(options: &Options, owner: &BuildLock) -> Result<Value
     let object = metadata
         .as_object_mut()
         .expect("invariant: public provenance is an object");
-    object.extend(json!({"format":2,"rust":RUST,"browser_bridge":BRIDGE_ABI,"package":package,"profile":profile,"files":generated,"asset_builder":"blog-assets","csr_graph":csr_graph,"bindings_tool":bindings_tool}).as_object().expect("Constant object").clone());
+    let Value::Object(fields) = json!({
+        "format": 2,
+        "rust": RUST,
+        "browser_bridge": BRIDGE_ABI,
+        "package": package,
+        "profile": profile,
+        "files": generated,
+        "asset_builder": "blog-assets",
+        "csr_graph": csr_graph,
+        "bindings_tool": bindings_tool,
+    }) else {
+        unreachable!("invariant: a JSON object expression produces an object");
+    };
+    object.extend(fields);
     let mut provenance = serde_json::to_vec(&metadata)
         .expect("invariant: JSON package metadata serializes to bytes");
     provenance.push(b'\n');
@@ -586,7 +619,7 @@ pub(crate) fn build_locked(options: &Options, owner: &BuildLock) -> Result<Value
             .collect::<Vec<_>>()
     );
     runtime["rust"] = rust_runtime;
-    let final_files = assets::write_outputs(&stage_dist, &outputs)?;
+    assets::write_outputs(&stage_dist, &outputs)?;
     if inventory::snapshot(&options.root)? != before {
         return Err(BuildError::SourceChanged(BuildPhase::AssetLinking));
     }
@@ -613,7 +646,12 @@ pub(crate) fn build_locked(options: &Options, owner: &BuildLock) -> Result<Value
             .as_deref()
             .map(|path| (path, runtime_bytes.as_slice())),
     )?;
-    let summary = json!({"distribution":dist,"files":final_files.len(),"bytes":outputs.values().map(Vec::len).sum::<usize>(),"runtime":runtime});
+    let summary = json!({
+        "distribution": dist,
+        "files": outputs.len(),
+        "bytes": outputs.values().map(Vec::len).sum::<usize>(),
+        "runtime": runtime,
+    });
     println!(
         "Built {} ({} files, {} bytes)",
         dist.display(),

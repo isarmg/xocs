@@ -88,6 +88,59 @@ fn absent_compressed_asset_falls_back_and_errors_stay_errors() {
         .contains_key(http::header::CONTENT_ENCODING);
     assert!(!is_encoded);
 }
+
+#[test]
+fn compressed_asset_failures_preserve_status_and_vary_instead_of_serving_identity() {
+    for encoding in ["gzip", "gzip, identity;q=0"] {
+        let mut headers = http::HeaderMap::new();
+        headers.insert(http::header::ACCEPT_ENCODING, encoding.parse().unwrap());
+        for method in [&http::Method::GET, &http::Method::HEAD] {
+            for failure in [
+                http::StatusCode::INTERNAL_SERVER_ERROR,
+                http::StatusCode::FORBIDDEN,
+            ] {
+                let result = response("/app.wasm", method, &headers, |path, method, _| {
+                    http::Response::builder()
+                        .status(if path.ends_with(".gz") {
+                            failure
+                        } else {
+                            http::StatusCode::OK
+                        })
+                        .header(http::header::CACHE_CONTROL, "no-store")
+                        .header(http::header::VARY, "Origin")
+                        .body(Bytes::from_static(if method == http::Method::HEAD {
+                            b""
+                        } else {
+                            b"asset read failed"
+                        }))
+                        .unwrap()
+                });
+                assert_eq!(result.status(), failure);
+                assert_eq!(result.headers()[http::header::CACHE_CONTROL], "no-store");
+                assert_eq!(
+                    result.body().as_ref(),
+                    if method == http::Method::HEAD {
+                        &b""[..]
+                    } else {
+                        &b"asset read failed"[..]
+                    },
+                );
+                let vary: Vec<_> = result
+                    .headers()
+                    .get_all(http::header::VARY)
+                    .iter()
+                    .map(|value| value.to_str().unwrap())
+                    .collect();
+                assert_eq!(vary, ["Origin", "Accept-Encoding"]);
+                assert!(
+                    !result
+                        .headers()
+                        .contains_key(http::header::CONTENT_ENCODING)
+                );
+            }
+        }
+    }
+}
 #[test]
 fn rejected_identity_is_not_a_compressed_fallback() {
     for encoding in ["gzip;q=0, identity;q=0", "gzip, identity;q=0", "*;q=0"] {

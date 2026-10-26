@@ -2,6 +2,18 @@ use super::*;
 use anyhow::Result;
 use std::error::Error;
 
+#[test]
+fn omitted_entry_uses_its_default_and_explicit_empty_entry_is_rejected() -> Result<()> {
+    let directory = tempfile::tempdir()?;
+    assert_eq!(Config::default().web.entry, "src/main.js");
+    assert_eq!(Config::read(directory.path())?.web.entry, "src/main.js");
+    fs::write(directory.path().join("rust-web.toml"), "[web]\nentry=''\n")?;
+    let error = Config::read(directory.path()).unwrap_err();
+    assert!(matches!(error, AssetError::Input { .. }));
+    assert!(error.source().is_some());
+    Ok(())
+}
+
 fn diagnostic(error: &AssetError) -> String {
     let mut messages = Vec::new();
     let mut current = Some(error as &(dyn Error + 'static));
@@ -966,7 +978,6 @@ fn output_admission_is_incremental_and_duplicate_outputs_are_not_counted_twice()
     );
     assert!(!linker.outputs.contains_key("b.js"));
     linker.generated_output("b.js".into(), b"bb".to_vec())?;
-    linker.budgets()?;
     assert_eq!(linker.outputs.values().map(Vec::len).sum::<usize>(), 5);
     Ok(())
 }

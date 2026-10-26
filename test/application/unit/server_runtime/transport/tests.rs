@@ -53,9 +53,68 @@ impl LifecycleParticipant for ScopeParticipant {
     async fn drain_commits(&self) {
         self.0.drain_commits().await;
     }
-    async fn close_state(&self) -> Result<(), String> {
+    async fn close_state(&self) -> Result<(), crate::state_file::Error> {
         Ok(())
     }
+}
+
+#[tokio::test]
+async fn shutdown_reports_the_original_state_close_failure() {
+    use crate::state_file::PrivateStateDirectory;
+    use std::error::Error as _;
+
+    struct FileParticipant(PrivateStateDirectory);
+    #[async_trait::async_trait]
+    impl LifecycleParticipant for FileParticipant {
+        fn quiesce(&self) {}
+        fn cancel_ordinary_work(&self) {}
+        fn active_tasks(&self) -> (usize, usize) {
+            (0, 0)
+        }
+        async fn drain_requests(&self) {}
+        async fn drain_commits(&self) {}
+        async fn close_state(&self) -> Result<(), crate::state_file::Error> {
+            self.0.open_existing("cleanup-state").map(drop)
+        }
+    }
+
+    let directory = tempfile::tempdir().unwrap();
+    let state = PrivateStateDirectory::open(directory.path()).unwrap();
+    state.create_file("cleanup-state").unwrap();
+    std::fs::remove_file(directory.path().join("cleanup-state")).unwrap();
+    let runtime = ServerRuntime::builder(ProductDescriptor {
+        id: "fixture".into(),
+        version: "1.0.0".into(),
+        core_source_sha256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+            .into(),
+        profile: "server-filesystem".into(),
+        capabilities: vec![],
+    })
+    .build()
+    .await
+    .unwrap();
+    runtime.handle().shutdown();
+    let mut server = HttpServer::new(
+        BoundListeners::bind(["127.0.0.1:0".parse().unwrap()]).unwrap(),
+        ProcessSignals::install().unwrap(),
+    );
+    server.participant = Some(Arc::new(FileParticipant(state)));
+    let failure = runtime.serve(server, Router::new()).await.unwrap_err();
+    assert!(matches!(
+        &failure,
+        Error::StateCloseFailed(crate::state_file::Error::OpenFile { .. })
+    ));
+    let state_failure = failure
+        .source()
+        .unwrap()
+        .downcast_ref::<crate::state_file::Error>()
+        .unwrap();
+    let io_failure = state_failure
+        .source()
+        .unwrap()
+        .downcast_ref::<std::io::Error>()
+        .unwrap();
+    assert_eq!(io_failure.kind(), std::io::ErrorKind::NotFound);
 }
 
 #[tokio::test]
@@ -120,7 +179,9 @@ async fn stalled_commit_report_does_not_count_the_socket_drain_barrier() {
     let scope = crate::server_runtime::WorkScope::new();
     let (release, blocked) = tokio::sync::oneshot::channel::<()>();
     scope.commit_tasks.spawn(async move {
-        let _ = blocked.await;
+        blocked
+            .await
+            .expect("fixture retains the commit release sender");
     });
     let runtime = ServerRuntime::builder(ProductDescriptor {
         id: "fixture".into(),

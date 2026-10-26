@@ -62,7 +62,9 @@ async fn cancelled_handle_waiter_does_not_block_the_worker_or_next_waiter() -> s
             .await?
             .set_progress_handler(1, move || {
                 if let Some(entered_tx) = entered_tx.take() {
-                    let _ = entered_tx.send(());
+                    entered_tx.send(()).expect(
+                        "invariant: progress observer remains alive until the worker enters",
+                    );
                     // Bound a failed test's native worker lifetime as well.
                     return release_rx.recv_timeout(Duration::from_secs(10)).is_ok();
                 }

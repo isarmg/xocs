@@ -6,7 +6,14 @@ use pulldown_cmark::{
 use sqlx::{Row, SqliteConnection};
 use url_encoding::address::Url;
 
+use super::formats::MediaFilename;
 use crate::{AppError, db_error};
+
+enum TextContext {
+    Prose,
+    Code,
+    Video(String),
+}
 
 fn decoded_reference(value: &str) -> String {
     let mut decoded = url_encoding::percent::percent_decode_str(value)
@@ -76,31 +83,32 @@ fn text_contains_reference(value: &str, path: &str) -> bool {
     // only URL percent decoding remains, not another HTML-entity pass.
     let mut finder = LinkFinder::new();
     finder.url_must_have_scheme(false);
-    let mut code = false;
-    let mut video = None::<String>;
+    let mut context = TextContext::Prose;
     Parser::new_ext(
         value,
         Options::ENABLE_TABLES | Options::ENABLE_STRIKETHROUGH,
     )
     .any(|event| match event {
         Event::Start(Tag::CodeBlock(kind)) => {
-            code = true;
-            video = matches!(kind, CodeBlockKind::Fenced(info) if info.trim() == "video")
-                .then(String::new);
+            context = match kind {
+                CodeBlockKind::Fenced(info) if info.trim() == "video" => {
+                    TextContext::Video(String::new())
+                }
+                CodeBlockKind::Indented | CodeBlockKind::Fenced(_) => TextContext::Code,
+            };
             false
         }
         Event::End(TagEnd::CodeBlock) => {
-            code = false;
             // A video fence is an active media destination. Its text is a URL,
             // not CommonMark, so preserve literal escapes while normalizing the
             // path exactly as for an ordinary media URL field.
-            video
-                .take()
-                .is_some_and(|source| url_references(source.trim(), path))
-        }
-        Event::Text(text) if video.is_some() => {
-            video.as_mut().expect("active video fence").push_str(&text);
-            false
+            match std::mem::replace(&mut context, TextContext::Prose) {
+                TextContext::Video(source) => url_references(source.trim(), path),
+                TextContext::Code => false,
+                TextContext::Prose => {
+                    unreachable!("invariant: CommonMark code block events are balanced")
+                }
+            }
         }
         Event::Start(Tag::Image { dest_url, .. } | Tag::Link { dest_url, .. }) => {
             dest_url.contains(path)
@@ -109,26 +117,88 @@ fn text_contains_reference(value: &str, path: &str) -> bool {
                     .contains(path)
                 || url_references(&dest_url, path)
         }
-        Event::Text(text) if !code => finder.links(&text).any(|link| {
-            if link.kind() != &LinkKind::Url {
-                return false;
+        Event::Text(text) => match &mut context {
+            TextContext::Video(video) => {
+                video.push_str(&text);
+                false
             }
-            let value = link.as_str();
-            if value.split_once("://").is_some_and(|(scheme, _)| {
-                scheme
-                    .as_bytes()
-                    .first()
-                    .is_some_and(u8::is_ascii_alphabetic)
-                    && scheme
-                        .bytes()
-                        .all(|byte| byte.is_ascii_alphanumeric() || b"+.-".contains(&byte))
-            }) {
-                url_references(value, path)
-            } else {
-                url_references(&format!("http://{value}"), path)
-            }
-        }),
-        _ => false,
+            TextContext::Code => false,
+            TextContext::Prose => finder.links(&text).any(|link| {
+                if link.kind() != &LinkKind::Url {
+                    return false;
+                }
+                let value = link.as_str();
+                if value.split_once("://").is_some_and(|(scheme, _)| {
+                    scheme
+                        .as_bytes()
+                        .first()
+                        .is_some_and(u8::is_ascii_alphabetic)
+                        && scheme
+                            .bytes()
+                            .all(|byte| byte.is_ascii_alphanumeric() || b"+.-".contains(&byte))
+                }) {
+                    url_references(value, path)
+                } else {
+                    url_references(&format!("http://{value}"), path)
+                }
+            }),
+        },
+        Event::Start(
+            Tag::Paragraph
+            | Tag::Heading { .. }
+            | Tag::BlockQuote(_)
+            | Tag::HtmlBlock
+            | Tag::List(_)
+            | Tag::Item
+            | Tag::FootnoteDefinition(_)
+            | Tag::DefinitionList
+            | Tag::DefinitionListTitle
+            | Tag::DefinitionListDefinition
+            | Tag::Table(_)
+            | Tag::TableHead
+            | Tag::TableRow
+            | Tag::TableCell
+            | Tag::Emphasis
+            | Tag::Strong
+            | Tag::Strikethrough
+            | Tag::Superscript
+            | Tag::Subscript
+            | Tag::MetadataBlock(_),
+        )
+        | Event::End(
+            TagEnd::Paragraph
+            | TagEnd::Heading(_)
+            | TagEnd::BlockQuote(_)
+            | TagEnd::HtmlBlock
+            | TagEnd::List(_)
+            | TagEnd::Item
+            | TagEnd::FootnoteDefinition
+            | TagEnd::DefinitionList
+            | TagEnd::DefinitionListTitle
+            | TagEnd::DefinitionListDefinition
+            | TagEnd::Table
+            | TagEnd::TableHead
+            | TagEnd::TableRow
+            | TagEnd::TableCell
+            | TagEnd::Emphasis
+            | TagEnd::Strong
+            | TagEnd::Strikethrough
+            | TagEnd::Superscript
+            | TagEnd::Subscript
+            | TagEnd::Link
+            | TagEnd::Image
+            | TagEnd::MetadataBlock(_),
+        )
+        | Event::Code(_)
+        | Event::InlineMath(_)
+        | Event::DisplayMath(_)
+        | Event::Html(_)
+        | Event::InlineHtml(_)
+        | Event::FootnoteReference(_)
+        | Event::SoftBreak
+        | Event::HardBreak
+        | Event::Rule
+        | Event::TaskListMarker(_) => false,
     })
 }
 
@@ -150,7 +220,9 @@ fn contains_reference(value: &str, path: &str) -> bool {
             serde_json::Value::Object(values) => {
                 values.values().any(|value| json_contains(value, path))
             }
-            _ => false,
+            serde_json::Value::Null | serde_json::Value::Bool(_) | serde_json::Value::Number(_) => {
+                false
+            }
         }
     }
     value.split('\0').any(|field| {
@@ -164,8 +236,9 @@ fn contains_reference(value: &str, path: &str) -> bool {
 
 pub(super) async fn referenced(
     connection: &mut SqliteConnection,
-    path: &str,
+    filename: &MediaFilename,
 ) -> Result<bool, AppError> {
+    let path = filename.path();
     // Inspect all current content, including drafts, so removing an unused
     // upload cannot break a saved article, profile, album, note or letter.
     const QUERIES: &[&str] = &[
@@ -188,14 +261,14 @@ pub(super) async fn referenced(
         let mut after = i64::MIN;
         loop {
             let rows = sqlx::query(sqlx::AssertSqlSafe(format!("SELECT id,value FROM ({query}) WHERE id>? AND (instr(value,?)>0 OR instr(value,'%')>0 OR instr(value,'&')>0 OR instr(value,char(92))>0) ORDER BY id LIMIT 8")))
-                .bind(after).bind(path.rsplit('/').next().unwrap_or(path)).fetch_all(&mut *connection).await.map_err(db_error)?;
+                .bind(after).bind(filename.as_str()).fetch_all(&mut *connection).await.map_err(db_error)?;
             if rows.is_empty() {
                 break;
             }
             for row in rows {
                 after = row.try_get("id").map_err(db_error)?;
                 let value: String = row.try_get("value").map_err(db_error)?;
-                if contains_reference(&value, path) {
+                if contains_reference(&value, &path) {
                     return Ok(true);
                 }
             }

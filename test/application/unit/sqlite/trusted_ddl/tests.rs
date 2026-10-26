@@ -56,11 +56,30 @@ fn rejects_input_and_schema_object_excess_and_sql_errors() {
 #[test]
 fn native_progress_interrupts_unbounded_trusted_evaluation() {
     let start = Instant::now();
-    assert!(matches!(
-        fingerprint_trusted_ddl(&[
+    let error = fingerprint_trusted_ddl(&[
             "WITH RECURSIVE values_(n) AS (VALUES(1) UNION ALL SELECT n+1 FROM values_) SELECT sum(n) FROM values_"
-        ]),
-        Err(DdlFingerprintError::Deadline)
-    ));
+        ]).unwrap_err();
+    let DdlFingerprintError::EvaluationDeadline(source) = error else {
+        panic!("native progress interruption must preserve the SQLite error");
+    };
+    assert_eq!(
+        source.as_database_error().unwrap().code().as_deref(),
+        Some(SQLITE_INTERRUPT_CODE)
+    );
     assert!(start.elapsed() < Duration::from_secs(10));
+}
+
+#[test]
+fn completed_native_evaluation_retains_its_fingerprint_after_the_deadline() {
+    crate::sqlite::block_on_sqlite_connection(async {
+        let mut connection =
+            SqliteConnection::connect_with(&SqliteConnectOptions::new().in_memory(true))
+                .await
+                .unwrap();
+        // This bounded empty-schema query finishes before its native progress
+        // callback fires. Its valid result remains usable after the deadline.
+        let result = evaluate(&mut connection, &[], Instant::now()).await;
+        connection.close().await.unwrap();
+        assert_eq!(result.unwrap(), schema_fingerprint(&[]).unwrap());
+    });
 }

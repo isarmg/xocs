@@ -130,7 +130,7 @@ async fn static_head_etag_and_traversal() -> Result<()> {
         client: proxy::Client::new(Duration::from_secs(300)),
         status: Arc::new(RwLock::new(BuildStatus::default())),
     };
-    let router = Router::new().fallback(handler).with_state(app);
+    let router = Router::new().fallback(handler).with_state(Arc::new(app));
     let status = router
         .clone()
         .oneshot(
@@ -212,7 +212,7 @@ async fn wasm_encoding_refusal_never_falls_back_to_forbidden_identity() -> Resul
         client: proxy::Client::new(Duration::from_secs(300)),
         status: Arc::new(RwLock::new(BuildStatus::default())),
     };
-    let router = Router::new().fallback(handler).with_state(app);
+    let router = Router::new().fallback(handler).with_state(Arc::new(app));
     for method in [Method::GET, Method::HEAD] {
         for (encoding, status, compressed) in [
             ("gzip;q=0, identity;q=0", StatusCode::NOT_ACCEPTABLE, false),

@@ -113,9 +113,11 @@ pub fn notify(message: String) {
     };
     let init = web_sys::CustomEventInit::new();
     init.set_detail(&wasm_bindgen::JsValue::from_str(&message));
-    if let Ok(event) = web_sys::CustomEvent::new_with_event_init_dict("blog-notify", &init) {
-        let _ = window.dispatch_event(&event);
-    }
+    let event = web_sys::CustomEvent::new_with_event_init_dict("blog-notify", &init)
+        .expect("invariant: blog-notify is a valid custom event type");
+    window
+        .dispatch_event(&event)
+        .expect("invariant: an initialized notification event can be dispatched");
 }
 fn push_toast(toasts: Toasts, message: String) {
     toasts.sequence.update(|n| *n += 1);
@@ -130,6 +132,7 @@ fn push_toast(toasts: Toasts, message: String) {
         });
     });
     Timeout::new(5_000, move || {
+        // The toast container can unmount before this expiration callback.
         let _ = toasts
             .records
             .try_update(|records| records.retain(|r| r.id != id));
@@ -233,7 +236,7 @@ pub fn ThemeToggle() -> impl IntoView {
     let current = RwSignal::new(theme::current());
     if let Some(window) = web_sys::window() {
         let listener = EventListener::new(&window, "blog-theme-change", move |_| {
-            let _ = current.try_set(theme::current());
+            let _ = current.try_set(theme::current()); // Theme events can outlive the mounted toggle.
         });
         let listener = blog_dom::thread_bound::SendWrapper::new(listener);
         on_cleanup(move || drop(listener));
@@ -353,7 +356,7 @@ pub fn AdminShell(
     };
     provide_context(targets);
     let notifications = blog_dom::thread_bound::SendWrapper::new(EventListener::new(
-        &web_sys::window().unwrap(),
+        &web_sys::window().expect("invariant: the application is mounted in a browser window"),
         "blog-notify",
         move |event| {
             if let Some(message) = event
@@ -366,7 +369,7 @@ pub fn AdminShell(
     ));
     on_cleanup(move || drop(notifications));
     let listener = blog_dom::thread_bound::SendWrapper::new(EventListener::new(
-        &web_sys::window().unwrap(),
+        &web_sys::window().expect("invariant: the application is mounted in a browser window"),
         api::AUTH_CHANGE_EVENT,
         move |_| {
             let next = api::snapshot();
@@ -382,7 +385,10 @@ pub fn AdminShell(
     ));
     on_cleanup(move || drop(listener));
     wasm_bindgen_futures::spawn_local(async {
-        let _ = api::restore().await;
+        if let Err(error) = api::restore().await {
+            // The shared authentication snapshot renders the failure to the user.
+            web_sys::console::debug_1(&format!("Session restore: {}", error.code.as_str()).into());
+        }
     });
     IntoRender::into_render({
         move || {
@@ -529,7 +535,10 @@ pub fn AdminShell(
                     blog_interface::ev::click,
                     move |_| {
                         wasm_bindgen_futures::spawn_local(async {
-                            let _ = api::logout().await;
+                            if let Err(error) = api::logout().await {
+                                // The shared authentication snapshot retains the revocation warning.
+                                web_sys::console::debug_1(&format!("Session logout: {}", error.code.as_str()).into());
+                            }
                         });
                     },
                 ),
@@ -598,7 +607,10 @@ pub fn AdminShell(
                     blog_interface::ev::click,
                     move |_| {
                         wasm_bindgen_futures::spawn_local(async {
-                            let _ = api::restore().await;
+                            if let Err(error) = api::restore().await {
+            // The shared authentication snapshot renders the failure to the user.
+            web_sys::console::debug_1(&format!("Session restore: {}", error.code.as_str()).into());
+        }
                         });
                     },
                 ),
@@ -650,15 +662,11 @@ pub fn AdminShell(
                     blog_interface::ev::click,
                     move |event| {
                         event.prevent_default();
-                        if let Some(main) = web_sys::window()
-                            .unwrap()
-                            .document()
-                            .unwrap()
+                        if let Some(main) = web_sys::window().expect("invariant: the application is mounted in a browser window")
+                            .document().expect("invariant: the application window owns its document")
                             .get_element_by_id("blog-main-content")
                             .and_then(|e| e.dyn_into::<web_sys::HtmlElement>().ok())
-                        {
-                            let _ = main.focus();
-                        }
+                            && let Err(error) = main.focus() { web_sys::console::warn_2(&"Unable to move browser focus".into(), &error); }
                     },
                 ),
             blog_interface::html::header()
@@ -773,8 +781,11 @@ pub fn AdminShell(
                                         }
                                         pending_logout.set(true);
                                         wasm_bindgen_futures::spawn_local(async move {
-                                            let _ = api::logout().await;
-                                            let _ = pending_logout.try_set(false);
+                                            if let Err(error) = api::logout().await {
+                                // The shared authentication snapshot retains the revocation warning.
+                                web_sys::console::debug_1(&format!("Session logout: {}", error.code.as_str()).into());
+                            }
+                                            let _ = pending_logout.try_set(false); // Logout can unmount its initiating control.
                                         });
                                     },
                                 ),
@@ -817,10 +828,11 @@ pub fn AdminShell(
                                 .on(
                                     blog_interface::ev::click,
                                     move |_| {
-                                        let _ = web_sys::window()
-                                            .unwrap()
+                                        if let Err(error) = web_sys::window().expect("invariant: the application is mounted in a browser window")
                                             .location()
-                                            .set_hash("account");
+                                            .set_hash("account") {
+                                            web_sys::console::warn_2(&"Unable to open account settings".into(), &error);
+                                        }
                                     },
                                 ),
                         ))
@@ -1080,16 +1092,24 @@ pub fn LoginPage(#[prop(optional)] landing: &'static str) -> impl IntoView {
                 if pending.get_untracked() {
                     return;
                 }
-                let name = username.get_untracked().unwrap();
-                let secret = password.get_untracked().unwrap();
+                let name = username
+                    .get_untracked()
+                    .expect("invariant: submitted form controls are mounted");
+                let secret = password
+                    .get_untracked()
+                    .expect("invariant: submitted form controls are mounted");
                 if name.value().is_empty() {
                     failure.set(Some((t("请输入用户名。", "Enter your username."), None)));
-                    let _ = name.focus();
+                    if let Err(error) = name.focus() {
+                        web_sys::console::warn_2(&"Unable to move browser focus".into(), &error);
+                    }
                     return;
                 }
                 if secret.value().is_empty() {
                     failure.set(Some((t("请输入密码。", "Enter your password."), None)));
-                    let _ = secret.focus();
+                    if let Err(error) = secret.focus() {
+                        web_sys::console::warn_2(&"Unable to move browser focus".into(), &error);
+                    }
                     return;
                 }
                 pending.set(true);
@@ -1097,27 +1117,18 @@ pub fn LoginPage(#[prop(optional)] landing: &'static str) -> impl IntoView {
                 wasm_bindgen_futures::spawn_local(async move {
                     match api::login(&name.value(), &secret.value()).await {
                         Ok(_) => {
-                            if !landing.is_empty() {
-                                let window = web_sys::window().unwrap();
-                                let current = window.location().href().unwrap();
-                                if let Ok(url) = web_sys::Url::new_with_base(landing, &current) {
-                                    if web_sys::Url::new(&current)
-                                        .is_ok_and(|current| current.search_params().has("lang"))
-                                    {
-                                        url.search_params().set("lang", &crate::i18n::locale());
-                                    }
-                                    let _ = window.history().unwrap().replace_state_with_url(
-                                        &wasm_bindgen::JsValue::NULL,
-                                        "",
-                                        Some(&url.href()),
-                                    );
-                                    let _ = window.dispatch_event(
-                                        &web_sys::Event::new("hashchange").unwrap(),
-                                    );
-                                }
+                            if !landing.is_empty()
+                                && let Err(error) = finish_login_navigation(landing)
+                            {
+                                web_sys::console::warn_2(&"Unable to open the signed-in page".into(), &error);
+                                notify(t(
+                                    "已登录，但页面跳转失败。请从导航栏选择页面。",
+                                    "Signed in, but the page could not be opened. Select a page from the navigation.",
+                                ));
                             }
                         }
                         Err(error) => {
+                            // Sign-in may complete after navigation disposes this form.
                             let _ = failure.try_set(Some((
                                 t(
                                     "登录失败，请检查用户名和密码后重试。",
@@ -1126,10 +1137,15 @@ pub fn LoginPage(#[prop(optional)] landing: &'static str) -> impl IntoView {
                                 error.request_id,
                             )));
                             secret.set_value("");
-                            let _ = secret.focus();
+                            if let Err(error) = secret.focus() {
+                                web_sys::console::warn_2(
+                                    &"Unable to move browser focus".into(),
+                                    &error,
+                                );
+                            }
                         }
                     }
-                    let _ = pending.try_set(false);
+                    let _ = pending.try_set(false); // Successful sign-in can dispose the form.
                 });
             }),
     )
@@ -1144,7 +1160,7 @@ pub fn AccountPage() -> impl IntoView {
     let pending = RwSignal::new(false);
     let failure = RwSignal::new(None::<String>);
     let initial = api::current_session()
-        .map(|s| s.username)
+        .map(|s| s.username().to_owned())
         .unwrap_or_default();
     on_cleanup(move || {
         for input in [current, new_password, confirmation] {
@@ -1338,10 +1354,10 @@ pub fn AccountPage() -> impl IntoView {
                                         if pending.get_untracked() {
                                             return;
                                         }
-                                        let name = username.get_untracked().unwrap();
-                                        let secret = current.get_untracked().unwrap();
-                                        let password = new_password.get_untracked().unwrap();
-                                        let confirm = confirmation.get_untracked().unwrap();
+                                        let name = username.get_untracked().expect("invariant: submitted form controls are mounted");
+                                        let secret = current.get_untracked().expect("invariant: submitted form controls are mounted");
+                                        let password = new_password.get_untracked().expect("invariant: submitted form controls are mounted");
+                                        let confirm = confirmation.get_untracked().expect("invariant: submitted form controls are mounted");
                                         if name.value().len() < 3 || name.value().len() > 64 {
                                             failure
                                                 .set(
@@ -1352,7 +1368,7 @@ pub fn AccountPage() -> impl IntoView {
                                                         ),
                                                     ),
                                                 );
-                                            let _ = name.focus();
+                                            if let Err(error) = name.focus() { web_sys::console::warn_2(&"Unable to move browser focus".into(), &error); }
                                             return;
                                         }
                                         if secret.value().is_empty() {
@@ -1365,7 +1381,7 @@ pub fn AccountPage() -> impl IntoView {
                                                         ),
                                                     ),
                                                 );
-                                            let _ = secret.focus();
+                                            if let Err(error) = secret.focus() { web_sys::console::warn_2(&"Unable to move browser focus".into(), &error); }
                                             return;
                                         }
                                         if !password.value().is_empty()
@@ -1380,7 +1396,7 @@ pub fn AccountPage() -> impl IntoView {
                                                         ),
                                                     ),
                                                 );
-                                            let _ = password.focus();
+                                            if let Err(error) = password.focus() { web_sys::console::warn_2(&"Unable to move browser focus".into(), &error); }
                                             return;
                                         }
                                         if password.value() != confirm.value() {
@@ -1393,7 +1409,7 @@ pub fn AccountPage() -> impl IntoView {
                                                         ),
                                                     ),
                                                 );
-                                            let _ = confirm.focus();
+                                            if let Err(error) = confirm.focus() { web_sys::console::warn_2(&"Unable to move browser focus".into(), &error); }
                                             return;
                                         }
                                         let mut input = json!(
@@ -1420,28 +1436,31 @@ pub fn AccountPage() -> impl IntoView {
                                                             "The username is already in use.",
                                                         )
                                                     }
-                                                    _ => {
+                                                    ApiErrorCode::Local(_) | ApiErrorCode::Remote(_) => {
                                                         t(
                                                             "账号未能更新，请检查输入并重试。",
                                                             "The account could not be updated. Check the input and retry.",
                                                         )
                                                     }
                                                 };
-                                                let _ = failure.try_set(Some(message));
+                                                let _ = failure.try_set(Some(message)); // Navigation can dispose the pending account form.
                                                 secret.set_value("");
                                                 password.set_value("");
                                                 confirm.set_value("");
-                                                let _ = if error.code == ApiErrorCode::Remote(RemoteErrorCode::AdministratorConflict) {
+                                                let focus = if error.code == ApiErrorCode::Remote(RemoteErrorCode::AdministratorConflict) {
                                                     name.focus()
                                                 } else {
                                                     secret.focus()
                                                 };
+                                                if let Err(error) = focus {
+                                                    web_sys::console::warn_2(&"Unable to move browser focus".into(), &error);
+                                                }
                                             } else {
                                                 secret.set_value("");
                                                 password.set_value("");
                                                 confirm.set_value("");
                                             }
-                                            let _ = pending.try_set(false);
+                                            let _ = pending.try_set(false); // Account updates can dispose the form.
                                         });
                                     },
                                 )
@@ -1457,4 +1476,26 @@ pub fn AccountPage() -> impl IntoView {
             ),
         ),
 )
+}
+
+fn finish_login_navigation(landing: &str) -> Result<(), wasm_bindgen::JsValue> {
+    let window =
+        web_sys::window().expect("invariant: the sign-in form is mounted in a browser window");
+    let current = web_sys::Url::new(&window.location().href()?)?;
+    let url = web_sys::Url::new_with_base(landing, &current.href())?;
+    if url.origin() != current.origin() {
+        return Err(wasm_bindgen::JsValue::from_str(
+            "Sign-in landing page must have the same origin",
+        ));
+    }
+    if current.search_params().has("lang") {
+        url.search_params().set("lang", &crate::i18n::locale());
+    }
+    window.history()?.replace_state_with_url(
+        &wasm_bindgen::JsValue::NULL,
+        "",
+        Some(&url.href()),
+    )?;
+    window.dispatch_event(&web_sys::Event::new("hashchange")?)?;
+    Ok(())
 }

@@ -29,7 +29,7 @@ impl Action {
                 c.abort()
             }
         });
-        let _ = self.busy.try_set(false);
+        let _ = self.busy.try_set(false); // Cleanup may follow disposal of the page's signals.
     }
     pub fn run(
         self,
@@ -58,16 +58,12 @@ impl Action {
         done: impl FnOnce(T) + 'static,
     ) {
         let error = self.error;
-        self.run_options(
-            path,
-            method,
-            body,
-            options,
-            move |value| match serde_json::from_value(value) {
+        self.run_options(path, method, body, options, move |value| {
+            match blog_interface::api::decode_response(value) {
                 Ok(value) => done(value),
-                Err(_) => error.set(Some(invalid())),
-            },
-        );
+                Err(source) => error.set(Some(source)),
+            }
+        });
     }
     pub fn run_options(
         self,
@@ -82,7 +78,8 @@ impl Action {
         }
         self.busy.set(true);
         self.error.set(None);
-        let c = web_sys::AbortController::new().unwrap();
+        let c = web_sys::AbortController::new()
+            .expect("invariant: AbortController construction has no failure conditions");
         let signal = c.signal();
         opts.signal = Some(signal.clone());
         self.controller.set_value(SendWrapper::new(Some(c)));
@@ -121,7 +118,7 @@ impl Action {
 
 impl Action {
     pub fn upload(self, file: SendWrapper<web_sys::File>, done: impl FnOnce(Value) + 'static) {
-        self.upload_file(file, false, done);
+        self.upload_file(file, UploadKind::Image, done);
     }
 
     pub fn upload_video(
@@ -129,46 +126,44 @@ impl Action {
         file: SendWrapper<web_sys::File>,
         done: impl FnOnce(Value) + 'static,
     ) {
-        self.upload_file(file, true, done);
+        self.upload_file(file, UploadKind::Video, done);
     }
 
     fn upload_file(
         self,
         file: SendWrapper<web_sys::File>,
-        video: bool,
+        kind: UploadKind,
         done: impl FnOnce(Value) + 'static,
     ) {
         if self.busy.get_untracked() {
             return;
         }
-        let (limit, accepted, route) = if video {
-            (
+        let (limit, accepted, route) = match kind {
+            UploadKind::Video => (
                 50.,
                 &["video/mp4", "video/webm"][..],
                 "/api/v1/content/upload-video",
-            )
-        } else {
-            (
+            ),
+            UploadKind::Image => (
                 10.,
                 &["image/png", "image/jpeg", "image/gif", "image/webp"][..],
                 "/api/v1/content/upload",
-            )
+            ),
         };
         if file.size() <= 0.
             || file.size() > limit * 1024. * 1024.
             || !accepted.contains(&file.type_().as_str())
         {
             self.error.set(Some(ApiError {
-                message: if video {
-                    t(
+                message: match kind {
+                    UploadKind::Video => t(
                         "请选择不超过 50 MB 的 MP4 或 WebM 视频",
                         "Choose an MP4 or WebM video up to 50 MB",
-                    )
-                } else {
-                    t(
+                    ),
+                    UploadKind::Image => t(
                         "请选择不超过 10 MB 的 PNG、JPEG、GIF 或 WebP 图片",
                         "Choose a PNG, JPEG, GIF, or WebP image up to 10 MB",
-                    )
+                    ),
                 },
                 code: LocalErrorCode::DisplayError.into(),
                 ..invalid()
@@ -177,7 +172,8 @@ impl Action {
         }
         self.busy.set(true);
         self.error.set(None);
-        let c = web_sys::AbortController::new().unwrap();
+        let c = web_sys::AbortController::new()
+            .expect("invariant: AbortController construction has no failure conditions");
         let signal = c.signal();
         self.controller.set_value(SendWrapper::new(Some(c)));
         blog_interface::task::spawn_local(async move {
@@ -195,10 +191,9 @@ impl Action {
                 body,
                 RequestOptions {
                     signal: Some(signal.clone()),
-                    timeout_ms: if video {
-                        120_000
-                    } else {
-                        blog_interface::api::DEFAULT_TIMEOUT_MS
+                    timeout_ms: match kind {
+                        UploadKind::Video => 120_000,
+                        UploadKind::Image => blog_interface::api::DEFAULT_TIMEOUT_MS,
                     },
                     headers,
                     ..Default::default()
@@ -210,10 +205,9 @@ impl Action {
             }
             match r {
                 Ok(v)
-                    if if video {
-                        crate::contracts::upload_video(&v)
-                    } else {
-                        crate::contracts::upload(&v)
+                    if match kind {
+                        UploadKind::Video => crate::contracts::upload_video(&v),
+                        UploadKind::Image => crate::contracts::upload(&v),
                     } =>
                 {
                     done(v)
@@ -225,4 +219,10 @@ impl Action {
             self.busy.set(false);
         });
     }
+}
+
+#[derive(Clone, Copy)]
+enum UploadKind {
+    Image,
+    Video,
 }

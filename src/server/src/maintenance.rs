@@ -20,12 +20,12 @@ pub async fn initialize(root: &Path, username: &str, password: &str) -> Result<(
     let username = admin_auth::normalize_administrator_username(username)?;
     let password = admin_auth::Password::new(password)?;
     let settings = crate::config::load_offline(root, &root.join("config/config.json"))?.value;
-    let state = PrivateDirectory::create(&settings.data_dir)?;
+    PrivateDirectory::create(&settings.data_dir)?;
     let lock = crate::config::runtime_lock(&settings)?;
     let database = settings.database_path();
-    let media = PrivateDirectory::create(settings.media_path())?;
-    let run = PrivateDirectory::create(root.join("run"))?;
-    let logs = PrivateDirectory::create(root.join("logs"))?;
+    PrivateDirectory::create(settings.media_path())?;
+    PrivateDirectory::create(root.join("run"))?;
+    PrivateDirectory::create(root.join("logs"))?;
     match crate::database::initialize_new_database(&database, &username, &password).await {
         Ok(()) => {}
         Err(Error::PublishDatabase {
@@ -47,11 +47,7 @@ pub async fn initialize(root: &Path, username: &str, password: &str) -> Result<(
         }
         Err(error) => return Err(error),
     }
-    crate::database::validate_existing_database(&database, &root.join("run")).await?;
-    for directory in [&state, &media, &run, &logs] {
-        directory.verify_identity()?;
-    }
-    drop(lock);
+    lock.release()?;
     Ok(())
 }
 
@@ -60,15 +56,12 @@ pub async fn check(root: &Path) -> Result<(), Error> {
     crate::verify_compiled_identity()?;
     let settings = crate::config::load_offline(root, &root.join("config/config.json"))?.value;
     let lock = crate::config::runtime_lock(&settings)?;
-    let media = PrivateDirectory::open_existing(settings.media_path())?;
-    let run = PrivateDirectory::open_existing(root.join("run"))?;
-    let logs = PrivateDirectory::open_existing(root.join("logs"))?;
+    PrivateDirectory::open_existing(settings.media_path())?;
+    PrivateDirectory::open_existing(root.join("run"))?;
+    PrivateDirectory::open_existing(root.join("logs"))?;
     crate::database::validate_existing_database(&settings.database_path(), &root.join("run"))
         .await?;
-    for directory in [&media, &run, &logs] {
-        directory.verify_identity()?;
-    }
-    drop(lock);
+    lock.release()?;
     Ok(())
 }
 
@@ -95,7 +88,7 @@ pub async fn reset_password(root: &Path, username: &str, password: &str) -> Resu
         let now = crate::app::now_micros()?;
         let audit = |action| -> Result<_, Error> {
             Ok(SecurityAuditEvent {
-                event_id: Identifier::new(admin_auth::random_token()?)?,
+                event_id: Identifier::generate()?,
                 action,
                 outcome: AuditOutcome::Success,
                 actor_administrator_id: None,
@@ -116,12 +109,11 @@ pub async fn reset_password(root: &Path, username: &str, password: &str) -> Resu
                 ],
             )
             .await?;
-        store.validate_all_administrators().await?;
         Ok::<(), Error>(())
     }
     .await;
     pool.close().await;
     result?;
-    drop(lock);
+    lock.release()?;
     Ok(())
 }

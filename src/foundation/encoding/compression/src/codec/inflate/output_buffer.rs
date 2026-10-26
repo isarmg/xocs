@@ -109,12 +109,12 @@ impl<'a> InputWrapper<'a> {
     #[inline]
     #[cfg(target_pointer_width = "64")]
     pub fn read_u32_le(&mut self) -> u32 {
-        let ret = {
-            let four_bytes: [u8; 4] = self.slice[..4].try_into().unwrap_or_default();
-            u32::from_le_bytes(four_bytes)
-        };
-        self.advance(4);
-        ret
+        let (bytes, rest) = self
+            .slice
+            .split_first_chunk::<4>()
+            .expect("invariant: the bit buffer reader has at least four input bytes");
+        self.slice = rest;
+        u32::from_le_bytes(*bytes)
     }
 
     #[inline(always)]

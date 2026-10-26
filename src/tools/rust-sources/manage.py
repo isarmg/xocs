@@ -264,7 +264,7 @@ def verify_platform_guard(root, policy, documents):
             raise ValueError(f'project package lacks a platform build script: {directory}')
         source = path.read_text()
         module = re.search(r'#\[path\s*=\s*"([^"]+)"\]\s*mod\s+platform_contract\s*;', source)
-        call = re.search(r'\bfn\s+main\s*\(\s*\)\s*\{\s*platform_contract::check\(\);', source)
+        call = re.search(r'\bfn\s+main\s*\(\s*\)\s*(?:->\s*[^{};]+)?\{\s*platform_contract::check\(\);', source)
         if (module is None or call is None
                 or relative(root, path.parent / module[1]) != guard):
             raise ValueError(f'build script must invoke the shared platform guard first: {directory}')

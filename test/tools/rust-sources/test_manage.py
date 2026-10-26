@@ -178,6 +178,22 @@ directory = "compliance/empty-registry"
         with self.assertRaisesRegex(ValueError, 'invoke the shared platform guard first'):
             manage.refresh(self.root)
 
+    def test_fallible_build_script_still_runs_platform_guard_first(self):
+        policy = self.enable_platform_guard()
+        manifest = self.root / 'src/server/Cargo.toml'
+        manifest.write_text(manifest.read_text().replace('build = "platform_contract.rs"', 'build = "build.rs"'))
+        prelude = '#[path = "platform_contract.rs"]\nmod platform_contract;\n'
+        for result in ('std::io::Result<()>', 'Result<(), Box<dyn std::error::Error>>'):
+            with self.subTest(result=result):
+                self.write('src/server/build.rs', prelude +
+                           f'fn main() -> {result} {{ platform_contract::check(); Ok(()) }}\n')
+                documents = manage.static_structure(self.root, policy)
+                manage.verify_platform_guard(self.root, policy, documents)
+                self.write('src/server/build.rs', prelude +
+                           f'fn main() -> {result} {{ println!("too early"); platform_contract::check(); Ok(()) }}\n')
+                with self.assertRaisesRegex(ValueError, 'invoke the shared platform guard first'):
+                    manage.verify_platform_guard(self.root, policy, documents)
+
     def test_platform_guard_cannot_live_outside_owned_sources(self):
         policy = self.enable_platform_guard()
         policy['platform_guard'] = 'tools/unowned.rs'

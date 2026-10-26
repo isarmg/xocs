@@ -356,14 +356,6 @@ impl<At, Ch> Mountable for ElementState<At, Ch> {
         Rndr::insert_node(parent, &self.el, marker);
     }
 
-    fn try_mount(
-        &mut self,
-        parent: &crate::view_tree::renderer::types::Element,
-        marker: Option<&crate::view_tree::renderer::types::Node>,
-    ) -> bool {
-        Rndr::try_insert_node(parent, &self.el, marker)
-    }
-
     fn insert_before_this(&self, child: &mut dyn Mountable) -> bool {
         // codegen optimisation:
         fn inner(

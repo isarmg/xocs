@@ -31,14 +31,14 @@ pub(crate) struct AppState {
 
 /// Concurrent write and bounded-wait capacity, independent of request identity.
 pub(crate) struct PublicMutationCapacity {
-    active: Arc<tokio::sync::Semaphore>,
-    admitted: Arc<tokio::sync::Semaphore>,
+    active: tokio::sync::Semaphore,
+    admitted: tokio::sync::Semaphore,
 }
 impl Default for PublicMutationCapacity {
     fn default() -> Self {
         Self {
-            active: Arc::new(tokio::sync::Semaphore::new(4)),
-            admitted: Arc::new(tokio::sync::Semaphore::new(36)),
+            active: tokio::sync::Semaphore::new(4),
+            admitted: tokio::sync::Semaphore::new(36),
         }
     }
 }
@@ -50,18 +50,21 @@ async fn admit_public_mutation(
     if request.method() != axum::http::Method::POST {
         return next.run(request).await;
     }
-    let Ok(_admission) = capacity.admitted.clone().try_acquire_owned() else {
-        return AppError::Public(
-            HttpStatus::ServiceUnavailable,
-            "服务写入容量已满，请稍后重试",
-        )
-        .into_response();
+    let _admission = match capacity.admitted.try_acquire() {
+        Ok(permit) => permit,
+        Err(tokio::sync::TryAcquireError::NoPermits) => {
+            return AppError::Public(
+                HttpStatus::ServiceUnavailable,
+                "服务写入容量已满，请稍后重试",
+            )
+            .into_response();
+        }
+        Err(tokio::sync::TryAcquireError::Closed) => {
+            unreachable!("invariant: public mutation admission is never closed")
+        }
     };
-    let Ok(Ok(_execution)) = tokio::time::timeout(
-        Duration::from_secs(10),
-        capacity.active.clone().acquire_owned(),
-    )
-    .await
+    let Ok(execution) =
+        tokio::time::timeout(Duration::from_secs(10), capacity.active.acquire()).await
     else {
         return AppError::Public(
             HttpStatus::ServiceUnavailable,
@@ -69,6 +72,7 @@ async fn admit_public_mutation(
         )
         .into_response();
     };
+    let _execution = execution.expect("invariant: public mutation execution is never closed");
     next.run(request).await
 }
 
@@ -80,6 +84,12 @@ pub enum AppError {
     Database(#[from] sqlx::Error),
     #[error("数据库暂时不可用")]
     DatabaseUnavailable(#[source] sqlx::Error),
+    #[error("管理员会话复核失败")]
+    AdministratorStore(#[source] blog_application::admin_sqlite::Error),
+    #[error("系统时钟早于 Unix 纪元")]
+    Clock(#[source] std::time::SystemTimeError),
+    #[error("当前时间超出数值范围")]
+    TimestampRange(#[source] std::num::TryFromIntError),
     #[error("媒体文件操作失败")]
     Filesystem(#[from] blog_application::fs_safety::Error),
     #[error("服务正在停止")]
@@ -98,16 +108,36 @@ pub enum AppError {
     },
     #[error("文章密码应为 12 至 1024 字节且不含控制字符")]
     InvalidPassword(#[source] blog_application::admin_auth::Error),
+    #[error("请求标识无效")]
+    InvalidIdempotencyKey(#[from] crate::content::IdempotencyKeyError),
     #[error("密码计算失败")]
     Password(#[from] blog_application::admin_auth::Error),
     #[error("文件名编码无效")]
     FileNameHeader(#[source] axum::http::header::ToStrError),
     #[error("文件名编码无效")]
     FileNameEncoding(#[source] std::str::Utf8Error),
+    #[error("媒体地址无效")]
+    MediaUrl(#[source] url_encoding::address::ParseError),
+    #[error("随机封面必须是图片地址数组或每行一个地址")]
+    MediaCovers(#[source] serde_json::Error),
     #[error("信笺存储内容无效")]
     StoredLetter(#[source] serde_json::Error),
     #[error("媒体删除日志名称无效")]
     InvalidDeletionJournal,
+    #[error("媒体删除日志名称编码无效")]
+    DeletionJournalEncoding(#[source] std::str::Utf8Error),
+    #[error("媒体删除失败且事务回滚失败")]
+    DeletionRollback {
+        #[source]
+        operation: Box<Self>,
+        rollback: sqlx::Error,
+    },
+    #[error("媒体删除失败且文件恢复失败")]
+    DeletionRecovery {
+        #[source]
+        operation: Box<Self>,
+        recovery: Box<Self>,
+    },
 }
 impl AppError {
     fn status(&self) -> HttpStatus {
@@ -117,14 +147,23 @@ impl AppError {
                 HttpStatus::ServiceUnavailable
             }
             Self::StoredLetter(_) => HttpStatus::Conflict,
-            Self::FileNameHeader(_) | Self::FileNameEncoding(_) | Self::InvalidPassword(_) => {
-                HttpStatus::BadRequest
-            }
+            Self::FileNameHeader(_)
+            | Self::FileNameEncoding(_)
+            | Self::MediaUrl(_)
+            | Self::MediaCovers(_)
+            | Self::InvalidPassword(_)
+            | Self::InvalidIdempotencyKey(_) => HttpStatus::BadRequest,
             Self::Database(_)
+            | Self::AdministratorStore(_)
+            | Self::Clock(_)
+            | Self::TimestampRange(_)
             | Self::Filesystem(_)
             | Self::Task { .. }
             | Self::Password(_)
-            | Self::InvalidDeletionJournal => HttpStatus::Internal,
+            | Self::InvalidDeletionJournal
+            | Self::DeletionJournalEncoding(_)
+            | Self::DeletionRollback { .. }
+            | Self::DeletionRecovery { .. } => HttpStatus::Internal,
         }
     }
 
@@ -139,7 +178,13 @@ impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         use std::error::Error as _;
         if self.source().is_some() {
-            tracing::error!(error = ?self, "request operation failed");
+            tracing::error!(
+                event = "blog.http.operation_failed",
+                component = "http",
+                error_code = self.status().code(),
+                operation = %self,
+                "request operation failed"
+            );
         }
         let envelope = self.envelope();
         let status = StatusCode::from_u16(self.status().status())
@@ -242,8 +287,8 @@ pub(crate) fn router(state: AppState, web: Option<PathBuf>) -> Result<Router, cr
                     let request_id = request
                         .extensions()
                         .get::<blog_application::contracts::RequestId>()
-                        .map(|value| value.as_str())
-                        .unwrap_or("");
+                        .expect("invariant: request context middleware assigns every request ID")
+                        .as_str();
                     tracing::info_span!("http.request", request_id)
                 })
                 .on_request(())
@@ -263,7 +308,8 @@ pub(crate) fn router(state: AppState, web: Option<PathBuf>) -> Result<Router, cr
         )
         .layer(from_fn_with_state(state.scope.clone(), admit_request))
         .layer(from_fn_with_state(
-            PRODUCT_ID.to_string(),
+            blog_application::server_cli::ServiceIdentity::new(PRODUCT_ID)
+                .expect("invariant: static service identity is a valid HTTP header"),
             blog_application::server_cli::service_identity_middleware,
         ))
         .layer(axum::middleware::from_fn(
@@ -343,6 +389,10 @@ pub(crate) async fn database_ready(pool: &SqlitePool) -> bool {
     match sqlx::query("SELECT 1").execute(pool).await {
         Ok(_) => true,
         Err(error) => {
+            #[expect(
+                clippy::wildcard_enum_match_arm,
+                reason = "SQLx errors are non-exhaustive; remaining variants share the driver failure category"
+            )]
             let (failure, io_kind, database_kind) = match &error {
                 sqlx::Error::Database(source) => {
                     (DatabaseProbeFailure::Database, None, Some(source.kind()))
@@ -364,7 +414,7 @@ pub(crate) async fn database_ready(pool: &SqlitePool) -> bool {
     }
 }
 
-async fn admin_gate(State(state): State<AppState>, request: Request, next: Next) -> Response {
+async fn admin_gate(State(state): State<AppState>, mut request: Request, next: Next) -> Response {
     match blog_application::admin_axum::authenticate_request(
         &state.admin,
         request.headers(),
@@ -375,7 +425,10 @@ async fn admin_gate(State(state): State<AppState>, request: Request, next: Next)
     )
     .await
     {
-        Ok(_) => next.run(request).await,
+        Ok(identity) => {
+            request.extensions_mut().insert(identity);
+            next.run(request).await
+        }
         Err(response) => *response,
     }
 }

@@ -38,7 +38,10 @@ pub fn accepted_encodings(headers: &HeaderMap) -> AcceptedEncodings {
         };
         for entry in value.split(',') {
             let mut parts = entry.split(';');
-            let coding = parts.next().unwrap_or_default().trim();
+            let coding = parts
+                .next()
+                .expect("invariant: str::split always yields its first segment")
+                .trim();
             let target = if coding.eq_ignore_ascii_case("gzip") {
                 &mut gzip
             } else if coding.eq_ignore_ascii_case("identity") {

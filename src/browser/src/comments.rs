@@ -301,8 +301,7 @@ pub(crate) fn Comments(
                                         .r#type("button")
                                         .disabled(move || busy.get())
                                         .on(blog_interface::ev::click, move |_| {
-                                            if !web_sys::window()
-                                                .unwrap()
+                                            if !web_sys::window().expect("invariant: the application is mounted in a browser window")
                                                 .confirm_with_message(&t("这条评论可能已经发表。请先检查评论列表；确定放弃确认原提交并清空草稿？", "This comment may already be posted. Check the comments first. Stop confirming this submission and clear its draft?"))
                                                 .unwrap_or(false)
                                             {
@@ -342,7 +341,7 @@ pub(crate) fn Comments(
                             Some(submission) => (submission, true),
                             None => {
                                 let mut submission = json!({
-                                    "request_id": web_sys::window().unwrap().crypto().unwrap().random_uuid(),
+                                    "request_id": web_sys::window().expect("invariant: the application is mounted in a browser window").crypto().expect("invariant: the application window exposes browser crypto").random_uuid(),
                                     "content": draft.get_untracked().trim(),
                                     "parent_comment_id": reply.get_untracked().map(|v| v["id"].clone()),
                                 });
@@ -376,7 +375,7 @@ pub(crate) fn Comments(
                         busy.set(true);
                         failure.set(String::new());
                         feedback.set(String::new());
-                        let c = web_sys::AbortController::new().unwrap();
+                        let c = web_sys::AbortController::new().expect("invariant: AbortController construction has no failure conditions");
                         let signal = c.signal();
                         controller.set_value(SendWrapper::new(Some(c)));
                         blog_interface::task::spawn_local(async move {

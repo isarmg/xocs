@@ -74,8 +74,7 @@ thread_local! {
 
 fn integral(u: f64) -> Integral {
     INTEGRALS.with(|table| {
-        let index =
-            ((u * INTEGRATION_INTERVALS as f64).floor() as usize).min(INTEGRATION_INTERVALS);
+        let index = (u * INTEGRATION_INTERVALS as f64).floor() as usize;
         let remainder = simpson(index as f64 / INTEGRATION_INTERVALS as f64, u);
         Integral {
             x: table[index].x + remainder.x,
@@ -113,7 +112,7 @@ pub(super) fn parallel_second_derivative_bound(offset: f64) -> f64 {
 }
 
 fn transition(t: f64) -> Sample {
-    let u = (t / TRANSITION_PARAMETER).clamp(0.0, 1.0);
+    let u = t / TRANSITION_PARAMETER;
     // Evaluate q with symmetry to avoid cancellation near u = 1.
     let q = |v: f64| v.powi(3) * (10.0 + v * (-15.0 + 6.0 * v));
     let curvature = NORMALIZED_MAX_CURVATURE * if u <= 0.5 { q(u) } else { 1.0 - q(1.0 - u) };

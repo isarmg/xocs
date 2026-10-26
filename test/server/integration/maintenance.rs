@@ -6,24 +6,26 @@ use blog_application::{
 use std::{fs, os::unix::fs::PermissionsExt};
 
 fn configured_root() -> tempfile::TempDir {
-    let root = tempfile::tempdir().unwrap();
-    fs::set_permissions(root.path(), fs::Permissions::from_mode(0o700)).unwrap();
-    fs::create_dir(root.path().join("config")).unwrap();
+    let root = tempfile::tempdir().expect("create offline maintenance fixture root");
+    fs::set_permissions(root.path(), fs::Permissions::from_mode(0o700))
+        .expect("set private offline fixture root permissions");
+    fs::create_dir(root.path().join("config"))
+        .expect("create offline fixture configuration directory");
     fs::set_permissions(
         root.path().join("config"),
         fs::Permissions::from_mode(0o700),
     )
-    .unwrap();
+    .expect("set private offline configuration directory permissions");
     fs::write(
         root.path().join("config/config.json"),
         b"{\"bind\":\"127.0.0.1:18091\",\"development\":true}",
     )
-    .unwrap();
+    .expect("write offline fixture configuration");
     fs::set_permissions(
         root.path().join("config/config.json"),
         fs::Permissions::from_mode(0o600),
     )
-    .unwrap();
+    .expect("set private offline configuration file permissions");
     root
 }
 

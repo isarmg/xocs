@@ -1,12 +1,21 @@
 use crate::{ApiResult, AppError, AppState, db_error, invalid};
 use axum::{Json, extract::State};
+use blog_application::admin_core::AuthenticatedIdentity;
 use blog_application::error::HttpStatus;
 use serde::{Deserialize, Serialize};
 
 const MAX_STORED_LETTER_BYTES: usize = 128 * 1024;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
+struct LetterContentDto {
+    recipient: String,
+    sender: String,
+    content: String,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(try_from = "LetterContentDto")]
 pub(super) struct LetterContent {
     recipient: String,
     sender: String,
@@ -31,19 +40,34 @@ struct StoredLetter {
     source: Option<i64>,
 }
 
-fn validate_content(content: &LetterContent) -> Result<(), AppError> {
-    if content.recipient.trim().is_empty()
-        || content.recipient.chars().count() > 100
-        || content.sender.trim().is_empty()
-        || content.sender.chars().count() > 100
-        || content.content.trim().is_empty()
-        || content.content.chars().count() > 16_384
-    {
-        return Err(invalid(
-            "信笺收件人与署名应为 1 至 100 字，正文应为 1 至 16384 字",
-        ));
+#[derive(Debug, thiserror::Error)]
+#[error("信笺收件人与署名应为 1 至 100 字，正文应为 1 至 16384 字")]
+struct LetterContentError;
+
+impl TryFrom<LetterContentDto> for LetterContent {
+    type Error = LetterContentError;
+
+    fn try_from(input: LetterContentDto) -> Result<Self, Self::Error> {
+        let LetterContentDto {
+            recipient,
+            sender,
+            content,
+        } = input;
+        if recipient.trim().is_empty()
+            || recipient.chars().count() > 100
+            || sender.trim().is_empty()
+            || sender.chars().count() > 100
+            || content.trim().is_empty()
+            || content.chars().count() > 16_384
+        {
+            return Err(LetterContentError);
+        }
+        Ok(Self {
+            recipient,
+            sender,
+            content,
+        })
     }
-    Ok(())
 }
 
 fn stored_content(stored: &StoredLetter) -> Result<LetterContent, AppError> {
@@ -55,14 +79,7 @@ fn stored_content(stored: &StoredLetter) -> Result<LetterContent, AppError> {
         return Err(malformed());
     }
     let raw = stored.content.as_deref().ok_or_else(malformed)?;
-    if raw.len() > MAX_STORED_LETTER_BYTES {
-        return Err(malformed());
-    }
-    let content: LetterContent = serde_json::from_str(raw).map_err(AppError::StoredLetter)?;
-    if validate_content(&content).is_err() {
-        return Err(malformed());
-    }
-    Ok(content)
+    serde_json::from_str(raw).map_err(AppError::StoredLetter)
 }
 
 async fn load_stored_letter(
@@ -123,24 +140,21 @@ pub(super) async fn admin_letter(State(state): State<AppState>) -> ApiResult<Man
 
 pub(super) async fn save_letter(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     crate::ContractJson(input): crate::ContractJson<ManagedLetter>,
 ) -> ApiResult<ManagedLetter> {
-    let content = LetterContent {
+    let content = LetterContent::try_from(LetterContentDto {
         recipient: input.recipient.trim().to_owned(),
         sender: input.sender.trim().to_owned(),
         content: input.content.trim().to_owned(),
-    };
-    validate_content(&content)?;
+    })
+    .map_err(|LetterContentError| {
+        invalid("信笺收件人与署名应为 1 至 100 字，正文应为 1 至 16384 字")
+    })?;
+    // At most six JSON bytes per character keeps the validated fields below 128 KiB.
     let encoded =
         serde_json::to_string(&content).expect("invariant: letter strings serialize to JSON");
-    if encoded.len() > MAX_STORED_LETTER_BYTES {
-        return Err(invalid("信笺内容过长"));
-    }
-    let mut transaction = state
-        .pool
-        .begin_with("BEGIN IMMEDIATE")
-        .await
-        .map_err(db_error)?;
+    let mut transaction = crate::content::begin_mutation(&state.pool, &identity).await?;
     let author = crate::site_author_id(&mut *transaction).await?;
     if let Some(stored) = load_stored_letter(&mut transaction, author).await? {
         stored_content(&stored)?;

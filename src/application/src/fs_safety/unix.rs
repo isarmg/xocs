@@ -14,6 +14,7 @@ use std::{
     ffi::OsStr,
     fs::File,
     io::{self, Read, Write},
+    os::unix::ffi::OsStrExt,
     path::{Component, Path},
 };
 
@@ -33,7 +34,9 @@ pub(super) fn open_directory(path: &Path) -> Result<File, Error> {
             Component::Normal(name) => {
                 fd = openat(&fd, name, DIRECTORY_FLAGS, Mode::empty()).map_err(io::Error::from)?;
             }
-            _ => return Err(Error::UnsafeRelativePath(path.to_path_buf())),
+            Component::Prefix(_) | Component::CurDir | Component::ParentDir => {
+                return Err(Error::UnsafeRelativePath(path.to_path_buf()));
+            }
         }
     }
     Ok(File::from(fd))
@@ -186,7 +189,6 @@ pub(super) fn files(
         if result.len() >= limits.max_entries {
             return Err(Error::BudgetExceeded);
         }
-        use std::os::unix::ffi::OsStrExt;
         let name = EntryName::new(OsStr::from_bytes(name.to_bytes()))?;
         let (_file, bytes) = open_regular(directory, &name)?;
         total_bytes = total_bytes
@@ -287,7 +289,12 @@ pub(super) fn atomic_replace(
     destination: &RelativePath,
     bytes: &[u8],
 ) -> Result<(), Error> {
-    atomic_write(directory, destination, bytes, WriteMode::Replace)
+    atomic_write(
+        directory,
+        entry_name(destination)?,
+        bytes,
+        WriteMode::Replace,
+    )
 }
 
 pub(super) fn atomic_create(
@@ -295,12 +302,7 @@ pub(super) fn atomic_create(
     destination: &EntryName,
     bytes: &[u8],
 ) -> Result<(), Error> {
-    atomic_write(
-        directory,
-        &destination.as_relative(),
-        bytes,
-        WriteMode::Create,
-    )
+    atomic_write(directory, destination.as_os_str(), bytes, WriteMode::Create)
 }
 
 enum WriteMode {
@@ -310,11 +312,10 @@ enum WriteMode {
 
 fn atomic_write(
     directory: &PrivateDirectory,
-    destination: &RelativePath,
+    name: &OsStr,
     bytes: &[u8],
     mode: WriteMode,
 ) -> Result<(), Error> {
-    let name = entry_name(destination)?;
     validate_destination(directory, name)?;
     let temporary = temporary_name()?;
     let fd: OwnedFd = openat(
@@ -336,10 +337,8 @@ fn atomic_write(
             )
             .map_err(io::Error::from)?;
         }
-        let identity = regular_single_link(&file, Path::new(&temporary))?;
         file.write_all(bytes)?;
         file.sync_all()?;
-        validate_destination(directory, name)?;
         match mode {
             WriteMode::Create => rename_no_clobber(directory, temporary.as_ref(), name)?,
             WriteMode::Replace => renameat(
@@ -350,7 +349,10 @@ fn atomic_write(
             )
             .map_err(io::Error::from)?,
         }
-        finish_publish(directory, name, &identity)
+        directory
+            .directory
+            .sync_all()
+            .map_err(Error::PublishedDurabilityUnknown)
     })();
     result.map_err(|operation| cleanup_failed_write(directory, &temporary, operation))
 }
@@ -414,8 +416,10 @@ pub(super) fn advisory_lock(
     if (identity.st_dev, identity.st_ino) != (current.st_dev, current.st_ino) {
         return Err(Error::IdentityChanged(path.to_path_buf()));
     }
-    file.sync_all()?;
-    directory.sync()?;
+    if created {
+        file.sync_all()?;
+        directory.sync()?;
+    }
     Ok(AdvisoryLock { _file: file })
 }
 
@@ -585,7 +589,12 @@ pub(super) fn bounded_inventory(
         }
         result.total_bytes = result
             .total_bytes
-            .checked_add(u64::try_from(opened.st_size).map_err(|_| Error::BudgetExceeded)?)
+            .checked_add(u64::try_from(opened.st_size).map_err(|source| {
+                Error::InvalidFileLength {
+                    path: Path::new(OsStr::from_bytes(name.to_bytes())).to_path_buf(),
+                    source,
+                }
+            })?)
             .ok_or(Error::BudgetExceeded)?;
         if result.total_bytes > limits.max_total_bytes {
             return Err(Error::BudgetExceeded);

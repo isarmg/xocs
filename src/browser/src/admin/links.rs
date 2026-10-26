@@ -129,8 +129,7 @@ pub(super) fn Links() -> impl IntoView {
                                     if save.busy.get_untracked() || remove.busy.get_untracked() {
                                         return;
                                     }
-                                    if web_sys::window()
-                                        .unwrap()
+                                    if web_sys::window().expect("invariant: the application is mounted in a browser window")
                                         .confirm_with_message(&t(
                                             "确定删除这条资源？",
                                             "Delete this resource?",

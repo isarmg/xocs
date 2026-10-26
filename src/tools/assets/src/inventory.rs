@@ -532,18 +532,22 @@ pub fn snapshot(root: &Path) -> Result<Value> {
 /// checked internally and exported in the private frontend receipt; public
 /// provenance binds those exact inventories by SHA and per-package summaries.
 pub(crate) fn public_provenance(snapshot: &Value, runtime: &Value) -> Value {
-    let mut public = snapshot.clone();
-    let object = public
-        .as_object_mut()
+    let snapshot_object = snapshot
+        .as_object()
         .expect("invariant: snapshot is a JSON object");
-    let dependencies = object
-        .remove("patched_inputs")
+    let mut object = snapshot_object
+        .iter()
+        .filter(|(name, _)| !matches!(name.as_str(), "patched_inputs" | "foundation_inputs"))
+        .map(|(name, value)| (name.clone(), value.clone()))
+        .collect::<serde_json::Map<_, _>>();
+    let dependencies = snapshot_object
+        .get("patched_inputs")
         .expect("invariant: snapshot includes local source packages");
     let summaries = dependencies.as_object().expect("invariant: local source packages are a JSON object").iter().map(|(name, files)| {
         (name.clone(), json!({"sha256":sha(&serde_json::to_vec(files).expect("invariant: JSON values serialize")),"file_count":files.as_object().expect("invariant: package file inventories are JSON objects").len()}))
     }).collect::<BTreeMap<_,_>>();
-    let foundation = object
-        .remove("foundation_inputs")
+    let foundation = snapshot_object
+        .get("foundation_inputs")
         .expect("invariant: snapshot includes foundation inputs");
     object.insert("source_packages".into(), json!(summaries));
     object.insert(
@@ -552,17 +556,21 @@ pub(crate) fn public_provenance(snapshot: &Value, runtime: &Value) -> Value {
             &serde_json::to_vec(snapshot).expect("invariant: JSON values serialize")
         )),
     );
-    object.insert("foundation_inventory".into(), json!({"sha256":sha(&serde_json::to_vec(&foundation).expect("invariant: JSON values serialize")),"file_count":foundation.as_object().expect("invariant: foundation inputs are a JSON object").len()}));
-    let mut runtime = runtime.clone();
+    object.insert("foundation_inventory".into(), json!({"sha256":sha(&serde_json::to_vec(foundation).expect("invariant: JSON values serialize")),"file_count":foundation.as_object().expect("invariant: foundation inputs are a JSON object").len()}));
     let runtime_object = runtime
-        .as_object_mut()
+        .as_object()
         .expect("invariant: runtime receipt is a JSON object");
     let sources = runtime_object
-        .remove("source_inputs")
+        .get("source_inputs")
         .expect("invariant: runtime receipt includes source inputs");
-    runtime_object.insert("source_inputs_summary".into(), json!({"sha256":sha(&serde_json::to_vec(&sources).expect("invariant: JSON values serialize")),"file_count":sources.as_object().expect("invariant: runtime source inputs are a JSON object").len()}));
-    object.insert("rust_runtime".into(), runtime);
-    public
+    let mut runtime = runtime_object
+        .iter()
+        .filter(|(name, _)| name.as_str() != "source_inputs")
+        .map(|(name, value)| (name.clone(), value.clone()))
+        .collect::<serde_json::Map<_, _>>();
+    runtime.insert("source_inputs_summary".into(), json!({"sha256":sha(&serde_json::to_vec(sources).expect("invariant: JSON values serialize")),"file_count":sources.as_object().expect("invariant: runtime source inputs are a JSON object").len()}));
+    object.insert("rust_runtime".into(), Value::Object(runtime));
+    Value::Object(object)
 }
 
 /// Cheap watcher probe; the release build still hashes all inputs before and

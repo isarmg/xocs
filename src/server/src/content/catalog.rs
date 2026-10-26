@@ -1,5 +1,6 @@
 use crate::{ApiResult, AppError, AppState, absent, db_error, invalid};
 use axum::{Json, extract::State};
+use blog_application::admin_core::AuthenticatedIdentity;
 use blog_application::error::HttpStatus;
 use blog_application::server_cli::{ContractPath as Path, ContractQuery as Query};
 use serde::{Deserialize, Serialize};
@@ -60,19 +61,22 @@ pub(super) struct CategoryInput {
 }
 pub(super) async fn create_category(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     crate::ContractJson(input): crate::ContractJson<CategoryInput>,
 ) -> ApiResult<Category> {
     if input.name.trim().is_empty() || input.name.chars().count() > 64 {
         return Err(invalid("分类名称无效"));
     }
+    let mut transaction = crate::content::begin_mutation(&state.pool, &identity).await?;
     let id = sqlx::query("INSERT INTO sort(sort_name,sort_description,priority) VALUES(?,?,?)")
         .bind(input.name.trim())
         .bind(input.description)
         .bind(input.priority.unwrap_or(0))
-        .execute(&state.pool)
+        .execute(&mut *transaction)
         .await
         .map_err(db_error)?
         .last_insert_rowid();
+    transaction.commit().await.map_err(db_error)?;
     Ok(Json(
         sqlx::query_as(
             "SELECT id,sort_name,sort_description,priority,0 AS article_count FROM sort WHERE id=?",
@@ -85,24 +89,27 @@ pub(super) async fn create_category(
 }
 pub(super) async fn update_category(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     Path(id): Path<i64>,
     crate::ContractJson(input): crate::ContractJson<CategoryInput>,
 ) -> ApiResult<Category> {
     if input.name.trim().is_empty() || input.name.chars().count() > 64 {
         return Err(invalid("分类名称无效"));
     }
+    let mut transaction = crate::content::begin_mutation(&state.pool, &identity).await?;
     let changed =
         sqlx::query("UPDATE sort SET sort_name=?,sort_description=?,priority=? WHERE id=?")
             .bind(input.name.trim())
             .bind(input.description)
             .bind(input.priority.unwrap_or(0))
             .bind(id)
-            .execute(&state.pool)
+            .execute(&mut *transaction)
             .await
             .map_err(db_error)?;
     if changed.rows_affected() == 0 {
         return Err(absent());
     }
+    transaction.commit().await.map_err(db_error)?;
     Ok(Json(
         sqlx::query_as("SELECT id,sort_name,sort_description,priority,(SELECT COUNT(*) FROM article a WHERE a.sort_id=sort.id AND a.deleted=0 AND (a.view_status=1 OR a.password IS NOT NULL)) AS article_count FROM sort WHERE id=?")
             .bind(id)
@@ -113,13 +120,10 @@ pub(super) async fn update_category(
 }
 pub(super) async fn delete_category(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     Path(id): Path<i64>,
 ) -> ApiResult<serde_json::Value> {
-    let mut transaction = state
-        .pool
-        .begin_with("BEGIN IMMEDIATE")
-        .await
-        .map_err(db_error)?;
+    let mut transaction = crate::content::begin_mutation(&state.pool, &identity).await?;
     let used: i64 =
         sqlx::query_scalar("SELECT COUNT(*) FROM article WHERE sort_id=? AND deleted=0")
             .bind(id)
@@ -188,16 +192,13 @@ pub(super) struct LabelInput {
 }
 pub(super) async fn create_label(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     crate::ContractJson(input): crate::ContractJson<LabelInput>,
 ) -> ApiResult<AdminLabel> {
     if input.name.trim().is_empty() || input.name.chars().count() > 32 {
         return Err(invalid("标签名称无效"));
     }
-    let mut transaction = state
-        .pool
-        .begin_with("BEGIN IMMEDIATE")
-        .await
-        .map_err(db_error)?;
+    let mut transaction = crate::content::begin_mutation(&state.pool, &identity).await?;
     let exists: Option<i64> = sqlx::query_scalar("SELECT id FROM sort WHERE id=?")
         .bind(input.sort_id)
         .fetch_optional(&mut *transaction)
@@ -225,17 +226,14 @@ pub(super) async fn create_label(
 }
 pub(super) async fn update_label(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     Path(id): Path<i64>,
     crate::ContractJson(input): crate::ContractJson<LabelInput>,
 ) -> ApiResult<AdminLabel> {
     if input.name.trim().is_empty() || input.name.chars().count() > 32 {
         return Err(invalid("标签名称无效"));
     }
-    let mut transaction = state
-        .pool
-        .begin_with("BEGIN IMMEDIATE")
-        .await
-        .map_err(db_error)?;
+    let mut transaction = crate::content::begin_mutation(&state.pool, &identity).await?;
     let previous: i64 = sqlx::query_scalar("SELECT sort_id FROM label WHERE id=?")
         .bind(id)
         .fetch_optional(&mut *transaction)
@@ -265,18 +263,14 @@ pub(super) async fn update_label(
     if category.is_none() {
         return Err(invalid("分类不存在"));
     }
-    let changed =
-        sqlx::query("UPDATE label SET sort_id=?,label_name=?,label_description=? WHERE id=?")
-            .bind(input.sort_id)
-            .bind(input.name.trim())
-            .bind(input.description)
-            .bind(id)
-            .execute(&mut *transaction)
-            .await
-            .map_err(db_error)?;
-    if changed.rows_affected() == 0 {
-        return Err(absent());
-    }
+    sqlx::query("UPDATE label SET sort_id=?,label_name=?,label_description=? WHERE id=?")
+        .bind(input.sort_id)
+        .bind(input.name.trim())
+        .bind(input.description)
+        .bind(id)
+        .execute(&mut *transaction)
+        .await
+        .map_err(db_error)?;
     let label =
         sqlx::query_as("SELECT id,sort_id,label_name,label_description FROM label WHERE id=?")
             .bind(id)
@@ -288,13 +282,10 @@ pub(super) async fn update_label(
 }
 pub(super) async fn delete_label(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     Path(id): Path<i64>,
 ) -> ApiResult<serde_json::Value> {
-    let mut transaction = state
-        .pool
-        .begin_with("BEGIN IMMEDIATE")
-        .await
-        .map_err(db_error)?;
+    let mut transaction = crate::content::begin_mutation(&state.pool, &identity).await?;
     let used: i64 =
         sqlx::query_scalar("SELECT COUNT(*) FROM article WHERE label_id=? AND deleted=0")
             .bind(id)

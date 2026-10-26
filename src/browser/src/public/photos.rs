@@ -265,7 +265,7 @@ pub(super) fn Collection(love: bool, active: Signal<bool>) -> impl IntoView {
                                             })
                                             .r#type("button")
                                             .aria_pressed({
-                                                let checked = title.clone();
+                                                let checked = title;
                                                 move || (selected.get() == checked).to_string()
                                             })
                                             .on(ev::click, move |_| selected.set(click.clone())),

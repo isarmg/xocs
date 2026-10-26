@@ -22,7 +22,6 @@ pub(crate) fn run(
         try_table_catches: IdHashMap::default(),
         legacy_catches: IdHashMap::default(),
         catch_parent: IdHashMap::default(),
-        _phantom: std::marker::PhantomData,
     };
     dfs_in_order(v, func, func.entry_block());
 
@@ -53,16 +52,13 @@ struct Emit<'a, 'instr> {
     map: Option<&'a mut Vec<(InstrLocId, usize)>>,
 
     // Store TryTable catches for emission
-    try_table_catches: IdHashMap<InstrSeq, Vec<TryTableCatch>>,
+    try_table_catches: IdHashMap<InstrSeq, &'instr [TryTableCatch]>,
 
     // Store legacy Try catches for emission
-    legacy_catches: IdHashMap<InstrSeq, Vec<LegacyCatch>>,
+    legacy_catches: IdHashMap<InstrSeq, &'instr [LegacyCatch]>,
 
     // Map from catch handler ID to parent try block ID
     catch_parent: IdHashMap<InstrSeq, InstrSeqId>,
-
-    // Phantom data to use the 'instr lifetime
-    _phantom: std::marker::PhantomData<&'instr ()>,
 }
 
 impl<'instr> Visitor<'instr> for Emit<'_, 'instr> {
@@ -73,8 +69,7 @@ impl<'instr> Visitor<'instr> for Emit<'_, 'instr> {
             let catches = self
                 .try_table_catches
                 .get(&seq.id())
-                .cloned()
-                .unwrap_or_default();
+                .expect("invariant: visiting a try_table registers its catches before its body");
 
             // Convert TryTableCatch to wasm_encoder::Catch
             // IMPORTANT: Calculate branch targets BEFORE pushing the try_table block
@@ -161,8 +156,10 @@ impl<'instr> Visitor<'instr> for Emit<'_, 'instr> {
         let popped_block = self.blocks.pop();
         debug_assert_eq!(popped_block, Some(seq.id()));
 
-        let popped_kind = self.block_kinds.pop();
-        debug_assert!(popped_kind.is_some());
+        let popped_kind = self
+            .block_kinds
+            .pop()
+            .expect("invariant: every instruction sequence has a block kind");
 
         debug_assert_eq!(self.blocks.len(), self.block_kinds.len());
 
@@ -172,7 +169,7 @@ impl<'instr> Visitor<'instr> for Emit<'_, 'instr> {
             map.push((seq.end, pos));
         }
 
-        match popped_kind.unwrap() {
+        match popped_kind {
             BlockKind::If => {
                 // We're about to visit the `else` block, so push its kind.
                 //
@@ -182,52 +179,54 @@ impl<'instr> Visitor<'instr> for Emit<'_, 'instr> {
             }
             BlockKind::Try | BlockKind::Catch => {
                 // Determine the try block ID
-                let try_block_id = if popped_kind.unwrap() == BlockKind::Try {
+                let try_block_id = if popped_kind == BlockKind::Try {
                     seq.id()
                 } else {
                     // This is a catch handler, find its parent try block
                     *self
                         .catch_parent
                         .get(&seq.id())
-                        .expect("Catch handler must have parent try block")
+                        .expect("invariant: every catch handler has a parent try block")
                 };
 
                 // Check if there's a next catch handler to emit
-                if let Some(catches) = self.legacy_catches.get(&try_block_id).cloned() {
-                    // Find which catch we just finished (if any) and emit the next one
-                    let mut found_current = popped_kind.unwrap() == BlockKind::Try;
-                    for catch in catches {
-                        if found_current {
-                            // Emit the next catch handler
-                            match catch {
-                                LegacyCatch::Catch { tag, handler: _ } => {
-                                    let tag_index = self.indices.get_tag_index(tag);
-                                    self.block_kinds.push(BlockKind::Catch);
-                                    self.encoder.instruction(&Instruction::Catch(tag_index));
-                                    return; // Don't emit End yet, we'll visit the handler next
-                                }
-                                LegacyCatch::CatchAll { handler: _ } => {
-                                    self.block_kinds.push(BlockKind::CatchAll);
-                                    self.encoder.instruction(&Instruction::CatchAll);
-                                    return; // Don't emit End yet, we'll visit the handler next
-                                }
-                                LegacyCatch::Delegate { relative_depth } => {
-                                    self.encoder
-                                        .instruction(&Instruction::Delegate(relative_depth));
-                                    return; // Delegate ends the try, no End needed
-                                }
-                            }
-                        }
-                        // Check if this catch matches the current block we're ending
+                let catches = self
+                    .legacy_catches
+                    .get(&try_block_id)
+                    .copied()
+                    .expect("invariant: visiting a try registers its catches before its body");
+                // Find which catch we just finished (if any) and emit the next one
+                let mut found_current = popped_kind == BlockKind::Try;
+                for catch in catches {
+                    if found_current {
+                        // Emit the next catch handler
                         match catch {
-                            LegacyCatch::Catch { handler, .. }
-                            | LegacyCatch::CatchAll { handler } => {
-                                if handler == seq.id() {
-                                    found_current = true;
-                                }
+                            LegacyCatch::Catch { tag, handler: _ } => {
+                                let tag_index = self.indices.get_tag_index(*tag);
+                                self.block_kinds.push(BlockKind::Catch);
+                                self.encoder.instruction(&Instruction::Catch(tag_index));
+                                return; // Don't emit End yet, we'll visit the handler next
                             }
-                            _ => {}
+                            LegacyCatch::CatchAll { handler: _ } => {
+                                self.block_kinds.push(BlockKind::CatchAll);
+                                self.encoder.instruction(&Instruction::CatchAll);
+                                return; // Don't emit End yet, we'll visit the handler next
+                            }
+                            LegacyCatch::Delegate { relative_depth } => {
+                                self.encoder
+                                    .instruction(&Instruction::Delegate(*relative_depth));
+                                return; // Delegate ends the try, no End needed
+                            }
                         }
+                    }
+                    // Check if this catch matches the current block we're ending
+                    match catch {
+                        LegacyCatch::Catch { handler, .. } | LegacyCatch::CatchAll { handler } => {
+                            if *handler == seq.id() {
+                                found_current = true;
+                            }
+                        }
+                        LegacyCatch::Delegate { .. } => {}
                     }
                 }
                 // No more catches, emit End
@@ -237,7 +236,11 @@ impl<'instr> Visitor<'instr> for Emit<'_, 'instr> {
                 // CatchAll is always the last handler, so just emit End
                 self.encoder.instruction(&Instruction::End);
             }
-            _ => {
+            BlockKind::Block
+            | BlockKind::Loop
+            | BlockKind::Else
+            | BlockKind::TryTable
+            | BlockKind::FunctionEntry => {
                 self.encoder.instruction(&Instruction::End);
             }
         }
@@ -272,20 +275,20 @@ impl<'instr> Visitor<'instr> for Emit<'_, 'instr> {
             }
             TryTable(t) => {
                 self.block_kinds.push(BlockKind::TryTable);
-                self.try_table_catches.insert(t.seq, t.catches.clone());
+                self.try_table_catches.insert(t.seq, &t.catches);
                 true
             }
             // Legacy exception handling
             Try(t) => {
                 self.block_kinds.push(BlockKind::Try);
-                self.legacy_catches.insert(t.seq, t.catches.clone());
+                self.legacy_catches.insert(t.seq, &t.catches);
                 // Map each handler to its parent try block
                 for catch in &t.catches {
                     match catch {
                         LegacyCatch::Catch { handler, .. } | LegacyCatch::CatchAll { handler } => {
                             self.catch_parent.insert(*handler, t.seq);
                         }
-                        _ => {}
+                        LegacyCatch::Delegate { .. } => {}
                     }
                 }
                 true

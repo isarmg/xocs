@@ -352,14 +352,14 @@ fn capture_once(
     let directory = Arc::new(match temporary_root {
         Some(root) => {
             let directory = crate::fs_safety::PrivateDirectory::open_existing(root)
-                .map_err(|_| SnapshotError::UnsafeSource)?;
+                .map_err(SnapshotError::TemporaryRoot)?;
             directory
                 .verify_identity()
-                .map_err(|_| SnapshotError::UnsafeSource)?;
+                .map_err(SnapshotError::TemporaryRoot)?;
             let temporary = builder.tempdir_in(root)?;
             directory
                 .verify_identity()
-                .map_err(|_| SnapshotError::UnsafeSource)?;
+                .map_err(SnapshotError::TemporaryRoot)?;
             temporary
         }
         None => builder.tempdir()?,
@@ -408,10 +408,13 @@ fn capture_once(
         (sidecar(path, "-journal"), journal.is_some()),
         (shm_path, shm.is_some()),
     ] {
-        match fs::symlink_metadata(name) {
-            Ok(_) if present => {}
-            Err(error) if error.kind() == io::ErrorKind::NotFound && !present => {}
-            _ => return Err(SnapshotError::SourceChanged),
+        let exists = match fs::symlink_metadata(name) {
+            Ok(_) => true,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => false,
+            Err(error) => return Err(error.into()),
+        };
+        if exists != present {
+            return Err(SnapshotError::SourceChanged);
         }
     }
     if let Some(shm) = shm {
@@ -501,6 +504,8 @@ pub enum SnapshotError {
     InvalidLimits,
     #[error("SQLite validation requires regular, single-linked files and an absolute data path")]
     UnsafeSource,
+    #[error("SQLite validation temporary directory is unavailable or unsafe")]
+    TemporaryRoot(#[source] crate::fs_safety::Error),
     #[error("SQLite validation source does not exist")]
     MissingDatabase,
     #[error("SQLite validation source is empty or invalid")]
@@ -513,13 +518,13 @@ pub enum SnapshotError {
     Timeout,
     #[error("SQLite source has an active writer, checkpoint or recovery; retry later")]
     Busy,
-    #[error("SQLite validation source does not support the required native lock: {0}")]
+    #[error("SQLite validation source does not support the required native lock")]
     LockUnavailable(#[source] io::Error),
     #[error("SQLite validation capture task failed")]
     CaptureTaskFailed(#[source] tokio::task::JoinError),
-    #[error("SQLite validation I/O failed: {0}")]
+    #[error("SQLite validation I/O failed")]
     Io(#[from] io::Error),
-    #[error("SQLite private validation failed: {0}")]
+    #[error("SQLite private validation failed")]
     Sqlx(#[from] sqlx::Error),
 }
 

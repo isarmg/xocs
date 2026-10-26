@@ -17,9 +17,14 @@ struct Window {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, thiserror::Error)]
-pub enum AuthenticationStateError {
+pub enum AuthenticationStateError<StoreError = std::convert::Infallible>
+where
+    StoreError: std::error::Error + Send + Sync + 'static,
+{
     #[error("authentication admission state is unavailable")]
     Unavailable,
+    #[error("failed to load authentication admission state")]
+    Store(#[source] StoreError),
     #[error("login attempt limit reached; retry after {retry_after_seconds} seconds")]
     LoginAttemptsExceeded { retry_after_seconds: u64 },
 }

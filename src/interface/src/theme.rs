@@ -43,7 +43,8 @@ fn apply(value: &str) {
         .and_then(|w| w.document())
         .and_then(|d| d.document_element())
     {
-        let _ = root.set_attribute("data-theme", value);
+        root.set_attribute("data-theme", value)
+            .expect("invariant: data-theme is a valid attribute name");
     }
 }
 
@@ -93,8 +94,13 @@ pub fn toggle() {
     // Keep an explicit preference for this document even when storage is denied.
     MANUAL.with(|manual| manual.set(true));
     if let Some(window) = web_sys::window() {
-        if let Ok(Some(storage)) = window.local_storage() {
-            let _ = storage.set_item("sarmg:theme", next);
+        if let Ok(Some(storage)) = window.local_storage()
+            && let Err(error) = storage.set_item("sarmg:theme", next)
+        {
+            web_sys::console::debug_2(
+                &"Theme preference remains limited to this document".into(),
+                &error,
+            );
         }
         apply(next);
         changed();
@@ -102,9 +108,11 @@ pub fn toggle() {
 }
 
 fn changed() {
-    if let Some(window) = web_sys::window()
-        && let Ok(event) = web_sys::Event::new("blog-theme-change")
-    {
-        let _ = window.dispatch_event(&event);
+    if let Some(window) = web_sys::window() {
+        let event = web_sys::Event::new("blog-theme-change")
+            .expect("invariant: blog-theme-change is a valid event type");
+        window
+            .dispatch_event(&event)
+            .expect("invariant: an initialized theme event can be dispatched");
     }
 }

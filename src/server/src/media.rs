@@ -1,4 +1,5 @@
 //! Media HTTP routes and the write/deletion transaction coordinators.
+use blog_application::admin_core::AuthenticatedIdentity;
 use blog_application::error::HttpStatus;
 mod formats;
 mod references;
@@ -19,11 +20,48 @@ use serde::Deserialize;
 use sqlx::Row;
 
 use self::{
-    formats::{MediaFormat, MediaKind},
+    formats::{MediaFilename, MediaKind},
     references::referenced,
-    storage::{DELETE_PREFIX, UploadedMedia, not_found, reconcile_deletion},
+    storage::{UploadedMedia, not_found, reconcile_deletion, recover_failed_deletion},
 };
 use crate::{ApiResult, AppError, AppState, db_error};
+
+struct MediaUpload {
+    body: Bytes,
+    filename: MediaFilename,
+    original_name: Option<String>,
+}
+
+impl MediaUpload {
+    fn parse(kind: MediaKind, headers: &HeaderMap, body: Bytes) -> Result<Self, AppError> {
+        let original_name = headers
+            .get("x-file-name")
+            .map(|value| {
+                let value = value.to_str().map_err(AppError::FileNameHeader)?;
+                let value = url_encoding::percent::percent_decode_str(value)
+                    .decode_utf8()
+                    .map_err(AppError::FileNameEncoding)?;
+                if value.len() > 200 || value.contains('/') || value.contains('\\') {
+                    return Err(crate::invalid("文件名无效"));
+                }
+                Ok(value.into_owned())
+            })
+            .transpose()?;
+        if body.is_empty() || body.len() > kind.max_bytes() {
+            return Err(crate::invalid("媒体大小无效"));
+        }
+        let format = kind
+            .detect(&body)
+            .ok_or_else(|| crate::invalid(kind.invalid_format_message()))?;
+        use sha2::{Digest, Sha256};
+        let filename = MediaFilename::from_digest(Sha256::digest(&body).into(), format);
+        Ok(Self {
+            body,
+            filename,
+            original_name,
+        })
+    }
+}
 
 pub fn admin_routes() -> Router<AppState> {
     Router::new()
@@ -43,49 +81,41 @@ pub fn admin_routes() -> Router<AppState> {
 
 async fn upload(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     headers: HeaderMap,
     body: Bytes,
 ) -> ApiResult<UploadedMedia> {
-    let author = crate::site_author_id(&state.pool).await?;
-    save_media(&state, &headers, body, author, MediaKind::Image).await
+    save_media(&state, &headers, body, identity, MediaKind::Image).await
 }
 
 async fn upload_video(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     headers: HeaderMap,
     body: Bytes,
 ) -> ApiResult<UploadedMedia> {
-    let author = crate::site_author_id(&state.pool).await?;
-    save_media(&state, &headers, body, author, MediaKind::Video).await
+    save_media(&state, &headers, body, identity, MediaKind::Video).await
 }
 
 async fn save_media(
     state: &AppState,
     headers: &HeaderMap,
     body: Bytes,
-    owner: i64,
+    identity: AuthenticatedIdentity,
     kind: MediaKind,
 ) -> ApiResult<UploadedMedia> {
+    let upload = MediaUpload::parse(kind, headers, body)?;
     let owned = state.clone();
-    let original_name = headers
-        .get("x-file-name")
-        .map(|value| {
-            let value = value.to_str().map_err(AppError::FileNameHeader)?;
-            let value = url_encoding::percent::percent_decode_str(value)
-                .decode_utf8()
-                .map_err(AppError::FileNameEncoding)?;
-            if value.len() > 200 || value.contains('/') || value.contains('\\') {
-                return Err(crate::invalid("文件名无效"));
-            }
-            Ok(value.into_owned())
-        })
-        .transpose()?;
     let result = state
         .scope
         .commit_tasks
         .try_spawn(async move {
             let _operation = owned.media_operations.lock().await;
-            storage::save(&owned, body, owner, kind, original_name).await
+            let mut transaction = crate::content::begin_mutation(&owned.pool, &identity).await?;
+            let owner = crate::site_author_id(&mut *transaction).await?;
+            let result = storage::save(&owned, &mut transaction, upload, owner).await?;
+            transaction.commit().await.map_err(db_error)?;
+            Ok::<_, AppError>(result)
         })?
         .await
         .map_err(|source| AppError::Task {
@@ -103,6 +133,7 @@ struct DeleteResourceInput {
 
 async fn delete_resource(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     ContractPath(id): ContractPath<i64>,
     crate::ContractJson(input): crate::ContractJson<DeleteResourceInput>,
 ) -> ApiResult<serde_json::Value> {
@@ -112,11 +143,7 @@ async fn delete_resource(
         .commit_tasks
         .try_spawn(async move {
             let _operation = owned.media_operations.lock().await;
-            let mut transaction = owned
-                .pool
-                .begin_with("BEGIN IMMEDIATE")
-                .await
-                .map_err(db_error)?;
+            let mut transaction = crate::content::begin_mutation(&owned.pool, &identity).await?;
             let row = sqlx::query("SELECT path,type,store_type FROM resource WHERE id=?")
                 .bind(id)
                 .fetch_optional(&mut *transaction)
@@ -126,72 +153,83 @@ async fn delete_resource(
             let path: Option<String> = row.try_get("path").map_err(db_error)?;
             let kind: Option<String> = row.try_get("type").map_err(db_error)?;
             let storage: Option<String> = row.try_get("store_type").map_err(db_error)?;
-            let path = path
-                .filter(|path| {
-                    path.strip_prefix("/media/")
-                        .and_then(MediaFormat::from_filename)
-                        .is_some_and(|format| {
-                            kind.as_deref() == Some(format.kind().resource_type())
-                        })
+            let filename = path
+                .as_deref()
+                .and_then(|path| path.strip_prefix("/media/").and_then(MediaFilename::parse))
+                .filter(|filename| {
+                    kind.as_deref() == Some(filename.format().kind().resource_type())
                 })
                 .filter(|_| storage.as_deref() == Some("local"))
                 .ok_or(AppError::Public(
                     HttpStatus::Conflict,
                     "仅可删除本站上传的图片或视频",
                 ))?;
+            let path = filename.path();
             if path != input.path {
                 return Err(AppError::Public(
                     HttpStatus::Conflict,
                     "文件记录已经改变，请刷新后重试",
                 ));
             }
-            if referenced(&mut transaction, &path).await? {
+            if referenced(&mut transaction, &filename).await? {
                 return Err(AppError::Public(
                     HttpStatus::Conflict,
                     "媒体仍被站内内容引用，请先移除引用",
                 ));
             }
-            let filename = path
-                .strip_prefix("/media/")
-                .expect("validated media path")
-                .to_owned();
             let media = owned.media.clone();
             let name = filename.clone();
-            let moved = tokio::task::spawn_blocking(move || {
-                use blog_application::fs_safety::{EntryName, NoClobberPublish, PrivateDirectory};
-                let directory = PrivateDirectory::open_existing(media)?;
-                NoClobberPublish::publish(
+            let (directory, moved) = tokio::task::spawn_blocking(move || {
+                use blog_application::fs_safety::{NoClobberPublish, PrivateDirectory};
+                let directory = std::sync::Arc::new(PrivateDirectory::open_existing(media)?);
+                let moved = NoClobberPublish::publish(
                     &directory,
-                    &EntryName::new(&name)?.as_relative(),
-                    &EntryName::new(format!("{DELETE_PREFIX}{name}"))?.as_relative(),
-                )
+                    &name.entry_name().as_relative(),
+                    &name.deletion_name().as_relative(),
+                );
+                Ok::<_, blog_application::fs_safety::Error>((directory, moved))
             })
             .await
             .map_err(|source| AppError::Task {
                 message: "媒体删除失败",
                 source,
-            })?;
-            if let Err(error) = moved
-                && !not_found(&error)
-            {
-                transaction.rollback().await.map_err(db_error)?;
-                reconcile_deletion(&owned.pool, &owned.media, &filename).await?;
-                return Err(error.into());
+            })??;
+            let deletion = async {
+                match moved {
+                    Ok(()) => {}
+                    // A row whose upload has already disappeared can still be removed.
+                    Err(error) if not_found(&error) => {}
+                    Err(error) => return Err(error.into()),
+                }
+                sqlx::query("DELETE FROM resource WHERE id=?")
+                    .bind(id)
+                    .execute(&mut *transaction)
+                    .await
+                    .map_err(db_error)?;
+                Ok::<_, AppError>(())
             }
-            let deletion = sqlx::query("DELETE FROM resource WHERE id=?")
-                .bind(id)
-                .execute(&mut *transaction)
-                .await;
-            if let Err(error) = deletion {
-                transaction.rollback().await.map_err(db_error)?;
-                reconcile_deletion(&owned.pool, &owned.media, &filename).await?;
-                return Err(db_error(error));
+            .await;
+            if let Err(operation) = deletion {
+                if let Err(rollback) = transaction.rollback().await {
+                    return Err(AppError::DeletionRollback {
+                        operation: Box::new(operation),
+                        rollback,
+                    });
+                }
+                return Err(
+                    recover_failed_deletion(&owned.pool, &directory, &filename, operation).await,
+                );
             }
             if let Err(error) = transaction.commit().await {
-                reconcile_deletion(&owned.pool, &owned.media, &filename).await?;
-                return Err(db_error(error));
+                return Err(recover_failed_deletion(
+                    &owned.pool,
+                    &directory,
+                    &filename,
+                    db_error(error),
+                )
+                .await);
             }
-            reconcile_deletion(&owned.pool, &owned.media, &filename).await?;
+            reconcile_deletion(&owned.pool, &directory, &filename).await?;
             Ok(Json(serde_json::json!({"deleted":true})))
         })?
         .await

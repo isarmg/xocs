@@ -28,10 +28,11 @@ pub fn read_private_file(path: &std::path::Path) -> Result<Vec<u8>, ConfigError>
         os::unix::fs::{MetadataExt, OpenOptionsExt},
     };
     let invalid = || ConfigError::new(Reason::UnsafeFile, "", ConfigSource::File);
-    let read_failed = || ConfigError::new(Reason::ReadFailed, "", ConfigSource::File);
+    let read_failed =
+        |cause| ConfigError::new(Reason::ReadFailed, "", ConfigSource::File).with_cause(cause);
     let parent = path.parent().ok_or_else(invalid)?;
-    let directory =
-        crate::state_file::PrivateStateDirectory::open(parent).map_err(|_| invalid())?;
+    let directory = crate::state_file::PrivateStateDirectory::open(parent)
+        .map_err(|cause| invalid().with_cause(ConfigCause::PrivateDirectory(cause)))?;
     let mut file = fs::OpenOptions::new()
         .read(true)
         .custom_flags((rustix::fs::OFlags::NOFOLLOW | rustix::fs::OFlags::NONBLOCK).bits() as i32)
@@ -48,8 +49,11 @@ pub fn read_private_file(path: &std::path::Path) -> Result<Vec<u8>, ConfigError>
                 "",
                 ConfigSource::File,
             )
+            .with_cause(ConfigCause::OpenFile(error))
         })?;
-    let before = file.metadata().map_err(|_| read_failed())?;
+    let before = file
+        .metadata()
+        .map_err(|cause| read_failed(ConfigCause::InspectFile(cause)))?;
     if !before.is_file()
         || before.nlink() != 1
         || before.mode() & 0o777 != 0o600
@@ -68,7 +72,7 @@ pub fn read_private_file(path: &std::path::Path) -> Result<Vec<u8>, ConfigError>
     (&mut file)
         .take(MAX_CONFIG_BYTES as u64 + 1)
         .read_to_end(&mut bytes)
-        .map_err(|_| read_failed())?;
+        .map_err(|cause| read_failed(ConfigCause::ReadFile(cause)))?;
     if bytes.len() > MAX_CONFIG_BYTES {
         return Err(ConfigError::new(
             Reason::LimitExceeded,
@@ -90,8 +94,11 @@ pub fn read_private_file(path: &std::path::Path) -> Result<Vec<u8>, ConfigError>
             metadata.nlink(),
         )
     };
-    let after = file.metadata().map_err(|_| read_failed())?;
-    let named = fs::symlink_metadata(path).map_err(|_| read_failed())?;
+    let after = file
+        .metadata()
+        .map_err(|cause| read_failed(ConfigCause::InspectFile(cause)))?;
+    let named =
+        fs::symlink_metadata(path).map_err(|cause| read_failed(ConfigCause::InspectFile(cause)))?;
     if stamp(&before) != stamp(&after)
         || stamp(&before) != stamp(&named)
         || bytes.len() as u64 != before.len()
@@ -102,7 +109,9 @@ pub fn read_private_file(path: &std::path::Path) -> Result<Vec<u8>, ConfigError>
             ConfigSource::File,
         ));
     }
-    directory.verify_identity().map_err(|_| invalid())?;
+    directory
+        .verify_identity()
+        .map_err(|cause| invalid().with_cause(ConfigCause::PrivateDirectory(cause)))?;
     Ok(bytes)
 }
 
@@ -132,9 +141,9 @@ pub enum Reason {
     SourceChanged,
 }
 
-/// Safe to emit to a terminal or HTTP client: input values and parser text are
-/// deliberately excluded, including invalid enum values and duplicate keys.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+/// Display, Debug and serialization expose only safe contract diagnostics.
+/// The error source retains internal I/O and parser evidence for the caller.
+#[derive(Serialize)]
 pub struct ConfigError {
     pub reason: Reason,
     pub path: String,
@@ -143,6 +152,34 @@ pub struct ConfigError {
     pub line: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub column: Option<usize>,
+    #[serde(skip)]
+    cause: Option<ConfigCause>,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum ConfigCause {
+    #[error("failed to open the private configuration directory")]
+    PrivateDirectory(#[source] crate::state_file::Error),
+    #[error("failed to open the configuration source")]
+    OpenFile(#[source] std::io::Error),
+    #[error("failed to inspect the configuration source")]
+    InspectFile(#[source] std::io::Error),
+    #[error("failed to read the configuration source")]
+    ReadFile(#[source] std::io::Error),
+    #[error("failed to inspect configuration access controls")]
+    ReadAccessControl(#[source] std::io::Error),
+    #[error("failed to parse configuration JSON")]
+    ParseJson(#[source] serde_json::Error),
+    #[error("failed to parse a configuration integer")]
+    ParseInteger(#[source] std::num::ParseIntError),
+    #[error("failed to serialize configuration defaults")]
+    SerializeDefaults(#[source] serde_json::Error),
+    #[error("failed to parse a configuration socket address")]
+    ParseAddress(#[source] std::net::AddrParseError),
+    #[error("failed to parse the configuration root layout")]
+    RootLayout(#[source] crate::server_layout::Error),
+    #[error("failed to parse a configuration URL")]
+    ParseUrl(#[source] url_encoding::address::ParseError),
 }
 
 impl ConfigError {
@@ -153,7 +190,13 @@ impl ConfigError {
             source,
             line: None,
             column: None,
+            cause: None,
         }
+    }
+
+    pub(crate) fn with_cause(mut self, cause: ConfigCause) -> Self {
+        self.cause = Some(cause);
+        self
     }
 
     pub fn envelope(&self) -> crate::error::ErrorEnvelope {
@@ -174,7 +217,14 @@ impl ConfigError {
                 "config_source_changed",
                 "The configuration source changed during inspection.",
             ),
-            _ => (
+            Reason::InvalidSyntax
+            | Reason::DuplicateField
+            | Reason::UnknownField
+            | Reason::MissingField
+            | Reason::TypeMismatch
+            | Reason::InvalidValue
+            | Reason::InvalidMapping
+            | Reason::LimitExceeded => (
                 "contract_violation",
                 "Configuration does not satisfy the current contract.",
             ),
@@ -196,7 +246,24 @@ impl fmt::Display for ConfigError {
         )
     }
 }
-impl std::error::Error for ConfigError {}
+impl fmt::Debug for ConfigError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("ConfigError")
+            .field("reason", &self.reason)
+            .field("path", &self.path)
+            .field("source", &self.source)
+            .field("line", &self.line)
+            .field("column", &self.column)
+            .finish_non_exhaustive()
+    }
+}
+
+impl std::error::Error for ConfigError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.cause.as_ref().map(|cause| cause as _)
+    }
+}
 
 /// A JSON pointer names a current field. Arrays are replaced as a complete
 /// field, so overrides cannot partially patch indexed business records.
@@ -297,10 +364,14 @@ pub fn read_environment(
                 "false" => Value::Bool(false),
                 _ => return Err(invalid()),
             },
-            EnvValueKind::UnsignedInteger => {
-                Value::from(raw.parse::<u64>().map_err(|_| invalid())?)
-            }
-            EnvValueKind::SignedInteger => Value::from(raw.parse::<i64>().map_err(|_| invalid())?),
+            EnvValueKind::UnsignedInteger => Value::from(
+                raw.parse::<u64>()
+                    .map_err(|cause| invalid().with_cause(ConfigCause::ParseInteger(cause)))?,
+            ),
+            EnvValueKind::SignedInteger => Value::from(
+                raw.parse::<i64>()
+                    .map_err(|cause| invalid().with_cause(ConfigCause::ParseInteger(cause)))?,
+            ),
             EnvValueKind::Json => strict::parse_json(raw.as_bytes(), ConfigSource::Environment)
                 .map_err(|mut error| {
                     error.path = format!("{}{}", mapping.path, error.path);
@@ -352,8 +423,10 @@ pub fn resolve_validated<T: Serialize + DeserializeOwned>(
     command_line: &[Override],
     validate: impl Fn(&T, ConfigSource) -> Result<(), ConfigError>,
 ) -> Result<Loaded<T>, ConfigError> {
-    let mut effective = serde_json::to_value(defaults)
-        .map_err(|_| ConfigError::new(Reason::InvalidValue, "", ConfigSource::Default))?;
+    let mut effective = serde_json::to_value(defaults).map_err(|cause| {
+        ConfigError::new(Reason::InvalidValue, "", ConfigSource::Default)
+            .with_cause(ConfigCause::SerializeDefaults(cause))
+    })?;
     if !effective.is_object() {
         return Err(ConfigError::new(
             Reason::TypeMismatch,
@@ -361,15 +434,18 @@ pub fn resolve_validated<T: Serialize + DeserializeOwned>(
             ConfigSource::Default,
         ));
     }
-    let check = |value: Value, source| {
-        let typed = strict::deserialize::<T>(value, source)?;
-        validate(&typed, source).map_err(|mut error| {
+    let validate_at = |typed: &T, source| {
+        validate(typed, source).map_err(|mut error| {
             error.source = source;
             error
-        })?;
+        })
+    };
+    let check = |value: Value, source| {
+        let typed = strict::deserialize::<T>(value, source)?;
+        validate_at(&typed, source)?;
         Ok::<T, ConfigError>(typed)
     };
-    check(effective.clone(), ConfigSource::Default)?;
+    let mut value = check(effective.clone(), ConfigSource::Default)?;
     let mut sources = BTreeMap::new();
     record_sources(&effective, "", ConfigSource::Default, &mut sources);
     if let Some(bytes) = file_json {
@@ -382,7 +458,7 @@ pub fn resolve_validated<T: Serialize + DeserializeOwned>(
             ));
         }
         merge(&mut effective, file, "", &mut sources);
-        check(effective.clone(), ConfigSource::File)?;
+        value = check(effective.clone(), ConfigSource::File)?;
     }
     for (overrides, source) in [
         (environment, ConfigSource::Environment),
@@ -415,17 +491,14 @@ pub fn resolve_validated<T: Serialize + DeserializeOwned>(
             // Reject structural errors immediately so later entries cannot hide
             // unknown fields or invalid types. Product constraints are checked
             // after the complete source, not against a partly applied layer.
-            strict::deserialize::<T>(effective.clone(), source)?;
+            value = strict::deserialize::<T>(effective.clone(), source)?;
             remove_sources(&item.path, &mut sources);
             record_sources(&item.value, &item.path, source, &mut sources);
         }
         if !overrides.is_empty() {
-            check(effective.clone(), source)?;
+            validate_at(&value, source)?;
         }
     }
-    // Every intermediate layer has already been checked. Do not label a final
-    // default/file value as CLI merely because there were no explicit args.
-    let value = strict::deserialize(effective, ConfigSource::Default)?;
     Ok(Loaded { value, sources })
 }
 

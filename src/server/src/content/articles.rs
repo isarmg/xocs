@@ -1,6 +1,10 @@
-use super::PageResult;
+use super::{
+    PageResult,
+    input::{IdempotencyKey, ShortContent},
+};
 use crate::{ApiResult, AppError, AppState, absent, db_error, invalid};
 use axum::{Json, extract::State, http::HeaderMap};
+use blog_application::admin_core::AuthenticatedIdentity;
 use blog_application::server_cli::{ContractPath as Path, ContractQuery as Query};
 use blog_application::{admin_auth::Password, error::HttpStatus};
 use serde::{Deserialize, Serialize};
@@ -83,7 +87,7 @@ async fn list_articles(
 ) -> Result<PageResult<ArticleSummary>, AppError> {
     let page = query.page.unwrap_or(1).clamp(1, 100_000);
     let size = query.size.unwrap_or(12).clamp(1, 100);
-    let search = query.search.unwrap_or_default().trim().to_owned();
+    let search = query.search.as_deref().unwrap_or_default().trim();
     if search.encode_utf16().count() > 200 {
         return Err(invalid("搜索词过长"));
     }
@@ -142,7 +146,7 @@ async fn list_articles(
     let mut transaction = pool.begin().await.map_err(db_error)?;
     let total: i64 = sqlx::query_scalar(sqlx::AssertSqlSafe(count_sql))
         .bind(query.sort_id)
-        .bind(&search)
+        .bind(search)
         .bind(&pattern)
         .bind(recommended)
         .bind(&phrase)
@@ -152,7 +156,7 @@ async fn list_articles(
         .map_err(db_error)?;
     let items = sqlx::query_as::<_, ArticleSummary>(sqlx::AssertSqlSafe(list_sql))
         .bind(query.sort_id)
-        .bind(&search)
+        .bind(search)
         .bind(&pattern)
         .bind(recommended)
         .bind(&phrase)
@@ -320,7 +324,7 @@ pub(super) async fn admin_article_news(
     let page = query.page.unwrap_or(1).clamp(1, 100_000);
     let size = query.size.unwrap_or(20).clamp(1, 100);
     let mut transaction = state.pool.begin().await.map_err(db_error)?;
-    load_article(&mut *transaction, id, ArticleAudience::Administrator).await?;
+    article_author(&mut transaction, id).await?;
     let total: i64 =
         sqlx::query_scalar("SELECT COUNT(*) FROM wei_yan WHERE type='news' AND source=?")
             .bind(id)
@@ -340,81 +344,70 @@ pub(super) async fn admin_article_news(
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct ArticleNewsInput {
-    content: String,
+    content: ShortContent,
     create_time: Option<String>,
 }
 pub(super) async fn admin_create_article_news(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     Path(id): Path<i64>,
     headers: HeaderMap,
     crate::ContractJson(input): crate::ContractJson<ArticleNewsInput>,
 ) -> ApiResult<ArticleNews> {
-    let request_id = headers
-        .get("Idempotency-Key")
-        .map(|value| {
-            value
-                .to_str()
-                .ok()
-                .filter(|key| {
-                    !key.is_empty()
-                        && key.len() <= 128
-                        && key.bytes().all(|byte| byte.is_ascii_graphic())
-                })
-                .map(str::to_owned)
-                .ok_or_else(|| invalid("进展请求标识无效"))
-        })
-        .transpose()?;
+    let request_id = IdempotencyKey::from_headers(&headers)?;
     Ok(Json(
-        insert_article_news(&state, id, input, request_id).await?,
+        insert_article_news(&state, &identity, id, input, request_id).await?,
     ))
 }
 pub(super) async fn admin_delete_article_news(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     Path((article_id, news_id)): Path<(i64, i64)>,
 ) -> ApiResult<serde_json::Value> {
+    let mut transaction = crate::content::begin_mutation(&state.pool, &identity).await?;
     let changed = sqlx::query("DELETE FROM wei_yan WHERE id=? AND source=? AND type='news'")
         .bind(news_id)
         .bind(article_id)
-        .execute(&state.pool)
+        .execute(&mut *transaction)
         .await
         .map_err(db_error)?;
     if changed.rows_affected() == 0 {
         return Err(absent());
     }
+    transaction.commit().await.map_err(db_error)?;
     Ok(Json(serde_json::json!({"deleted":true})))
 }
 
 pub(super) async fn admin_update_article_news(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     Path((article_id, news_id)): Path<(i64, i64)>,
     crate::ContractJson(input): crate::ContractJson<ArticleNewsInput>,
 ) -> ApiResult<ArticleNews> {
-    load_article(&state.pool, article_id, ArticleAudience::Administrator).await?;
-    validate_news_content(&input.content)?;
+    let mut transaction = crate::content::begin_mutation(&state.pool, &identity).await?;
+    sqlx::query_scalar::<_, i64>("SELECT id FROM article WHERE id=? AND deleted=0")
+        .bind(article_id)
+        .fetch_optional(&mut *transaction)
+        .await
+        .map_err(db_error)?
+        .ok_or_else(absent)?;
     let time = normalize_news_time(input.create_time)?;
     let changed = sqlx::query("UPDATE wei_yan SET content=?,create_time=COALESCE(?,create_time) WHERE id=? AND source=? AND type='news'")
-        .bind(input.content.trim()).bind(time).bind(news_id).bind(article_id)
-        .execute(&state.pool).await.map_err(db_error)?;
+        .bind(input.content.as_str()).bind(time).bind(news_id).bind(article_id)
+        .execute(&mut *transaction).await.map_err(db_error)?;
     if changed.rows_affected() == 0 {
         return Err(absent());
     }
-    Ok(Json(
-        sqlx::query_as::<_, ArticleNews>(sqlx::AssertSqlSafe(format!(
-            "{ARTICLE_NEWS_SQL} WHERE w.id=? AND w.source=? AND w.type='news'"
-        )))
-        .bind(news_id)
-        .bind(article_id)
-        .fetch_one(&state.pool)
-        .await
-        .map_err(db_error)?,
-    ))
-}
-
-fn validate_news_content(content: &str) -> Result<(), AppError> {
-    if content.trim().is_empty() || content.trim().chars().count() > 1024 {
-        return Err(invalid("进展内容应为 1 至 1024 字"));
-    }
-    Ok(())
+    let result = sqlx::query_as::<_, ArticleNews>(sqlx::AssertSqlSafe(format!(
+        "{ARTICLE_NEWS_SQL} WHERE w.id=? AND w.source=? AND w.type='news'"
+    )))
+    .bind(news_id)
+    .bind(article_id)
+    .fetch_one(&mut *transaction)
+    .await
+    .map_err(db_error)?;
+    transaction.commit().await.map_err(db_error)?;
+    Ok(Json(result))
 }
 
 fn normalize_news_time(raw: Option<String>) -> Result<Option<String>, AppError> {
@@ -449,14 +442,23 @@ fn normalize_news_time(raw: Option<String>) -> Result<Option<String>, AppError> 
     Ok(Some(parsed.format("%Y-%m-%d %H:%M:%S").to_string()))
 }
 
+async fn article_author(connection: &mut sqlx::SqliteConnection, id: i64) -> Result<i64, AppError> {
+    sqlx::query_scalar("SELECT user_id FROM article WHERE id=? AND deleted=0")
+        .bind(id)
+        .fetch_optional(connection)
+        .await
+        .map_err(db_error)?
+        .ok_or_else(absent)
+}
+
 async fn insert_article_news(
     state: &AppState,
+    identity: &AuthenticatedIdentity,
     id: i64,
     input: ArticleNewsInput,
-    request_id: Option<String>,
+    request_id: Option<IdempotencyKey<'_>>,
 ) -> Result<ArticleNews, AppError> {
-    validate_news_content(&input.content)?;
-    let content = input.content.trim();
+    let content = input.content.as_str();
     let time = normalize_news_time(input.create_time)?;
     use sha2::{Digest, Sha256};
     // Bind the key to its article and normalized original draft, including time.
@@ -465,22 +467,13 @@ async fn insert_article_news(
             .expect("invariant: news strings and identifiers serialize to JSON"),
     )
     .to_vec();
-    let mut transaction = state
-        .pool
-        .begin_with("BEGIN IMMEDIATE")
-        .await
-        .map_err(db_error)?;
-    let author: i64 = sqlx::query_scalar("SELECT user_id FROM article WHERE id=? AND deleted=0")
-        .bind(id)
-        .fetch_optional(&mut *transaction)
-        .await
-        .map_err(db_error)?
-        .ok_or_else(absent)?;
+    let mut transaction = crate::content::begin_mutation(&state.pool, identity).await?;
+    let author = article_author(&mut transaction, id).await?;
     let previous: Option<(Vec<u8>, Option<i64>)> = if let Some(key) = &request_id {
         sqlx::query_as(
             "SELECT request_hash,news_id FROM article_news_submission WHERE request_id=?",
         )
-        .bind(key)
+        .bind(key.as_str())
         .fetch_optional(&mut *transaction)
         .await
         .map_err(db_error)?
@@ -503,7 +496,7 @@ async fn insert_article_news(
             .bind(author).bind(content).bind(id).bind(time).execute(&mut *transaction).await.map_err(db_error)?.last_insert_rowid();
         if let Some(key) = request_id {
             sqlx::query("INSERT INTO article_news_submission(request_id,request_hash,news_id) VALUES(?,?,?)")
-                .bind(key).bind(request_hash).bind(news_id).execute(&mut *transaction).await.map_err(db_error)?;
+                .bind(key.as_str()).bind(request_hash).bind(news_id).execute(&mut *transaction).await.map_err(db_error)?;
         }
         news_id
     };
@@ -562,7 +555,7 @@ pub(super) async fn unlock_article(
     .ok_or_else(absent)?;
     let permit = tokio::time::timeout(
         std::time::Duration::from_secs(2),
-        state.password_slots.clone().acquire_owned(),
+        std::sync::Arc::clone(&state.password_slots).acquire_owned(),
     )
     .await
     .map_err(|source| AppError::Busy {
@@ -619,8 +612,24 @@ pub(super) async fn unlock_article(
     Ok(Json(article))
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
+struct ArticleInputDto {
+    article_title: String,
+    article_content: String,
+    article_cover: Option<String>,
+    video_url: Option<String>,
+    sort_id: i64,
+    label_id: i64,
+    view_status: bool,
+    recommend_status: bool,
+    comment_status: bool,
+    password: Option<String>,
+    tips: Option<String>,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(try_from = "ArticleInputDto")]
 pub(super) struct ArticleInput {
     article_title: String,
     article_content: String,
@@ -634,23 +643,62 @@ pub(super) struct ArticleInput {
     password: Option<String>,
     tips: Option<String>,
 }
-fn validate_article(input: &ArticleInput, has_existing_password: bool) -> Result<(), AppError> {
-    if input.article_title.trim().is_empty() || input.article_title.chars().count() > 120 {
-        return Err(invalid("文章标题无效"));
+
+#[derive(Debug, thiserror::Error)]
+enum ArticleInputError {
+    #[error("文章标题无效")]
+    Title,
+    #[error("文章内容无效")]
+    Content,
+    #[error("请选择分类和标签")]
+    Taxonomy,
+    #[error("公开文章不可设置访问密码")]
+    PublicPassword,
+}
+
+impl TryFrom<ArticleInputDto> for ArticleInput {
+    type Error = ArticleInputError;
+
+    fn try_from(input: ArticleInputDto) -> Result<Self, Self::Error> {
+        let ArticleInputDto {
+            article_title,
+            article_content,
+            article_cover,
+            video_url,
+            sort_id,
+            label_id,
+            view_status,
+            recommend_status,
+            comment_status,
+            password,
+            tips,
+        } = input;
+        if article_title.trim().is_empty() || article_title.chars().count() > 120 {
+            return Err(ArticleInputError::Title);
+        }
+        if article_content.trim().is_empty() || article_content.len() > 2_000_000 {
+            return Err(ArticleInputError::Content);
+        }
+        if sort_id < 1 || label_id < 1 {
+            return Err(ArticleInputError::Taxonomy);
+        }
+        if view_status && password.is_some() {
+            return Err(ArticleInputError::PublicPassword);
+        }
+        Ok(Self {
+            article_title,
+            article_content,
+            article_cover,
+            video_url,
+            sort_id,
+            label_id,
+            view_status,
+            recommend_status,
+            comment_status,
+            password,
+            tips,
+        })
     }
-    if input.article_content.trim().is_empty() || input.article_content.len() > 2_000_000 {
-        return Err(invalid("文章内容无效"));
-    }
-    if input.sort_id < 1 || input.label_id < 1 {
-        return Err(invalid("请选择分类和标签"));
-    }
-    if !input.view_status && input.password.is_none() && !has_existing_password {
-        return Err(invalid("加密文章必须设置访问密码"));
-    }
-    if input.view_status && input.password.is_some() {
-        return Err(invalid("公开文章不可设置访问密码"));
-    }
-    Ok(())
 }
 
 // Serialize taxonomy validation with label moves/deletes and category deletion.
@@ -675,25 +723,14 @@ async fn validate_article_taxonomy(
 
 pub(super) async fn create_article(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     headers: HeaderMap,
     crate::ContractJson(input): crate::ContractJson<ArticleInput>,
 ) -> ApiResult<Article> {
-    validate_article(&input, false)?;
-    let request_id = headers
-        .get("Idempotency-Key")
-        .map(|value| {
-            value
-                .to_str()
-                .ok()
-                .filter(|key| {
-                    !key.is_empty()
-                        && key.len() <= 128
-                        && key.bytes().all(|byte| byte.is_ascii_graphic())
-                })
-                .map(str::to_owned)
-                .ok_or_else(|| invalid("文章请求标识无效"))
-        })
-        .transpose()?;
+    if !input.view_status && input.password.is_none() {
+        return Err(invalid("加密文章必须设置访问密码"));
+    }
+    let request_id = IdempotencyKey::from_headers(&headers)?;
     use sha2::{Digest, Sha256};
     let request_hash = Sha256::digest(
         serde_json::to_vec(&input).expect("invariant: article strings and flags serialize to JSON"),
@@ -706,14 +743,10 @@ pub(super) async fn create_article(
         .transpose()
         .map_err(AppError::InvalidPassword)?;
     let password = hash_article_password(&state, password).await?;
-    let mut transaction = state
-        .pool
-        .begin_with("BEGIN IMMEDIATE")
-        .await
-        .map_err(db_error)?;
+    let mut transaction = crate::content::begin_mutation(&state.pool, &identity).await?;
     if let Some(key) = &request_id {
         let receipt: Option<(Vec<u8>, i64, i64)> = sqlx::query_as("SELECT s.request_hash,s.article_id,a.deleted FROM article_submission s JOIN article a ON a.id=s.article_id WHERE s.request_id=?")
-            .bind(key).fetch_optional(&mut *transaction).await.map_err(db_error)?;
+            .bind(key.as_str()).fetch_optional(&mut *transaction).await.map_err(db_error)?;
         if let Some((hash, id, deleted)) = receipt {
             if hash != request_hash || deleted != 0 {
                 return Err(AppError::Public(
@@ -738,7 +771,7 @@ pub(super) async fn create_article(
         sqlx::query(
             "INSERT INTO article_submission(request_id,request_hash,article_id) VALUES(?,?,?)",
         )
-        .bind(key)
+        .bind(key.as_str())
         .bind(request_hash)
         .bind(id)
         .execute(&mut *transaction)
@@ -760,7 +793,7 @@ async fn hash_article_password(
     };
     let permit = tokio::time::timeout(
         std::time::Duration::from_secs(2),
-        state.password_slots.clone().acquire_owned(),
+        std::sync::Arc::clone(&state.password_slots).acquire_owned(),
     )
     .await
     .map_err(|source| AppError::Busy {
@@ -783,6 +816,7 @@ async fn hash_article_password(
 
 pub(super) async fn update_article(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     Path(id): Path<i64>,
     crate::ContractJson(input): crate::ContractJson<ArticleInput>,
 ) -> ApiResult<Article> {
@@ -793,30 +827,23 @@ pub(super) async fn update_article(
         .transpose()
         .map_err(AppError::InvalidPassword)?;
     let password = hash_article_password(&state, password).await?;
-    let mut transaction = state
-        .pool
-        .begin_with("BEGIN IMMEDIATE")
-        .await
-        .map_err(db_error)?;
-    let old_password: Option<Option<String>> =
-        sqlx::query_scalar("SELECT password FROM article WHERE id=? AND deleted=0")
+    let mut transaction = crate::content::begin_mutation(&state.pool, &identity).await?;
+    let has_password: bool =
+        sqlx::query_scalar("SELECT password IS NOT NULL FROM article WHERE id=? AND deleted=0")
             .bind(id)
             .fetch_optional(&mut *transaction)
             .await
-            .map_err(db_error)?;
-    let Some(old_password) = old_password else {
-        return Err(absent());
-    };
-    validate_article(&input, old_password.is_some())?;
+            .map_err(db_error)?
+            .ok_or_else(absent)?;
+    if !input.view_status && input.password.is_none() && !has_password {
+        return Err(invalid("加密文章必须设置访问密码"));
+    }
     validate_article_taxonomy(&mut transaction, &input).await?;
 
-    let result = sqlx::query("UPDATE article SET sort_id=?,label_id=?,article_cover=?,article_title=?,article_content=?,video_url=?,view_status=?,recommend_status=?,comment_status=?,password=CASE WHEN ?=1 THEN NULL ELSE COALESCE(?,password) END,tips=?,update_time=CURRENT_TIMESTAMP WHERE id=? AND deleted=0")
+    sqlx::query("UPDATE article SET sort_id=?,label_id=?,article_cover=?,article_title=?,article_content=?,video_url=?,view_status=?,recommend_status=?,comment_status=?,password=CASE WHEN ?=1 THEN NULL ELSE COALESCE(?,password) END,tips=?,update_time=CURRENT_TIMESTAMP WHERE id=? AND deleted=0")
         .bind(input.sort_id).bind(input.label_id).bind(input.article_cover).bind(input.article_title).bind(input.article_content).bind(input.video_url)
         .bind(i64::from(input.view_status)).bind(i64::from(input.recommend_status)).bind(i64::from(input.comment_status)).bind(i64::from(input.view_status)).bind(password).bind(input.tips).bind(id)
         .execute(&mut *transaction).await.map_err(db_error)?;
-    if result.rows_affected() == 0 {
-        return Err(absent());
-    }
     transaction.commit().await.map_err(db_error)?;
     Ok(Json(
         load_article(&state.pool, id, ArticleAudience::Administrator).await?,
@@ -825,18 +852,21 @@ pub(super) async fn update_article(
 
 pub(super) async fn delete_article(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     Path(id): Path<i64>,
 ) -> ApiResult<serde_json::Value> {
+    let mut transaction = crate::content::begin_mutation(&state.pool, &identity).await?;
     let result = sqlx::query(
         "UPDATE article SET deleted=1,update_time=CURRENT_TIMESTAMP WHERE id=? AND deleted=0",
     )
     .bind(id)
-    .execute(&state.pool)
+    .execute(&mut *transaction)
     .await
     .map_err(db_error)?;
     if result.rows_affected() == 0 {
         return Err(absent());
     }
+    transaction.commit().await.map_err(db_error)?;
     Ok(Json(serde_json::json!({"deleted":true})))
 }
 

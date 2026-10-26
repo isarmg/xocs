@@ -25,7 +25,10 @@ pub(crate) fn parse(tokens: &mut Peekable<token_stream::IntoIter>) -> Result<Vec
         Some(TokenTree::Punct(punct)) => punct.as_char() != '>',
         Some(_) => true,
     } {
-        match tokens.next().unwrap() {
+        match tokens
+            .next()
+            .expect("invariant: peek confirmed the next token exists")
+        {
             TokenTree::Ident(ident) => {
                 let mut fragment = ident.to_string();
                 if fragment.starts_with("r#") {
@@ -37,7 +40,9 @@ pub(crate) fn parse(tokens: &mut Peekable<token_stream::IntoIter>) -> Result<Vec
                         _ => false,
                     }
                 {
-                    let bang = tokens.next().unwrap(); // `!`
+                    let bang = tokens
+                        .next()
+                        .expect("invariant: peek confirmed the next token exists"); // `!`
                     let expect_group = tokens.next();
                     let parenthesized = match &expect_group {
                         Some(TokenTree::Group(group))
@@ -154,24 +159,15 @@ pub(crate) fn paste(segments: &[Segment]) -> Result<String> {
                 is_lifetime = true;
             }
             Segment::Env(var) => {
-                let resolved = match std::env::var(&var.value) {
-                    Ok(resolved) => resolved,
-                    Err(_) => {
-                        return Err(Error::new(
-                            var.span,
-                            &format!("no such env var: {:?}", var.value),
-                        ));
-                    }
-                };
+                let resolved = std::env::var(&var.value).map_err(|error| {
+                    Error::new(var.span, &environment_error_message(&var.value, error))
+                })?;
                 let resolved = resolved.replace('-', "_");
                 evaluated.push(resolved);
             }
             Segment::Modifier(colon, ident) => {
-                let last = match evaluated.pop() {
-                    Some(last) => last,
-                    None => {
-                        return Err(Error::new2(colon.span, ident.span(), "unexpected modifier"));
-                    }
+                let Some(last) = evaluated.pop() else {
+                    return Err(Error::new2(colon.span, ident.span(), "unexpected modifier"));
                 };
                 match ident.to_string().as_str() {
                     "lower" => {
@@ -231,3 +227,16 @@ pub(crate) fn paste(segments: &[Segment]) -> Result<String> {
     }
     Ok(pasted)
 }
+
+fn environment_error_message(name: &str, error: std::env::VarError) -> String {
+    // Compiler diagnostics expose the name and failure category without the value.
+    let reason = match error {
+        std::env::VarError::NotPresent => "is not set",
+        std::env::VarError::NotUnicode(_) => "is not valid Unicode",
+    };
+    format!("environment variable {name:?} {reason}")
+}
+
+#[cfg(test)]
+#[path = "../../../../../test/interface/macros/unit/token_join/segment.rs"]
+mod tests;

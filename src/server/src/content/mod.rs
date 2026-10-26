@@ -6,16 +6,21 @@ use axum::{
 use serde::{Deserialize, Serialize};
 
 mod articles;
+mod authorization;
 mod catalog;
 mod comments;
 mod family;
 mod guestbook;
+mod input;
 mod letter;
 mod links;
 mod notes;
 mod resources;
 mod site;
 mod statistics;
+
+pub(crate) use authorization::begin_mutation;
+pub(crate) use input::IdempotencyKeyError;
 
 #[derive(Serialize)]
 struct PageResult<T> {

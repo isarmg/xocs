@@ -12,6 +12,8 @@
 
 开发构建使用 Cargo 默认的增量编译。磁盘受限的验证环境可设置 `CARGO_INCREMENTAL=0`；测试和发行构建使用各自的 profile。产品、应用、浏览器与组件门面继承 workspace 的 `unused_must_use`、`unnecessary_wraps` 和 unsafe 规则，构建器与界面库另外禁止 unsafe。DOM 基础实现保留其独立的 cfg 和 unsafe 边界，通过维护库与实际消费者验证。
 
+workspace 还检查丢弃必须处理的结果、无说明的 `unwrap`、可简化的控制流、冗余克隆及有限枚举的通配分支。CI 使用 `-D warnings`；测试函数可按 `clippy.toml` 使用 `unwrap`，外部非穷尽枚举的语言要求通过局部且注明原因的 `#[expect]` 表达。
+
 ```sh
 python3 src/tools/rust-sources/manage.py verify --metadata
 python3 src/tools/check-independence.py

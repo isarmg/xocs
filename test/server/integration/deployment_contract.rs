@@ -1,6 +1,6 @@
 use std::{
     fs,
-    io::{Read, Write},
+    io::{self, Read, Write},
     net::{SocketAddr, TcpListener, TcpStream},
     os::unix::fs::PermissionsExt,
     path::Path,
@@ -10,37 +10,78 @@ use std::{
 const BINARY: &str = env!("CARGO_BIN_EXE_blog");
 
 fn fixture(bind: SocketAddr) -> tempfile::TempDir {
-    let root = tempfile::tempdir().unwrap();
-    fs::set_permissions(root.path(), fs::Permissions::from_mode(0o755)).unwrap();
-    fs::create_dir(root.path().join("config")).unwrap();
+    let root = tempfile::tempdir().expect("create deployment fixture root");
+    fs::set_permissions(root.path(), fs::Permissions::from_mode(0o755))
+        .expect("set deployment fixture root permissions");
+    fs::create_dir(root.path().join("config")).expect("create fixture configuration directory");
     fs::set_permissions(
         root.path().join("config"),
         fs::Permissions::from_mode(0o700),
     )
-    .unwrap();
+    .expect("set private fixture configuration directory permissions");
     let config = root.path().join("config/config.json");
     fs::write(
         &config,
         serde_json::to_vec(&serde_json::json!({"bind":bind.to_string(),"development":true}))
-            .unwrap(),
+            .expect("invariant: fixture configuration serializes to JSON"),
     )
-    .unwrap();
-    fs::set_permissions(config, fs::Permissions::from_mode(0o600)).unwrap();
+    .expect("write fixture configuration");
+    fs::set_permissions(config, fs::Permissions::from_mode(0o600))
+        .expect("set private fixture configuration file permissions");
     root
 }
 fn available_address() -> SocketAddr {
     TcpListener::bind("127.0.0.1:0")
-        .unwrap()
+        .expect("reserve a loopback test address")
         .local_addr()
-        .unwrap()
+        .expect("read the reserved loopback address")
 }
 struct Running(std::process::Child);
-impl Drop for Running {
-    fn drop(&mut self) {
-        let _ = self.0.kill();
-        let _ = self.0.wait();
+impl Running {
+    fn stop(mut self) -> io::Result<()> {
+        if self.0.try_wait()?.is_none() {
+            self.0.kill()?;
+        }
+        self.0.wait()?;
+        Ok(())
     }
 }
+impl Drop for Running {
+    fn drop(&mut self) {
+        match self.0.try_wait() {
+            Ok(Some(_)) => return,
+            Ok(None) => {}
+            Err(error) => eprintln!("inspect fixture process during cleanup: {error}"),
+        }
+        // Assertion failures also need cleanup; Drop reports failures without a second panic.
+        if let Err(kill) = self.0.kill() {
+            match self.0.try_wait() {
+                Ok(Some(_)) => return,
+                Ok(None) => eprintln!("kill fixture process during cleanup: {kill}"),
+                Err(wait) => {
+                    eprintln!("kill fixture process during cleanup: {kill}; inspect exit: {wait}");
+                }
+            }
+            return;
+        }
+        if let Err(error) = self.0.wait() {
+            eprintln!("reap fixture process during cleanup: {error}");
+        }
+    }
+}
+
+fn probe_readiness(address: SocketAddr) -> io::Result<bool> {
+    let mut socket = TcpStream::connect_timeout(&address, Duration::from_millis(200))?;
+    socket.set_read_timeout(Some(Duration::from_millis(500)))?;
+    socket.set_write_timeout(Some(Duration::from_millis(500)))?;
+    socket.write_all(
+        format!("GET /readyz HTTP/1.1\r\nHost: {address}\r\nConnection: close\r\n\r\n").as_bytes(),
+    )?;
+    let mut response = String::new();
+    socket.take(65_536).read_to_string(&mut response)?;
+    Ok(response.starts_with("HTTP/1.1 200"))
+}
+
 fn start(root: &Path, address: SocketAddr) -> Running {
     let mut child = Running(
         Command::new(BINARY)
@@ -50,39 +91,46 @@ fn start(root: &Path, address: SocketAddr) -> Running {
             .stdout(Stdio::null())
             .stderr(Stdio::piped())
             .spawn()
-            .unwrap(),
+            .expect("spawn the compiled server for the deployment fixture"),
     );
     let deadline = Instant::now() + Duration::from_secs(15);
     loop {
-        if let Some(status) = child.0.try_wait().unwrap() {
+        if let Some(status) = child.0.try_wait().expect("inspect fixture server exit") {
             let mut diagnostic = String::new();
             child
                 .0
                 .stderr
                 .take()
-                .unwrap()
+                .expect("invariant: fixture server stderr was piped")
                 .take(65536)
                 .read_to_string(&mut diagnostic)
-                .unwrap();
+                .expect("read bounded fixture server startup diagnostics");
             panic!("runtime exited before ready: {status}: {diagnostic}");
         }
-        if let Ok(mut socket) = TcpStream::connect_timeout(&address, Duration::from_millis(200)) {
-            socket
-                .set_read_timeout(Some(Duration::from_millis(500)))
-                .unwrap();
-            socket
-                .write_all(
-                    format!("GET /readyz HTTP/1.1\r\nHost: {address}\r\nConnection: close\r\n\r\n")
-                        .as_bytes(),
-                )
-                .unwrap();
-            let mut response = String::new();
-            let _ = socket.read_to_string(&mut response);
-            if response.starts_with("HTTP/1.1 200") {
-                return child;
+        match probe_readiness(address) {
+            Ok(true) => return child,
+            Ok(false) => {
+                assert!(Instant::now() < deadline, "runtime readiness timeout");
             }
+            Err(error)
+                if matches!(
+                    error.kind(),
+                    io::ErrorKind::ConnectionRefused
+                        | io::ErrorKind::ConnectionReset
+                        | io::ErrorKind::ConnectionAborted
+                        | io::ErrorKind::BrokenPipe
+                        | io::ErrorKind::UnexpectedEof
+                        | io::ErrorKind::TimedOut
+                        | io::ErrorKind::WouldBlock
+                ) =>
+            {
+                assert!(
+                    Instant::now() < deadline,
+                    "runtime readiness timeout: {error}"
+                );
+            }
+            Err(error) => panic!("fixture readiness request failed: {error}"),
         }
-        assert!(Instant::now() < deadline, "runtime readiness timeout");
         std::thread::sleep(Duration::from_millis(50));
     }
 }
@@ -161,9 +209,9 @@ async fn current_installed_state_starts_and_foreign_state_rejects_without_writes
         !duplicate.status.success(),
         "accepted concurrent runtime for the same physical state"
     );
-    drop(running);
+    running.stop().expect("stop the first fixture server");
     let restarted = start(root.path(), address);
-    drop(restarted);
+    restarted.stop().expect("stop the restarted fixture server");
     let options = sqlx::sqlite::SqliteConnectOptions::new()
         .filename(&database)
         .journal_mode(sqlx::sqlite::SqliteJournalMode::Delete);

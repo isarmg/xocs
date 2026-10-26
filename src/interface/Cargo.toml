@@ -27,7 +27,7 @@ web-sys = {  features = [
   "HtmlImageElement", "HtmlInputElement", "HtmlMediaElement", "HtmlOptionElement", "HtmlOptionsCollection",
   "HtmlSelectElement", "HtmlTemplateElement", "HtmlTextAreaElement", "HtmlVideoElement", "InputEvent",
   "KeyboardEvent", "Location", "MediaQueryList", "MediaQueryListEvent", "MediaStream",
-  "MediaStreamTrack", "MessageEvent", "MouseEvent", "MutationObserver", "MutationObserverInit",
+  "MediaStreamTrack", "MessageEvent", "MouseEvent", "MutationObserver", "MutationObserverInit", "MutationRecord",
   "Navigator", "Node", "NodeList", "PageTransitionEvent", "Performance", "PointerEvent",
   "ProgressEvent", "ReadableStream", "ReadableStreamDefaultReader", "ReadableStreamReadResult", "Request",
   "RequestCache", "RequestCredentials", "RequestInit", "RequestMode", "RequestRedirect",
@@ -70,6 +70,11 @@ path = "../../test/interface/integration/executor_overrides.rs"
 [[test]]
 name = "kernel_state"
 path = "../../test/interface/integration/kernel_state.rs"
+
+[[example]]
+name = "corner-listener-contracts"
+path = "../../test/interface/browser/fixture.rs"
+crate-type = ["cdylib"]
 
 [lints]
 workspace = true

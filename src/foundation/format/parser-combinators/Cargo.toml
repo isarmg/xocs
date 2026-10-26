@@ -120,3 +120,7 @@ unused_macro_rules = "warn"
 [lints.rust.rust_2018_idioms]
 level = "warn"
 priority = -1
+
+[[test]]
+name = "numeric-contracts"
+path = "../../../../test/foundation/format/parser-combinators/integration/numeric_contracts.rs"

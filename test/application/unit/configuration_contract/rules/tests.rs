@@ -1,6 +1,77 @@
 use super::*;
 use serde_json::json;
 
+#[test]
+fn rule_and_path_modes_accept_only_their_string_representation() {
+    let range =
+        json!({"kind":"integer-range","fields":["/value"],"arguments":{"minimum":1,"maximum":2}});
+    validate(json!([range]), json!({"value":1})).unwrap();
+    let mut object_kind = range;
+    object_kind["kind"] = json!({"integer-range":null});
+    assert_eq!(
+        validate(json!([object_kind]), json!({"value":1}))
+            .unwrap_err()
+            .reason,
+        Reason::InvalidMapping
+    );
+
+    let path = json!({"base":"root","value":"state","fallback":null,"suffix":"","encoding":"path"});
+    let rule = |path| json!([{"kind":"root-state-paths","fields":[],"arguments":{"paths":[path],"protected":[]}}]);
+    validate(rule(path.clone()), json!({})).unwrap();
+    for (field, object) in [
+        ("base", json!({"root":null})),
+        ("encoding", json!({"path":null})),
+    ] {
+        let mut invalid = path.clone();
+        invalid[field] = object;
+        assert_eq!(
+            validate(rule(invalid), json!({})).unwrap_err().reason,
+            Reason::InvalidMapping
+        );
+    }
+}
+
+#[test]
+fn rule_decoding_and_address_failures_preserve_their_sources_privately() {
+    use std::error::Error as _;
+    let unknown = validate(
+        json!([{"kind":"private-unknown-rule","fields":[],"arguments":{}}]),
+        json!({}),
+    )
+    .unwrap_err();
+    assert_eq!(unknown.reason, Reason::InvalidMapping);
+    assert!(
+        unknown
+            .source()
+            .unwrap()
+            .source()
+            .unwrap()
+            .is::<serde_json::Error>()
+    );
+    let address = validate(
+        json!([{"kind":"socket-address","fields":["/bind"],"arguments":{}}]),
+        json!({"bind":"private-invalid-address"}),
+    )
+    .unwrap_err();
+    assert_eq!(address.reason, Reason::InvalidValue);
+    assert!(
+        address
+            .source()
+            .unwrap()
+            .source()
+            .unwrap()
+            .is::<std::net::AddrParseError>()
+    );
+    for failure in [unknown, address] {
+        assert!(!format!("{failure:?}").contains("private-"));
+        assert!(
+            !serde_json::to_string(&failure.envelope())
+                .unwrap()
+                .contains("private-")
+        );
+    }
+}
+
 fn validate(rules: Value, value: Value) -> std::result::Result<(), ConfigError> {
     validate_rules(
         &rules,
@@ -8,6 +79,50 @@ fn validate(rules: Value, value: Value) -> std::result::Result<(), ConfigError> 
         Path::new("/opt/fixture"),
         ConfigSource::File,
     )
+}
+
+#[test]
+fn optional_paths_and_relative_urls_still_reject_malformed_rule_arguments() {
+    assert_eq!(
+        validate(
+            json!([{"kind":"path","fields":["/path"],"arguments":{"optional":true,"absolute":"invalid"}}]),
+            json!({"path":null}),
+        )
+        .unwrap_err()
+        .reason,
+        Reason::InvalidMapping,
+    );
+    for arguments in [
+        json!({"relative_path":true}),
+        json!({"relative_path":true,"allowed_schemes":false}),
+        json!({"relative_path":true,"allowed_schemes":[]}),
+        json!({"relative_path":true,"allowed_schemes":["https"],"no_credentials":1}),
+        json!({"relative_path":true,"allowed_schemes":["https"],"no_query":1}),
+        json!({"relative_path":true,"allowed_schemes":["https"],"no_fragment":1}),
+        json!({"relative_path":true,"allowed_schemes":["https"],"loopback_host":1}),
+        json!({"relative_path":true,"allowed_schemes":["https"],"origin_only":1}),
+        json!({"relative_path":true,"allowed_schemes":["https"],"production_public_rtsps":1}),
+    ] {
+        assert_eq!(
+            validate(
+                json!([{"kind":"url","fields":["/url"],"arguments":arguments}]),
+                json!({"url":"/media/image.png"}),
+            )
+            .unwrap_err()
+            .reason,
+            Reason::InvalidMapping,
+        );
+    }
+    validate(
+        json!([{"kind":"path","fields":["/path"],"arguments":{"optional":true,"absolute":true}}]),
+        json!({"path":null}),
+    )
+    .unwrap();
+    validate(
+        json!([{"kind":"url","fields":["/url"],"arguments":{"relative_path":true,"allowed_schemes":["https"],"no_credentials":true,"no_query":true,"no_fragment":true}}]),
+        json!({"url":"/media/image.png"}),
+    )
+    .unwrap();
 }
 
 #[test]

@@ -146,7 +146,7 @@ impl Default for RequestOptions {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum AuthPhase {
     Loading,
     Anonymous,
@@ -184,7 +184,7 @@ pub fn snapshot() -> AuthSnapshot {
         let s = s.borrow();
         AuthSnapshot {
             session: s.session.clone(),
-            phase: s.phase.clone(),
+            phase: s.phase,
             error: s.error.clone(),
             account_updated: s.account_updated,
         }
@@ -214,11 +214,16 @@ fn invalidate(error: Option<ApiError>) {
     });
     changed();
 }
-fn begin_mutation(revoking: bool) -> u64 {
+enum SessionMutation {
+    Login,
+    Logout,
+}
+
+fn begin_mutation(mutation: SessionMutation) -> u64 {
     let generation = STATE.with(|s| {
         let mut s = s.borrow_mut();
         s.generation += 1;
-        if revoking {
+        if matches!(mutation, SessionMutation::Logout) {
             s.revoking = Some(s.generation);
         }
         s.restore = None;
@@ -234,8 +239,12 @@ fn begin_mutation(revoking: bool) -> u64 {
     changed();
     generation
 }
+fn is_current_generation(generation: u64) -> bool {
+    STATE.with(|s| s.borrow().generation) == generation
+}
+
 fn require_generation(generation: u64) -> Result<(), ApiError> {
-    if STATE.with(|s| s.borrow().generation) == generation {
+    if is_current_generation(generation) {
         Ok(())
     } else {
         Err(ApiError::local(LocalErrorCode::AuthOperationSuperseded))
@@ -359,7 +368,7 @@ pub async fn request_with_options(
         let s = s.borrow();
         (
             s.generation,
-            s.session.as_ref().map(|v| v.csrf_token.clone()),
+            s.session.as_ref().map(|v| v.csrf_token().to_owned()),
         )
     });
     send(path, method, body, options, token, generation).await
@@ -376,10 +385,24 @@ pub async fn request_blob(
         let s = s.borrow();
         (
             s.generation,
-            s.session.as_ref().map(|v| v.csrf_token.clone()),
+            s.session.as_ref().map(|v| v.csrf_token().to_owned()),
         )
     });
-    send_body(path, method, None, Some(body), options, token, generation).await
+    send_body(
+        path,
+        method,
+        RequestBody::Blob(body),
+        options,
+        token,
+        generation,
+    )
+    .await
+}
+
+enum RequestBody {
+    Empty,
+    Json(Value),
+    Blob(web_sys::Blob),
 }
 
 async fn send(
@@ -390,14 +413,21 @@ async fn send(
     token: Option<String>,
     generation: u64,
 ) -> Result<Value, ApiError> {
-    send_body(path, method, body, None, options, token, generation).await
+    send_body(
+        path,
+        method,
+        body.map_or(RequestBody::Empty, RequestBody::Json),
+        options,
+        token,
+        generation,
+    )
+    .await
 }
 
 async fn send_body(
     path: &str,
     method: &str,
-    body: Option<Value>,
-    raw_body: Option<web_sys::Blob>,
+    body: RequestBody,
     options: RequestOptions,
     token: Option<String>,
     generation: u64,
@@ -454,36 +484,41 @@ async fn send_body(
             .set("x-csrf-token", token)
             .map_err(|source| ApiError::with_source(LocalErrorCode::InvalidHeaders, source))?;
     }
-    if let Some(body) = body {
-        headers
-            .set("content-type", "application/json")
-            .map_err(|source| ApiError::with_source(LocalErrorCode::InvalidHeaders, source))?;
-        init.set_body(&JsValue::from_str(&body.to_string()));
-    }
-    if let Some(body) = raw_body {
-        if !headers
-            .has("content-type")
-            .map_err(|source| ApiError::with_source(LocalErrorCode::InvalidHeaders, source))?
-        {
-            let media = body.type_();
+    match body {
+        RequestBody::Empty => {}
+        RequestBody::Json(body) => {
             headers
-                .set(
-                    "content-type",
-                    if media.is_empty() {
-                        "application/octet-stream"
-                    } else {
-                        &media
-                    },
-                )
+                .set("content-type", "application/json")
                 .map_err(|source| ApiError::with_source(LocalErrorCode::InvalidHeaders, source))?;
+            init.set_body(&JsValue::from_str(&body.to_string()));
         }
-        init.set_body(body.as_ref());
+        RequestBody::Blob(body) => {
+            if !headers
+                .has("content-type")
+                .map_err(|source| ApiError::with_source(LocalErrorCode::InvalidHeaders, source))?
+            {
+                let media = body.type_();
+                headers
+                    .set(
+                        "content-type",
+                        if media.is_empty() {
+                            "application/octet-stream"
+                        } else {
+                            &media
+                        },
+                    )
+                    .map_err(|source| {
+                        ApiError::with_source(LocalErrorCode::InvalidHeaders, source)
+                    })?;
+            }
+            init.set_body(body.as_ref());
+        }
     }
     init.set_headers(&headers);
     let operation = async {
         let response: Response = JsFuture::from(
             web_sys::window()
-                .unwrap()
+                .expect("invariant: the application is mounted in a browser window")
                 .fetch_with_str_and_init(&target, &init),
         )
         .await
@@ -498,7 +533,7 @@ async fn send_body(
         if status == 401
             && path != LOGIN_PATH
             && path != LOGOUT_PATH
-            && require_generation(generation).is_ok()
+            && is_current_generation(generation)
         {
             invalidate(None);
         }
@@ -679,19 +714,15 @@ async fn read_bounded(response: &Response, maximum: usize) -> Result<Vec<u8>, Ap
 }
 
 fn session(value: Value) -> Result<AdministratorSession, ApiError> {
-    let session: AdministratorSession = serde_json::from_value(value)
-        .map_err(|source| ApiError::with_source(LocalErrorCode::InvalidResponseShape, source))?;
-    if !session.validate() {
-        return Err(ApiError::local(LocalErrorCode::InvalidResponseShape));
-    }
-    Ok(session)
+    serde_json::from_value(value)
+        .map_err(|source| ApiError::with_source(LocalErrorCode::InvalidResponseShape, source))
 }
 
 pub async fn login(username: &str, password: &str) -> Result<AdministratorSession, ApiError> {
     if !valid_username_candidate(username) || !valid_password(password) {
         return Err(ApiError::local(LocalErrorCode::InvalidCredentials));
     }
-    let generation = begin_mutation(false);
+    let generation = begin_mutation(SessionMutation::Login);
     let mutex = MUTATIONS.with(Clone::clone);
     let _guard = mutex.lock().await;
     let received = send(
@@ -735,7 +766,7 @@ pub async fn restore() -> Result<AdministratorSession, ApiError> {
             match received {
                 Ok(session) => publish(session, generation),
                 Err(error) => {
-                    if require_generation(generation).is_ok() {
+                    if is_current_generation(generation) {
                         if error.status == 401 {
                             invalidate(None);
                         } else {
@@ -762,10 +793,15 @@ pub async fn restore() -> Result<AdministratorSession, ApiError> {
 }
 
 pub async fn logout() -> Result<(), ApiError> {
-    let generation = begin_mutation(true);
+    let generation = begin_mutation(SessionMutation::Logout);
     let mutex = MUTATIONS.with(Clone::clone);
     let _guard = mutex.lock().await;
-    let token = STATE.with(|s| s.borrow().transport.as_ref().map(|v| v.csrf_token.clone()));
+    let token = STATE.with(|s| {
+        s.borrow()
+            .transport
+            .as_ref()
+            .map(|v| v.csrf_token().to_owned())
+    });
     let result = send(
         LOGOUT_PATH,
         "POST",

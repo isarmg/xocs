@@ -57,7 +57,10 @@ async fn fixture() -> Fixture {
         service,
         context: AdministratorManagementContext {
             identity,
-            request_id: Some("management-test".into()),
+            request_id: Some(
+                crate::error::RequestId::new("management-test")
+                    .expect("fixture request ID is valid"),
+            ),
             now_micros: now(),
         },
     }
@@ -285,7 +288,7 @@ async fn explicit_empty_password_does_not_update_or_revoke_the_account() {
 #[tokio::test]
 async fn own_account_update_is_atomic_and_keeps_identity() {
     let f = fixture().await;
-    let original = f.context.identity.administrator_id.clone();
+    let original = f.context.identity.administrator_id().clone();
     f.service
         .update_own_account(
             &f.context,
@@ -382,8 +385,8 @@ async fn wrong_password_and_duplicate_name_leave_account_unchanged() {
 async fn stale_touch_cannot_overwrite_a_changed_csrf_hash() {
     let f = fixture().await;
     let store = f.service.store();
-    let id = &f.context.identity.session_id;
-    let old = f.context.identity.csrf_hash;
+    let id = f.context.identity.session_id();
+    let old = *f.context.identity.csrf_hash();
     let current = [42; 32];
     let timestamp = now();
     sqlx::query("UPDATE _common_admin_sessions SET csrf_hash=? WHERE session_id=?")
@@ -466,8 +469,8 @@ async fn account_audit_failure_rolls_back_password_identity_and_session_revocati
 async fn minute_activity_updates_can_finish_out_of_order_without_logging_out() {
     let f = fixture().await;
     let store = f.service.store();
-    let id = &f.context.identity.session_id;
-    let hash = f.context.identity.csrf_hash;
+    let id = f.context.identity.session_id();
+    let hash = *f.context.identity.csrf_hash();
     let timestamp = now() + 61_000_000;
     let deadline = timestamp + crate::admin_core::SESSION_IDLE_MICROS;
     assert!(

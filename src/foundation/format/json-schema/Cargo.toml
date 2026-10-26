@@ -87,3 +87,7 @@ features = [
     "parser",
 ]
 
+[[test]]
+name = "serialization-contracts"
+path = "../../../../test/foundation/format/json-schema/integration/serialization_contracts.rs"
+

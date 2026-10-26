@@ -1,5 +1,6 @@
 //! A variety of DOM utility functions.
 
+use crate::events::{EventListener, EventListenerOptions};
 use crate::poison::OrPoisoned;
 #[cfg(debug_assertions)]
 use crate::reactivity::diagnostics::SpecialNonReactiveZone;
@@ -30,48 +31,6 @@ pub fn window() -> web_sys::Window {
 /// requires only one call out to JavaScript.
 pub fn document() -> web_sys::Document {
     DOCUMENT.with(Clone::clone)
-}
-
-/// Sets a property on a DOM element.
-pub fn set_property(el: &web_sys::Element, prop_name: &str, value: &Option<JsValue>) {
-    let key = JsValue::from_str(prop_name);
-    match value {
-        Some(value) => _ = js_sys::Reflect::set(el, &key, value),
-        None => _ = js_sys::Reflect::delete_property(el, &key),
-    };
-}
-
-/// Gets the value of a property set on a DOM element.
-#[doc(hidden)]
-pub fn get_property(el: &web_sys::Element, prop_name: &str) -> Result<JsValue, JsValue> {
-    let key = JsValue::from_str(prop_name);
-    js_sys::Reflect::get(el, &key)
-}
-
-/// Returns the current [`window.location`](https://developer.mozilla.org/en-US/docs/Web/API/Window/location).
-pub fn location() -> web_sys::Location {
-    window().location()
-}
-
-/// Current [`window.location.hash`](https://developer.mozilla.org/en-US/docs/Web/API/Window/location)
-/// without the beginning #.
-pub fn location_hash() -> Option<String> {
-    if is_server() {
-        None
-    } else {
-        location()
-            .hash()
-            .ok()
-            .map(|hash| match hash.chars().next() {
-                Some('#') => hash[1..].to_string(),
-                _ => hash,
-            })
-    }
-}
-
-/// Current [`window.location.pathname`](https://developer.mozilla.org/en-US/docs/Web/API/Window/location).
-pub fn location_pathname() -> Option<String> {
-    location().pathname().ok()
 }
 
 /// Helper function to extract [`Event.target`](https://developer.mozilla.org/en-US/docs/Web/API/Event/target)
@@ -117,7 +76,9 @@ impl AnimationFrameRequestHandle {
     /// Cancels the animation frame request to which this refers.
     /// See [`cancelAnimationFrame()`](https://developer.mozilla.org/en-US/docs/Web/API/Window/cancelAnimationFrame)
     pub fn cancel(&self) {
-        _ = window().cancel_animation_frame(self.0);
+        window()
+            .cancel_animation_frame(self.0)
+            .unwrap_or_else(|error| wasm_bindgen::throw_val(error));
     }
 }
 
@@ -129,7 +90,7 @@ impl AnimationFrameRequestHandle {
 /// The callback is called outside of the reactive ownership tree. This means that it does not have access to context via [`use_context`](blog_dom::reactivity::owner::use_context). If you want to use context inside the callback, you should either call `use_context` in the body of the component, and move the value into the callback, or access the current owner inside the component body using [`Owner::current`](blog_dom::reactivity::owner::Owner::current) and reestablish it in the callback with [`Owner::with`](blog_dom::reactivity::owner::Owner::with).
 #[inline(always)]
 pub fn request_animation_frame(cb: impl FnOnce() + 'static) {
-    _ = request_animation_frame_with_handle(cb);
+    request_animation_frame_with_handle(cb).unwrap_or_else(|error| wasm_bindgen::throw_val(error));
 }
 
 // Closure::once_into_js only frees the callback when it's actually
@@ -193,7 +154,7 @@ impl IdleCallbackHandle {
 /// The callback is called outside of the reactive ownership tree. This means that it does not have access to context via [`use_context`](blog_dom::reactivity::owner::use_context). If you want to use context inside the callback, you should either call `use_context` in the body of the component, and move the value into the callback, or access the current owner inside the component body using [`Owner::current`](blog_dom::reactivity::owner::Owner::current) and reestablish it in the callback with [`Owner::with`](blog_dom::reactivity::owner::Owner::with).
 #[inline(always)]
 pub fn request_idle_callback(cb: impl Fn() + 'static) {
-    _ = request_idle_callback_with_handle(cb);
+    request_idle_callback_with_handle(cb).unwrap_or_else(|error| wasm_bindgen::throw_val(error));
 }
 
 /// Queues the given function during an idle period using
@@ -252,7 +213,7 @@ impl TimeoutHandle {
 ///
 /// The callback is called outside of the reactive ownership tree. This means that it does not have access to context via [`use_context`](blog_dom::reactivity::owner::use_context). If you want to use context inside the callback, you should either call `use_context` in the body of the component, and move the value into the callback, or access the current owner inside the component body using [`Owner::current`](blog_dom::reactivity::owner::Owner::current) and reestablish it in the callback with [`Owner::with`](blog_dom::reactivity::owner::Owner::with).
 pub fn set_timeout(cb: impl FnOnce() + 'static, duration: Duration) {
-    _ = set_timeout_with_handle(cb, duration);
+    set_timeout_with_handle(cb, duration).unwrap_or_else(|error| wasm_bindgen::throw_val(error));
 }
 
 /// Executes the given function after the given duration of time has passed, returning a cancelable handle.
@@ -273,16 +234,17 @@ pub fn set_timeout_with_handle(
     };
 
     #[inline(never)]
-    fn st(cb: JsValue, duration: Duration) -> Result<TimeoutHandle, JsValue> {
+    fn st(cb: JsValue, millis: i32) -> Result<TimeoutHandle, JsValue> {
         window()
             .set_timeout_with_callback_and_timeout_and_arguments_0(
                 cb.as_ref().unchecked_ref(),
-                duration.as_millis().try_into().unwrap_throw(),
+                millis,
             )
             .map(TimeoutHandle)
     }
 
-    st(closure_once(cb), duration)
+    let millis = timer_delay(duration)?;
+    st(closure_once(cb), millis)
 }
 
 /// "Debounce" a callback function. This will cause it to wait for a period of `delay`
@@ -326,21 +288,20 @@ pub fn debounce<T: 'static>(delay: Duration, cb: impl FnMut(T) + 'static) -> imp
     });
 
     move |arg| {
-        if let Some(timer) = timer.write().unwrap().take() {
+        if let Some(timer) = timer.write().or_poisoned().take() {
             timer.clear();
         }
         let handle = set_timeout_with_handle(
             {
                 let cb = Arc::clone(&cb);
                 move || {
-                    cb.write().unwrap()(arg);
+                    cb.write().or_poisoned()(arg);
                 }
             },
             delay,
         );
-        if let Ok(handle) = handle {
-            *timer.write().or_poisoned() = Some(handle);
-        }
+        let handle = handle.unwrap_or_else(|error| wasm_bindgen::throw_val(error));
+        *timer.write().or_poisoned() = Some(handle);
     }
 }
 
@@ -363,7 +324,7 @@ impl IntervalHandle {
 ///
 /// The callback is called outside of the reactive ownership tree. This means that it does not have access to context via [`use_context`](blog_dom::reactivity::owner::use_context). If you want to use context inside the callback, you should either call `use_context` in the body of the component, and move the value into the callback, or access the current owner inside the component body using [`Owner::current`](blog_dom::reactivity::owner::Owner::current) and reestablish it in the callback with [`Owner::with`](blog_dom::reactivity::owner::Owner::with).
 pub fn set_interval(cb: impl Fn() + 'static, duration: Duration) {
-    _ = set_interval_with_handle(cb, duration);
+    set_interval_with_handle(cb, duration).unwrap_or_else(|error| wasm_bindgen::throw_val(error));
 }
 
 /// Repeatedly calls the given function, with a delay of the given duration between calls,
@@ -385,18 +346,19 @@ pub fn set_interval_with_handle(
     };
 
     #[inline(never)]
-    fn si(cb: Box<dyn FnMut()>, duration: Duration) -> Result<IntervalHandle, JsValue> {
+    fn si(cb: Box<dyn FnMut()>, millis: i32) -> Result<IntervalHandle, JsValue> {
         let cb = Closure::wrap(cb).into_js_value();
 
         window()
             .set_interval_with_callback_and_timeout_and_arguments_0(
                 cb.as_ref().unchecked_ref(),
-                duration.as_millis().try_into().unwrap_throw(),
+                millis,
             )
             .map(IntervalHandle)
     }
 
-    si(Box::new(cb), duration)
+    let millis = timer_delay(duration)?;
+    si(Box::new(cb), millis)
 }
 
 /// Adds an event listener to the `Window`, typed as a generic `Event`,
@@ -416,22 +378,12 @@ pub fn window_event_listener_untyped(
         cb(e);
     };
 
-    if !is_server() {
-        #[inline(never)]
-        fn wel(cb: Box<dyn FnMut(web_sys::Event)>, event_name: &str) -> WindowListenerHandle {
-            let cb = Closure::wrap(cb).into_js_value();
-            _ = window().add_event_listener_with_callback(event_name, cb.unchecked_ref());
-            let event_name = event_name.to_string();
-            let cb = SendWrapper::new(cb);
-            WindowListenerHandle(Box::new(move || {
-                _ = window().remove_event_listener_with_callback(&event_name, cb.unchecked_ref());
-            }))
-        }
-
-        wel(Box::new(cb), event_name)
-    } else {
-        WindowListenerHandle(Box::new(|| ()))
-    }
+    WindowListenerHandle(SendWrapper::new(EventListener::new_with_options(
+        window().as_ref(),
+        event_name.to_owned(),
+        EventListenerOptions::enable_prevent_default(),
+        move |event| cb(event.clone()),
+    )))
 }
 
 /// Creates a window event listener from a typed event, returning a
@@ -462,8 +414,9 @@ where
     })
 }
 
-/// A handle that can be called to remove a global event listener.
-pub struct WindowListenerHandle(Box<dyn FnOnce() + Send + Sync>);
+/// A global event listener that is removed when its handle is dropped.
+#[must_use = "dropping the handle removes the window event listener"]
+pub struct WindowListenerHandle(SendWrapper<EventListener>);
 
 impl core::fmt::Debug for WindowListenerHandle {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -474,18 +427,16 @@ impl core::fmt::Debug for WindowListenerHandle {
 impl WindowListenerHandle {
     /// Removes the event listener.
     pub fn remove(self) {
-        (self.0)()
+        self.0
+            .take()
+            .remove()
+            .unwrap_or_else(|error| wasm_bindgen::throw_val(error));
     }
 }
 
-/// Returns `true` if the current environment is a server.
-pub fn is_server() -> bool {
-    {
-        false
-    }
-}
-
-/// Returns `true` if the current environment is a browser.
-pub fn is_browser() -> bool {
-    !is_server()
+fn timer_delay(duration: Duration) -> Result<i32, JsValue> {
+    duration
+        .as_millis()
+        .try_into()
+        .map_err(|_| js_sys::RangeError::new("timer delay exceeds i32 milliseconds").into())
 }

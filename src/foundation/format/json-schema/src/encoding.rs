@@ -27,7 +27,8 @@ pub fn encode_ref_name(name: &str) -> Cow<'_, str> {
             } else if byte == b'/' {
                 buf.push_str("~1");
             } else if needs_encoding(byte) {
-                write!(buf, "%{byte:2X}").unwrap();
+                write!(buf, "%{byte:02X}")
+                    .expect("invariant: formatting into a String cannot fail");
             } else {
                 buf.push(byte as char);
             }
@@ -47,7 +48,12 @@ pub fn percent_decode(s: &str) -> Option<Cow<'_, str>> {
         let mut buf = Vec::<u8>::new();
 
         let mut segments = s.split('%');
-        buf.extend(segments.next().unwrap_or_default().as_bytes());
+        buf.extend(
+            segments
+                .next()
+                .expect("invariant: str::split always yields its first segment")
+                .as_bytes(),
+        );
 
         for segment in segments {
             if let Some(decoded_byte) = segment

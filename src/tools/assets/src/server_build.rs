@@ -282,7 +282,15 @@ fn verify_assets(inventory: &Inventory, dist: &Path, binary: &[u8]) -> Result<()
     {
         return Err(NativeBuildError::InvalidInventory);
     }
-    let mut actual: BTreeSet<_> = crate::inventory::files(dist)?.into_keys().collect();
+    let mut actual = crate::inventory::walk(dist)?
+        .into_iter()
+        .map(|path| {
+            crate::inventory::relative(
+                path.strip_prefix(dist)
+                    .expect("invariant: walked assets remain under their distribution"),
+            )
+        })
+        .collect::<std::result::Result<BTreeSet<_>, _>>()?;
     let mut previous = "";
     for asset in &inventory.files {
         if asset.path.as_str() <= previous || !sha(&asset.sha256) || asset.content_type.is_empty() {
@@ -427,10 +435,7 @@ pub fn source_stamp(root: &Path) -> Result<SourceStamp> {
             Ok(info) => info,
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
             Err(source) => {
-                return Err(NativeBuildError::InspectSource {
-                    path: path.clone(),
-                    source,
-                });
+                return Err(NativeBuildError::InspectSource { path, source });
             }
         };
         if info.file_type().is_symlink() {
@@ -659,10 +664,16 @@ pub fn build(options: &crate::Options, request: BuildRequest<'_>) -> Result<Path
         return Err(NativeBuildError::CompiledIdentityMismatch);
     }
     let binary_bytes = read(&binary, 1024 * 1024 * 1024)?;
+    let identity_sha256 = digest(&identity_bytes);
     if memchr::memmem::find(&binary_bytes, &inventory_bytes).is_none()
         || memchr::memmem::find(&binary_bytes, identity.web_assets_sha256.as_bytes()).is_none()
     {
         return Err(NativeBuildError::MissingEmbeddedInventory);
+    }
+    if memchr::memmem::find(&binary_bytes, &identity_bytes).is_none()
+        || memchr::memmem::find(&binary_bytes, identity_sha256.as_bytes()).is_none()
+    {
+        return Err(NativeBuildError::BinaryReceiptMismatch);
     }
     verify_assets(&inventory, &dist, &binary_bytes)?;
     if source_stamp(root)? != stamp {
@@ -672,7 +683,7 @@ pub fn build(options: &crate::Options, request: BuildRequest<'_>) -> Result<Path
         format: "blog-assets-receipt-v1".into(),
         binary_sha256: digest(&binary_bytes),
         inventory_sha256: digest(&inventory_bytes),
-        identity_sha256: digest(&identity_bytes),
+        identity_sha256,
         inventory,
         identity,
     };
@@ -688,7 +699,6 @@ pub fn build(options: &crate::Options, request: BuildRequest<'_>) -> Result<Path
         &destination,
         &serde_json::to_vec(&receipt).expect("invariant: receipt fields serialize to JSON"),
     )?;
-    verify(&binary, &dist, &destination)?;
     if let Some(export) = std::env::var_os("BLOG_BUILD_METADATA_DIR") {
         let export = PathBuf::from(export);
         if !export.is_absolute() {

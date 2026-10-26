@@ -4,21 +4,27 @@ use std::path::{Path, PathBuf};
 
 pub use crate::config_definition::Settings;
 
+enum EnvironmentSource {
+    Runtime,
+    #[cfg(feature = "maintenance")]
+    Offline,
+}
+
 pub fn load(root: &Path, config: &Path) -> Result<Loaded<Settings>, Error> {
-    load_with_environment(root, config, true)
+    load_with_environment(root, config, EnvironmentSource::Runtime)
 }
 
 /// Offline operations take their complete state target from ROOT/config only.
 /// Runtime environment overrides must never redirect a maintenance operation.
 #[cfg(feature = "maintenance")]
 pub(crate) fn load_offline(root: &Path, config: &Path) -> Result<Loaded<Settings>, Error> {
-    load_with_environment(root, config, false)
+    load_with_environment(root, config, EnvironmentSource::Offline)
 }
 
 fn load_with_environment(
     root: &Path,
     config: &Path,
-    runtime: bool,
+    environment_source: EnvironmentSource,
 ) -> Result<Loaded<Settings>, Error> {
     if !root.is_absolute()
         || root == Path::new("/")
@@ -68,7 +74,7 @@ fn load_with_environment(
         },
     ];
     let mut values = std::collections::BTreeMap::new();
-    if runtime {
+    if matches!(environment_source, EnvironmentSource::Runtime) {
         for mapping in &mappings {
             match std::env::var(mapping.variable) {
                 Ok(value) => {

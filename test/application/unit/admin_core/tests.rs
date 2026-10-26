@@ -117,7 +117,9 @@ fn audit_input_is_bounded_before_json_parsing_and_uses_canonical_request_ids() {
         outcome: AuditOutcome::Success,
         actor_administrator_id: None,
         subject_digest: None,
-        request_id: Some("valid-request".into()),
+        request_id: Some(
+            crate::error::RequestId::new("valid-request").expect("fixture request ID is valid"),
+        ),
         detail_json: "{}".into(),
         occurred_at_micros: 1,
     };
@@ -128,14 +130,7 @@ fn audit_input_is_bounded_before_json_parsing_and_uses_canonical_request_ids() {
     );
     assert!(event.validate().is_err());
     event.detail_json = "{}".into();
-    event.request_id = Some("invalid\nrequest".into());
-    let failure = event.validate().unwrap_err();
-    assert!(
-        failure
-            .source()
-            .unwrap()
-            .is::<crate::error::InvalidRequestId>()
-    );
+    assert!(RequestId::new("invalid\nrequest").is_err());
 
     event.request_id = None;
     event.detail_json = "{".into();
@@ -143,16 +138,10 @@ fn audit_input_is_bounded_before_json_parsing_and_uses_canonical_request_ids() {
     assert!(failure.source().unwrap().is::<serde_json::Error>());
 
     let context = LoginContext {
-        request_id: Some("invalid\nrequest".into()),
+        request_id: Some(RequestId::new("valid-context").unwrap()),
         now_micros: 1,
     };
-    let failure = context.validate().unwrap_err();
-    assert!(
-        failure
-            .source()
-            .unwrap()
-            .is::<crate::error::InvalidRequestId>()
-    );
+    context.validate().unwrap();
 }
 
 // Separate fixtures model separate processes without sharing the process-wide budget.

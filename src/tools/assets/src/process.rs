@@ -250,9 +250,7 @@ impl Output {
     }
 
     fn append(&mut self, bytes: &[u8], stream: Stream) -> Result<()> {
-        let count = bytes
-            .len()
-            .min(self.maximum.saturating_sub(self.bytes.len()));
+        let count = bytes.len().min(self.maximum - self.bytes.len());
         let needed = self.bytes.len() + count;
         if needed > self.bytes.capacity() {
             let capacity = self

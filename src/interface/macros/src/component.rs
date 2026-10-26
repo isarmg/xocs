@@ -75,7 +75,7 @@ impl Parse for Model {
             docs,
             unknown_attrs,
             vis: item.vis.clone(),
-            name: convert_from_snake_case(&item.sig.ident),
+            name: convert_from_snake_case(&item.sig.ident)?,
             props,
             ret: item.sig.output.clone(),
             body: item,
@@ -96,12 +96,20 @@ pub fn drain_filter<T>(vec: &mut Vec<T>, mut some_predicate: impl FnMut(&mut T) 
     }
 }
 
-pub fn convert_from_snake_case(name: &Ident) -> Ident {
+fn convert_from_snake_case(name: &Ident) -> syn::Result<Ident> {
     let name_str = name.to_string();
-    if name_str != snake(&name_str) {
-        name.clone()
+    let name_str = name_str.strip_prefix("r#").unwrap_or(&name_str);
+    if name_str != snake(name_str) {
+        Ok(name.clone())
     } else {
-        Ident::new(&pascal(&name_str), name.span())
+        let mut converted = syn::parse_str::<Ident>(&pascal(name_str)).map_err(|_| {
+            syn::Error::new(
+                name.span(),
+                "component name must form a valid Rust identifier",
+            )
+        })?;
+        converted.set_span(name.span());
+        Ok(converted)
     }
 }
 
@@ -124,7 +132,7 @@ impl Model {
         if !is_transparent {
             let ends_semi = body.block.stmts.last().and_then(|stmt| match stmt {
                 Stmt::Item(Item::Macro(mac)) => mac.semi_token.as_ref(),
-                _ => None,
+                Stmt::Local(_) | Stmt::Item(_) | Stmt::Expr(..) | Stmt::Macro(_) => None,
             });
             if let Some(semi) = ends_semi {
                 errors.push(syn::Error::new(
@@ -309,14 +317,16 @@ fn prop_identifier(name: &str, span: Span) -> syn::Result<Ident> {
 
 impl Prop {
     fn new(arg: FnArg) -> syn::Result<Self> {
-        let typed = if let FnArg::Typed(ty) = arg {
-            ty
-        } else {
+        let FnArg::Typed(typed) = arg else {
             return Err(syn::Error::new_spanned(arg, "receiver not allowed in `fn`"));
         };
 
         let prop_opts = PropOpt::from_attributes(&typed.attrs)?;
 
+        #[expect(
+            clippy::wildcard_enum_match_arm,
+            reason = "syn patterns are non-exhaustive; other prop patterns produce a boundary diagnostic"
+        )]
         let name = match *typed.pat {
             Pat::Ident(i) => {
                 if let Some((name, span)) = &prop_opts.name {
@@ -862,10 +872,9 @@ fn prop_to_doc(
 }
 
 pub fn unmodified_fn_name_from_fn_name(ident: &Ident) -> Ident {
-    Ident::new(
-        &format!("__component_{}", snake(&ident.to_string())),
-        ident.span(),
-    )
+    let spelling = ident.to_string();
+    let spelling = spelling.strip_prefix("r#").unwrap_or(&spelling);
+    Ident::new(&format!("__component_{}", snake(spelling)), ident.span())
 }
 
 /// Converts all `impl Trait`s in a function signature to use generic params instead.
@@ -923,14 +932,18 @@ fn convert_impl_trait_to_generic(sig: &mut Signature) {
 // Literal extraction formerly supplied by leptos_hot_reload::parsing.
 // The original MIT source and archive identity remain in compliance provenance.
 fn value_to_string(value: &syn::Expr) -> Option<String> {
-    match value {
-        syn::Expr::Lit(lit) => match &lit.lit {
-            syn::Lit::Str(s) => Some(s.value()),
-            syn::Lit::Char(c) => Some(c.value().to_string()),
-            syn::Lit::Int(i) => Some(i.base10_digits().to_string()),
-            syn::Lit::Float(f) => Some(f.base10_digits().to_string()),
-            _ => None,
-        },
+    let syn::Expr::Lit(lit) = value else {
+        return None;
+    };
+    #[expect(
+        clippy::wildcard_enum_match_arm,
+        reason = "syn literals are non-exhaustive; only these displayable literal kinds carry documentation text"
+    )]
+    match &lit.lit {
+        syn::Lit::Str(s) => Some(s.value()),
+        syn::Lit::Char(c) => Some(c.value().to_string()),
+        syn::Lit::Int(i) => Some(i.base10_digits().to_string()),
+        syn::Lit::Float(f) => Some(f.base10_digits().to_string()),
         _ => None,
     }
 }
@@ -942,3 +955,7 @@ mod maintained_doc_tests;
 #[path = "../../../../test/interface/macros/unit/component/prop_name_tests.rs"]
 #[cfg(test)]
 mod prop_name_tests;
+
+#[path = "../../../../test/interface/macros/unit/component/component_name_tests.rs"]
+#[cfg(test)]
+mod component_name_tests;

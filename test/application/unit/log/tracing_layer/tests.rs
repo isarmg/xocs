@@ -95,9 +95,34 @@ fn common_events_keep_registered_templates_and_reject_unknown_names() {
     assert!(!std::str::from_utf8(&bytes).unwrap().contains("SECRET"));
 }
 
+#[test]
+fn malformed_structured_fields_are_rejected_instead_of_becoming_missing_defaults() {
+    let output = Output(Arc::default());
+    let layer = BlogStructuredLayer::new("example")
+        .unwrap()
+        .with_writer(output.clone());
+    let subscriber = tracing::collector::registry().with(layer.clone());
+    tracing::subscriber::with_default(subscriber, || {
+        tracing::info!(event = 17_u64);
+        tracing::info!(request_id = true);
+        tracing::info!(component = 9_i64);
+        tracing::info!("diagnostic without optional fields");
+    });
+    assert_eq!(layer.rejected_count(), 3);
+    let bytes = output.0.lock().unwrap();
+    let records = crate::log::query(
+        &bytes[..],
+        crate::log::LogFilter::default(),
+        crate::log::QueryLimits::default(),
+    )
+    .unwrap();
+    assert_eq!(records.len(), 1);
+    assert_eq!(records[0].event(), "example.diagnostic");
+}
+
 #[cfg(unix)]
 #[test]
-fn installed_layer_switches_to_a_bounded_custom_file_and_counts_sink_failure() {
+fn installed_layer_keeps_the_held_log_directory_after_renaming() {
     use std::{fs, os::unix::fs::PermissionsExt};
     let output = Output(Arc::default());
     let layer = BlogStructuredLayer::new("example")
@@ -130,7 +155,7 @@ fn installed_layer_switches_to_a_bounded_custom_file_and_counts_sink_failure() {
             assert!(fs::metadata(moved.join(name)).unwrap().len() <= retention.file_bytes);
         }
     });
-    assert_eq!(layer.rejected_count(), 1);
+    assert_eq!(layer.rejected_count(), 0);
     let bytes = output.0.lock().unwrap();
     assert_eq!(std::str::from_utf8(&bytes).unwrap().lines().count(), 1);
     assert!(

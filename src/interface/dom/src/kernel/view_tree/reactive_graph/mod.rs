@@ -18,6 +18,10 @@ mod style;
 
 pub use owned::*;
 
+#[path = "../../../../../../../test/interface/dom/unit/kernel/view_tree/reactive_graph/tests.rs"]
+#[cfg(all(test, not(target_family = "wasm")))]
+mod tests;
+
 impl<F, V> Render for F
 where
     F: ReactiveFunction<Output = V>,
@@ -52,11 +56,11 @@ where
 }
 
 /// Retained view state for a [`RenderEffect`].
-pub struct RenderEffectState<T: 'static>(Option<RenderEffect<T>>);
+pub struct RenderEffectState<T: 'static>(RenderEffect<T>);
 
 impl<T> From<RenderEffect<T>> for RenderEffectState<T> {
     fn from(value: RenderEffect<T>) -> Self {
-        Self(Some(value))
+        Self(value)
     }
 }
 
@@ -65,9 +69,7 @@ where
     T: Mountable,
 {
     fn unmount(&mut self) {
-        if let Some(ref mut inner) = self.0 {
-            inner.unmount();
-        }
+        self.0.unmount();
     }
 
     fn mount(
@@ -75,24 +77,15 @@ where
         parent: &crate::view_tree::renderer::types::Element,
         marker: Option<&crate::view_tree::renderer::types::Node>,
     ) {
-        if let Some(ref mut inner) = self.0 {
-            inner.mount(parent, marker);
-        }
+        self.0.mount(parent, marker);
     }
 
     fn insert_before_this(&self, child: &mut dyn Mountable) -> bool {
-        if let Some(inner) = &self.0 {
-            inner.insert_before_this(child)
-        } else {
-            false
-        }
+        self.0.insert_before_this(child)
     }
 
     fn elements(&self) -> Vec<crate::view_tree::renderer::types::Element> {
-        self.0
-            .as_ref()
-            .map(|inner| inner.elements())
-            .unwrap_or_default()
+        self.0.elements()
     }
 }
 
@@ -157,10 +150,7 @@ where
 
 impl<T> Drop for RenderEffectState<T> {
     fn drop(&mut self) {
-        if let Some(effect) = self.0.take() {
-            drop(effect.take_value());
-            drop(effect);
-        }
+        drop(self.0.take_value());
     }
 }
 

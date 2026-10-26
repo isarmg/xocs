@@ -128,7 +128,7 @@ where
     ) {
         require_same_origin_with_uri(mode, headers, uri, id.as_ref())?;
         let values = header_values(headers, crate::admin_auth::CSRF_HEADER);
-        crate::admin_auth::require_csrf_token_matches_hash(&values, &identity.csrf_hash).map_err(
+        crate::admin_auth::require_csrf_token_matches_hash(&values, identity.csrf_hash()).map_err(
             |_| {
                 Box::new(error(
                     StatusCode::FORBIDDEN,
@@ -169,7 +169,6 @@ where
         .read(
             Request::from_parts(parts, body),
             body::Scope::Login,
-            true,
             request_id.as_ref(),
         )
         .await
@@ -193,7 +192,7 @@ where
         Err(response) => return *response,
     };
     let context = crate::admin_core::LoginContext {
-        request_id: request_id.as_ref().map(ToString::to_string),
+        request_id: request_id.clone(),
         now_micros: now,
     };
     match state
@@ -202,23 +201,20 @@ where
         .await
     {
         Ok(authenticated) => {
-            let cookie = match crate::admin_core::session_set_cookie(
+            let Ok(cookie) = crate::admin_core::session_set_cookie(
                 &state.product_id,
                 state.mode,
                 &authenticated.session_token,
-            ) {
-                Ok(value) => value,
-                Err(_) => {
-                    return error(
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        "platform.cookie_failed",
-                        false,
-                        request_id.as_ref(),
-                    );
-                }
+            ) else {
+                return error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "platform.cookie_failed",
+                    false,
+                    request_id.as_ref(),
+                );
             };
             VerifiedAdministrator::attach(
-                authenticated.administrator.username.clone(),
+                authenticated.administrator.username().to_owned(),
                 json_with_cookie(StatusCode::OK, &authenticated.administrator, &cookie),
             )
         }
@@ -249,7 +245,7 @@ where
     };
     match state.service.restore_session(&token, now).await {
         Ok(authenticated) => VerifiedAdministrator::attach(
-            authenticated.administrator.username.clone(),
+            authenticated.administrator.username().to_owned(),
             no_store(axum::Json(authenticated.administrator).into_response()),
         ),
         Err(failure) => service_error(failure, request_id.as_ref()),
@@ -290,29 +286,25 @@ where
         Ok(value) => value,
         Err(response) => return *response,
     };
-    match state
-        .service
-        .logout(&token, now, request_id.as_ref().map(ToString::to_string))
-        .await
-    {
+    match state.service.logout(&token, now, request_id.clone()).await {
         Ok(()) => {
-            let cookie =
-                match crate::admin_core::session_clear_cookie(&state.product_id, state.mode) {
-                    Ok(value) => value,
-                    Err(_) => {
-                        return error(
-                            StatusCode::INTERNAL_SERVER_ERROR,
-                            "platform.cookie_failed",
-                            false,
-                            request_id.as_ref(),
-                        );
-                    }
-                };
+            let Ok(cookie) = crate::admin_core::session_clear_cookie(&state.product_id, state.mode)
+            else {
+                return error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "platform.cookie_failed",
+                    false,
+                    request_id.as_ref(),
+                );
+            };
             let mut response = StatusCode::NO_CONTENT.into_response();
             match HeaderValue::from_str(&cookie) {
                 Ok(value) => {
                     response.headers_mut().insert(header::SET_COOKIE, value);
-                    VerifiedAdministrator::attach(identity.username, no_store(response))
+                    VerifiedAdministrator::attach(
+                        identity.username().to_owned(),
+                        no_store(response),
+                    )
                 }
                 Err(_) => error(
                     StatusCode::INTERNAL_SERVER_ERROR,

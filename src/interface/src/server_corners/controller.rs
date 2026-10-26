@@ -8,7 +8,8 @@ use std::{
 use wasm_bindgen::{JsCast, JsValue, closure::Closure};
 use web_sys::{
     CssStyleDeclaration, Document, Element, Event, EventTarget, HtmlElement, MediaQueryList,
-    MutationObserver, MutationObserverInit, ResizeObserver, SvgsvgElement, Window,
+    MutationObserver, MutationObserverInit, MutationRecord, Node, NodeList, ResizeObserver,
+    SvgsvgElement, Window,
 };
 
 const SIDES: [&str; 4] = ["top", "right", "bottom", "left"];
@@ -43,6 +44,7 @@ thread_local! { static CONTROLLERS: RefCell<Vec<Weak<Inner>>> = const { RefCell:
 pub struct ServerCornersController(Rc<Inner>);
 impl ServerCornersController {
     pub fn refresh(&self) {
+        self.0.candidates_dirty.set(true);
         self.0.schedule();
     }
     pub fn refresh_now(&self) -> Result<(), JsValue> {
@@ -56,7 +58,9 @@ impl ServerCornersController {
     }
 }
 
-pub fn start(document: &Document) -> Result<ServerCornersController, JsValue> {
+/// Start decoration for an explicit selector of stable surface roles.
+/// CSS determines which candidates currently have a positive corner extent.
+pub fn start(document: &Document, surfaces: &str) -> Result<ServerCornersController, JsValue> {
     if let Some(previous) = CONTROLLERS.with(|controllers| {
         let mut controllers = controllers.borrow_mut();
         controllers.retain(|entry| entry.strong_count() > 0);
@@ -65,6 +69,11 @@ pub fn start(document: &Document) -> Result<ServerCornersController, JsValue> {
             .filter_map(Weak::upgrade)
             .find(|entry| !entry.stopped.get() && entry.document == *document)
     }) {
+        if previous.surfaces.as_ref() != surfaces {
+            return Err(JsValue::from_str(
+                "A document already owns different corner surface roles",
+            ));
+        }
         return Ok(ServerCornersController(previous));
     }
     let view = document
@@ -98,6 +107,9 @@ pub fn start(document: &Document) -> Result<ServerCornersController, JsValue> {
         all_properties,
         forced,
         color_scheme,
+        surfaces: surfaces.into(),
+        candidates: RefCell::new(Vec::new()),
+        candidates_dirty: Cell::new(true),
         state: RefCell::new(State::default()),
         stopped: Cell::new(false),
         updating: Cell::new(false),
@@ -175,6 +187,9 @@ struct Inner {
     all_properties: Vec<String>,
     forced: MediaQueryList,
     color_scheme: MediaQueryList,
+    surfaces: Box<str>,
+    candidates: RefCell<Vec<HtmlElement>>,
+    candidates_dirty: Cell<bool>,
     state: RefCell<State>,
     stopped: Cell<bool>,
     // Custom-element attribute callbacks can synchronously reenter public APIs
@@ -188,8 +203,10 @@ struct Inner {
 }
 struct Setup {
     observer: MutationObserver,
+    candidate_observer: MutationObserver,
     resize: ResizeObserver,
     _mutation: Closure<dyn FnMut(js_sys::Array, MutationObserver)>,
+    _candidate_mutation: Closure<dyn FnMut(js_sys::Array, MutationObserver)>,
     _resize: Closure<dyn FnMut(js_sys::Array, ResizeObserver)>,
     animation_frame: Closure<dyn FnMut(f64)>,
     listeners: Vec<Listener>,
@@ -198,20 +215,104 @@ struct Listener {
     target: EventTarget,
     name: &'static str,
     capture: bool,
-    callback: Closure<dyn FnMut(Event)>,
+    callback: Option<Closure<dyn FnMut(Event)>>,
+    removal: Cell<ListenerRemoval>,
 }
+
+#[derive(Clone, Copy)]
+enum ListenerRemoval {
+    Registered,
+    Detached,
+    Failed,
+}
+
 impl Listener {
     fn detach(&self) {
-        let _ = self.target.remove_event_listener_with_callback_and_bool(
+        match self.removal.get() {
+            ListenerRemoval::Detached | ListenerRemoval::Failed => return,
+            ListenerRemoval::Registered => {}
+        }
+        let callback = self
+            .callback
+            .as_ref()
+            .expect("invariant: an owned listener retains its callback until drop");
+        match self.target.remove_event_listener_with_callback_and_bool(
             self.name,
-            self.callback.as_ref().unchecked_ref(),
+            callback.as_ref().unchecked_ref(),
             self.capture,
-        );
+        ) {
+            Ok(()) => self.removal.set(ListenerRemoval::Detached),
+            Err(error) => {
+                self.removal.set(ListenerRemoval::Failed);
+                web_sys::console::warn_2(
+                    &"Unable to detach a corner event listener".into(),
+                    &error,
+                );
+            }
+        }
     }
 }
 impl Drop for Listener {
     fn drop(&mut self) {
         self.detach();
+        if let ListenerRemoval::Failed = self.removal.get()
+            && let Some(callback) = self.callback.take()
+        {
+            // A failed browser removal can leave the callback registered.
+            // Retain its callable trampoline instead of freeing it underneath JS.
+            callback.forget();
+        }
+    }
+}
+
+fn decoration_node(node: &Node) -> bool {
+    let mut current = Some(node.clone());
+    while let Some(node) = current {
+        if node
+            .dyn_ref::<Element>()
+            .is_some_and(|element| element.has_attribute("data-blog-server-corner-decoration"))
+        {
+            return true;
+        }
+        current = node.parent_node();
+    }
+    false
+}
+
+fn contains_authored_node(nodes: &NodeList) -> bool {
+    (0..nodes.length()).any(|index| {
+        !decoration_node(
+            &nodes
+                .item(index)
+                .expect("invariant: a mutation record owns a stable node list"),
+        )
+    })
+}
+
+fn changes_candidate_roles(record: &MutationRecord) -> bool {
+    if record.type_() == "attributes"
+        && matches!(
+            record.attribute_name().as_deref(),
+            Some("style" | "data-blog-server-corner-state" | "data-blog-server-corner-reason")
+        )
+    {
+        return false;
+    }
+    let target = record
+        .target()
+        .expect("invariant: each browser mutation record identifies its target");
+    if decoration_node(&target) {
+        return false;
+    }
+    match record.type_().as_str() {
+        "attributes" => true,
+        "childList" => {
+            contains_authored_node(&record.added_nodes())
+                || contains_authored_node(&record.removed_nodes())
+        }
+        _ => unreachable!(
+            "invariant: candidate observation only subscribes to attributes and child lists"
+        ),
     }
 }
 
@@ -228,6 +329,7 @@ impl Inner {
         let weak = Rc::downgrade(self);
         let mutation = Closure::wrap(Box::new(move |_: js_sys::Array, _: MutationObserver| {
             if let Some(inner) = weak.upgrade() {
+                inner.candidates_dirty.set(true);
                 for record in &mut inner.state.borrow_mut().records {
                     record.transition_dirty = true;
                 }
@@ -236,6 +338,27 @@ impl Inner {
         })
             as Box<dyn FnMut(js_sys::Array, MutationObserver)>);
         let observer = MutationObserver::new(mutation.as_ref().unchecked_ref())?;
+        let weak = Rc::downgrade(self);
+        let candidate_mutation = Closure::wrap(Box::new(
+            move |records: js_sys::Array, _: MutationObserver| {
+                let Some(inner) = weak.upgrade().filter(|inner| !inner.stopped.get()) else {
+                    return;
+                };
+                if records
+                    .iter()
+                    .any(|record| changes_candidate_roles(record.unchecked_ref()))
+                {
+                    inner.candidates_dirty.set(true);
+                    for record in &mut inner.state.borrow_mut().records {
+                        record.transition_dirty = true;
+                    }
+                    inner.schedule();
+                }
+            },
+        )
+            as Box<dyn FnMut(js_sys::Array, MutationObserver)>);
+        let candidate_observer =
+            MutationObserver::new(candidate_mutation.as_ref().unchecked_ref())?;
         let weak = Rc::downgrade(self);
         let resize_callback = Closure::wrap(Box::new(move |_: js_sys::Array, _: ResizeObserver| {
             if let Some(inner) = weak.upgrade() {
@@ -302,8 +425,10 @@ impl Inner {
         listeners.push(self.listen(self.view.as_ref(), "pagehide", false, EventKind::PageHide)?);
         let installed = self.setup.set(Setup {
             observer,
+            candidate_observer,
             resize,
             _mutation: mutation,
+            _candidate_mutation: candidate_mutation,
             _resize: resize_callback,
             animation_frame,
             listeners,
@@ -312,6 +437,17 @@ impl Inner {
             installed.is_ok(),
             "invariant: a corner controller is installed once"
         );
+        // This observer remains active while paint owns the style observer:
+        // custom-element callbacks can synchronously insert new surface roles.
+        let candidates = MutationObserverInit::new();
+        candidates.set_subtree(true);
+        candidates.set_child_list(true);
+        candidates.set_attributes(true);
+        self.setup
+            .get()
+            .expect("invariant: controller setup was installed above")
+            .candidate_observer
+            .observe_with_options(&self.document, &candidates)?;
         Ok(())
     }
     fn listen(
@@ -336,7 +472,8 @@ impl Inner {
             target: target.clone(),
             name,
             capture,
-            callback,
+            callback: Some(callback),
+            removal: Cell::new(ListenerRemoval::Registered),
         })
     }
     fn event(&self, event: &Event, kind: EventKind) {
@@ -368,7 +505,12 @@ impl Inner {
                 EventKind::Interaction => {
                     if event.type_() == "scroll" {
                         for record in &state.records {
-                            let _ = position_foreground(record);
+                            if let Err(error) = position_foreground(record) {
+                                web_sys::console::warn_2(
+                                    &"Unable to position corner foreground".into(),
+                                    &error,
+                                );
+                            }
                         }
                     }
                     let mut element = target;
@@ -409,7 +551,7 @@ impl Inner {
                         }
                     }
                 }
-                _ => {}
+                EventKind::Schedule | EventKind::PageHide => {}
             }
         }
         self.schedule();
@@ -427,6 +569,7 @@ impl Inner {
         }
     }
     fn refresh_now(&self) -> Result<(), JsValue> {
+        self.candidates_dirty.set(true);
         if self.updating.get() {
             self.deferred_refresh.set(true);
             return Ok(());
@@ -492,24 +635,34 @@ impl Inner {
         self.deferred_dirty.set(false);
         self.deferred_refresh.set(false);
         if let Some(frame) = self.frame.take() {
-            let _ = self.view.cancel_animation_frame(frame);
+            self.view.cancel_animation_frame(frame).expect(
+                "invariant: cancelling an animation frame in its owning window cannot fail",
+            );
         }
         if let Some(setup) = self.setup.get() {
             setup.observer.disconnect();
+            setup.candidate_observer.disconnect();
             setup.resize.disconnect();
             for listener in &setup.listeners {
                 listener.detach();
             }
         }
         let mut state = self.state.borrow_mut();
+        self.candidates.borrow_mut().clear();
         state.active.clear();
         for record in &mut state.records {
-            let _ = restore(record, &self.draft, true);
+            if let Err(error) = restore(record, &self.draft, true) {
+                web_sys::console::warn_2(
+                    &"Unable to restore corner decoration during teardown".into(),
+                    &error,
+                );
+            }
         }
         state.records.clear();
         state.indices.clear();
         for (_, url) in state.images.drain(..) {
-            let _ = web_sys::Url::revoke_object_url(&url);
+            web_sys::Url::revoke_object_url(&url)
+                .expect("invariant: revoking an owned object URL has no failure conditions");
         }
         state.used_images.clear();
     }
@@ -896,22 +1049,23 @@ impl State {
         }
         self.records = keep;
         self.reindex();
-        let nodes = inner.document.query_selector_all("*")?;
-        let mut candidates = Vec::new();
-        for index in 0..nodes.length() {
-            let Some(node) = nodes.item(index) else {
-                continue;
-            };
-            // querySelectorAll returns Elements; HTML namespace elements expose
-            // HTMLElement even when their constructor belongs to another realm.
-            let node = node.unchecked_into::<Element>();
-            if node.namespace_uri().as_deref() != Some("http://www.w3.org/1999/xhtml")
-                || node.has_attribute("data-blog-server-corner-decoration")
-            {
-                continue;
+        if inner.candidates_dirty.get() {
+            let nodes = inner.document.query_selector_all(&inner.surfaces)?;
+            let mut candidates = Vec::with_capacity(nodes.length() as usize);
+            for node in nodes.values() {
+                let node = node?.unchecked_into::<Element>();
+                if node.namespace_uri().as_deref() == Some("http://www.w3.org/1999/xhtml")
+                    && !node.has_attribute("data-blog-server-corner-decoration")
+                {
+                    candidates.push(node.unchecked_into::<HtmlElement>());
+                }
             }
-            let node = node.unchecked_into::<HtmlElement>();
-            let Some(live) = inner.view.get_computed_style(&node)? else {
+            *inner.candidates.borrow_mut() = candidates;
+            inner.candidates_dirty.set(false);
+        }
+        let mut candidates = Vec::new();
+        for node in inner.candidates.borrow().iter() {
+            let Some(live) = inner.view.get_computed_style(node)? else {
                 continue;
             };
             if number(
@@ -922,15 +1076,15 @@ impl State {
             {
                 continue;
             }
-            if self.index(&node).is_none() {
-                self.prepare_transitions(inner, &node, Some(&live))?;
+            if self.index(node).is_none() {
+                self.prepare_transitions(inner, node, Some(&live))?;
             }
             let css = paint::snapshot(&live)?;
-            let width = measured_dimension(&node, &css, "width");
-            let height = measured_dimension(&node, &css, "height");
+            let width = measured_dimension(node, &css, "width");
+            let height = measured_dimension(node, &css, "height");
             let fragments = node.get_client_rects().length();
             candidates.push(Candidate {
-                node,
+                node: node.clone(),
                 css,
                 width,
                 height,
@@ -968,7 +1122,8 @@ impl State {
         self.images.retain(|(source, url)| {
             if remove > 0 && !self.used_images.contains(source) {
                 remove -= 1;
-                let _ = web_sys::Url::revoke_object_url(url);
+                web_sys::Url::revoke_object_url(url)
+                    .expect("invariant: revoking an owned object URL has no failure conditions");
                 false
             } else {
                 true
@@ -1131,7 +1286,10 @@ impl State {
                 child.append_child(&path)?;
                 record.foreground = Some(child);
             }
-            let child = record.foreground.as_ref().unwrap();
+            let child = record
+                .foreground
+                .as_ref()
+                .expect("invariant: foreground paint was constructed above");
             if child.parent_element().as_ref() != Some(node.as_ref())
                 || node.last_element_child().as_ref() != Some(child.as_ref())
             {
@@ -1165,7 +1323,10 @@ impl State {
                 child.set_attribute("aria-hidden", "true")?;
                 record.decoration = Some(child);
             }
-            let child = record.decoration.as_ref().unwrap();
+            let child = record
+                .decoration
+                .as_ref()
+                .expect("invariant: background decoration was constructed above");
             if child.parent_element().as_ref() != Some(node.as_ref()) {
                 node.insert_before(child, node.first_child().as_ref())?;
             }

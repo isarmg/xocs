@@ -172,8 +172,10 @@ async fn client_clones_reuse_the_http_connection() -> Result<()> {
 #[tokio::test]
 async fn deadline_cancels_a_pending_upload_before_response_headers() -> Result<()> {
     let app = Router::new().fallback(|request: Request| async move {
-        let _ = axum::body::to_bytes(request.into_body(), 1024).await;
-        "finished"
+        match axum::body::to_bytes(request.into_body(), 1024).await {
+            Ok(_) => StatusCode::OK,
+            Err(_) => StatusCode::BAD_REQUEST,
+        }
     });
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;
     let address = listener.local_addr()?;

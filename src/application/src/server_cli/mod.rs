@@ -71,6 +71,10 @@ pub fn state_error(error: &crate::state_file::Error) -> ErrorEnvelope {
     }
 }
 
+#[expect(
+    clippy::wildcard_enum_match_arm,
+    reason = "ErrorKind is an external non-exhaustive error classification"
+)]
 fn state_io_error(error: &io::Error) -> ErrorEnvelope {
     match error.kind() {
         io::ErrorKind::NotFound => {
@@ -96,7 +100,7 @@ pub fn snapshot_error(error: &SnapshotError) -> ErrorEnvelope {
             "The validation snapshot limits are invalid.",
             false,
         ),
-        SnapshotError::UnsafeSource => (
+        SnapshotError::UnsafeSource | SnapshotError::TemporaryRoot(_) => (
             "snapshot.unsafe_source",
             "The validation source does not satisfy the private file contract.",
             false,
@@ -150,20 +154,26 @@ pub fn snapshot_error(error: &SnapshotError) -> ErrorEnvelope {
     failure(code, message).retryable(retryable)
 }
 
-/// Response identity comes from the product that owns this router. Validate
-/// the service name before installing the middleware; invalid names fail
-/// closed because a status caller requires the header to match exactly.
+/// A response identity parsed once when the product router is assembled.
+#[derive(Clone)]
+pub struct ServiceIdentity(HeaderValue);
+
+impl ServiceIdentity {
+    pub fn new(service: &str) -> Result<Self, axum::http::header::InvalidHeaderValue> {
+        HeaderValue::from_str(service).map(Self)
+    }
+}
+
+/// Install the product's validated response identity.
 pub async fn service_identity_middleware(
-    State(service): State<String>,
+    State(service): State<ServiceIdentity>,
     request: Request,
     next: Next,
 ) -> Response {
     let mut response = next.run(request).await;
-    if let Ok(value) = HeaderValue::from_str(&service) {
-        response
-            .headers_mut()
-            .insert(SERVICE_IDENTITY_HEADER, value);
-    }
+    response
+        .headers_mut()
+        .insert(SERVICE_IDENTITY_HEADER, service.0);
     response
 }
 
@@ -177,10 +187,11 @@ pub fn report_error(error: &ErrorEnvelope, json: bool, exit: u8) -> ExitCode {
         &mut io::stderr().lock(),
     );
     if emitted.is_err() {
-        let _ = writeln!(
+        // The exit status still reports failure when the diagnostic stream is closed.
+        drop(writeln!(
             io::stderr().lock(),
             "Could not write the command error response."
-        );
+        ));
     }
     ExitCode::from(if exit == 0 { 1 } else { exit })
 }

@@ -31,7 +31,7 @@ pub(super) fn Home() -> impl IntoView {
         let items = site
             .value
             .get()
-            .map(|v| notices(&v.notices.clone().unwrap_or_default()))
+            .map(|v| notices(&v.notices.unwrap_or_default()))
             .unwrap_or_default();
         let get = |prefix: &str| {
             items
@@ -45,7 +45,11 @@ pub(super) fn Home() -> impl IntoView {
             return;
         }
         let key = format!("blog-push:{link}");
-        let store = web_sys::window().unwrap().local_storage().ok().flatten();
+        let store = web_sys::window()
+            .expect("invariant: the application is mounted in a browser window")
+            .local_storage()
+            .ok()
+            .flatten();
         if store
             .as_ref()
             .is_some_and(|s| s.get_item(&key).ok().flatten().as_deref() == Some("seen"))
@@ -56,8 +60,13 @@ pub(super) fn Home() -> impl IntoView {
         let timer = blog_interface::thread_bound::SendWrapper::new(
             blog_interface::timers::callback::Timeout::new(2000, move || {
                 push.set(Some(value));
-                if let Some(s) = store {
-                    let _ = s.set_item(&key, "seen");
+                if let Some(s) = store
+                    && let Err(error) = s.set_item(&key, "seen")
+                {
+                    web_sys::console::debug_2(
+                        &"Notice receipt remains limited to this document".into(),
+                        &error,
+                    );
                 }
             }),
         );
@@ -110,7 +119,7 @@ pub(super) fn Home() -> impl IntoView {
                                             html::h2().child(move || {
                                                 site.value
                                                     .get()
-                                                    .map(|v| v.web_name.clone().unwrap_or_default())
+                                                    .map(|v| v.web_name.unwrap_or_default())
                                                     .filter(|s| !s.is_empty())
                                                     .unwrap_or("blog".into())
                                             }),
@@ -341,21 +350,19 @@ pub(super) fn Home() -> impl IntoView {
                                                 site.value
                                                     .get()
                                                     .map(|v| {
-                                                        notices(
-                                                            &v.notices.clone().unwrap_or_default(),
-                                                        )
-                                                        .into_iter()
-                                                        .filter(|s| {
-                                                            ![
-                                                                "推送标题：",
-                                                                "推送封面：",
-                                                                "推送链接：",
-                                                            ]
-                                                            .iter()
-                                                            .any(|p| s.starts_with(p))
-                                                        })
-                                                        .collect::<Vec<_>>()
-                                                        .join(" · ")
+                                                        notices(&v.notices.unwrap_or_default())
+                                                            .into_iter()
+                                                            .filter(|s| {
+                                                                ![
+                                                                    "推送标题：",
+                                                                    "推送封面：",
+                                                                    "推送链接：",
+                                                                ]
+                                                                .iter()
+                                                                .any(|p| s.starts_with(p))
+                                                            })
+                                                            .collect::<Vec<_>>()
+                                                            .join(" · ")
                                                     })
                                                     .filter(|s| !s.is_empty())
                                                     .unwrap_or(t("欢迎光临", "Welcome"))
@@ -527,6 +534,6 @@ fn HomeSection(section: HomeSectionModel) -> impl IntoView {
                 },
             ))
             .class("home-section")
-            .aria_label(section.title.clone()),
+            .aria_label(section.title),
     )
 }

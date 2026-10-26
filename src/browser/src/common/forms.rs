@@ -29,7 +29,7 @@ pub(crate) fn Field(
 ) -> impl IntoView {
     let input = NodeRef::<blog_interface::html::Input>::new();
     let area = NodeRef::<blog_interface::html::Textarea>::new();
-    let error = Memo::new(move |_| scalar_error(&text(&form.get(), key), max));
+    let error = Memo::new(move |_| form.with(|form| scalar_error(&text(form, key), max)));
     Effect::new(move |_| {
         let message = error.get();
         if let Some(input) = input.get() {
@@ -49,13 +49,13 @@ pub(crate) fn Field(
                     View::new(
                         blog_interface::html::textarea()
                             .node_ref(area)
-                            .aria_label(label.clone())
+                            .aria_label(label)
                             .class("blog-input")
                             .name(key)
                             .required(required)
-                            .maxlength(max.saturating_mul(2))
+                            .maxlength(max * 2)
                             .aria_invalid(move || (!error.get().is_empty()).to_string())
-                            .prop("value", move || text(&form.get(), key))
+                            .prop("value", move || form.with(|form| text(form, key)))
                             .on(blog_interface::ev::change, move |ev| {
                                 let node = event_target::<web_sys::HtmlTextAreaElement>(&ev);
                                 node.set_custom_validity(&scalar_error(&node.value(), max));
@@ -72,14 +72,14 @@ pub(crate) fn Field(
                     View::new(
                         blog_interface::html::input()
                             .node_ref(input)
-                            .aria_label(label.clone())
+                            .aria_label(label)
                             .class("blog-input")
                             .name(key)
                             .r#type("text")
                             .required(required)
-                            .maxlength(max.saturating_mul(2))
+                            .maxlength(max * 2)
                             .aria_invalid(move || (!error.get().is_empty()).to_string())
-                            .prop("value", move || text(&form.get(), key))
+                            .prop("value", move || form.with(|form| text(form, key)))
                             .on(blog_interface::ev::change, move |ev| {
                                 let node = event_target::<web_sys::HtmlInputElement>(&ev);
                                 node.set_custom_validity(&scalar_error(&node.value(), max));
@@ -136,7 +136,7 @@ pub(crate) fn ControlledField(
                     .class("blog-input")
                     .r#type("text")
                     .required(required)
-                    .maxlength(max.saturating_mul(2))
+                    .maxlength(max * 2)
                     .aria_invalid(move || (!error.get().is_empty()).to_string())
                     .prop("value", move || value.get())
                     .on(blog_interface::ev::change, move |ev| {
@@ -191,7 +191,7 @@ pub(crate) fn Check(label: String, key: &'static str, form: RwSignal<Value>) -> 
             .child((
                 blog_interface::html::input()
                     .r#type("checkbox")
-                    .prop("checked", move || flag(&form.get(), key))
+                    .prop("checked", move || form.with(|form| flag(form, key)))
                     .on(blog_interface::ev::change, move |ev| {
                         form.update(|f| f[key] = Value::Bool(event_target_checked(&ev)))
                     }),
@@ -211,7 +211,11 @@ pub(crate) fn FilePicker(
     let input = NodeRef::<blog_interface::html::Input>::new();
     let id = format!(
         "blog-file-{}",
-        web_sys::window().unwrap().crypto().unwrap().random_uuid()
+        web_sys::window()
+            .expect("invariant: the application is mounted in a browser window")
+            .crypto()
+            .expect("invariant: the application window exposes browser crypto")
+            .random_uuid()
     );
     View::new(
         blog_interface::html::div()

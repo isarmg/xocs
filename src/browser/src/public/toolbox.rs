@@ -213,17 +213,15 @@ pub(super) fn Toolbox() -> impl IntoView {
                     "Site name")),
                     html::span()
                     .child( site.value.get()
-                    .map(| v | v.web_name.clone().unwrap_or_default())
+                    .map(| v | v.web_name.unwrap_or_default())
                     .unwrap_or("blog".into())),)),
                     html::p()
                     .child((html::b()
                     .child( t("网址", "URL")),
                     html::a()
-                    .child( web_sys::window()
-                    .unwrap().location().origin().unwrap_or_default())
-                    .href(web_sys::window()
-                    .unwrap().location().origin().unwrap_or_default()),)),
-                    site.value.get().and_then(| v | safe_url(& v.avatar.clone()
+                    .child( web_sys::window().expect("invariant: the application is mounted in a browser window").location().origin().unwrap_or_default())
+                    .href(web_sys::window().expect("invariant: the application is mounted in a browser window").location().origin().unwrap_or_default()),)),
+                    site.value.get().and_then(| v | safe_url(& v.avatar
                     .unwrap_or_default(), false)).map(| u | View::new(
     html::p()
         .child(
@@ -245,7 +243,7 @@ pub(super) fn Toolbox() -> impl IntoView {
                     "Description")),
                     html::span()
                     .child( site.value.get()
-                    .map(| v | v.web_title.clone().unwrap_or_default())
+                    .map(| v | v.web_title.unwrap_or_default())
                     .unwrap_or(t("有诗意地记录生活",
                     "Record life through poetry"))),)),)),))
                     .class("friend-site-info"),

@@ -60,13 +60,14 @@ impl ConnectOptions for SqliteConnectOptions {
 }
 
 impl SqliteConnectOptions {
-    /// Collect all `PRAMGA` commands into a single string
+    /// Collect all `PRAGMA` commands into a single string.
     pub(crate) fn pragma_string(&self) -> String {
         let mut string = String::new();
 
         for (key, opt_value) in &self.pragmas {
             if let Some(value) = opt_value {
-                write!(string, "PRAGMA {key} = {value}; ").ok();
+                write!(string, "PRAGMA {key} = {value}; ")
+                    .expect("invariant: formatting into a String cannot fail");
             }
         }
 

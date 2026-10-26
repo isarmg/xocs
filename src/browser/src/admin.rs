@@ -18,6 +18,7 @@ use self::moderation::{Moderation, ModerationKind};
 use self::site::SiteSettings;
 use self::taxonomy::{Taxonomy, TaxonomyKind};
 use crate::common::{hash_signal, href, navigate, t};
+use crate::models::ArticleId;
 use blog_interface::children::ToChildren;
 use blog_interface::component::component_props_builder;
 use blog_interface::components::{AccountPage, AdminShell, HeaderActions, HeaderNavigation};
@@ -129,7 +130,8 @@ enum Route {
     Page(Page),
     Account,
     NewArticle,
-    EditArticle(i64),
+    EditArticle(ArticleId),
+    NotFound,
 }
 
 impl Route {
@@ -139,22 +141,22 @@ impl Route {
         } else if hash == "new" {
             Self::NewArticle
         } else if let Some(id) = hash.strip_prefix("edit/") {
-            Self::EditArticle(id.parse().unwrap_or(0))
+            ArticleId::parse(id).map_or(Self::NotFound, Self::EditArticle)
+        } else if hash.is_empty() {
+            Self::Page(Page::Articles)
         } else {
-            Self::Page(
-                Group::ALL
-                    .into_iter()
-                    .flat_map(|group| group.pages().iter().copied())
-                    .find(|page| page.hash() == hash)
-                    .unwrap_or(Page::Articles),
-            )
+            Group::ALL
+                .into_iter()
+                .flat_map(|group| group.pages().iter().copied())
+                .find(|page| page.hash() == hash)
+                .map_or(Self::NotFound, Self::Page)
         }
     }
 
     fn active_page(self) -> Option<Page> {
         match self {
             Self::Page(page) => Some(page),
-            Self::Account => None,
+            Self::Account | Self::NotFound => None,
             Self::NewArticle | Self::EditArticle(_) => Some(Page::Articles),
         }
     }
@@ -241,6 +243,16 @@ fn Workspace() -> impl IntoView {
 
 fn render_page(route: Route) -> AnyView {
     match route {
+        Route::NotFound => View::new(
+            blog_interface::html::section().class("blog-stack").child((
+                blog_interface::html::h1().child(t("页面不存在", "Page not found")),
+                blog_interface::html::button()
+                    .class("blog-button")
+                    .child(t("返回文章管理", "Back to articles"))
+                    .on(blog_interface::ev::click, move |_| navigate("articles")),
+            )),
+        )
+        .into_any(),
         Route::Account => View::new(AccountPage()).into_any(),
         Route::NewArticle => View::new(crate::editor::ArticleEditor(
             component_props_builder(&crate::editor::ArticleEditor).build(),
@@ -248,7 +260,7 @@ fn render_page(route: Route) -> AnyView {
         .into_any(),
         Route::EditArticle(id) => View::new(crate::editor::ArticleEditor(
             component_props_builder(&crate::editor::ArticleEditor)
-                .id(id)
+                .id(id.get())
                 .build(),
         ))
         .into_any(),

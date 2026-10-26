@@ -12,7 +12,7 @@ See the documentation for [`EventListener`] for more information.
 
 use std::borrow::Cow;
 use wasm_bindgen::closure::Closure;
-use wasm_bindgen::{JsCast, UnwrapThrowExt};
+use wasm_bindgen::{JsCast, JsValue, UnwrapThrowExt};
 use web_sys::{AddEventListenerOptions, Event, EventTarget};
 
 /// Specifies whether the event listener is run during the capture or bubble phase.
@@ -243,13 +243,16 @@ impl EventListener {
         options: &AddEventListenerOptions,
         phase: EventListenerPhase,
     ) -> Self {
-        target
-            .add_event_listener_with_callback_and_add_event_listener_options(
-                &event_type,
-                callback.as_ref().unchecked_ref(),
-                options,
-            )
-            .unwrap_throw();
+        let result = target.add_event_listener_with_callback_and_add_event_listener_options(
+            &event_type,
+            callback.as_ref().unchecked_ref(),
+            options,
+        );
+        if let Err(error) = result {
+            drop(callback);
+            drop(event_type);
+            wasm_bindgen::throw_val(error);
+        }
 
         Self {
             target: target.clone(),
@@ -564,20 +567,47 @@ impl EventListener {
     pub fn phase(&self) -> EventListenerPhase {
         self.phase
     }
+
+    /// Removes this listener and releases its callback.
+    ///
+    /// If the host rejects removal, the callback stays valid for the listener
+    /// still registered with that host; the original JavaScript error is returned.
+    pub fn remove(mut self) -> Result<(), JsValue> {
+        match self.detach() {
+            Ok(()) => Ok(()),
+            Err(error) => {
+                self.callback
+                    .take()
+                    .expect("invariant: a failed detach leaves the listener registered")
+                    .forget();
+                Err(error)
+            }
+        }
+    }
+
+    fn detach(&mut self) -> Result<(), JsValue> {
+        if let Some(callback) = &self.callback {
+            self.target.remove_event_listener_with_callback_and_bool(
+                self.event_type(),
+                callback.as_ref().unchecked_ref(),
+                self.phase.is_capture(),
+            )?;
+            self.callback = None;
+        }
+        Ok(())
+    }
 }
 
 impl Drop for EventListener {
     #[inline]
     fn drop(&mut self) {
-        // This will only be None if forget() was called
-        if let Some(callback) = &self.callback {
-            self.target
-                .remove_event_listener_with_callback_and_bool(
-                    self.event_type(),
-                    callback.as_ref().unchecked_ref(),
-                    self.phase.is_capture(),
-                )
-                .unwrap_throw();
+        if let Err(error) = self.detach() {
+            // Cleanup has no caller to receive an error. Keep the registered
+            // callback callable and report the host failure at this boundary.
+            if let Some(callback) = self.callback.take() {
+                callback.forget();
+            }
+            web_sys::console::error_2(&"Event listener cleanup failed".into(), &error);
         }
     }
 }

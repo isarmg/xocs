@@ -7,6 +7,12 @@ use std::{
     task::{Context, Poll},
 };
 
+impl BodyAdmission {
+    pub(crate) fn isolated() -> Self {
+        Self(Arc::new(Semaphore::new(ADMIN_BODY_READERS_GLOBAL)))
+    }
+}
+
 struct PendingBody(Arc<AtomicBool>);
 impl http_body::Body for PendingBody {
     type Data = Bytes;
@@ -138,7 +144,6 @@ async fn slow_body_deadline_and_cancellation_drop_body_and_permit() {
         .read(
             request(Body::new(PendingBody(dropped.clone()))),
             Scope::Login,
-            true,
             Some(&id),
         )
         .await
@@ -154,7 +159,6 @@ async fn slow_body_deadline_and_cancellation_drop_body_and_permit() {
     let mut read = Box::pin(admission.read(
         request(Body::new(PendingBody(dropped.clone()))),
         Scope::Login,
-        true,
         None,
     ));
     std::future::poll_fn(|cx| {

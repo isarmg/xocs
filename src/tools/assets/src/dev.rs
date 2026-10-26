@@ -77,7 +77,6 @@ mod proxy;
 
 const SHUTDOWN_GRACE: Duration = Duration::from_secs(2);
 
-#[derive(Clone)]
 struct App {
     dist: PathBuf,
     base: String,
@@ -127,7 +126,7 @@ fn plain(status: StatusCode, message: &str) -> Response {
         .expect("Constant headers")
 }
 
-async fn handler(State(app): State<App>, request: Request) -> Response {
+async fn handler(State(app): State<Arc<App>>, request: Request) -> Response {
     match respond(app, request).await {
         Ok(response) => response,
         Err(error) => {
@@ -140,7 +139,7 @@ async fn handler(State(app): State<App>, request: Request) -> Response {
     }
 }
 
-async fn respond(app: App, request: Request) -> Result<Response> {
+async fn respond(app: Arc<App>, request: Request) -> Result<Response> {
     let path = request.uri().path();
     if path == "/__rust_web/status" {
         return Ok(Response::builder()
@@ -152,7 +151,10 @@ async fn respond(app: App, request: Request) -> Result<Response> {
             ))?);
     }
     if let Some((prefix, target)) = app.proxies.iter().find(|(prefix, _)| {
-        path == prefix || path.starts_with(&format!("{}/", prefix.trim_end_matches('/')))
+        path == prefix
+            || path
+                .strip_prefix(prefix.trim_end_matches('/'))
+                .is_some_and(|suffix| suffix.starts_with('/'))
     }) {
         if request.headers().contains_key(header::UPGRADE) {
             return Err(DevError::WebSocket);
@@ -475,6 +477,13 @@ pub async fn serve(
         return Err(DevError::NonLoopbackBind);
     }
     let config = Config::read(&options.root.join(layout::WEB))?;
+    let dist = crate::resolve_distribution(
+        &options.root,
+        options
+            .dist
+            .clone()
+            .unwrap_or_else(|| config.web.dist.clone().into()),
+    )?;
     let mut proxies = config.web.proxies;
     for value in overrides {
         let (prefix, target) = value
@@ -491,7 +500,6 @@ pub async fn serve(
     let mut proxies = proxies.into_iter().collect::<Vec<_>>();
     proxies.sort_by_key(|(prefix, _)| std::cmp::Reverse(prefix.len()));
     let status = Arc::new(RwLock::new(BuildStatus::default()));
-    let dist = crate::distribution(&options)?;
     let mut watcher = if watch == WatchMode::Enabled {
         Some(WatchState::new(
             source_signature(options.root.clone()).await,
@@ -558,13 +566,13 @@ pub async fn serve(
     } else {
         None
     };
-    let app = App {
+    let app = Arc::new(App {
         dist,
         base: config.web.base,
         proxies,
         status,
         client: proxy::Client::new(Duration::from_secs(300)),
-    };
+    });
     println!(
         "{}",
         json!({"event":"listening","address":format!("http://{}",listener.local_addr().map_err(DevError::ListenerAddress)?),"status":"/__rust_web/status"})

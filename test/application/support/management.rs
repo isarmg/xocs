@@ -31,7 +31,7 @@ where
             .insert(header::COOKIE, HeaderValue::from_str(&cookie).unwrap());
         request.headers_mut().insert(
             "x-csrf-token",
-            HeaderValue::from_str(&session.csrf_token).unwrap(),
+            HeaderValue::from_str(session.csrf_token()).unwrap(),
         );
         request
     };
@@ -101,11 +101,11 @@ where
         (Method::POST, ADMINISTRATORS_PATH.to_owned()),
         (
             Method::POST,
-            format!("{ADMINISTRATORS_PATH}/{}/password", session.user_id),
+            format!("{ADMINISTRATORS_PATH}/{}/password", session.user_id()),
         ),
         (
             Method::POST,
-            format!("{ADMINISTRATORS_PATH}/{}/disable", session.user_id),
+            format!("{ADMINISTRATORS_PATH}/{}/disable", session.user_id()),
         ),
     ] {
         assert_eq!(
@@ -141,7 +141,7 @@ where
             .insert(header::COOKIE, HeaderValue::from_str(&cookie).unwrap());
         value.headers_mut().insert(
             "x-csrf-token",
-            HeaderValue::from_str(&current.csrf_token).unwrap(),
+            HeaderValue::from_str(current.csrf_token()).unwrap(),
         );
         value
     };
@@ -199,6 +199,6 @@ where
     assert_eq!(login.status(), StatusCode::OK);
     let updated: AdministratorSession =
         serde_json::from_slice(&to_bytes(login.into_body(), 8192).await.unwrap()).unwrap();
-    assert_eq!(updated.user_id, current.user_id);
-    assert_eq!(updated.username, "renamed");
+    assert_eq!(updated.user_id(), current.user_id());
+    assert_eq!(updated.username(), "renamed");
 }

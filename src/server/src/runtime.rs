@@ -28,18 +28,41 @@ pub(crate) async fn run(root: &Path) -> Result<(), Error> {
         .try_init()?;
     let database = settings.database_path();
     let media = settings.media_path();
-    let instance_lock = Arc::new(config::runtime_lock(settings)?);
     let bind = settings.bind;
     let web = settings.web.clone();
     let development = settings.development;
     if let Some(web) = &web
-        && !fs::metadata(web.join("index.html"))?.is_file()
+        && !fs::metadata(web.join("index.html"))
+            .map_err(Error::ReadWebEntry)?
+            .is_file()
     {
         return Err(Error::InvalidWebEntry);
     }
     blog_application::fs_safety::PrivateDirectory::open_existing(&media)?;
-    validate_existing_database(&database, &settings.root.join("run")).await?;
-    let pool = open_database(&database, false).await?;
+    let instance_lock = config::runtime_lock(settings)?;
+    let pool = match async {
+        validate_existing_database(&database, &settings.root.join("run")).await?;
+        open_database(&database, false).await
+    }
+    .await
+    {
+        Ok(pool) => pool,
+        Err(operation) => {
+            return match instance_lock.release() {
+                Ok(()) => Err(operation),
+                Err(release) => Err(Error::StateRelease {
+                    operation: Box::new(operation),
+                    release,
+                }),
+            };
+        }
+    };
+    let scope = blog_application::server_runtime::WorkScope::new();
+    let participant = Arc::new(lifecycle::Lifecycle {
+        scope: scope.clone(),
+        pool: pool.clone(),
+        lock: std::sync::Mutex::new(Some(instance_lock)),
+    });
     let result = async {
         let origin = if development {
             AdministratorOriginMode::LoopbackDevelopmentHttp
@@ -51,12 +74,6 @@ pub(crate) async fn run(root: &Path) -> Result<(), Error> {
         )));
         attach_log_file(settings)?;
         tracing::info!(event = "common.config.loaded");
-        let scope = blog_application::server_runtime::WorkScope::new();
-        let participant = Arc::new(lifecycle::Lifecycle {
-            scope: scope.clone(),
-            pool: pool.clone(),
-            lock: std::sync::Mutex::new(Some(instance_lock.clone())),
-        });
         let health_pool = pool.clone();
         let runtime = blog_application::server_runtime::ServerRuntime::builder(
             blog_application::server_runtime::ProductDescriptor {
@@ -89,11 +106,14 @@ pub(crate) async fn run(root: &Path) -> Result<(), Error> {
             password_slots: Arc::new(tokio::sync::Semaphore::new(2)),
         };
         let app = router(state, web)?;
-        let signals = blog_application::server_runtime::ProcessSignals::install()?;
-        let listeners = blog_application::server_runtime::BoundListeners::bind([bind])?;
+        let signals = blog_application::server_runtime::ProcessSignals::install()
+            .map_err(Error::InstallProcessSignals)?;
+        let listeners = blog_application::server_runtime::BoundListeners::bind([bind])
+            .map_err(Error::BindListeners)?;
         tracing::info!(event = "common.runtime.started");
         let mut transport = blog_application::server_runtime::HttpServer::new(listeners, signals);
-        transport.participant = Some(participant);
+        transport.participant = Some(Arc::clone(&participant)
+            as Arc<dyn blog_application::server_runtime::LifecycleParticipant>);
         tracing::info!(%bind, "BLOG listening");
         if let Err(error) = runtime.serve(transport, app).await {
             if matches!(
@@ -112,8 +132,15 @@ pub(crate) async fn run(root: &Path) -> Result<(), Error> {
     }
     .await;
     pool.close().await;
-    result?;
-    Ok(())
+    match (result, participant.release_lock()) {
+        (Ok(()), Ok(())) => Ok(()),
+        (Err(operation), Ok(())) => Err(operation),
+        (Ok(()), Err(release)) => Err(release.into()),
+        (Err(operation), Err(release)) => Err(Error::StateRelease {
+            operation: Box::new(operation),
+            release,
+        }),
+    }
 }
 
 fn attach_log_file(settings: &config::Settings) -> Result<(), Error> {

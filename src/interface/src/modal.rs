@@ -24,11 +24,18 @@ pub fn ModalSurface(
     );
     Effect::new(move |_| {
         if let Some(dialog) = dialog.get() {
-            let _ = dialog.show_modal();
-            if let Ok(Some(element)) = dialog.query_selector("[data-blog-initial-focus]")
+            if let Err(error) = dialog.show_modal() {
+                web_sys::console::warn_2(&"Unable to open the modal dialog".into(), &error);
+                close.run(());
+                return;
+            }
+            if let Some(element) = dialog
+                .query_selector("[data-blog-initial-focus]")
+                .expect("invariant: the initial focus selector is valid CSS")
                 && let Ok(element) = element.dyn_into::<web_sys::HtmlElement>()
+                && let Err(error) = element.focus()
             {
-                let _ = element.focus();
+                web_sys::console::warn_2(&"Unable to move browser focus".into(), &error);
             }
         }
     });
@@ -38,8 +45,9 @@ pub fn ModalSurface(
         }
         if let Some(previous) = previous.as_ref()
             && previous.is_connected()
+            && let Err(error) = previous.focus()
         {
-            let _ = previous.focus();
+            web_sys::console::warn_2(&"Unable to move browser focus".into(), &error);
         }
     });
     html::dialog()
@@ -80,22 +88,26 @@ fn contain_focus(dialog: &web_sys::HtmlDialogElement, event: web_sys::KeyboardEv
     if event.key() != "Tab"
         || dialog
             .query_selector("video[controls],audio[controls]")
-            .ok()
-            .flatten()
+            .expect("invariant: the media controls selector is valid CSS")
             .is_some()
     {
         return;
     }
-    let Ok(nodes) = dialog.query_selector_all("button,input,select,textarea,a[href],[tabindex]")
-    else {
-        return;
-    };
+    let nodes = dialog
+        .query_selector_all("button,input,select,textarea,a[href],[tabindex]")
+        .expect("invariant: the modal focus selector is valid CSS");
     let focusable: Vec<_> = (0..nodes.length())
-        .filter_map(|index| nodes.item(index))
+        .map(|index| {
+            nodes
+                .item(index)
+                .expect("invariant: the static focusable node list contains each index")
+        })
         .filter_map(|node| node.dyn_into::<web_sys::HtmlElement>().ok())
         .filter(|element| {
             element.tab_index() >= 0
-                && !element.matches(":disabled,[hidden]").unwrap_or(true)
+                && !element
+                    .matches(":disabled,[hidden]")
+                    .expect("invariant: the disabled and hidden selectors are valid CSS")
                 && element.get_client_rects().length() > 0
         })
         .collect();
@@ -107,13 +119,19 @@ fn contain_focus(dialog: &web_sys::HtmlDialogElement, event: web_sys::KeyboardEv
             && (active.as_ref() == Some(first.as_ref()) || active.as_ref() == Some(dialog.as_ref()))
         {
             event.prevent_default();
-            let _ = last.focus();
+            if let Err(error) = last.focus() {
+                web_sys::console::warn_2(&"Unable to move browser focus".into(), &error);
+            }
         } else if !event.shift_key() && active.as_ref() == Some(last.as_ref()) {
             event.prevent_default();
-            let _ = first.focus();
+            if let Err(error) = first.focus() {
+                web_sys::console::warn_2(&"Unable to move browser focus".into(), &error);
+            }
         }
     } else {
         event.prevent_default();
-        let _ = dialog.focus();
+        if let Err(error) = dialog.focus() {
+            web_sys::console::warn_2(&"Unable to move browser focus".into(), &error);
+        }
     }
 }

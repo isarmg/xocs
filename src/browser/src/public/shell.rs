@@ -29,7 +29,7 @@ pub(super) fn Chrome(
         let covers = site
             .value
             .get()
-            .map(|v| notices(&v.random_cover.clone().unwrap_or_default()))
+            .map(|v| notices(&v.random_cover.unwrap_or_default()))
             .unwrap_or_default();
         covers
             .get((js_sys::Math::random() * covers.len() as f64) as usize)
@@ -39,7 +39,7 @@ pub(super) fn Chrome(
     let menu = RwSignal::new(false);
     let dark = RwSignal::new(
         web_sys::window()
-            .unwrap()
+            .expect("invariant: the application is mounted in a browser window")
             .local_storage()
             .ok()
             .flatten()
@@ -53,11 +53,14 @@ pub(super) fn Chrome(
     let direction = StoredValue::new(0i32);
     let distance = StoredValue::new(0.);
     let scroll = SendWrapper::new(blog_interface::events::EventListener::new(
-        &web_sys::window().unwrap(),
+        &web_sys::window().expect("invariant: the application is mounted in a browser window"),
         "scroll",
         move |_| {
-            let win = web_sys::window().unwrap();
-            let doc = win.document().unwrap();
+            let win = web_sys::window()
+                .expect("invariant: the application is mounted in a browser window");
+            let doc = win
+                .document()
+                .expect("invariant: the application window owns its document");
             let position = win.scroll_y().unwrap_or(0.).max(0.);
             let delta = position - previous.get_value();
             previous.set_value(position);
@@ -92,7 +95,7 @@ pub(super) fn Chrome(
         },
     ));
     let keys = SendWrapper::new(blog_interface::events::EventListener::new(
-        &web_sys::window().unwrap(),
+        &web_sys::window().expect("invariant: the application is mounted in a browser window"),
         "keydown",
         move |ev| {
             if ev
@@ -179,10 +182,9 @@ pub(super) fn Chrome(
                     .aria_pressed(move
                     | | dark.get().to_string())
                     .on(ev::click, move | _ | { dark
-                    .update(| v | * v = ! * v); if let Some(s) = web_sys::window()
-                    .unwrap().local_storage().ok().flatten() { let _ = s
+                    .update(| v | * v = ! * v); if let Some(s) = web_sys::window().expect("invariant: the application is mounted in a browser window").local_storage().ok().flatten() && let Err(error) = s
                     .set_item("blog-theme", if dark.get_untracked() { "dark" } else {
-                    "light" }); } }),)).class("public-header-controls"),
+                    "light" }) { web_sys::console::debug_2(&"Theme preference remains limited to this document".into(), &error); } }),)).class("public-header-controls"),
                     html::button()
                     .child( move | | if menu.get() { "✕" } else { "☰" })
                     .class("public-menu-toggle").r#type("button")
@@ -204,7 +206,7 @@ pub(super) fn Chrome(
                     html::div()
                     .child((html::h1()
                     .child( move | | if home { let value = site.value.get().map(| v | v
-                    .web_title.clone().unwrap_or_default()).unwrap_or_default(); if
+                    .web_title.unwrap_or_default()).unwrap_or_default(); if
                     value.is_empty() { t("相信记录的力量",
                     "Believe in the power of stories") } else { value } } else {
                     title.get() }),
@@ -312,8 +314,7 @@ pub(super) fn Chrome(
                             let opts = web_sys::ScrollToOptions::new();
                             opts.set_top(0.);
                             opts.set_behavior(web_sys::ScrollBehavior::Smooth);
-                            web_sys::window()
-                                .unwrap()
+                            web_sys::window().expect("invariant: the application is mounted in a browser window")
                                 .scroll_to_with_scroll_to_options(&opts);
                         },
                     ),

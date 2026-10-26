@@ -1,6 +1,7 @@
 use super::{AdminPageQuery, PageResult};
 use crate::{ApiResult, AppState, absent, db_error, invalid};
 use axum::{Json, extract::State};
+use blog_application::admin_core::AuthenticatedIdentity;
 use blog_application::server_cli::{ContractPath as Path, ContractQuery as Query};
 use serde::{Deserialize, Serialize};
 
@@ -81,15 +82,18 @@ pub(super) async fn content_tree_hole(
 }
 pub(super) async fn delete_tree_hole(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     Path(id): Path<i64>,
 ) -> ApiResult<serde_json::Value> {
+    let mut transaction = crate::content::begin_mutation(&state.pool, &identity).await?;
     let changed = sqlx::query("DELETE FROM tree_hole WHERE id=?")
         .bind(id)
-        .execute(&state.pool)
+        .execute(&mut *transaction)
         .await
         .map_err(db_error)?;
     if changed.rows_affected() == 0 {
         return Err(absent());
     }
+    transaction.commit().await.map_err(db_error)?;
     Ok(Json(serde_json::json!({"deleted": true})))
 }

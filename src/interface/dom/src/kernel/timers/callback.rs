@@ -59,13 +59,11 @@ impl Timeout {
     where
         F: 'static + FnOnce(),
     {
+        let millis = timer_millis(millis);
         let closure = Closure::once(callback);
 
-        let id = set_timeout(
-            closure.as_ref().unchecked_ref::<js_sys::Function>(),
-            millis as i32,
-        )
-        .unwrap_throw();
+        let id = set_timeout(closure.as_ref().unchecked_ref::<js_sys::Function>(), millis)
+            .unwrap_or_else(|error| wasm_bindgen::throw_val(error));
 
         Timeout {
             id: Some(id),
@@ -160,13 +158,11 @@ impl Interval {
     where
         F: 'static + FnMut(),
     {
+        let millis = timer_millis(millis);
         let closure = Closure::wrap(Box::new(callback) as Box<dyn FnMut()>);
 
-        let id = set_interval(
-            closure.as_ref().unchecked_ref::<js_sys::Function>(),
-            millis as i32,
-        )
-        .unwrap_throw();
+        let id = set_interval(closure.as_ref().unchecked_ref::<js_sys::Function>(), millis)
+            .unwrap_or_else(|error| wasm_bindgen::throw_val(error));
 
         Interval {
             id: Some(id),
@@ -219,4 +215,12 @@ impl Interval {
     pub fn cancel(mut self) -> Closure<dyn FnMut()> {
         self.closure.take().unwrap_throw()
     }
+}
+
+fn timer_millis(millis: u32) -> i32 {
+    i32::try_from(millis).unwrap_or_else(|_| {
+        wasm_bindgen::throw_val(
+            js_sys::RangeError::new("timer delay exceeds i32 milliseconds").into(),
+        )
+    })
 }

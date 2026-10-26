@@ -198,7 +198,16 @@ pub fn html(content: &str) -> String {
                     events.push(Event::Text(text[start..].to_owned().into()));
                 }
             }
-            event => events.push(event),
+            event @ (Event::Start(_)
+            | Event::End(_)
+            | Event::Text(_)
+            | Event::Code(_)
+            | Event::InlineMath(_)
+            | Event::DisplayMath(_)
+            | Event::FootnoteReference(_)
+            | Event::HardBreak
+            | Event::Rule
+            | Event::TaskListMarker(_)) => events.push(event),
         }
     }
     let mut output = String::with_capacity(content.len());

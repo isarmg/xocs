@@ -11,7 +11,7 @@ mod shell;
 mod toolbox;
 
 use crate::common::{href, load_typed, pathname, t};
-use crate::models::Site;
+use crate::models::{ArticleId, Site};
 use blog_interface::children::ToChildren;
 use blog_interface::prelude::*;
 
@@ -40,12 +40,12 @@ pub fn Public() -> impl IntoView {
         "/favorite" => toolbox::Toolbox().into_any(),
         "/love" => love::Love().into_any(),
         "/letter" => love::Letter().into_any(),
-        path if path.starts_with("/article/") => articles::Article(
-            articles::ArticleProps::builder()
-                .id(path[9..].parse::<i64>().unwrap_or(0))
-                .build(),
-        )
-        .into_any(),
+        path if path.starts_with("/article/") => match ArticleId::parse(&path[9..]) {
+            Some(id) => {
+                articles::Article(articles::ArticleProps::builder().id(id.get()).build()).into_any()
+            }
+            None => not_found().into_any(),
+        },
         _ => not_found().into_any(),
     }
 }

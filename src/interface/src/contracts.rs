@@ -5,46 +5,114 @@ pub const SESSION_PATH: &str = "/api/v1/auth/session";
 pub const LOGOUT_PATH: &str = "/api/v1/auth/logout";
 pub const ACCOUNT_PATH: &str = "/api/v1/platform/administrators/self";
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+struct SessionFields {
+    authenticated: bool,
+    user_id: String,
+    username: String,
+    role: String,
+    csrf_token: String,
+}
+
+/// A response parsed as an authenticated administrator with a valid CSRF token.
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(try_from = "SessionFields", into = "SessionFields")]
 pub struct AdministratorSession {
-    pub authenticated: bool,
-    pub user_id: String,
-    pub username: String,
-    pub role: String,
-    pub csrf_token: String,
+    user_id: String,
+    username: String,
+    csrf_token: String,
+}
+
+impl std::fmt::Debug for AdministratorSession {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AdministratorSession")
+            .finish_non_exhaustive()
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+enum SessionError {
+    #[error("expected an authenticated administrator")]
+    Authentication,
+    #[error("invalid administrator identifier")]
+    UserId,
+    #[error("invalid administrator username")]
+    Username,
+    #[error("invalid administrator CSRF token")]
+    CsrfToken,
+}
+
+impl TryFrom<SessionFields> for AdministratorSession {
+    type Error = SessionError;
+
+    fn try_from(fields: SessionFields) -> Result<Self, Self::Error> {
+        let SessionFields {
+            authenticated,
+            user_id,
+            username,
+            role,
+            csrf_token,
+        } = fields;
+        if !authenticated || role != "admin" {
+            return Err(SessionError::Authentication);
+        }
+        if !safe_request_id(&user_id) {
+            return Err(SessionError::UserId);
+        }
+        if !(3..=64).contains(&username.len())
+            || !username
+                .bytes()
+                .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b"._-".contains(&b))
+            || !username.as_bytes()[0].is_ascii_alphanumeric()
+            || !username.as_bytes()[username.len() - 1].is_ascii_alphanumeric()
+        {
+            return Err(SessionError::Username);
+        }
+        if csrf_token.len() != 43
+            || !csrf_token
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+            || !b"AEIMQUYcgkosw048".contains(&csrf_token.as_bytes()[42])
+        {
+            return Err(SessionError::CsrfToken);
+        }
+        Ok(Self {
+            user_id,
+            username,
+            csrf_token,
+        })
+    }
+}
+
+impl From<AdministratorSession> for SessionFields {
+    fn from(session: AdministratorSession) -> Self {
+        let AdministratorSession {
+            user_id,
+            username,
+            csrf_token,
+        } = session;
+        Self {
+            authenticated: true,
+            user_id,
+            username,
+            role: "admin".into(),
+            csrf_token,
+        }
+    }
 }
 
 impl AdministratorSession {
-    pub fn validate(&self) -> bool {
-        self.authenticated
-            && self.role == "admin"
-            && safe_request_id(&self.user_id)
-            && (3..=64).contains(&self.username.len())
-            && self
-                .username
-                .bytes()
-                .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b"._-".contains(&b))
-            && self
-                .username
-                .as_bytes()
-                .first()
-                .is_some_and(u8::is_ascii_alphanumeric)
-            && self
-                .username
-                .as_bytes()
-                .last()
-                .is_some_and(u8::is_ascii_alphanumeric)
-            && self.csrf_token.len() == 43
-            && self
-                .csrf_token
-                .bytes()
-                .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
-            && self
-                .csrf_token
-                .as_bytes()
-                .last()
-                .is_some_and(|b| b"AEIMQUYcgkosw048".contains(b))
+    pub fn user_id(&self) -> &str {
+        &self.user_id
+    }
+
+    pub fn username(&self) -> &str {
+        &self.username
+    }
+
+    pub(crate) fn csrf_token(&self) -> &str {
+        &self.csrf_token
     }
 }
 

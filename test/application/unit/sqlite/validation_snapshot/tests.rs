@@ -2,6 +2,42 @@ use super::*;
 use std::os::unix::fs::symlink;
 
 #[tokio::test]
+async fn unavailable_temporary_root_preserves_its_filesystem_error() {
+    use std::{error::Error as _, os::unix::fs::PermissionsExt};
+    let root = tempfile::tempdir().unwrap();
+    let source = root.path().join("source.sqlite3");
+    let pool = crate::sqlite::create_if_missing(&source, crate::sqlite::PoolOptions::new(1))
+        .await
+        .unwrap();
+    sqlx::query("CREATE TABLE records(value INTEGER)")
+        .execute(&pool)
+        .await
+        .unwrap();
+    pool.close().await;
+    let run = root.path().join("run");
+    let error = ValidationSnapshot::capture_in(&source, &run).err().unwrap();
+    assert!(matches!(&error, SnapshotError::TemporaryRoot(_)));
+    let fs_error = error
+        .source()
+        .unwrap()
+        .downcast_ref::<crate::fs_safety::Error>()
+        .unwrap();
+    let crate::fs_safety::Error::Io(io_error) = fs_error else {
+        panic!("missing temporary root must preserve the I/O error");
+    };
+    assert_eq!(io_error.kind(), io::ErrorKind::NotFound);
+
+    fs::create_dir(&run).unwrap();
+    fs::set_permissions(&run, fs::Permissions::from_mode(0o755)).unwrap();
+    assert!(matches!(
+        ValidationSnapshot::capture_in(&source, &run),
+        Err(SnapshotError::TemporaryRoot(
+            crate::fs_safety::Error::UnsafePermissions(_)
+        ))
+    ));
+}
+
+#[tokio::test]
 async fn explicit_private_run_directory_keeps_limits_and_cleans_temporary_files() {
     let root = tempfile::tempdir().unwrap();
     let run = root.path().join("run");

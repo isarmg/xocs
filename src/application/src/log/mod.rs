@@ -306,7 +306,7 @@ impl LogRecord {
     }
     pub fn with_request_id(mut self, request_id: &str) -> Result<Self, LogError> {
         self.request_id =
-            Some(crate::error::RequestId::new(request_id).map_err(|_| LogError::InvalidRecord)?);
+            Some(crate::error::RequestId::new(request_id).map_err(LogError::RequestId)?);
         Ok(self)
     }
     pub fn with_task_id(mut self, task_id: &str) -> Result<Self, LogError> {
@@ -315,20 +315,17 @@ impl LogRecord {
         Ok(self)
     }
     pub fn with_error_code(mut self, code: &str) -> Result<Self, LogError> {
-        self.error_code =
-            Some(crate::error::ErrorCode::new(code).map_err(|_| LogError::InvalidRecord)?);
+        self.error_code = Some(crate::error::ErrorCode::new(code).map_err(LogError::ErrorCode)?);
         Ok(self)
     }
     pub fn with_attribute(mut self, key: &str, value: impl Into<Value>) -> Result<Self, LogError> {
         identifier(key)?;
         let mut attribute = json!({key: value.into()});
         redact(&mut attribute);
-        self.attributes.extend(
-            attribute
-                .as_object_mut()
-                .expect("one attribute object")
-                .clone(),
-        );
+        let Value::Object(attribute) = attribute else {
+            unreachable!("invariant: an attribute is constructed as a JSON object");
+        };
+        self.attributes.extend(attribute);
         self.json_line()?;
         Ok(self)
     }
@@ -348,42 +345,57 @@ impl LogRecord {
         &self.event
     }
     pub fn json_line(&self) -> Result<Vec<u8>, LogError> {
+        self.encode().map(|line| line.0)
+    }
+
+    fn encode(&self) -> Result<LogLine, LogError> {
         let mut limited = LimitedBuffer { bytes: Vec::new() };
         serde_json::to_writer(&mut limited, self).map_err(|error| {
             if error.is_io() {
                 LogError::RecordTooLarge
             } else {
-                LogError::InvalidRecord
+                unreachable!("invariant: log records contain only JSON-serializable fields");
             }
         })?;
         if limited.bytes.len() >= MAX_RECORD_BYTES {
             return Err(LogError::RecordTooLarge);
         }
         limited.bytes.push(b'\n');
-        Ok(limited.bytes)
+        Ok(LogLine(limited.bytes))
     }
     pub fn write_to(&self, output: &mut impl Write) -> Result<(), LogError> {
-        output.write_all(&self.json_line()?)?;
-        output.flush()?;
-        Ok(())
+        write_line_to(&self.encode()?, output)
     }
     /// Stderr is a stream sink. The service manager owns stream capture,
     /// retention and rotation; no application-owned file grows behind it.
     pub fn emit_stderr(&self) -> Result<(), LogError> {
-        self.write_to(&mut io::stderr().lock())
+        let line = self.encode()?;
+        write_line_to(&line, &mut io::stderr().lock())
     }
     /// Emit to the explicitly installed process sink, or to stderr when absent.
     /// Native background services install their persistent sink before work.
     pub fn emit(&self) -> Result<(), LogError> {
-        #[cfg(any(unix, windows))]
-        if let Some(sink) = PROCESS_SINK.get() {
-            return sink
-                .lock()
-                .expect("process log sink lock poisoned")
-                .write(self);
-        }
-        self.emit_stderr()
+        emit_line(&self.encode()?)
     }
+}
+
+struct LogLine(Vec<u8>);
+
+fn emit_line(line: &LogLine) -> Result<(), LogError> {
+    #[cfg(any(unix, windows))]
+    if let Some(sink) = PROCESS_SINK.get() {
+        return sink
+            .lock()
+            .expect("process log sink lock poisoned")
+            .write_line(line);
+    }
+    write_line_to(line, &mut io::stderr().lock())
+}
+
+fn write_line_to(line: &LogLine, output: &mut (impl Write + ?Sized)) -> Result<(), LogError> {
+    output.write_all(&line.0)?;
+    output.flush()?;
+    Ok(())
 }
 
 struct LimitedBuffer {
@@ -462,7 +474,7 @@ pub fn redact(value: &mut Value) {
                                 .and_then(Value::as_bool)
                                 .filter(|_| value.len() == 1)
                                 .unwrap_or(!value.is_empty()),
-                            _ => true,
+                            Value::Bool(_) | Value::Number(_) => true,
                         };
                         *value = json!({"configured":configured});
                     }
@@ -477,7 +489,7 @@ pub fn redact(value: &mut Value) {
             }
         }
         Value::String(value) => *value = sanitize_text(value),
-        _ => {}
+        Value::Null | Value::Bool(_) | Value::Number(_) => {}
     }
 }
 
@@ -565,8 +577,7 @@ pub fn query(
         if line.last() != Some(&b'\n') {
             return Err(LogError::InvalidRecord);
         }
-        let record = parse_record(&line)?;
-        let time = parse_time(&record.timestamp)?;
+        let (record, time) = parse_record(&line)?;
         if filter
             .instance_id
             .is_none_or(|id| record.instance_id.as_deref() == Some(id))
@@ -603,10 +614,10 @@ fn parse_time(timestamp: &str) -> Result<DateTime<Utc>, LogError> {
     }
     DateTime::parse_from_rfc3339(timestamp)
         .map(|time| time.with_timezone(&Utc))
-        .map_err(|_| LogError::InvalidRecord)
+        .map_err(LogError::Timestamp)
 }
 
-fn parse_record(line: &[u8]) -> Result<LogRecord, LogError> {
+fn parse_record(line: &[u8]) -> Result<(LogRecord, DateTime<Utc>), LogError> {
     #[derive(Deserialize)]
     #[serde(deny_unknown_fields)]
     struct Raw {
@@ -625,8 +636,8 @@ fn parse_record(line: &[u8]) -> Result<LogRecord, LogError> {
         #[serde(default)]
         attributes: Map<String, Value>,
     }
-    let raw: Raw = serde_json::from_slice(line).map_err(|_| LogError::InvalidRecord)?;
-    parse_time(&raw.timestamp)?;
+    let raw: Raw = serde_json::from_slice(line).map_err(LogError::DecodeRecord)?;
+    let timestamp = parse_time(&raw.timestamp)?;
     if raw.event.starts_with("common.") {
         let common = CommonEvent::ALL
             .into_iter()
@@ -676,17 +687,27 @@ fn parse_record(line: &[u8]) -> Result<LogRecord, LogError> {
     record.error_code = raw.error_code;
     let mut attributes = Value::Object(raw.attributes);
     redact(&mut attributes);
-    record.attributes = attributes
-        .as_object_mut()
-        .expect("attributes object")
-        .clone();
-    Ok(record)
+    let Value::Object(attributes) = attributes else {
+        unreachable!("invariant: parsed attributes are constructed as a JSON object");
+    };
+    record.attributes = attributes;
+    Ok((record, timestamp))
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum LogError {
     #[error("structured log record does not satisfy the current contract")]
     InvalidRecord,
+    #[error("structured log record could not be decoded")]
+    DecodeRecord(#[source] serde_json::Error),
+    #[error("structured log timestamp is invalid")]
+    Timestamp(#[source] chrono::ParseError),
+    #[error("structured log request ID is invalid")]
+    RequestId(#[source] crate::error::InvalidRequestId),
+    #[error("structured log error code is invalid")]
+    ErrorCode(#[source] crate::error::InvalidErrorCode),
+    #[error("structured log archive index is invalid")]
+    ArchiveIndex(#[source] std::num::ParseIntError),
     #[error("structured log record exceeds its byte budget")]
     RecordTooLarge,
     #[error("structured log query exceeds its byte or record budget")]
@@ -695,7 +716,17 @@ pub enum LogError {
     InvalidLimits,
     #[error("log storage must be a private directory with private regular files and one writer")]
     UnsafeStorage,
-    #[error("log I/O failed: {0}")]
+    #[error("failed to acquire the exclusive log writer lease")]
+    WriterLock(#[source] io::Error),
+    #[error("failed to append a log record and restore the previous length; rollback: {rollback}")]
+    AppendRollback {
+        #[source]
+        source: io::Error,
+        rollback: io::Error,
+    },
+    #[error("log writer is unavailable after a failed append rollback")]
+    WriterFailed,
+    #[error("log I/O failed")]
     Io(#[from] io::Error),
 }
 

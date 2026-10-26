@@ -196,7 +196,7 @@ impl ServerRuntime {
                 participant
                     .close_state()
                     .await
-                    .map_err(|_| Error::StateCloseFailed)?;
+                    .map_err(Error::StateCloseFailed)?;
             }
             Ok::<_, Error>(())
         };

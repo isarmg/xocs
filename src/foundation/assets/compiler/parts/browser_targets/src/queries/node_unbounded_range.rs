@@ -1,11 +1,8 @@
-use std::str::FromStr;
-
-use super::{Distrib, QueryResult};
-use crate::browser_targets::{data::node::node_versions, error::Error, parser::Comparator, semver::Version};
+use super::{Distrib, QueryResult, node_version::NodeVersion};
+use crate::browser_targets::{data::node::node_versions, parser::Comparator};
 
 pub(super) fn node_unbounded_range(comparator: Comparator, version: &str) -> QueryResult {
-    let version =
-        Version::from_str(version).map_err(|_| Error::UnknownNodejsVersion(version.to_string()))?;
+    let version = NodeVersion::parse(version)?.padded();
     let distribs = node_versions()
         .iter()
         .filter(|(v, _)| comparator.compare(*v, version))

@@ -2,6 +2,10 @@ use super::{add_attr::AddAnyAttr, DomView, Mountable, Render};
 use crate::alternatives::*;
 use crate::view_tree::html::attribute::{Attribute, NamedAttributeKey, NextAttribute};
 
+#[path = "../../../../../../../test/interface/dom/unit/kernel/view_tree/view/either/tests.rs"]
+#[cfg(test)]
+mod tests;
+
 impl<A, B> Render for Either<A, B>
 where
     A: Render,
@@ -204,6 +208,7 @@ where
 }
 
 /// Stores each value in the view state, overwriting it only if `Some(_)` is provided.
+/// The selected branch must be provided before it is first shown.
 pub struct EitherKeepAlive<A, B> {
     /// The first possibility.
     pub a: Option<A>,
@@ -231,6 +236,10 @@ where
         let showing_b = self.show_b;
         let a = self.a.map(Render::build);
         let b = self.b.map(Render::build);
+        assert!(
+            if showing_b { b.is_some() } else { a.is_some() },
+            "invariant: selected keep-alive branch has been provided"
+        );
         EitherKeepAliveState { a, b, showing_b }
     }
 
@@ -239,14 +248,14 @@ where
         match (self.a, &mut state.a) {
             (Some(new), Some(old)) => new.rebuild(old),
             (Some(new), None) => state.a = Some(new.build()),
-            _ => {}
+            (None, Some(_) | None) => {}
         }
 
         // set or update B
         match (self.b, &mut state.b) {
             (Some(new), Some(old)) => new.rebuild(old),
             (Some(new), None) => state.b = Some(new.build()),
-            _ => {}
+            (None, Some(_) | None) => {}
         }
 
         match (self.show_b, state.showing_b) {
@@ -256,7 +265,9 @@ where
                     a.insert_before_this(b);
                     a.unmount();
                 }
-                _ => unreachable!(),
+                (None, Some(_) | None) | (Some(_), None) => {
+                    unreachable!("invariant: both keep-alive branches exist before switching")
+                }
             },
             // transition from B to A
             (false, true) => match (&mut state.a, &mut state.b) {
@@ -264,9 +275,11 @@ where
                     b.insert_before_this(a);
                     b.unmount();
                 }
-                _ => unreachable!(),
+                (None, Some(_) | None) | (Some(_), None) => {
+                    unreachable!("invariant: both keep-alive branches exist before switching")
+                }
             },
-            _ => {}
+            (true, true) | (false, false) => {}
         }
         state.showing_b = self.show_b;
     }
@@ -361,13 +374,13 @@ where
         if self.showing_b {
             self.b
                 .as_ref()
-                .map(|inner| inner.elements())
-                .unwrap_or_default()
+                .expect("invariant: selected keep-alive branch has been provided")
+                .elements()
         } else {
             self.a
                 .as_ref()
-                .map(|inner| inner.elements())
-                .unwrap_or_default()
+                .expect("invariant: selected keep-alive branch has been provided")
+                .elements()
         }
     }
 }

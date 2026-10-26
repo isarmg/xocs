@@ -9,6 +9,29 @@ pub use super::profile::{
 use serde::Serialize;
 use std::{cell::RefCell, collections::VecDeque, f64::consts::PI, rc::Rc};
 
+/// A caller-supplied coordinate or error budget cannot produce a certified path.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, thiserror::Error)]
+pub enum GeometryError {
+    #[error("{0} must be finite")]
+    NonFinite(&'static str),
+    #[error("t must be in [0, 1]")]
+    ParameterRange,
+    #[error("invalid corner dimensions or tolerance")]
+    Dimensions,
+    #[error("corner sampling cannot meet the requested budget")]
+    SamplingBudget,
+    #[error("corner offset is not certified regular")]
+    IrregularOffset,
+    #[error("tolerance is smaller than arithmetic/serialization allowance")]
+    ArithmeticAllowance,
+    #[error("corner cannot meet the requested coordinate budget")]
+    CoordinateBudget,
+    #[error("inset leaves no positive shadow dimensions")]
+    EmptyInset,
+    #[error("inset exceeds certified minimum curvature radius")]
+    InsetRadius,
+}
+
 #[derive(Clone, Copy, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Vector {
@@ -74,19 +97,71 @@ pub struct Curve {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Geometry {
-    pub width: f64,
-    pub height: f64,
-    pub extent: f64,
-    pub radius: f64,
-    pub path: String,
-    pub points: Vec<Point>,
-    pub corners: Vec<Curve>,
-    pub canonical: bool,
-    pub error_bound: f64,
+    pub(super) width: f64,
+    pub(super) height: f64,
+    pub(super) extent: f64,
+    pub(super) radius: f64,
+    pub(super) path: String,
+    pub(super) points: Vec<Point>,
+    pub(super) corners: [Curve; 4],
+    pub(super) canonical: bool,
+    pub(super) error_bound: f64,
     #[serde(skip)]
-    pub tolerance: f64,
+    pub(super) tolerance: f64,
     #[serde(skip)]
     offset_paths: RefCell<Cache<u64, String>>,
+}
+
+impl Geometry {
+    /// The certified shape's width.
+    pub fn width(&self) -> f64 {
+        self.width
+    }
+
+    /// The certified shape's height.
+    pub fn height(&self) -> f64 {
+        self.height
+    }
+
+    /// The clamped corner box size.
+    pub fn extent(&self) -> f64 {
+        self.extent
+    }
+
+    /// The certified minimum curvature radius.
+    pub fn radius(&self) -> f64 {
+        self.radius
+    }
+
+    /// The closed SVG path whose coordinates satisfy the error budget.
+    pub fn path(&self) -> &str {
+        &self.path
+    }
+
+    /// The ordered points of the closed shape.
+    pub fn points(&self) -> &[Point] {
+        &self.points
+    }
+
+    /// The four clockwise corners, starting at the upper right.
+    pub fn corners(&self) -> &[Curve; 4] {
+        &self.corners
+    }
+
+    /// Whether the shape is the unoffset profile constructed by [`create`].
+    pub fn is_canonical(&self) -> bool {
+        self.canonical
+    }
+
+    /// The certified coordinate error bound.
+    pub fn error_bound(&self) -> f64 {
+        self.error_bound
+    }
+
+    /// The requested maximum coordinate error.
+    pub fn tolerance(&self) -> f64 {
+        self.tolerance
+    }
 }
 
 #[derive(Debug)]
@@ -99,7 +174,10 @@ impl<K: PartialEq, V: Clone> Cache<K, V> {
 
     fn get(&mut self, key: &K) -> Option<V> {
         let index = self.0.iter().position(|(item, _)| item == key)?;
-        let entry = self.0.remove(index)?;
+        let entry = self
+            .0
+            .remove(index)
+            .expect("invariant: the cache entry was located in the same deque");
         let value = entry.1.clone();
         self.0.push_back(entry);
         Some(value)
@@ -134,20 +212,27 @@ fn key(value: f64) -> u64 {
     if value == 0.0 { 0 } else { value.to_bits() }
 }
 
-fn finite(value: f64, name: &str) -> Result<f64, String> {
+fn finite(value: f64, name: &'static str) -> Result<f64, GeometryError> {
     if value.is_finite() {
         Ok(value)
     } else {
-        Err(format!("{name} must be finite"))
+        Err(GeometryError::NonFinite(name))
     }
 }
 
 /// Analytic position and Frenet derivatives for normalized total arc length.
-pub fn profile(t: f64) -> Result<Profile, String> {
+///
+/// # Errors
+/// Returns a coordinate error when `t` is nonfinite or outside `[0, 1]`.
+pub fn profile(t: f64) -> Result<Profile, GeometryError> {
     finite(t, "t")?;
     if !(0.0..=1.0).contains(&t) {
-        return Err("t must be in [0, 1]".into());
+        return Err(GeometryError::ParameterRange);
     }
+    Ok(profile_at(t))
+}
+
+fn profile_at(t: f64) -> Profile {
     let q = source::evaluate(t);
     let (sin, cos) = q.heading.sin_cos();
     let k = q.curvature;
@@ -155,7 +240,7 @@ pub fn profile(t: f64) -> Result<Profile, String> {
     let kss = q.curvature_second_derivative;
     let speed = source::SPEED;
     // T=(cos θ,sin θ), N=(-sin θ,cos θ), d/dt = speed*d/ds.
-    Ok(Profile {
+    Profile {
         x: q.x,
         y: q.y,
         first: Vector {
@@ -179,7 +264,7 @@ pub fn profile(t: f64) -> Result<Profile, String> {
         curvature: k,
         curvature_derivative: ks,
         curvature_second_derivative: kss,
-    })
+    }
 }
 
 /// q(u)=6u⁵-15u⁴+10u³ has q'(u)=30u²(1-u)²>=0, so 0<=κ<=K.
@@ -279,7 +364,7 @@ fn path(points: &[Point], offset: f64) -> String {
 }
 
 fn profile_point(t: f64, offset: f64) -> Point {
-    let q = profile(t).expect("sampling uses a unit-interval parameter");
+    let q = profile_at(t);
     Point {
         x: q.x - offset * q.heading.sin(),
         y: q.y + offset * q.heading.cos() - offset,
@@ -296,7 +381,7 @@ struct Sampler {
 }
 
 impl Sampler {
-    fn visit(&mut self, interval: [f64; 2], depth: usize) -> Result<(), String> {
+    fn visit(&mut self, interval: [f64; 2], depth: usize) -> Result<(), GeometryError> {
         let [start, end] = interval;
         // For γ+dN, d²/dt² = speed²[(1-dκ)κN-dκ_sT]. Its norm
         // is bounded globally even where a segment crosses a circle junction.
@@ -308,7 +393,7 @@ impl Sampler {
             return Ok(());
         }
         if depth == 24 {
-            return Err("Corner sampling cannot meet the requested budget".into());
+            return Err(GeometryError::SamplingBudget);
         }
         let middle = (start + end) / 2.0;
         self.visit([start, middle], depth + 1)?;
@@ -316,7 +401,7 @@ impl Sampler {
     }
 }
 
-fn sample_profile(offset: f64, budget: f64) -> Result<Sample, String> {
+fn sample_profile(offset: f64, budget: f64) -> Result<Sample, GeometryError> {
     let key = [key(offset), key(budget)];
     if let Some(cached) = SAMPLES.with(|cache| cache.borrow_mut().get(&key)) {
         return Ok(cached);
@@ -356,7 +441,7 @@ struct LocalCurve {
     bound: f64,
 }
 
-fn local_curve(source: Source, tolerance: f64) -> Result<LocalCurve, String> {
+fn local_curve(source: Source, tolerance: f64) -> Result<LocalCurve, GeometryError> {
     if source.extent == 0.0 {
         return Ok(LocalCurve {
             extent: 0.0,
@@ -379,12 +464,12 @@ fn local_curve(source: Source, tolerance: f64) -> Result<LocalCurve, String> {
         });
     }
     if !regular(source) {
-        return Err("Corner offset is not certified regular".into());
+        return Err(GeometryError::IrregularOffset);
     }
     let size = source.extent;
     let allowance = 2e-6 + size * 1e-10;
     if allowance >= tolerance / 2.0 {
-        return Err("Tolerance is smaller than arithmetic/serialization allowance".into());
+        return Err(GeometryError::ArithmeticAllowance);
     }
     let sampled = sample_profile(source.offset / size, tolerance / (2.0 * size))?;
     Ok(LocalCurve {
@@ -436,24 +521,22 @@ fn assemble(
     source: Source,
     tolerance: f64,
     canonical: bool,
-) -> Result<Geometry, String> {
+) -> Result<Geometry, GeometryError> {
     let local = local_curve(source, tolerance)?;
     let error_bound = local.bound + (2e-6 + width.max(height) * f64::EPSILON * 16.0);
     if error_bound > tolerance {
-        return Err("Corner cannot meet the requested coordinate budget".into());
+        return Err(GeometryError::CoordinateBudget);
     }
-    let corners: Vec<_> = (0..4)
-        .map(|index| Curve {
-            extent: local.extent,
-            radius: local.radius,
-            source,
-            points: local
-                .points
-                .iter()
-                .map(|q| transform(*q, index, width, height, local.extent))
-                .collect(),
-        })
-        .collect();
+    let corners = std::array::from_fn(|index| Curve {
+        extent: local.extent,
+        radius: local.radius,
+        source,
+        points: local
+            .points
+            .iter()
+            .map(|q| transform(*q, index, width, height, local.extent))
+            .collect(),
+    });
     let mut points = vec![Point {
         x: corners[3].extent,
         y: 0.0,
@@ -482,18 +565,22 @@ fn assemble(
 
 /// Clamp identical physical corner boxes to half the short side, retaining
 /// the original profile without stretching one axis independently.
+///
+/// # Errors
+/// Returns a coordinate or budget error when the dimensions are invalid or
+/// the requested tolerance cannot certify the generated path.
 pub fn create(
     width: f64,
     height: f64,
     extent: f64,
     tolerance: f64,
-) -> Result<Rc<Geometry>, String> {
+) -> Result<Rc<Geometry>, GeometryError> {
     finite(width, "width")?;
     finite(height, "height")?;
     finite(extent, "extent")?;
     finite(tolerance, "tolerance")?;
     if width <= 0.0 || height <= 0.0 || extent < 0.0 || tolerance <= 0.0 {
-        return Err("Invalid corner dimensions or tolerance".into());
+        return Err(GeometryError::Dimensions);
     }
     let extent = extent.min(width / 2.0).min(height / 2.0);
     let key = [key(width), key(height), key(extent), key(tolerance)];
@@ -512,16 +599,20 @@ pub fn create(
 
 /// Resample the analytic parallel profile with its own derivative bound;
 /// translating previously sampled coarse chords would lose the error budget.
-pub fn offset_path(geometry: &Geometry, offset: f64) -> Result<String, String> {
+///
+/// # Errors
+/// Returns an inset or coordinate error when the offset is nonfinite, leaves
+/// no interior, crosses a curvature singularity or exceeds the path budget.
+pub fn offset_path(geometry: &Geometry, offset: f64) -> Result<String, GeometryError> {
     finite(offset, "offset")?;
     if offset == 0.0 {
         return Ok(geometry.path.clone());
     }
     if geometry.width + offset * 2.0 <= 0.0 || geometry.height + offset * 2.0 <= 0.0 {
-        return Err("Inset leaves no positive shadow dimensions".into());
+        return Err(GeometryError::EmptyInset);
     }
     if offset < 0.0 && geometry.radius > 0.0 && offset <= -geometry.radius {
-        return Err("Inset exceeds certified minimum curvature radius".into());
+        return Err(GeometryError::InsetRadius);
     }
     if let Some(cached) = geometry.offset_paths.borrow_mut().get(&key(offset)) {
         return Ok(cached);

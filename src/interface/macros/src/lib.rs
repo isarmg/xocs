@@ -56,39 +56,42 @@ fn component_impl(
 }
 
 fn component_macro(s: TokenStream, is_transparent: bool) -> syn::Result<proc_macro2::TokenStream> {
-    let mut dummy = syn::parse::<DummyModel>(s.clone());
-    let parse_result = syn::parse::<component::Model>(s);
-
-    if let (Ok(unexpanded), Ok(model)) = (&mut dummy, parse_result) {
-        let mut errors = diagnostics::Errors::default();
-        let expanded = model.is_transparent(is_transparent).expand(&mut errors);
-        if !matches!(unexpanded.vis, Visibility::Public(_)) {
-            unexpanded.vis = Visibility::Public(Pub {
-                span: unexpanded.vis.span(),
-            })
+    let dummy = syn::parse::<DummyModel>(s.clone());
+    let model = match syn::parse::<component::Model>(s) {
+        Ok(model) => model,
+        Err(error) => {
+            let diagnostic = error.to_compile_error();
+            return dummy.map(|mut dummy| {
+                dummy.sig.ident = unmodified_fn_name_from_fn_name(&dummy.sig.ident);
+                quote! {
+                    #[doc(hidden)]
+                    #[allow(clippy::too_many_arguments, clippy::needless_lifetimes)]
+                    #dummy
+                    #diagnostic
+                }
+            });
         }
-        unexpanded.sig.ident = unmodified_fn_name_from_fn_name(&unexpanded.sig.ident);
-
-        let output = expanded.map(|expanded| {
-            quote! {
-                #expanded
-
-                #[doc(hidden)]
-                #[allow(clippy::too_many_arguments, clippy::needless_lifetimes)]
-                #unexpanded
-            }
-        });
-        errors.finish(output)
-    } else {
-        dummy.map(|mut dummy| {
-            dummy.sig.ident = unmodified_fn_name_from_fn_name(&dummy.sig.ident);
-            quote! {
-                #[doc(hidden)]
-                #[allow(clippy::too_many_arguments, clippy::needless_lifetimes)]
-                #dummy
-            }
+    };
+    let mut unexpanded = dummy?;
+    let mut errors = diagnostics::Errors::default();
+    let expanded = model.is_transparent(is_transparent).expand(&mut errors);
+    if !matches!(unexpanded.vis, Visibility::Public(_)) {
+        unexpanded.vis = Visibility::Public(Pub {
+            span: unexpanded.vis.span(),
         })
     }
+    unexpanded.sig.ident = unmodified_fn_name_from_fn_name(&unexpanded.sig.ident);
+
+    let output = expanded.map(|expanded| {
+        quote! {
+            #expanded
+
+            #[doc(hidden)]
+            #[allow(clippy::too_many_arguments, clippy::needless_lifetimes)]
+            #unexpanded
+        }
+    });
+    errors.finish(output)
 }
 
 /// Generates the typed props builder used by component expansion.

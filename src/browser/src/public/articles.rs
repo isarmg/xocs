@@ -332,37 +332,51 @@ fn reading_action(
     copy_status: RwSignal<String>,
 ) {
     let Some(target) = target else { return };
-    if let Ok(Some(button)) = target.closest(".article-copy-code") {
+    if let Some(button) = target
+        .closest(".article-copy-code")
+        .expect("invariant: the code copy selector is valid CSS")
+    {
         let content = button
             .parent_element()
-            .and_then(|e| e.query_selector("code").ok().flatten())
-            .and_then(|c| c.text_content())
-            .unwrap_or_default();
+            .expect("invariant: a code copy button belongs to a code block")
+            .query_selector("code")
+            .expect("invariant: code is a valid CSS selector")
+            .expect("invariant: a rendered code block contains its code element")
+            .text_content()
+            .expect("invariant: an element has text content");
         blog_interface::task::spawn_local(async move {
             let result = wasm_bindgen_futures::JsFuture::from(
                 web_sys::window()
-                    .unwrap()
+                    .expect("invariant: the application is mounted in a browser window")
                     .navigator()
                     .clipboard()
                     .write_text(&content),
             )
             .await;
-            copy_status.set(if result.is_ok() {
-                t("代码已复制", "Code copied")
-            } else {
-                t(
-                    "复制失败，请手动选中代码",
-                    "Copy failed. Select the code manually.",
-                )
-            });
+            let message = match result {
+                Ok(_) => t("代码已复制", "Code copied"),
+                Err(error) => {
+                    web_sys::console::debug_2(&"Unable to write to the clipboard".into(), &error);
+                    t(
+                        "复制失败，请手动选中代码",
+                        "Copy failed. Select the code manually.",
+                    )
+                }
+            };
+            if copy_status.try_set(message).is_some() {
+                return;
+            }
             blog_interface::timers::callback::Timeout::new(2000, move || {
-                let _ = copy_status.try_set(String::new());
+                let _ = copy_status.try_set(String::new()); // The article can unmount before feedback expires.
             })
             .forget();
         });
         return;
     }
-    if let Ok(Some(img)) = target.closest("img") {
+    if let Some(img) = target
+        .closest("img")
+        .expect("invariant: img is a valid CSS selector")
+    {
         lightbox.set(img.get_attribute("src").and_then(|s| safe_url(&s, false)));
     }
 }
@@ -384,7 +398,8 @@ fn Reading(article: ArticleModel) -> impl IntoView {
     let copied = RwSignal::new(String::new());
     let update = move || {
         let Some(card) = node.get() else { return };
-        let win = web_sys::window().unwrap();
+        let win =
+            web_sys::window().expect("invariant: the application is mounted in a browser window");
         let scroll = win.scroll_y().unwrap_or(0.);
         let start = card.get_bounding_client_rect().top() + scroll;
         let end = (start + card.offset_height() as f64
@@ -399,7 +414,9 @@ fn Reading(article: ArticleModel) -> impl IntoView {
                 .clamp(0., 100.)
                 .round() as i64,
         );
-        let doc = win.document().unwrap();
+        let doc = win
+            .document()
+            .expect("invariant: the application window owns its document");
         let current = headings
             .get_value()
             .into_iter()
@@ -412,12 +429,12 @@ fn Reading(article: ArticleModel) -> impl IntoView {
         active.set(current);
     };
     let scroll = SendWrapper::new(blog_interface::events::EventListener::new(
-        &web_sys::window().unwrap(),
+        &web_sys::window().expect("invariant: the application is mounted in a browser window"),
         "scroll",
         move |_| update(),
     ));
     let resize = SendWrapper::new(blog_interface::events::EventListener::new(
-        &web_sys::window().unwrap(),
+        &web_sys::window().expect("invariant: the application is mounted in a browser window"),
         "resize",
         move |_| update(),
     ));
@@ -665,7 +682,7 @@ fn News(id: i64) -> impl IntoView {
                                             html::time().child(crate::dates::format(
                                                 &n.create_time.clone().unwrap_or_default(),
                                             )),
-                                            html::p().child(n.content.clone()),
+                                            html::p().child(n.content),
                                         )))
                                     })
                                     .collect_view(),

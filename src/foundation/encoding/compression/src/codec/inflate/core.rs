@@ -30,7 +30,6 @@ use crate::codec::shared::{update_adler32, HUFFMAN_LENGTH_ORDER};
 use ::core::cell::Cell;
 
 use ::core::cmp;
-use ::core::convert::TryInto;
 
 use self::output_buffer::{InputWrapper, OutputBuffer};
 
@@ -547,10 +546,11 @@ const BASE_EXTRA_MASK: usize = 32 - 1;
 /// Panics if there are less than two bytes left.
 #[inline]
 fn read_u16_le(iter: &mut InputWrapper) -> u16 {
-    let ret = {
-        let two_bytes = iter.as_slice()[..2].try_into().unwrap_or_default();
-        u16::from_le_bytes(two_bytes)
-    };
+    let bytes = iter
+        .as_slice()
+        .first_chunk::<2>()
+        .expect("invariant: the stored-block reader has at least two input bytes");
+    let ret = u16::from_le_bytes(*bytes);
     iter.advance(2);
     ret
 }

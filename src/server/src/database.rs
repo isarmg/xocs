@@ -41,14 +41,18 @@ pub(crate) async fn open_database_with_limit(
             .write(true)
             .create_new(true)
             .mode(0o600)
-            .open(path)?;
+            .open(path)
+            .map_err(Error::CreateDatabase)?;
     }
     let descriptor = directory.open_existing(
         path.file_name()
             .expect("invariant: database has a filename"),
     )?;
     descriptor.verify_identity()?;
-    let before = descriptor.file().metadata()?;
+    let before = descriptor
+        .file()
+        .metadata()
+        .map_err(Error::ReadDatabaseDescriptor)?;
     // Closing a raw descriptor after SQLite opens the inode releases POSIX locks.
     drop(descriptor);
     let options = SqliteConnectOptions::new()
@@ -72,7 +76,7 @@ pub(crate) async fn open_database_with_limit(
         .await?;
     use std::os::unix::fs::MetadataExt;
     let verified = (|| {
-        let after = fs::symlink_metadata(path)?;
+        let after = fs::symlink_metadata(path).map_err(Error::ReadDatabasePath)?;
         if (before.dev(), before.ino()) != (after.dev(), after.ino()) {
             return Err(Error::DatabaseIdentityChanged);
         }
@@ -99,7 +103,8 @@ pub(crate) async fn initialize_new_database(
     let temporary = tempfile::Builder::new()
         .prefix(".blog-init-")
         .suffix(".sqlite")
-        .tempfile_in(root)?;
+        .tempfile_in(root)
+        .map_err(Error::CreateInitializationStaging)?;
     let staging = temporary.path().to_path_buf();
     let pool = open_database_with_limit(&staging, false, 1).await?;
     let result = async {
@@ -121,7 +126,6 @@ pub(crate) async fn initialize_new_database(
     .await;
     pool.close().await;
     result?;
-    temporary.as_file().sync_all()?;
     let (file, staging) = temporary.keep()?;
     let source = blog_application::fs_safety::RelativePath::new(
         staging
@@ -135,7 +139,7 @@ pub(crate) async fn initialize_new_database(
     )?;
     blog_application::fs_safety::NoClobberPublish::publish(&directory, &source, &destination)
         .map_err(|source| Error::PublishDatabase { staging, source })?;
-    file.sync_all()?;
+    drop(file);
     Ok(())
 }
 
@@ -157,7 +161,7 @@ pub(crate) async fn initialize(
         .await?;
     let service = AdministratorService::new(SqliteAdministratorStore::new(pool.clone()));
     crate::administrator::seed_administrator(&service, username, password, now_micros()?).await?;
-    validate_database(pool).await
+    Ok(())
 }
 
 pub(crate) async fn validate_database(pool: &SqlitePool) -> Result<(), Error> {

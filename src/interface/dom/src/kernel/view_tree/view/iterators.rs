@@ -449,10 +449,6 @@ where
     type Owned = [T::Owned; N];
 
     fn into_owned(self) -> Self::Owned {
-        self.into_iter()
-            .map(DomView::into_owned)
-            .collect::<Vec<_>>()
-            .try_into()
-            .unwrap_or_else(|_| unreachable!())
+        self.map(DomView::into_owned)
     }
 }

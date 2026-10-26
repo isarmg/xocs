@@ -226,7 +226,7 @@ impl Default for Web {
     fn default() -> Self {
         Self {
             kind: OutputKind::Spa,
-            entry: String::new(),
+            entry: "src/main.js".into(),
             entries: BTreeMap::new(),
             copies: BTreeMap::new(),
             css_output: String::new(),
@@ -252,7 +252,7 @@ impl Default for Web {
 impl Config {
     pub fn read(web: &Path) -> Result<Self> {
         let path = web.join("rust-web.toml");
-        let mut config: Self = match inventory::read(&path) {
+        let config: Self = match inventory::read(&path) {
             Ok(bytes) => toml::from_str(&utf8(bytes, &path)?).map_err(|source| {
                 AssetError::Configuration {
                     path: path.clone(),
@@ -266,9 +266,6 @@ impl Config {
             }
             Err(error) => return Err(error.into()),
         };
-        if config.web.entry.is_empty() {
-            config.web.entry = "src/main.js".into();
-        }
         source_inputs::web_relative(Path::new(&config.web.entry), false)
             .map_err(|source| input_error(Path::new(&config.web.entry), source))?;
         if config.web.kind == OutputKind::Embedded && config.web.entries.is_empty() {
@@ -338,8 +335,8 @@ struct Module {
 pub struct Linker {
     web: PathBuf,
     pkg: PathBuf,
-    pub config: Config,
-    pub outputs: BTreeMap<String, Vec<u8>>,
+    config: Config,
+    outputs: BTreeMap<String, Vec<u8>>,
     public_outputs: BTreeSet<String>,
     public_media: BTreeSet<String>,
     budget: OutputBudget,
@@ -558,7 +555,9 @@ impl Linker {
                     }
                 }
                 std::path::Component::CurDir => {}
-                component => normalized.push(component.as_os_str()),
+                component @ (std::path::Component::Prefix(_)
+                | std::path::Component::RootDir
+                | std::path::Component::Normal(_)) => normalized.push(component.as_os_str()),
             }
         }
         let mut path = if normalized.starts_with(self.web.join("pkg")) {
@@ -1155,16 +1154,14 @@ impl Linker {
             html = html.replacen("</head>", &format!("{preload}</head>"), 1);
             self.generated_output("index.html".into(), html.into_bytes())?;
         }
-        self.budgets()?;
-        let ordered = self.modules.keys().cloned().collect::<Vec<_>>();
-        let ids = ordered
-            .iter()
+        let ids = self
+            .modules
+            .keys()
             .enumerate()
-            .map(|(id, path)| (path.clone(), id))
+            .map(|(id, path)| (path.as_path(), id))
             .collect::<BTreeMap<_, _>>();
         let mut modules = Vec::new();
-        for path in ordered {
-            let module = &self.modules[&path];
+        for module in self.modules.values() {
             let relative = if module.source.starts_with(&self.pkg) {
                 format!(
                     "pkg/{}",
@@ -1188,9 +1185,10 @@ impl Linker {
             } else {
                 relative
             };
-            let mut delivered = vec![module.output.clone()];
-            delivered.extend(module.derived_outputs.clone());
-            modules.push(json!({"path":relative,"sha256":inventory::sha(&inventory::read(&module.source)?),"files":delivered,"imports":module.imports.iter().map(|path|ids[path]).collect::<Vec<_>>()}));
+            let delivered = std::iter::once(&module.output)
+                .chain(&module.derived_outputs)
+                .collect::<Vec<_>>();
+            modules.push(json!({"path":relative,"sha256":inventory::sha(&inventory::read(&module.source)?),"files":delivered,"imports":module.imports.iter().map(|path|ids[path.as_path()]).collect::<Vec<_>>()}));
         }
         let outputs = self
             .outputs
@@ -1202,22 +1200,10 @@ impl Linker {
             json!({"format_version":1,"distribution":"dist","modules":modules,"outputs":outputs}),
         ))
     }
-
-    fn budgets(&self) -> Result<()> {
-        let mut budget = OutputBudget::default();
-        for (name, bytes) in &self.outputs {
-            budget.add(
-                &self.config.web,
-                name,
-                bytes.len(),
-                self.public_media.contains(name),
-            )?;
-        }
-        Ok(())
-    }
 }
 
-pub fn write_outputs(root: &Path, outputs: &BTreeMap<String, Vec<u8>>) -> Result<Files> {
+/// Write the accepted bundle; each filesystem operation reports its own failure.
+pub fn write_outputs(root: &Path, outputs: &BTreeMap<String, Vec<u8>>) -> Result<()> {
     for (name, bytes) in outputs {
         inventory::relative(Path::new(name))?;
         let path = root.join(name);
@@ -1230,7 +1216,7 @@ pub fn write_outputs(root: &Path, outputs: &BTreeMap<String, Vec<u8>>) -> Result
         })?;
         fs::write(&path, bytes).map_err(|source| AssetError::WriteOutput { path, source })?;
     }
-    Ok(inventory::files(root)?)
+    Ok(())
 }
 
 #[cfg(test)]

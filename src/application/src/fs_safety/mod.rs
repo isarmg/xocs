@@ -168,18 +168,13 @@ impl AtomicFile {
 pub struct NoClobberPublish;
 impl NoClobberPublish {
     /// Publish a single-linked regular staging file within one held private directory.
+    /// The staging file is synchronized before the no-clobber rename; the
+    /// containing directory is synchronized before success is returned.
     pub fn publish(
         directory: &PrivateDirectory,
         source: &RelativePath,
         destination: &RelativePath,
     ) -> Result<(), Error> {
-        if source.as_path().components().count() != 1
-            || destination.as_path().components().count() != 1
-        {
-            return Err(Error::UnsafeRelativePath(
-                destination.as_path().to_path_buf(),
-            ));
-        }
         unix::no_clobber_publish(directory, source, destination)
     }
 }
@@ -245,7 +240,7 @@ pub enum Error {
     UnsafePermissions(PathBuf),
     #[error("directory entry identity changed: {0:?}")]
     IdentityChanged(PathBuf),
-    #[error("publication happened but durability could not be confirmed: {0}")]
+    #[error("publication happened but durability could not be confirmed")]
     PublishedDurabilityUnknown(#[source] io::Error),
     #[error("advisory lock is already held: {0:?}")]
     AlreadyLocked(PathBuf),
@@ -259,7 +254,7 @@ pub enum Error {
         #[source]
         source: std::num::TryFromIntError,
     },
-    #[error("{operation}; temporary-file cleanup also failed: {cleanup}")]
+    #[error("filesystem operation failed; temporary-file cleanup also failed: {cleanup}")]
     Cleanup {
         #[source]
         operation: Box<Error>,

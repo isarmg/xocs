@@ -9,6 +9,7 @@ use crate::admin_auth::{
     AdministratorOriginMode, require_canonical_administrator_username,
     require_current_password_hash,
 };
+use crate::error::RequestId;
 use std::{
     fmt,
     sync::{Arc, OnceLock},
@@ -80,6 +81,14 @@ impl AdministratorPolicy {
 pub struct Identifier(String);
 
 impl Identifier {
+    /// Generate an identifier from the current fixed-length random-token format.
+    ///
+    /// # Errors
+    /// Returns the operating-system randomness failure when entropy is unavailable.
+    pub fn generate() -> Result<Self, crate::admin_auth::Error> {
+        crate::admin_auth::random_token().map(Self)
+    }
+
     pub fn new(value: impl Into<String>) -> Result<Self, Error> {
         let value = value.into();
         if value.is_empty()
@@ -265,7 +274,7 @@ pub struct SecurityAuditEvent {
     pub outcome: AuditOutcome,
     pub actor_administrator_id: Option<Identifier>,
     pub subject_digest: Option<[u8; DIGEST_BYTES]>,
-    pub request_id: Option<String>,
+    pub request_id: Option<RequestId>,
     pub detail_json: String,
     pub occurred_at_micros: u64,
 }
@@ -280,9 +289,6 @@ impl SecurityAuditEvent {
             serde_json::from_str(&self.detail_json).map_err(Error::AuditJson)?;
         if !detail.is_object() {
             return Err(Error::InvalidAuditEvent);
-        }
-        if let Some(request_id) = &self.request_id {
-            crate::error::validate_request_id(request_id)?;
         }
         Ok(())
     }
@@ -308,7 +314,7 @@ pub trait AdministratorStore: Send + Sync {
     /// service or pool is recreated. Never derive scope from request input.
     async fn authentication_state(
         &self,
-    ) -> Result<Arc<AuthenticationState>, AuthenticationStateError>;
+    ) -> Result<Arc<AuthenticationState>, AuthenticationStateError<Self::StoreError>>;
     fn supports_account_updates(&self) -> bool;
     async fn manage_administrator(
         &self,
@@ -354,16 +360,13 @@ pub trait AdministratorStore: Send + Sync {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LoginContext {
-    pub request_id: Option<String>,
+    pub request_id: Option<RequestId>,
     pub now_micros: u64,
 }
 
 impl LoginContext {
     pub fn validate(&self) -> Result<(), Error> {
         require_persistable_time(self.now_micros)?;
-        if let Some(request_id) = &self.request_id {
-            crate::error::validate_request_id(request_id)?;
-        }
         Ok(())
     }
 }
@@ -386,10 +389,28 @@ impl fmt::Debug for AuthenticatedSession {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AuthenticatedIdentity {
-    pub administrator_id: Identifier,
-    pub username: String,
-    pub session_id: Identifier,
-    pub csrf_hash: [u8; DIGEST_BYTES],
+    administrator_id: Identifier,
+    username: String,
+    session_id: Identifier,
+    csrf_hash: [u8; DIGEST_BYTES],
+}
+
+impl AuthenticatedIdentity {
+    pub fn administrator_id(&self) -> &Identifier {
+        &self.administrator_id
+    }
+
+    pub fn username(&self) -> &str {
+        &self.username
+    }
+
+    pub fn session_id(&self) -> &Identifier {
+        &self.session_id
+    }
+
+    pub fn csrf_hash(&self) -> &[u8; DIGEST_BYTES] {
+        &self.csrf_hash
+    }
 }
 
 /// Complete storage-independent login/session orchestration. HTTP adapters are
@@ -446,18 +467,28 @@ where
         context: &LoginContext,
     ) -> Result<AuthenticatedSession, ServiceError<Store::StoreError>> {
         context.validate()?;
-        self.store
+        let state = self
+            .store
             .authentication_state()
             .await
-            .and_then(|state| state.admit_login_attempt())
             .map_err(|error| match error {
                 AuthenticationStateError::Unavailable => ServiceError::AuthenticationBusy,
+                AuthenticationStateError::Store(source) => ServiceError::Store(source),
                 AuthenticationStateError::LoginAttemptsExceeded {
                     retry_after_seconds,
                 } => ServiceError::LoginAttemptsExceeded {
                     retry_after_seconds,
                 },
             })?;
+        state.admit_login_attempt().map_err(|error| match error {
+            AuthenticationStateError::Unavailable => ServiceError::AuthenticationBusy,
+            AuthenticationStateError::Store(impossible) => match impossible {},
+            AuthenticationStateError::LoginAttemptsExceeded {
+                retry_after_seconds,
+            } => ServiceError::LoginAttemptsExceeded {
+                retry_after_seconds,
+            },
+        })?;
         let normalized =
             crate::admin_auth::normalize_administrator_username(username_candidate).ok();
         let administrator = match normalized.as_deref() {
@@ -503,7 +534,7 @@ where
             .checked_add(SESSION_ABSOLUTE_MICROS)
             .ok_or(Error::InvalidTimestamp)?;
         let session = SessionRecord {
-            session_id: Identifier::new(crate::admin_auth::random_token()?)?,
+            session_id: Identifier::generate()?,
             administrator_id: administrator.administrator_id.clone(),
             token_hash: crate::admin_auth::token_hash(&session_token),
             csrf_hash: crate::admin_auth::token_hash(&csrf_token),
@@ -631,7 +662,7 @@ where
         &self,
         session_token: &str,
         now_micros: u64,
-        request_id: Option<String>,
+        request_id: Option<RequestId>,
     ) -> Result<(), ServiceError<Store::StoreError>> {
         if !crate::admin_auth::is_token_shape(session_token) {
             return Err(ServiceError::InvalidSession);
@@ -658,7 +689,7 @@ where
                 &found.session.session_id,
                 now_micros,
                 SecurityAuditEvent {
-                    event_id: Identifier::new(crate::admin_auth::random_token()?)?,
+                    event_id: Identifier::generate()?,
                     action: SecurityAction::SessionRevoked,
                     outcome: AuditOutcome::Success,
                     actor_administrator_id: Some(found.administrator.administrator_id),
@@ -727,7 +758,7 @@ fn security_event(
     context: &LoginContext,
 ) -> Result<SecurityAuditEvent, Error> {
     Ok(SecurityAuditEvent {
-        event_id: Identifier::new(crate::admin_auth::random_token()?)?,
+        event_id: Identifier::generate()?,
         action,
         outcome: AuditOutcome::Success,
         actor_administrator_id: Some(administrator.administrator_id.clone()),
@@ -848,8 +879,6 @@ pub enum Error {
     InvalidAuditEvent,
     #[error("security audit details are not valid JSON")]
     AuditJson(#[source] serde_json::Error),
-    #[error("request ID is invalid")]
-    InvalidRequestId(#[from] crate::error::InvalidRequestId),
     #[error(transparent)]
     Authentication(#[from] crate::admin_auth::Error),
 }

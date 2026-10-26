@@ -72,13 +72,17 @@ pub fn modify_types_generics_hack<F>(
 where
     F: FnMut(&mut syn::punctuated::Punctuated<syn::GenericArgument, syn::token::Comma>),
 {
-    let mut abga: syn::AngleBracketedGenericArguments = syn::parse2(ty_generics.to_token_stream())
-        .unwrap_or_else(|_| syn::AngleBracketedGenericArguments {
+    let tokens = ty_generics.to_token_stream();
+    let mut abga = if tokens.is_empty() {
+        syn::AngleBracketedGenericArguments {
             colon2_token: None,
             lt_token: Default::default(),
             args: Default::default(),
             gt_token: Default::default(),
-        });
+        }
+    } else {
+        syn::parse2(tokens).expect("invariant: parsed generic arguments remain valid Rust")
+    };
     mutator(&mut abga.args);
     abga
 }
@@ -105,13 +109,13 @@ pub fn public_visibility() -> syn::Visibility {
 }
 
 pub fn expr_to_lit_string(expr: &syn::Expr) -> Result<String, Error> {
-    match expr {
-        syn::Expr::Lit(lit) => match &lit.lit {
-            syn::Lit::Str(str) => Ok(str.value()),
-            _ => Err(Error::new_spanned(expr, "attribute only allows str values")),
-        },
-        _ => Err(Error::new_spanned(expr, "attribute only allows str values")),
-    }
+    let syn::Expr::Lit(lit) = expr else {
+        return Err(Error::new_spanned(expr, "attribute only allows str values"));
+    };
+    let syn::Lit::Str(value) = &lit.lit else {
+        return Err(Error::new_spanned(expr, "attribute only allows str values"));
+    };
+    Ok(value.value())
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -173,7 +177,7 @@ impl AttrArg {
         match self {
             Self::KeyValue(key_value) => Ok(Some(key_value)),
             Self::Not { .. } => Ok(None),
-            _ => Err(self.incorrect_type()),
+            Self::Flag(_) | Self::Sub(_) | Self::Fn(_) => Err(self.incorrect_type()),
         }
     }
 
@@ -202,7 +206,7 @@ impl AttrArg {
                 *field = None;
                 Ok(())
             }
-            _ => Err(self.incorrect_type()),
+            Self::KeyValue(_) | Self::Sub(_) | Self::Fn(_) => Err(self.incorrect_type()),
         }
     }
 
@@ -241,7 +245,7 @@ impl AttrArg {
                 *field = None;
                 Ok(())
             }
-            _ => Err(self.incorrect_type()),
+            Self::KeyValue(_) | Self::Fn(_) => Err(self.incorrect_type()),
         }
     }
 }
@@ -409,7 +413,9 @@ pub trait ApplyMeta {
     fn apply_attr(&mut self, attr: &Attribute) -> syn::Result<()> {
         match &attr.meta {
             syn::Meta::List(list) => self.apply_subsections(list),
-            meta => Err(Error::new_spanned(meta, "Expected builder(…)")),
+            meta @ (syn::Meta::Path(_) | syn::Meta::NameValue(_)) => {
+                Err(Error::new_spanned(meta, "Expected builder(…)"))
+            }
         }
     }
 }

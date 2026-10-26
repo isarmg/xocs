@@ -30,14 +30,22 @@ struct FixtureProcess {
 
 impl FixtureProcess {
     fn identify(path: &Path) -> Self {
-        let pid: i32 = fs::read_to_string(path).unwrap().trim().parse().unwrap();
-        let pid = Pid::from_raw(pid).unwrap();
+        let pid: i32 = fs::read_to_string(path)
+            .expect("read the fixture's published PID")
+            .trim()
+            .parse()
+            .expect("invariant: the fixture publishes a decimal PID");
+        let pid = Pid::from_raw(pid).expect("invariant: a running fixture has a positive PID");
         let (_, started) = Self::state(pid).expect("Fixture process is running");
         Self { pid, started }
     }
 
     fn state(pid: Pid) -> Option<(char, String)> {
-        let stat = fs::read_to_string(format!("/proc/{}/stat", pid.as_raw_nonzero())).ok()?;
+        let stat = match fs::read_to_string(format!("/proc/{}/stat", pid.as_raw_nonzero())) {
+            Ok(stat) => stat,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return None,
+            Err(error) => panic!("read fixture process state: {error}"),
+        };
         let fields = stat
             .rsplit_once(") ")?
             .1
@@ -54,8 +62,11 @@ impl FixtureProcess {
 
 impl Drop for FixtureProcess {
     fn drop(&mut self) {
-        if self.running() {
-            let _ = kill_process(self.pid, Signal::KILL);
+        if self.running()
+            && let Err(error) = kill_process(self.pid, Signal::KILL)
+            && error != rustix::io::Errno::SRCH
+        {
+            eprintln!("stop remaining fixture process: {error}");
         }
     }
 }
@@ -66,7 +77,7 @@ impl Cli {
     fn wait(&mut self) -> ExitStatus {
         let deadline = Instant::now() + Duration::from_secs(5);
         loop {
-            if let Some(status) = self.0.try_wait().unwrap() {
+            if let Some(status) = self.0.try_wait().expect("observe the fixture CLI's exit") {
                 return status;
             }
             assert!(
@@ -80,17 +91,27 @@ impl Cli {
 
 impl Drop for Cli {
     fn drop(&mut self) {
-        let _ = self.0.kill();
-        let _ = self.0.wait();
+        // A completed fixture may already have been reaped by its assertion.
+        if let Err(error) = self.0.kill()
+            && error.kind() != std::io::ErrorKind::InvalidInput
+        {
+            eprintln!("stop fixture child: {error}");
+        }
+        if let Err(error) = self.0.wait() {
+            eprintln!("reap fixture child: {error}");
+        }
     }
 }
 
 fn wait_for_file(path: PathBuf) {
     let deadline = Instant::now() + Duration::from_secs(5);
-    while fs::read_to_string(&path)
-        .ok()
-        .is_none_or(|value| value.trim().is_empty())
-    {
+    loop {
+        match fs::read_to_string(&path) {
+            Ok(value) if !value.trim().is_empty() => return,
+            Ok(_) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => panic!("read fixture readiness {}: {error}", path.display()),
+        }
         assert!(
             Instant::now() < deadline,
             "Fixture did not become ready: {}",
@@ -102,9 +123,11 @@ fn wait_for_file(path: PathBuf) {
 
 fn preview(root: &Path) -> (Cli, String) {
     let web = root.join("src/web");
-    fs::create_dir_all(web.join("dist")).unwrap();
-    fs::write(web.join("rust-web.toml"), "[web]\nentry='src/main.js'\n").unwrap();
-    fs::write(web.join("dist/index.html"), "preview fixture").unwrap();
+    fs::create_dir_all(web.join("dist")).expect("create the preview fixture's output");
+    fs::write(web.join("rust-web.toml"), "[web]\nentry='src/main.js'\n")
+        .expect("write the preview fixture's configuration");
+    fs::write(web.join("dist/index.html"), "preview fixture")
+        .expect("write the preview fixture's entry page");
     let mut cli = Cli(Command::new(env!("CARGO_BIN_EXE_blog-assets"))
         .args(["preview", "--product-root"])
         .arg(root)
@@ -113,21 +136,36 @@ fn preview(root: &Path) -> (Cli, String) {
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit())
         .spawn()
-        .unwrap());
-    let stdout = cli.0.stdout.take().unwrap();
+        .expect("start the preview fixture"));
+    let stdout = cli
+        .0
+        .stdout
+        .take()
+        .expect("invariant: preview stdout is piped");
     let (sender, receiver) = std::sync::mpsc::sync_channel(1);
     let reader = thread::spawn(move || {
         let mut line = String::new();
-        BufReader::new(stdout).read_line(&mut line).unwrap();
-        let _ = sender.send(line);
+        BufReader::new(stdout)
+            .read_line(&mut line)
+            .expect("read the preview's listening event");
+        sender
+            .send(line)
+            .expect("invariant: the fixture waits for the preview's listening event");
     });
     let line = receiver
         .recv_timeout(Duration::from_secs(5))
         .expect("Preview did not report its listening address");
-    reader.join().unwrap();
-    let listening: serde_json::Value = serde_json::from_str(&line).unwrap();
+    reader.join().expect("the preview event reader must finish");
+    let listening: serde_json::Value =
+        serde_json::from_str(&line).expect("preview must emit a JSON listening event");
     assert_eq!(listening["event"], "listening");
-    (cli, listening["address"].as_str().unwrap().to_string())
+    (
+        cli,
+        listening["address"]
+            .as_str()
+            .expect("the listening event must contain its address")
+            .to_string(),
+    )
 }
 
 #[test]

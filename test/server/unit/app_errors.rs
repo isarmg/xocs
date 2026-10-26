@@ -2,6 +2,31 @@ use super::*;
 use std::error::Error as _;
 
 #[tokio::test]
+async fn media_parse_failures_retain_sources_without_echoing_values() {
+    let json_error = serde_json::from_str::<Vec<String>>(r#"["private-cover",false]"#).unwrap_err();
+    let url_error = url_encoding::address::Url::parse("http://[private-host]").unwrap_err();
+    let errors = [
+        AppError::MediaCovers(json_error),
+        AppError::MediaUrl(url_error),
+    ];
+    for error in errors {
+        assert!(error.source().is_some());
+        let response = error.into_response();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        let bytes = axum::body::to_bytes(response.into_body(), 4096)
+            .await
+            .unwrap();
+        let value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(value["code"], "bad_request");
+        assert!(
+            !String::from_utf8(bytes.to_vec())
+                .unwrap()
+                .contains("private")
+        );
+    }
+}
+
+#[tokio::test]
 async fn database_failures_retain_the_source_and_return_a_safe_response() {
     let error = db_error(sqlx::Error::Io(std::io::Error::other(
         "private-database-detail",

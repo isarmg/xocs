@@ -1,6 +1,7 @@
 use super::{AdminPageQuery, PageResult};
 use crate::{ApiResult, AppError, AppState, absent, db_error, invalid};
 use axum::{Json, extract::State};
+use blog_application::admin_core::AuthenticatedIdentity;
 use blog_application::server_cli::{ContractPath as Path, ContractQuery as Query};
 use serde::{Deserialize, Serialize};
 
@@ -185,55 +186,67 @@ async fn load_link(state: &AppState, id: i64) -> ApiResult<AdminLink> {
 }
 pub(super) async fn create_link(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     crate::ContractJson(input): crate::ContractJson<LinkInput>,
 ) -> ApiResult<AdminLink> {
     validate_link(&input)?;
+    let mut transaction = crate::content::begin_mutation(&state.pool, &identity).await?;
     let id = sqlx::query("INSERT INTO resource_path(title,classify,cover,url,introduction,type,status) VALUES(?,?,?,?,?,?,?)")
         .bind(input.title).bind(input.classify).bind(input.cover).bind(input.url).bind(input.introduction).bind(input.link_type.as_str()).bind(i64::from(input.status))
-        .execute(&state.pool).await.map_err(db_error)?.last_insert_rowid();
+        .execute(&mut *transaction).await.map_err(db_error)?.last_insert_rowid();
+    transaction.commit().await.map_err(db_error)?;
     load_link(&state, id).await
 }
 pub(super) async fn update_link(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     Path(id): Path<i64>,
     crate::ContractJson(input): crate::ContractJson<LinkInput>,
 ) -> ApiResult<AdminLink> {
     validate_link(&input)?;
+    let mut transaction = crate::content::begin_mutation(&state.pool, &identity).await?;
     let changed = sqlx::query("UPDATE resource_path SET title=?,classify=?,cover=?,url=?,introduction=?,type=?,status=? WHERE id=?")
         .bind(input.title).bind(input.classify).bind(input.cover).bind(input.url).bind(input.introduction).bind(input.link_type.as_str()).bind(i64::from(input.status)).bind(id)
-        .execute(&state.pool).await.map_err(db_error)?;
+        .execute(&mut *transaction).await.map_err(db_error)?;
     if changed.rows_affected() == 0 {
         return Err(absent());
     }
+    transaction.commit().await.map_err(db_error)?;
     load_link(&state, id).await
 }
 pub(super) async fn change_link_status(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     Path(id): Path<i64>,
     crate::ContractJson(input): crate::ContractJson<LinkStatusInput>,
 ) -> ApiResult<AdminLink> {
+    let mut transaction = crate::content::begin_mutation(&state.pool, &identity).await?;
     let changed = sqlx::query("UPDATE resource_path SET status=? WHERE id=?")
         .bind(i64::from(input.active))
         .bind(id)
-        .execute(&state.pool)
+        .execute(&mut *transaction)
         .await
         .map_err(db_error)?;
     if changed.rows_affected() == 0 {
         return Err(absent());
     }
+    transaction.commit().await.map_err(db_error)?;
     load_link(&state, id).await
 }
 pub(super) async fn delete_link(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     Path(id): Path<i64>,
 ) -> ApiResult<serde_json::Value> {
+    let mut transaction = crate::content::begin_mutation(&state.pool, &identity).await?;
     let changed = sqlx::query("DELETE FROM resource_path WHERE id=?")
         .bind(id)
-        .execute(&state.pool)
+        .execute(&mut *transaction)
         .await
         .map_err(db_error)?;
     if changed.rows_affected() == 0 {
         return Err(absent());
     }
+    transaction.commit().await.map_err(db_error)?;
     Ok(Json(serde_json::json!({"deleted": true})))
 }

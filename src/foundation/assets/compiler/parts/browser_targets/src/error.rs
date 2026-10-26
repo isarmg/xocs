@@ -27,6 +27,16 @@ pub enum Error {
     /// The given Node.js version can't be found.
     UnknownNodejsVersion(String),
 
+    #[error("invalid Node.js version: {version}")]
+    /// A numeric component of the given Node.js version is invalid.
+    InvalidNodejsVersion {
+        /// The version supplied in the query.
+        version: String,
+        /// The failed numeric conversion.
+        #[source]
+        source: std::num::ParseIntError,
+    },
+
     #[error("unknown version '{1}' of browser '{0}'")]
     /// The given version of the given browser can't be found.
     UnknownBrowserVersion(String, String),

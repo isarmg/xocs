@@ -51,6 +51,6 @@ pub(crate) fn Sliding(title: String) -> impl IntoView {
             )
             .class("sliding-title")
             .node_ref(node)
-            .title(title.clone()),
+            .title(title),
     )
 }

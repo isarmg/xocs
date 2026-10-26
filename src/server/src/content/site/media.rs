@@ -20,17 +20,29 @@ pub(super) struct SiteMedia {
 
 impl SiteMedia {
     pub(super) fn normalize(&mut self) -> Result<(), AppError> {
+        let Self {
+            logo,
+            journey_background,
+            journal_background,
+            guestbook_background,
+            love_letter_background,
+            love_moments_cover,
+            love_photos_cover,
+            love_wishes_cover,
+            toolbox_background,
+            toolbox_video,
+        } = self;
         for field in [
-            &mut self.logo,
-            &mut self.journey_background,
-            &mut self.journal_background,
-            &mut self.guestbook_background,
-            &mut self.love_letter_background,
-            &mut self.love_moments_cover,
-            &mut self.love_photos_cover,
-            &mut self.love_wishes_cover,
-            &mut self.toolbox_background,
-            &mut self.toolbox_video,
+            logo,
+            journey_background,
+            journal_background,
+            guestbook_background,
+            love_letter_background,
+            love_moments_cover,
+            love_photos_cover,
+            love_wishes_cover,
+            toolbox_background,
+            toolbox_video,
         ] {
             normalize_url(field)?;
         }
@@ -63,8 +75,9 @@ pub(super) fn normalize_url(field: &mut Option<String>) -> Result<(), AppError> 
         Url::parse(value)
     } else {
         return Err(invalid("媒体地址必须是 HTTP(S) 或站点绝对路径"));
-    };
-    if !parsed.is_ok_and(|url| matches!(url.scheme(), "http" | "https") && url.has_host()) {
+    }
+    .map_err(AppError::MediaUrl)?;
+    if !matches!(parsed.scheme(), "http" | "https") || !parsed.has_host() {
         return Err(invalid("媒体地址无效"));
     }
     *field = Some(value.to_owned());
@@ -81,8 +94,7 @@ pub(super) fn normalize_covers(field: &mut Option<String>) -> Result<(), AppErro
         return Ok(());
     }
     let urls = if value.starts_with('[') {
-        serde_json::from_str::<Vec<String>>(value)
-            .map_err(|_| invalid("随机封面必须是图片地址数组或每行一个地址"))?
+        serde_json::from_str::<Vec<String>>(value).map_err(AppError::MediaCovers)?
     } else {
         value.lines().map(str::to_owned).collect()
     };

@@ -1,5 +1,6 @@
 use crate::{ApiResult, AppError, AppState, absent, db_error, invalid};
 use axum::{Json, extract::State};
+use blog_application::admin_core::AuthenticatedIdentity;
 use blog_application::error::HttpStatus;
 use blog_application::server_cli::ContractPath as Path;
 use serde::{Deserialize, Serialize};
@@ -113,14 +114,11 @@ async fn load_family(state: &AppState, id: i64) -> ApiResult<AdminFamily> {
 }
 pub(super) async fn create_family(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     crate::ContractJson(input): crate::ContractJson<FamilyInput>,
 ) -> ApiResult<AdminFamily> {
     validate_family(&input)?;
-    let mut transaction = state
-        .pool
-        .begin_with("BEGIN IMMEDIATE")
-        .await
-        .map_err(db_error)?;
+    let mut transaction = crate::content::begin_mutation(&state.pool, &identity).await?;
     let author = crate::site_author_id(&mut *transaction).await?;
     let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM family WHERE user_id=?)")
         .bind(author)
@@ -143,30 +141,30 @@ pub(super) async fn create_family(
 }
 pub(super) async fn update_family(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     Path(id): Path<i64>,
     crate::ContractJson(input): crate::ContractJson<FamilyInput>,
 ) -> ApiResult<AdminFamily> {
     validate_family(&input)?;
-    let author = crate::site_author_id(&state.pool).await?;
+    let mut transaction = crate::content::begin_mutation(&state.pool, &identity).await?;
+    let author = crate::site_author_id(&mut *transaction).await?;
     let changed=sqlx::query(sqlx::AssertSqlSafe(format!("UPDATE family SET bg_cover=?,man_cover=?,woman_cover=?,man_name=?,woman_name=?,timing=?,countdown_title=?,countdown_time=?,family_info=?,status=?,update_time=CURRENT_TIMESTAMP WHERE id=? AND {FAMILY_OWNER}")))
         .bind(input.bg_cover).bind(input.man_cover).bind(input.woman_cover).bind(input.man_name).bind(input.woman_name).bind(input.timing)
         .bind(input.countdown_title).bind(input.countdown_time).bind(input.family_info).bind(i64::from(input.status)).bind(id).bind(author)
-        .execute(&state.pool).await.map_err(db_error)?;
+        .execute(&mut *transaction).await.map_err(db_error)?;
     if changed.rows_affected() == 0 {
         return Err(absent());
     }
+    transaction.commit().await.map_err(db_error)?;
     load_family(&state, id).await
 }
 pub(super) async fn delete_family(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     Path(id): Path<i64>,
 ) -> ApiResult<serde_json::Value> {
     let author = crate::site_author_id(&state.pool).await?;
-    let mut transaction = state
-        .pool
-        .begin_with("BEGIN IMMEDIATE")
-        .await
-        .map_err(db_error)?;
+    let mut transaction = crate::content::begin_mutation(&state.pool, &identity).await?;
     let changed = sqlx::query(sqlx::AssertSqlSafe(format!(
         "DELETE FROM family WHERE id=? AND {FAMILY_OWNER}"
     )))

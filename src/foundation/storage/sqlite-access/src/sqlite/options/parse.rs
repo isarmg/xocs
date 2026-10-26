@@ -173,7 +173,9 @@ impl FromStr for SqliteConnectOptions {
 
         let mut database_and_params = url.splitn(2, '?');
 
-        let database = database_and_params.next().unwrap_or_default();
+        let database = database_and_params
+            .next()
+            .expect("invariant: str::splitn with a nonzero limit yields its first segment");
         let params = database_and_params.next();
 
         Self::from_db_and_params(database, params)

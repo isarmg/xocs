@@ -81,7 +81,7 @@ pub(super) fn Letter() -> impl IntoView {
                     "Open letter")).node_ref(front).r#type("button")
                     .on(ev::click, move | _ | { open
                     .set(true); blog_interface::timers::callback::Timeout::new(0, move || { if
-                    let Some(close) = close.get() { let _ = close.focus(); } })
+                    let Some(close) = close.get() && let Err(error) = close.focus() { web_sys::console::warn_2(&"Unable to move browser focus".into(), &error); } })
                     .forget(); }),)).class("letter-envelope-front")
                     .aria_hidden(move
                     | | open.get().to_string())
@@ -102,7 +102,7 @@ pub(super) fn Letter() -> impl IntoView {
                     "Close letter")).node_ref(close).r#type("button")
                     .on(ev::click, move | _ | { open
                     .set(false); blog_interface::timers::callback::Timeout::new(0, move || { if
-                    let Some(front) = front.get() { let _ = front.focus(); } })
+                    let Some(front) = front.get() && let Err(error) = front.focus() { web_sys::console::warn_2(&"Unable to move browser focus".into(), &error); } })
                     .forget(); }),)).class("letter-paper")
                     .aria_hidden(move
                     | | (! open.get()).to_string())

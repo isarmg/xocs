@@ -113,7 +113,9 @@ impl ApplyMeta for BuildMethodSettings {
                     self.into = IntoSetting::TypeConversionToSpecificType(type_path);
                     Ok(())
                 }
-                _ => Err(expr.incorrect_type()),
+                AttrArg::Sub(_) | AttrArg::Not { .. } | AttrArg::Fn(_) => {
+                    Err(expr.incorrect_type())
+                }
             },
             _ => self.common.apply_meta(expr),
         }
@@ -169,7 +171,7 @@ impl<'a> TypeBuilderAttr<'a> {
 
                     list
                 }
-                _ => continue,
+                syn::Meta::Path(_) | syn::Meta::NameValue(_) => continue,
             };
 
             result.apply_subsections(list)?;

@@ -29,7 +29,7 @@ fn video_formats_require_container_metadata_and_a_video_track() {
     for size in 0..video.len() {
         assert_eq!(video_type(&video[..size]), None, "truncated MP4 at {size}");
     }
-    let mut oversized = video.clone();
+    let mut oversized = video;
     oversized[..4].copy_from_slice(&u32::MAX.to_be_bytes());
     assert_eq!(video_type(&oversized), None);
 

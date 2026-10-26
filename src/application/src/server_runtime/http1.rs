@@ -235,9 +235,8 @@ pub(crate) async fn accept_with_backoff(
             return None;
         }
 
-        let accepted = match readiness.try_io(|listener| listener.get_ref().accept()) {
-            Ok(result) => result,
-            Err(_) => continue,
+        let Ok(accepted) = readiness.try_io(|listener| listener.get_ref().accept()) else {
+            continue;
         };
         drop(readiness);
         match accepted {
@@ -344,6 +343,10 @@ fn log_accept_error(
     emit_record(&record);
 }
 
+#[expect(
+    clippy::wildcard_enum_match_arm,
+    reason = "ErrorKind is an external non-exhaustive error classification"
+)]
 fn classify_accept_error(err: &std::io::Error) -> &'static str {
     if is_resource_exhaustion(err) {
         "resource"
@@ -433,7 +436,8 @@ fn emit_record(record: &LogRecord) {
     if record.emit().is_err() {
         // The same structured record remains observable when the persistent
         // sink fails. No raw error chain, request contents or peer address.
-        let _ = record.emit_stderr();
+        // There is no further diagnostic sink when stderr is closed too.
+        drop(record.emit_stderr());
     }
 }
 

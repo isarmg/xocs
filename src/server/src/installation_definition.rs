@@ -3,7 +3,7 @@ use crate::config_definition::{DATABASE_FILENAME, DEFAULT_ROOT, STATE_DIRECTORY}
 use blog_application::contracts::{ReleaseIdentity, SchemaIdentity};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
-use std::path::Path;
+use std::{io, path::Path};
 
 fn sha(bytes: &[u8]) -> String {
     Sha256::digest(bytes)
@@ -15,9 +15,9 @@ fn sha(bytes: &[u8]) -> String {
 fn root_path(value: &str) -> Value {
     json!({"base":"root","value":value,"fallback":null,"suffix":"","encoding":"path"})
 }
-fn asset(directory: &Path, name: &str, bytes: &[u8]) -> Value {
-    std::fs::write(directory.join(name), bytes).expect("write generated current material");
-    json!({"path":format!("share/contracts/{name}"),"sha256":sha(bytes)})
+fn asset(directory: &Path, name: &str, bytes: &[u8]) -> io::Result<Value> {
+    std::fs::write(directory.join(name), bytes)?;
+    Ok(json!({"path":format!("share/contracts/{name}"),"sha256":sha(bytes)}))
 }
 fn relocate_defaults(value: &mut Value) {
     match value {
@@ -31,7 +31,7 @@ fn relocate_defaults(value: &mut Value) {
         }
         Value::Object(values) => values.values_mut().for_each(relocate_defaults),
         Value::Array(values) => values.iter_mut().for_each(relocate_defaults),
-        _ => {}
+        Value::Null | Value::Bool(_) | Value::Number(_) => {}
     }
 }
 
@@ -40,39 +40,51 @@ pub(crate) fn emit(
     identity: &ReleaseIdentity,
     schema: &SchemaIdentity,
     ddl: &str,
-) {
+) -> io::Result<()> {
     let directory = destination.join("contracts");
-    std::fs::create_dir_all(&directory).expect("create immutable material directory");
+    std::fs::create_dir_all(&directory)?;
     let mut material = blog_application::installation_material::common(identity, schema, None)
         .expect("generate authoritative public installation material");
     let definitions = material
         .as_object_mut()
-        .unwrap()
+        .expect("invariant: common installation material is an object")
         .remove("definitions")
-        .unwrap();
+        .expect("invariant: common installation material includes definitions");
     asset(
         &directory,
         "common-definitions.json",
-        &serde_json::to_vec(&definitions).unwrap(),
-    );
+        &serde_json::to_vec(&definitions)
+            .expect("invariant: installation definitions are JSON values"),
+    )?;
     let mut database = material
         .as_object_mut()
-        .unwrap()
+        .expect("invariant: common installation material is an object")
         .remove("database")
-        .unwrap();
+        .expect("invariant: common installation material includes a database");
     database["name"] = json!("site");
     let mut path = crate::config_definition::data_path_spec();
     path["suffix"] = json!(DATABASE_FILENAME);
     database["path"] = path;
-    database["ddl"] = asset(&directory, "current-schema.sql", ddl.as_bytes());
-    database["initialize"].as_array_mut().unwrap().insert(0, json!({
-        "sql":include_str!("../schema/initialize-site-author.sql"),"parameters":[],"expected_changes":1
-    }));
+    database["ddl"] = asset(&directory, "current-schema.sql", ddl.as_bytes())?;
+    database["initialize"]
+        .as_array_mut()
+        .expect("invariant: database initialization is an array")
+        .insert(
+            0,
+            json!({
+                "sql": include_str!("../schema/initialize-site-author.sql"),
+                "parameters": [],
+                "expected_changes": 1,
+            }),
+        );
     material["databases"] = json!([database]);
     let mut config =
         blog_application::configuration_contract::generate::<crate::config_definition::Settings>()
             .expect("derive current runtime configuration shape");
-    config["schema"].as_object_mut().unwrap().remove("required");
+    config["schema"]
+        .as_object_mut()
+        .expect("invariant: generated configuration schema is an object")
+        .remove("required");
     relocate_defaults(&mut config["defaults"]);
     config["data_dir"] = crate::config_definition::data_path_spec();
     config["bind_pointer"] = json!("/bind");
@@ -183,7 +195,7 @@ pub(crate) fn emit(
     ] {
         material["authority_sources"]
             .as_array_mut()
-            .unwrap()
+            .expect("invariant: common material includes an authority source array")
             .push(json!({"path":path,
             "sha256":sha(bytes),
             "generator":format!("blog/src/server/build.rs@{}",identity.source_revision)}));
@@ -191,6 +203,8 @@ pub(crate) fn emit(
     asset(
         &directory,
         "install.json",
-        &serde_json::to_vec(&material).unwrap(),
-    );
+        &serde_json::to_vec(&material)
+            .expect("invariant: installation material contains JSON values"),
+    )?;
+    Ok(())
 }

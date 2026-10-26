@@ -81,7 +81,8 @@ fn current_installation_plan_retains_runtime_defaults_and_database_location() {
         &identity,
         &schema,
         include_str!(concat!(env!("OUT_DIR"), "/blog-current-schema.sql")),
-    );
+    )
+    .unwrap();
     let material: serde_json::Value = serde_json::from_slice(
         &std::fs::read(destination.path().join("contracts/install.json")).unwrap(),
     )

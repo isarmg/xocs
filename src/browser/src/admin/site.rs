@@ -449,9 +449,7 @@ pub(super) fn SiteSettings() -> impl IntoView {
                                         if let Some(field) = form_node.get_untracked()
                                             .and_then(|node| node.query_selector("[name=author_name]").ok().flatten())
                                             .and_then(|node| node.dyn_into::<web_sys::HtmlElement>().ok())
-                                        {
-                                            let _ = field.focus();
-                                        }
+                                            && let Err(error) = field.focus() { web_sys::console::warn_2(&"Unable to move browser focus".into(), &error); }
                                         return;
                                     }
                                     validation.set(String::new());

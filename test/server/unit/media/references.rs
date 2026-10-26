@@ -25,9 +25,12 @@ fn commonmark_reference_detection_preserves_escape_context() {
             &source,
             Options::ENABLE_TABLES | Options::ENABLE_STRIKETHROUGH,
         )
-        .filter_map(|event| match event {
-            Event::Start(Tag::Image { dest_url, .. }) => Some(dest_url.into_string()),
-            _ => None,
+        .filter_map(|event| {
+            if let Event::Start(Tag::Image { dest_url, .. }) = event {
+                Some(dest_url.into_string())
+            } else {
+                None
+            }
         })
         .collect();
         assert_eq!(destinations, [expected_destination], "{source}");

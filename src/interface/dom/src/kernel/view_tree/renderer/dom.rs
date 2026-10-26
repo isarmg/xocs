@@ -3,14 +3,15 @@
 //! Direct browser DOM operations for the CSR view tree.
 
 use super::{CastFrom, RemoveEventHandler};
+use crate::events::{EventListener, EventListenerOptions, EventListenerPhase};
+use crate::thread_bound::SendWrapper;
 use crate::view_tree::{
     dom::{document, window},
-    ok_or_debug, or_debug,
     view::Mountable,
 };
 use std::cell::{Cell, LazyCell, RefCell};
 use wasm_bindgen::{intern, prelude::Closure, JsCast, JsValue};
-use web_sys::{AddEventListenerOptions, Comment};
+use web_sys::Comment;
 
 /// Browser DOM operations backed by `web-sys`.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -33,14 +34,20 @@ pub type CssStyleDeclaration = web_sys::CssStyleDeclaration;
 ///
 /// [MDN queueMicrotask](https://developer.mozilla.org/en-US/docs/Web/API/queueMicrotask)
 pub fn queue_microtask(task: impl FnOnce() + 'static) {
+    schedule_microtask(task).unwrap_or_else(|error| wasm_bindgen::throw_val(error));
+}
+
+fn schedule_microtask(task: impl FnOnce() + 'static) -> Result<(), JsValue> {
     use js_sys::{Function, Reflect};
 
-    let task = Closure::once_into_js(task);
     let window = window();
-    let queue_microtask = Reflect::get(&window, &JsValue::from_str("queueMicrotask"))
-        .expect("queueMicrotask not available");
-    let queue_microtask = queue_microtask.unchecked_into::<Function>();
-    _ = queue_microtask.call1(&JsValue::UNDEFINED, &task);
+    let queue_microtask = Reflect::get(&window, &JsValue::from_str("queueMicrotask"))?
+        .dyn_into::<Function>()
+        .map_err(|_| js_sys::TypeError::new("queueMicrotask is not a function"))?;
+    let callback = Closure::once(task);
+    queue_microtask.call1(&window, callback.as_ref())?;
+    callback.forget();
+    Ok(())
 }
 
 thread_local! {
@@ -49,7 +56,13 @@ thread_local! {
 }
 
 fn queue(fun: Box<dyn FnOnce()>) {
-    enqueue_dom_task(fun, queue_microtask);
+    enqueue_dom_task(fun, |flush| {
+        if let Err(error) = schedule_microtask(flush) {
+            DOM_TASK_PENDING.set(false);
+            drop(DOM_TASKS.take());
+            wasm_bindgen::throw_val(error);
+        }
+    });
 }
 
 fn enqueue_dom_task(fun: Box<dyn FnOnce()>, schedule: impl FnOnce(fn())) {
@@ -103,27 +116,19 @@ impl Dom {
     }
 
     pub fn set_attribute(node: &Element, name: &str, value: &str) {
-        or_debug!(node.set_attribute(name, value), node, "setAttribute");
+        node.set_attribute(name, value)
+            .unwrap_or_else(|error| wasm_bindgen::throw_val(error));
     }
 
     pub fn remove_attribute(node: &Element, name: &str) {
-        or_debug!(node.remove_attribute(name), node, "removeAttribute");
+        node.remove_attribute(name)
+            .unwrap_or_else(|error| wasm_bindgen::throw_val(error));
     }
 
     pub fn insert_node(parent: &Element, new_child: &Node, anchor: Option<&Node>) {
-        ok_or_debug!(
-            parent.insert_before(new_child, anchor),
-            parent,
-            "insertNode"
-        );
-    }
-
-    pub fn try_insert_node(parent: &Element, new_child: &Node, anchor: Option<&Node>) -> bool {
-        parent.insert_before(new_child, anchor).is_ok()
-    }
-
-    pub fn remove_node(parent: &Element, child: &Node) -> Option<Node> {
-        ok_or_debug!(parent.remove_child(child), parent, "removeNode")
+        parent
+            .insert_before(new_child, anchor)
+            .unwrap_or_else(|error| wasm_bindgen::throw_val(error));
     }
 
     pub fn remove(node: &Node) {
@@ -237,84 +242,44 @@ impl Dom {
     }
 
     pub fn set_property(el: &Element, key: &str, value: &JsValue) {
-        or_debug!(
-            js_sys::Reflect::set(el, &wasm_bindgen::JsValue::from_str(key), value,),
-            el,
-            "setProperty"
-        );
+        let assigned = js_sys::Reflect::set(el, &wasm_bindgen::JsValue::from_str(key), value)
+            .unwrap_or_else(|error| wasm_bindgen::throw_val(error));
+        if !assigned {
+            wasm_bindgen::throw_val(
+                js_sys::TypeError::new("DOM property assignment was rejected").into(),
+            );
+        }
     }
 
     pub fn add_event_listener(
         el: &Element,
         name: &str,
-        cb: Box<dyn FnMut(Event)>,
+        mut cb: Box<dyn FnMut(Event)>,
     ) -> RemoveEventHandler {
-        let cb = wasm_bindgen::closure::Closure::wrap(cb);
-        let name = intern(name);
-        or_debug!(
-            el.add_event_listener_with_callback(name, cb.as_ref().unchecked_ref()),
-            el,
-            "addEventListener"
-        );
-
-        // return the remover
-        RemoveEventHandler::new({
-            let name = name.to_owned();
-            let el = el.clone();
-            // safe to construct this here, because it will only run in the browser
-            // so it will always be accessed or dropped from the main thread
-            let cb = crate::thread_bound::SendWrapper::new(move || {
-                or_debug!(
-                    el.remove_event_listener_with_callback(
-                        intern(&name),
-                        cb.as_ref().unchecked_ref()
-                    ),
-                    &el,
-                    "removeEventListener"
-                )
-            });
-            move || cb()
-        })
+        let listener = SendWrapper::new(EventListener::new_with_options(
+            el.as_ref(),
+            name.to_owned(),
+            EventListenerOptions::enable_prevent_default(),
+            move |event| cb(event.clone().into()),
+        ));
+        RemoveEventHandler::new(move || drop(listener))
     }
 
     pub fn add_event_listener_use_capture(
         el: &Element,
         name: &str,
-        cb: Box<dyn FnMut(Event)>,
+        mut cb: Box<dyn FnMut(Event)>,
     ) -> RemoveEventHandler {
-        let cb = wasm_bindgen::closure::Closure::wrap(cb);
-        let name = intern(name);
-        let options = AddEventListenerOptions::new();
-        options.set_capture(true);
-        or_debug!(
-            el.add_event_listener_with_callback_and_add_event_listener_options(
-                name,
-                cb.as_ref().unchecked_ref(),
-                &options
-            ),
-            el,
-            "addEventListenerUseCapture"
-        );
-
-        // return the remover
-        RemoveEventHandler::new({
-            let name = name.to_owned();
-            let el = el.clone();
-            // safe to construct this here, because it will only run in the browser
-            // so it will always be accessed or dropped from the main thread
-            let cb = crate::thread_bound::SendWrapper::new(move || {
-                or_debug!(
-                    el.remove_event_listener_with_callback_and_bool(
-                        intern(&name),
-                        cb.as_ref().unchecked_ref(),
-                        true
-                    ),
-                    &el,
-                    "removeEventListener"
-                )
-            });
-            move || cb()
-        })
+        let listener = SendWrapper::new(EventListener::new_with_options(
+            el.as_ref(),
+            name.to_owned(),
+            EventListenerOptions {
+                phase: EventListenerPhase::Capture,
+                passive: false,
+            },
+            move |event| cb(event.clone().into()),
+        ));
+        RemoveEventHandler::new(move || drop(listener))
     }
 
     pub fn event_target<T>(ev: &Event) -> T
@@ -334,11 +299,13 @@ impl Dom {
     }
 
     pub fn add_class(list: &ClassList, name: &str) {
-        or_debug!(list.add_1(name), list.unchecked_ref(), "add()");
+        list.add_1(name)
+            .unwrap_or_else(|error| wasm_bindgen::throw_val(error));
     }
 
     pub fn remove_class(list: &ClassList, name: &str) {
-        or_debug!(list.remove_1(name), list.unchecked_ref(), "remove()");
+        list.remove_1(name)
+            .unwrap_or_else(|error| wasm_bindgen::throw_val(error));
     }
 
     pub fn style(el: &Element) -> CssStyleDeclaration {
@@ -346,19 +313,15 @@ impl Dom {
     }
 
     pub fn set_css_property(style: &CssStyleDeclaration, name: &str, value: &str) {
-        or_debug!(
-            style.set_property(name, value),
-            style.unchecked_ref(),
-            "setProperty"
-        );
+        style
+            .set_property(name, value)
+            .unwrap_or_else(|error| wasm_bindgen::throw_val(error));
     }
 
     pub fn remove_css_property(style: &CssStyleDeclaration, name: &str) {
-        or_debug!(
-            style.remove_property(name),
-            style.unchecked_ref(),
-            "removeProperty"
-        );
+        style
+            .remove_property(name)
+            .unwrap_or_else(|error| wasm_bindgen::throw_val(error));
     }
 
     pub fn set_inner_html(el: &Element, html: &str) {
@@ -368,15 +331,15 @@ impl Dom {
 
 impl Mountable for Node {
     fn unmount(&mut self) {
-        todo!()
+        if let Some(parent) = self.parent_node() {
+            parent
+                .remove_child(self)
+                .unwrap_or_else(|error| wasm_bindgen::throw_val(error));
+        }
     }
 
     fn mount(&mut self, parent: &Element, marker: Option<&Node>) {
         Dom::insert_node(parent, self, marker);
-    }
-
-    fn try_mount(&mut self, parent: &Element, marker: Option<&Node>) -> bool {
-        Dom::try_insert_node(parent, self, marker)
     }
 
     fn insert_before_this(&self, child: &mut dyn Mountable) -> bool {
@@ -402,10 +365,6 @@ impl Mountable for Text {
         Dom::insert_node(parent, self, marker);
     }
 
-    fn try_mount(&mut self, parent: &Element, marker: Option<&Node>) -> bool {
-        Dom::try_insert_node(parent, self, marker)
-    }
-
     fn insert_before_this(&self, child: &mut dyn Mountable) -> bool {
         let parent = Dom::get_parent(self.as_ref()).and_then(Element::cast_from);
         if let Some(parent) = parent {
@@ -427,10 +386,6 @@ impl Mountable for Comment {
 
     fn mount(&mut self, parent: &Element, marker: Option<&Node>) {
         Dom::insert_node(parent, self, marker);
-    }
-
-    fn try_mount(&mut self, parent: &Element, marker: Option<&Node>) -> bool {
-        Dom::try_insert_node(parent, self, marker)
     }
 
     fn insert_before_this(&self, child: &mut dyn Mountable) -> bool {
@@ -472,19 +427,19 @@ impl Mountable for Element {
 
 impl CastFrom<Node> for Text {
     fn cast_from(node: Node) -> Option<Text> {
-        node.clone().dyn_into().ok()
+        node.dyn_into().ok()
     }
 }
 
 impl CastFrom<Node> for Comment {
     fn cast_from(node: Node) -> Option<Comment> {
-        node.clone().dyn_into().ok()
+        node.dyn_into().ok()
     }
 }
 
 impl CastFrom<Node> for Element {
     fn cast_from(node: Node) -> Option<Element> {
-        node.clone().dyn_into().ok()
+        node.dyn_into().ok()
     }
 }
 

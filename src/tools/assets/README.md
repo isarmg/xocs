@@ -31,6 +31,8 @@ JS 编译由 `blog-assets-compiler` 提供，CSS 编译由 `blog-assets-style-co
 
 绑定默认生成到 `src/web/pkg`。资源包含 WASM、JS、CSS、字体、许可文本及预压缩文件。`src/web/pkg/blog-assets.json` 与 `src/web/dist/assets/blog-assets.json` 记录实际构建输入、依赖图和输出摘要。
 
+省略 `[web].entry` 时使用 `src/main.js`；显式配置的入口必须是有效的 Web 相对文件路径，空字符串会返回配置错误。
+
 `BLOG_FRONTEND_METADATA_FILE` 必须指定一个尚不存在的绝对文件路径，并位于 `src/web/pkg`、资源输出目录之外；父目录必须已存在且不经过符号链接。构建器先完整写入并同步临时收据，再发布输出与新收据。收据名称冲突或输出发布失败时保留原有输出与已有收据。
 
 ## 构建模式与校验

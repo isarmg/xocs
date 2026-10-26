@@ -1,6 +1,7 @@
 use super::{AdminPageQuery, PageResult};
 use crate::{ApiResult, AppError, AppState, absent, db_error, invalid};
 use axum::{Json, extract::State};
+use blog_application::admin_core::AuthenticatedIdentity;
 use blog_application::error::HttpStatus;
 use blog_application::server_cli::{ContractPath as Path, ContractQuery as Query};
 use serde::{Deserialize, Serialize};
@@ -29,13 +30,12 @@ pub(super) async fn create_comment(
 ) -> ApiResult<Comment> {
     create_anonymous_comment(
         &state,
-        input.article_id,
-        "article",
-        MessageCommentInput {
+        CommentTarget::Article(input.article_id),
+        CommentSubmission::parse(MessageCommentInput {
             request_id: input.request_id,
             content: input.content,
             parent_comment_id: input.parent_comment_id,
-        },
+        })?,
     )
     .await
 }
@@ -44,7 +44,12 @@ pub(super) async fn create_message_comment(
     State(state): State<AppState>,
     crate::ContractJson(input): crate::ContractJson<MessageCommentInput>,
 ) -> ApiResult<Comment> {
-    create_anonymous_comment(&state, 0, "message", input).await
+    create_anonymous_comment(
+        &state,
+        CommentTarget::Message,
+        CommentSubmission::parse(input)?,
+    )
+    .await
 }
 
 pub(super) async fn create_love_comment(
@@ -52,7 +57,12 @@ pub(super) async fn create_love_comment(
     crate::ContractJson(input): crate::ContractJson<MessageCommentInput>,
 ) -> ApiResult<Comment> {
     let source = crate::site_author_id(&state.pool).await?;
-    create_anonymous_comment(&state, source, "love", input).await
+    create_anonymous_comment(
+        &state,
+        CommentTarget::Love(source),
+        CommentSubmission::parse(input)?,
+    )
+    .await
 }
 
 fn valid_request_id(value: &str) -> bool {
@@ -65,25 +75,67 @@ fn valid_request_id(value: &str) -> bool {
         })
 }
 
+enum CommentTarget {
+    Article(i64),
+    Message,
+    Love(i64),
+}
+
+impl CommentTarget {
+    fn source(&self) -> i64 {
+        match *self {
+            Self::Article(id) | Self::Love(id) => id,
+            Self::Message => 0,
+        }
+    }
+
+    fn as_str(&self) -> &'static str {
+        match self {
+            Self::Article(_) => "article",
+            Self::Message => "message",
+            Self::Love(_) => "love",
+        }
+    }
+}
+
+struct CommentSubmission {
+    request_id: String,
+    content: String,
+    parent: i64,
+}
+
+impl CommentSubmission {
+    fn parse(input: MessageCommentInput) -> Result<Self, AppError> {
+        if !valid_request_id(&input.request_id) {
+            return Err(invalid("评论请求标识必须为小写 UUIDv4"));
+        }
+        let content = input.content.trim();
+        let parent = input.parent_comment_id.unwrap_or(0);
+        if content.is_empty()
+            || content.chars().count() > 1024
+            || content.contains('<')
+            || content.contains('>')
+            || parent < 0
+        {
+            return Err(invalid("评论内容或回复目标无效"));
+        }
+        Ok(Self {
+            request_id: input.request_id,
+            content: content.to_owned(),
+            parent,
+        })
+    }
+}
+
 async fn create_anonymous_comment(
     state: &AppState,
-    source: i64,
-    kind: &'static str,
-    input: MessageCommentInput,
+    target: CommentTarget,
+    input: CommentSubmission,
 ) -> ApiResult<Comment> {
-    let content = input.content.trim();
-    let parent = input.parent_comment_id.unwrap_or(0);
-    if !valid_request_id(&input.request_id) {
-        return Err(invalid("评论请求标识必须为小写 UUIDv4"));
-    }
-    if content.is_empty()
-        || content.chars().count() > 1024
-        || content.contains('<')
-        || content.contains('>')
-        || parent < 0
-    {
-        return Err(invalid("评论内容或回复目标无效"));
-    }
+    let source = target.source();
+    let kind = target.as_str();
+    let content = &input.content;
+    let parent = input.parent;
     let mut hash = Sha256::new();
     hash.update(source.to_be_bytes());
     hash.update(kind.as_bytes());
@@ -100,7 +152,7 @@ async fn create_anonymous_comment(
         .map_err(db_error)?;
     // Gate and insert share the writer boundary so a queued request observes
     // administrator changes to publication, comments, deletion or protection.
-    if kind == "article" {
+    if let CommentTarget::Article(_) = target {
         let enabled: Option<i64> = sqlx::query_scalar("SELECT comment_status FROM article WHERE id=? AND deleted=0 AND view_status=1 AND password IS NULL")
             .bind(source).fetch_optional(&mut *transaction).await.map_err(db_error)?;
         if enabled != Some(1) {
@@ -144,7 +196,10 @@ async fn create_anonymous_comment(
             Some(if parent_parent.unwrap_or(0) == 0 {
                 parent
             } else {
-                parent_floor.unwrap_or(parent)
+                parent_floor.ok_or(AppError::Public(
+                    HttpStatus::Conflict,
+                    "回复目标的楼层信息无效",
+                ))?
             }),
             user,
         )
@@ -397,12 +452,14 @@ pub(super) async fn admin_comments(
 }
 pub(super) async fn delete_comment(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     Path(id): Path<i64>,
 ) -> ApiResult<serde_json::Value> {
+    let mut transaction = crate::content::begin_mutation(&state.pool, &identity).await?;
     let root: Option<Option<i64>> =
         sqlx::query_scalar("SELECT parent_comment_id FROM comment WHERE id=?")
             .bind(id)
-            .fetch_optional(&state.pool)
+            .fetch_optional(&mut *transaction)
             .await
             .map_err(db_error)?;
     let Some(parent) = root else {
@@ -412,15 +469,16 @@ pub(super) async fn delete_comment(
         sqlx::query("DELETE FROM comment WHERE id=? OR floor_comment_id=?")
             .bind(id)
             .bind(id)
-            .execute(&state.pool)
+            .execute(&mut *transaction)
             .await
             .map_err(db_error)?;
     } else {
         sqlx::query("DELETE FROM comment WHERE id=?")
             .bind(id)
-            .execute(&state.pool)
+            .execute(&mut *transaction)
             .await
             .map_err(db_error)?;
     }
+    transaction.commit().await.map_err(db_error)?;
     Ok(Json(serde_json::json!({"deleted":true})))
 }

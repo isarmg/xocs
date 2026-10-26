@@ -9,6 +9,8 @@ const MAX_FRAGMENTS: usize = 128;
 const MAX_DDL_BYTES: usize = 1024 * 1024;
 use crate::sqlite::MAX_SCHEMA_BYTES;
 const DEADLINE: Duration = Duration::from_secs(3);
+// SQLite's SQLITE_INTERRUPT result code, as exposed by DatabaseError::code.
+const SQLITE_INTERRUPT_CODE: &str = "9";
 
 #[derive(Debug, Error)]
 pub enum DdlFingerprintError {
@@ -18,12 +20,22 @@ pub enum DdlFingerprintError {
     ResultLimit,
     #[error("trusted DDL evaluation exceeded its deadline")]
     Deadline,
+    #[error("trusted DDL SQLite evaluation exceeded its deadline")]
+    EvaluationDeadline(#[source] sqlx::Error),
+    #[error("trusted DDL SQLite connection limits could not be applied")]
+    ConnectionLimits(#[source] crate::sqlite::ConnectionLimitError),
     #[error("trusted DDL SQLite evaluation failed")]
     Sqlite(#[source] sqlx::Error),
     #[error("trusted DDL schema fingerprint failed")]
     Schema(#[source] crate::schema_identity::Error),
     #[error("trusted DDL SQLite connection could not be closed")]
     Close(#[source] sqlx::Error),
+    #[error("trusted DDL evaluation failed and its connection could not be closed; close: {close}")]
+    EvaluationClose {
+        #[source]
+        operation: Box<DdlFingerprintError>,
+        close: sqlx::Error,
+    },
 }
 
 /// Compute a schema fingerprint from owned, trusted product DDL synchronously.
@@ -58,7 +70,11 @@ pub fn fingerprint_trusted_ddl(ddl: &[&str]) -> Result<String, DdlFingerprintErr
         let result = evaluate(&mut connection, ddl, deadline).await;
         let close = connection.close().await;
         match (result, close) {
-            (Err(error), _) => Err(error),
+            (Err(operation), Err(close)) => Err(DdlFingerprintError::EvaluationClose {
+                operation: Box::new(operation),
+                close,
+            }),
+            (Err(error), Ok(())) => Err(error),
             (Ok(_), Err(error)) => Err(DdlFingerprintError::Close(error)),
             (Ok(fingerprint), Ok(())) => Ok(fingerprint),
         }
@@ -75,7 +91,7 @@ async fn evaluate(
         crate::sqlite::ConnectionLimits::new(MAX_SCHEMA_BYTES as u32),
     )
     .await
-    .map_err(|_| DdlFingerprintError::InputLimit)?;
+    .map_err(DdlFingerprintError::ConnectionLimits)?;
     {
         let mut handle = connection
             .lock_handle()
@@ -92,32 +108,39 @@ async fn evaluate(
         sqlx::raw_sql(sqlx::AssertSqlSafe(*fragment))
             .execute(&mut *connection)
             .await
-            .map_err(|error| {
-                if Instant::now() >= deadline {
-                    DdlFingerprintError::Deadline
-                } else {
-                    DdlFingerprintError::Sqlite(error)
-                }
-            })?;
+            .map_err(|error| evaluation_error(error, deadline))?;
     }
     let rows = crate::sqlite::schema_rows(&mut *connection)
         .await
-        .map_err(|error| {
-            if Instant::now() >= deadline {
-                return DdlFingerprintError::Deadline;
-            }
-            match error {
-                crate::sqlite::Error::SchemaBudgetExceeded => DdlFingerprintError::ResultLimit,
-                crate::sqlite::Error::Sqlx(error) => DdlFingerprintError::Sqlite(error),
-                // schema_rows has no metadata or file-system operation.
-                _ => DdlFingerprintError::ResultLimit,
+        .map_err(|error| match error {
+            crate::sqlite::Error::SchemaBudgetExceeded => DdlFingerprintError::ResultLimit,
+            crate::sqlite::Error::Sqlx(error) => evaluation_error(error, deadline),
+            crate::sqlite::Error::InvalidPoolOptions(_)
+            | crate::sqlite::Error::DatabaseDoesNotExist { .. }
+            | crate::sqlite::Error::ConnectionLimits(_)
+            | crate::sqlite::Error::IntegrityCheckFailed { .. }
+            | crate::sqlite::Error::ForeignKeyViolations { .. }
+            | crate::sqlite::Error::CheckpointBusy { .. }
+            | crate::sqlite::Error::CheckpointIncomplete { .. }
+            | crate::sqlite::Error::ProductMetadataTableMissing
+            | crate::sqlite::Error::ProductMetadataStorageClass { .. }
+            | crate::sqlite::Error::SchemaIdentity(_) => {
+                unreachable!("invariant: schema_rows only reads schema rows within its budget");
             }
         })?;
-    let fingerprint = schema_fingerprint(&rows).map_err(DdlFingerprintError::Schema)?;
-    if Instant::now() >= deadline {
-        return Err(DdlFingerprintError::Deadline);
+    schema_fingerprint(&rows).map_err(DdlFingerprintError::Schema)
+}
+
+fn evaluation_error(error: sqlx::Error, deadline: Instant) -> DdlFingerprintError {
+    if Instant::now() >= deadline
+        && error
+            .as_database_error()
+            .is_some_and(|error| error.code().as_deref() == Some(SQLITE_INTERRUPT_CODE))
+    {
+        DdlFingerprintError::EvaluationDeadline(error)
+    } else {
+        DdlFingerprintError::Sqlite(error)
     }
-    Ok(fingerprint)
 }
 
 #[path = "../../../../test/application/unit/sqlite/trusted_ddl/tests.rs"]

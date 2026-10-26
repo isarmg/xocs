@@ -32,17 +32,15 @@ pub(super) async fn execute(
         .map_err(storage_error)?;
     let wall_now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map_err(|_| ManagementError::Store(Error::IntegerRange))?
+        .map_err(|source| ManagementError::Store(Error::Clock(source)))?
         .as_micros();
     let now = u64::try_from(wall_now)
         .map_err(|_| ManagementError::Store(Error::IntegerRange))?
         .max(context.now_micros);
     let timestamp = to_i64(now).map_err(ManagementError::Store)?;
-    let authorized: bool = sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM _common_admin_sessions s JOIN _common_administrators a ON a.administrator_id=s.administrator_id WHERE s.session_id=? AND s.administrator_id=? AND s.csrf_hash=? AND s.revoked_at_micros IS NULL AND s.idle_expires_at_micros>? AND s.absolute_expires_at_micros>? AND a.active=1 AND a.session_version=s.administrator_session_version)"
-    ).bind(context.identity.session_id.as_str()).bind(context.identity.administrator_id.as_str())
-        .bind(context.identity.csrf_hash.as_slice()).bind(timestamp).bind(timestamp)
-        .fetch_one(&mut *transaction).await.map_err(storage_error)?;
+    let authorized = session_authorized_on_connection(&mut transaction, &context.identity, now)
+        .await
+        .map_err(ManagementError::Store)?;
     if !authorized {
         return Err(ManagementError::Unauthorized);
     }
@@ -57,7 +55,7 @@ pub(super) async fn execute(
             if let Some(hash) = &password_hash {
                 crate::admin_auth::require_current_password_hash(hash)?;
             }
-            let id = &context.identity.administrator_id;
+            let id = context.identity.administrator_id();
             let changed = sqlx::query("UPDATE _common_administrators SET username=?, password_hash=COALESCE(?, password_hash), session_version=session_version+1, updated_at_micros=? WHERE administrator_id=? AND active=1 AND password_hash=?")
                 .bind(&username).bind(password_hash).bind(timestamp).bind(id.as_str()).bind(expected_password_hash)
                 .execute(&mut *transaction).await.map_err(storage_error)?.rows_affected();
@@ -94,14 +92,12 @@ fn event(
     action: SecurityAction,
     now: u64,
 ) -> Result<SecurityAuditEvent, Failure> {
-    let token = crate::admin_auth::random_token()
-        .map_err(|error| ManagementError::Store(Error::Authentication(error)))?;
     Ok(SecurityAuditEvent {
-        event_id: Identifier::new(token)
-            .map_err(|error| ManagementError::Store(Error::Core(error)))?,
+        event_id: Identifier::generate()
+            .map_err(|error| ManagementError::Store(Error::Authentication(error)))?,
         action,
         outcome: AuditOutcome::Success,
-        actor_administrator_id: Some(context.identity.administrator_id.clone()),
+        actor_administrator_id: Some(context.identity.administrator_id().clone()),
         subject_digest: Some(crate::admin_auth::token_hash(subject)),
         request_id: context.request_id.clone(),
         detail_json: "{}".into(),

@@ -289,7 +289,7 @@ fn explicit_unlock_prevents_old_guard_drop_from_releasing_a_reacquired_alias()
 }
 
 #[test]
-fn identity_failure_cleanup_unlocks_only_the_held_original_description()
+fn explicit_release_unlocks_the_original_description_after_its_name_is_replaced()
 -> Result<(), Box<dyn std::error::Error>> {
     let parent = private_tempdir()?;
     let state = PrivateStateDirectory::open(parent.path())?;
@@ -301,12 +301,9 @@ fn identity_failure_cleanup_unlocks_only_the_held_original_description()
         state.path().join("original-lock"),
     )?;
     let replacement = state.try_instance_lock()?;
-    assert!(matches!(
-        instance.release(),
-        Err(Error::FileIdentityChanged { .. })
-    ));
-    // release's identity check fails, but ownership cleanup still unlocks
-    // the original inode while the separately opened replacement stays held.
+    instance.release()?;
+    // Release uses its owned descriptor. The separately opened replacement
+    // retains its lease while the original inode can be locked again.
     try_flock(
         &alias,
         FlockOperation::NonBlockingLockExclusive,

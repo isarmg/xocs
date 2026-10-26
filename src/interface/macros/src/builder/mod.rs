@@ -50,3 +50,7 @@ fn impl_my_derive(ast: &syn::DeriveInput) -> Result<TokenStream, Error> {
     };
     Ok(data)
 }
+
+#[path = "../../../../../test/interface/macros/unit/builder/identifier_tests.rs"]
+#[cfg(test)]
+mod identifier_tests;

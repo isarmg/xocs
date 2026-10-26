@@ -290,3 +290,23 @@ fn unsupported_shadow_portal_still_fails_before_mounting() {
             .build(),
     );
 }
+
+mod raw_component_names {
+    use blog_interface::prelude::*;
+
+    #[component]
+    fn r#type(value: &'static str) -> impl IntoView {
+        value
+    }
+
+    #[component]
+    fn r#AsyncView() -> impl IntoView {
+        "raw component"
+    }
+
+    #[test]
+    fn raw_function_names_expand_to_callable_components() {
+        let _ = Type(TypeProps::builder().value("keyword component").build());
+        let _ = r#AsyncView();
+    }
+}

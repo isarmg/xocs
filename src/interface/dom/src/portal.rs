@@ -59,29 +59,30 @@ where
             let render_root = if use_shadow {
                 container
                     .attach_shadow(&web_sys::ShadowRootInit::new(web_sys::ShadowRootMode::Open))
-                    .map(|root| root.unchecked_into())
-                    .unwrap_or(container.clone())
+                    .unwrap_or_else(|error| wasm_bindgen::throw_val(error))
+                    .unchecked_into()
             } else {
                 container.clone()
             };
             #[cfg(not(feature = "shadow-dom"))]
             let render_root = container.clone();
 
-            let _ = mount.append_child(&container);
+            mount
+                .append_child(&container)
+                .unwrap_or_else(|error| wasm_bindgen::throw_val(error));
             let handle = SendWrapper::new((
                 mount::mount_to(render_root.unchecked_into(), {
                     let children = Arc::clone(&children);
                     move || untrack(|| children())
                 }),
-                mount.clone(),
                 container,
             ));
 
             Owner::on_cleanup({
                 move || {
-                    let (handle, mount, container) = handle.take();
+                    let (handle, container) = handle.take();
                     drop(handle);
-                    let _ = mount.remove_child(&container);
+                    container.remove();
                 }
             })
         });

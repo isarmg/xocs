@@ -85,27 +85,50 @@ impl AdministratorLoginRequest {
 }
 
 #[derive(Clone, Eq, PartialEq, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[serde(try_from = "UncheckedAdministratorSession")]
 pub struct AdministratorSession {
-    #[serde(deserialize_with = "deserialize_authenticated_true")]
-    pub authenticated: bool,
-    #[serde(deserialize_with = "deserialize_identifier")]
-    pub user_id: String,
-    #[serde(deserialize_with = "deserialize_canonical_administrator_username")]
-    pub username: String,
-    pub role: AdministratorRole,
-    #[serde(deserialize_with = "deserialize_authentication_token")]
-    pub csrf_token: String,
+    user_id: String,
+    username: String,
+    csrf_token: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct UncheckedAdministratorSession {
+    authenticated: bool,
+    user_id: String,
+    username: String,
+    role: String,
+    csrf_token: String,
+}
+
+impl TryFrom<UncheckedAdministratorSession> for AdministratorSession {
+    type Error = ValidationError;
+
+    fn try_from(value: UncheckedAdministratorSession) -> Result<Self, Self::Error> {
+        let UncheckedAdministratorSession {
+            authenticated,
+            user_id,
+            username,
+            role,
+            csrf_token,
+        } = value;
+        if !authenticated {
+            return Err(ValidationError::NotAuthenticated);
+        }
+        if role != ADMINISTRATOR_ROLE {
+            return Err(ValidationError::InvalidAdministratorRole);
+        }
+        Self::new(user_id, username, csrf_token)
+    }
 }
 
 impl std::fmt::Debug for AdministratorSession {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("AdministratorSession")
-            .field("authenticated", &self.authenticated)
             .field("user_id", &self.user_id)
             .field("username", &self.username)
-            .field("role", &self.role)
             .field("csrf_token", &"[REDACTED]")
             .finish()
     }
@@ -116,12 +139,11 @@ impl Serialize for AdministratorSession {
     where
         S: Serializer,
     {
-        self.validate().map_err(S::Error::custom)?;
         let mut state = serializer.serialize_struct("AdministratorSession", 5)?;
         state.serialize_field("authenticated", &true)?;
         state.serialize_field("user_id", &self.user_id)?;
         state.serialize_field("username", &self.username)?;
-        state.serialize_field("role", &self.role)?;
+        state.serialize_field("role", &AdministratorRole::Admin)?;
         state.serialize_field("csrf_token", &self.csrf_token)?;
         state.end()
     }
@@ -134,29 +156,31 @@ impl AdministratorSession {
         csrf_token: impl Into<String>,
     ) -> Result<Self, ValidationError> {
         let value = Self {
-            authenticated: true,
             user_id: user_id.into(),
             username: username.into(),
-            role: AdministratorRole::Admin,
             csrf_token: csrf_token.into(),
         };
-        value.validate()?;
-        Ok(value)
-    }
-
-    pub fn validate(&self) -> Result<(), ValidationError> {
-        if !self.authenticated {
-            return Err(ValidationError::NotAuthenticated);
-        }
-        validate_identifier("user_id", &self.user_id)?;
-        require_canonical_administrator_username(&self.username)
+        validate_identifier("user_id", &value.user_id)?;
+        require_canonical_administrator_username(&value.username)
             .map_err(|_| ValidationError::InvalidAdministratorUsername)?;
-        if !is_token_shape(&self.csrf_token) {
+        if !is_token_shape(&value.csrf_token) {
             return Err(ValidationError::InvalidAuthenticationToken {
                 field: "csrf_token",
             });
         }
-        Ok(())
+        Ok(value)
+    }
+
+    pub fn user_id(&self) -> &str {
+        &self.user_id
+    }
+
+    pub fn username(&self) -> &str {
+        &self.username
+    }
+
+    pub fn csrf_token(&self) -> &str {
+        &self.csrf_token
     }
 }
 
@@ -509,6 +533,8 @@ pub enum ValidationError {
     EmptyPath { field: &'static str },
     #[error("authenticated must be true in an administrator session")]
     NotAuthenticated,
+    #[error("administrator session role must be admin")]
+    InvalidAdministratorRole,
     #[error("administrator session username must use the canonical current administrator identity")]
     InvalidAdministratorUsername,
     #[error(
@@ -650,48 +676,12 @@ where
     Ok(value)
 }
 
-fn deserialize_authenticated_true<'de, D>(deserializer: D) -> Result<bool, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let value = bool::deserialize(deserializer)?;
-    if !value {
-        return Err(D::Error::custom(ValidationError::NotAuthenticated));
-    }
-    Ok(value)
-}
-
 fn deserialize_administrator_username_candidate<'de, D>(deserializer: D) -> Result<String, D::Error>
 where
     D: Deserializer<'de>,
 {
     let value = String::deserialize(deserializer)?;
     validate_administrator_username_candidate(&value).map_err(D::Error::custom)?;
-    Ok(value)
-}
-
-fn deserialize_canonical_administrator_username<'de, D>(deserializer: D) -> Result<String, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let value = String::deserialize(deserializer)?;
-    require_canonical_administrator_username(&value)
-        .map_err(|_| D::Error::custom(ValidationError::InvalidAdministratorUsername))?;
-    Ok(value)
-}
-
-fn deserialize_authentication_token<'de, D>(deserializer: D) -> Result<String, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let value = String::deserialize(deserializer)?;
-    if !is_token_shape(&value) {
-        return Err(D::Error::custom(
-            ValidationError::InvalidAuthenticationToken {
-                field: "authentication token",
-            },
-        ));
-    }
     Ok(value)
 }
 

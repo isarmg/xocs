@@ -85,12 +85,9 @@ impl<'a> FieldInfo<'a> {
         if segment.ident != "Option" {
             return None;
         }
-        let generic_params =
-            if let syn::PathArguments::AngleBracketed(generic_params) = &segment.arguments {
-                generic_params
-            } else {
-                return None;
-            };
+        let syn::PathArguments::AngleBracketed(generic_params) = &segment.arguments else {
+            return None;
+        };
         if let syn::GenericArgument::Type(ty) = generic_params.args.first()? {
             Some(ty)
         } else {
@@ -98,21 +95,26 @@ impl<'a> FieldInfo<'a> {
         }
     }
 
-    pub fn setter_method_name(&self) -> Ident {
+    pub fn setter_method_name(&self) -> Result<Ident, Error> {
         let name = strip_raw_ident_prefix(self.name.to_string());
-
-        if let (Some(prefix), Some(suffix)) = (
-            &self.builder_attr.setter.prefix,
-            &self.builder_attr.setter.suffix,
-        ) {
-            Ident::new(&format!("{}{}{}", prefix, name, suffix), Span::call_site())
-        } else if let Some(prefix) = &self.builder_attr.setter.prefix {
-            Ident::new(&format!("{}{}", prefix, name), Span::call_site())
-        } else if let Some(suffix) = &self.builder_attr.setter.suffix {
-            Ident::new(&format!("{}{}", name, suffix), Span::call_site())
-        } else {
-            self.name.clone()
+        let setter = &self.builder_attr.setter;
+        if setter.prefix.is_none() && setter.suffix.is_none() {
+            return Ok(self.name.clone());
         }
+        let method = format!(
+            "{}{}{}",
+            setter.prefix.as_deref().unwrap_or_default(),
+            name,
+            setter.suffix.as_deref().unwrap_or_default(),
+        );
+        let mut identifier = syn::parse_str::<Ident>(&method).map_err(|_| {
+            Error::new(
+                self.name.span(),
+                "setter name must be a valid Rust identifier",
+            )
+        })?;
+        identifier.set_span(self.name.span());
+        Ok(identifier)
     }
 
     fn post_process(mut self) -> Result<Self, Error> {
@@ -319,7 +321,9 @@ impl<'a> FieldBuilderAttr<'a> {
             .collect::<Vec<_>>();
 
         if 1 < conflicting_transformations.len() {
-            let (first_caption, first_span) = conflicting_transformations.pop().unwrap();
+            let (first_caption, first_span) = conflicting_transformations
+                .pop()
+                .expect("invariant: at least two conflicting transformations were collected");
             let conflicting_captions = conflicting_transformations
                 .iter()
                 .map(|(caption, _)| **caption)
@@ -350,7 +354,7 @@ impl ApplyMeta for FieldBuilderAttr<'_> {
                         syn::parse2(
                             quote_spanned!(ident.span() => ::core::default::Default::default()),
                         )
-                        .unwrap(),
+                        .expect("invariant: generated default expression is valid Rust"),
                     );
                     Ok(())
                 }
@@ -400,7 +404,7 @@ impl ApplyMeta for FieldBuilderAttr<'_> {
                             init: syn::parse2(
                                 quote_spanned!(ident.span() => ::core::default::Default::default()),
                             )
-                            .unwrap(),
+                            .expect("invariant: generated default expression is valid Rust"),
                         });
                     }
                     AttrArg::KeyValue(key_value) => {
@@ -414,12 +418,9 @@ impl ApplyMeta for FieldBuilderAttr<'_> {
                     }
                     AttrArg::Sub(sub) => {
                         if let Some(via_mutators) = self.via_mutators.as_mut() {
-                            if let Some(joined_span) = via_mutators.span.join(sub.span()) {
-                                via_mutators.span = joined_span;
-                            } else {
-                                // Shouldn't happen, but whatever
-                                via_mutators.span = sub.span();
-                            };
+                            // Tokens from different macro expansions can have disjoint source spans.
+                            via_mutators.span =
+                                via_mutators.span.join(sub.span()).unwrap_or(sub.span());
                             via_mutators.apply_sub_attr(sub)?;
                         } else {
                             let mut via_mutators = ViaMutators::empty_spanned(sub.span());
@@ -461,7 +462,7 @@ impl ApplyMeta for SetterSettings {
                         key_value.parse_value()?,
                     )?),
                     AttrArg::Not { .. } => None,
-                    _ => return Err(expr.incorrect_type()),
+                    AttrArg::Flag(_) | AttrArg::Sub(_) => return Err(expr.incorrect_type()),
                 };
                 Ok(())
             }
@@ -635,9 +636,8 @@ fn parse_transform_fn(span: Span, func: syn::ItemFn) -> Result<Transform, Error>
 }
 
 fn parse_transform_closure(span: Span, expr: syn::Expr) -> Result<Transform, Error> {
-    let closure = match expr {
-        syn::Expr::Closure(closure) => closure,
-        _ => return Err(Error::new_spanned(expr, "Expected closure")),
+    let syn::Expr::Closure(closure) = expr else {
+        return Err(Error::new_spanned(expr, "Expected closure"));
     };
 
     if let Some(kw) = &closure.asyncness {
@@ -650,12 +650,14 @@ fn parse_transform_closure(span: Span, expr: syn::Expr) -> Result<Transform, Err
     let params = closure
         .inputs
         .into_iter()
-        .map(|input| match input {
-            syn::Pat::Type(pat_type) => Ok((*pat_type.pat, *pat_type.ty)),
-            _ => Err(Error::new_spanned(
-                input,
-                "Transform closure must explicitly declare types",
-            )),
+        .map(|input| {
+            let syn::Pat::Type(pat_type) = input else {
+                return Err(Error::new_spanned(
+                    input,
+                    "Transform closure must explicitly declare types",
+                ));
+            };
+            Ok((*pat_type.pat, *pat_type.ty))
         })
         .collect::<Result<Vec<_>, _>>()?;
 
@@ -678,7 +680,8 @@ impl ViaMutators {
     fn empty_spanned(span: Span) -> Self {
         Self {
             span,
-            init: syn::parse2(quote_spanned!(span => ::core::default::Default::default())).unwrap(),
+            init: syn::parse2(quote_spanned!(span => ::core::default::Default::default()))
+                .expect("invariant: generated default expression is valid Rust"),
         }
     }
 }

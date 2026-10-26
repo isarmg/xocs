@@ -13,6 +13,7 @@ pub fn Select(
     #[prop(default = false)] required: bool,
     #[prop(default=Signal::derive(||false))] disabled: Signal<bool>,
 ) -> impl IntoView {
+    let options = Memo::new(move |_| options.get());
     let trigger = NodeRef::<blog_interface::html::Button>::new();
     let native = NodeRef::<blog_interface::html::Select>::new();
     let panel = NodeRef::<blog_interface::html::Span>::new();
@@ -25,11 +26,17 @@ pub fn Select(
     let typed = StoredValue::new((String::new(), 0f64));
     let id = StoredValue::new(format!(
         "blog-select-{}",
-        web_sys::window().unwrap().crypto().unwrap().random_uuid()
+        web_sys::window()
+            .expect("invariant: the application is mounted in a browser window")
+            .crypto()
+            .expect("invariant: the application window exposes browser crypto")
+            .random_uuid()
     ));
     let close = Callback::new(move |()| {
-        if let Some(p) = panel.get() {
-            let _ = p.hide_popover();
+        if let Some(p) = panel.get()
+            && let Err(error) = p.hide_popover()
+        {
+            web_sys::console::debug_2(&"Selector popup was already detached".into(), &error);
         }
         open.set(false);
         typed.set_value((String::new(), 0.));
@@ -39,7 +46,8 @@ pub fn Select(
             return;
         };
         let rect = anchor.get_bounding_client_rect();
-        let win = web_sys::window().unwrap();
+        let win =
+            web_sys::window().expect("invariant: the application is mounted in a browser window");
         let width = rect.width().min(
             win.inner_width()
                 .ok()
@@ -69,36 +77,50 @@ pub fn Select(
         let above = (rect.top() - 12.).max(0.);
         let upwards = below < 180f64.min(popup.scroll_height() as f64) && above > below;
         let style = popup.unchecked_ref::<web_sys::HtmlElement>().style();
-        let _ = style.set_property("width", &format!("{width}px"));
-        let _ = style.set_property("left", &format!("{left}px"));
-        let _ = style.set_property(
-            "max-height",
-            &format!("{}px", 320f64.min(if upwards { above } else { below })),
-        );
+        style
+            .set_property("width", &format!("{width}px"))
+            .expect("invariant: the selector popup owns a writable style declaration");
+        style
+            .set_property("left", &format!("{left}px"))
+            .expect("invariant: the selector popup owns a writable style declaration");
+        style
+            .set_property(
+                "max-height",
+                &format!("{}px", 320f64.min(if upwards { above } else { below })),
+            )
+            .expect("invariant: the selector popup owns a writable style declaration");
         let height = popup.get_bounding_client_rect().height();
         let top = if upwards {
             (rect.top() - 4. - height).max(8.)
         } else {
             rect.bottom() + 4.
         };
-        let _ = style.set_property("top", &format!("{top}px"));
+        style
+            .set_property("top", &format!("{top}px"))
+            .expect("invariant: the selector popup owns a writable style declaration");
     });
     let show = Callback::new(move |index: Option<usize>| {
         let Some(field) = native.get() else { return };
-        if field.matches(":disabled").unwrap_or(true) {
+        if field
+            .matches(":disabled")
+            .expect("invariant: :disabled is a valid CSS selector")
+        {
             return;
         }
-        let opts = options.get_untracked();
-        if opts.is_empty() {
+        let selected = value.get_untracked();
+        let Some(index) = options.with_untracked(|opts| {
+            (!opts.is_empty()).then(|| {
+                let selected = opts.iter().position(|(v, _)| *v == selected).unwrap_or(0);
+                index.unwrap_or(selected).min(opts.len() - 1)
+            })
+        }) else {
             return;
-        }
-        let selected = opts
-            .iter()
-            .position(|(v, _)| *v == value.get_untracked())
-            .unwrap_or(0);
-        active.set(index.unwrap_or(selected).min(opts.len() - 1));
-        if let Some(panel) = panel.get() {
-            let _ = panel.show_popover();
+        };
+        active.set(index);
+        let Some(panel) = panel.get() else { return };
+        if let Err(error) = panel.show_popover() {
+            web_sys::console::warn_2(&"Unable to open the selector popup".into(), &error);
+            return;
         }
         position.run(());
         open.set(true);
@@ -106,23 +128,27 @@ pub fn Select(
     });
     let commit = Callback::new(move |index: usize| {
         let Some(field) = native.get() else { return };
-        if field.matches(":disabled").unwrap_or(true) {
+        if field
+            .matches(":disabled")
+            .expect("invariant: :disabled is a valid CSS selector")
+        {
             close.run(());
             return;
         }
-        if let Some((next, _)) = options.get_untracked().get(index) {
+        let next = options.with_untracked(|opts| opts.get(index).map(|(next, _)| next.clone()));
+        if let Some(next) = next {
             field.set_custom_validity("");
             message.set(String::new());
-            if *next != value.get_untracked() {
-                field.set_value(if required && next == "0" { "" } else { next });
-                change.run(next.clone());
+            if next != value.get_untracked() {
+                field.set_value(if required && next == "0" { "" } else { &next });
+                change.run(next);
             }
         }
         close.run(());
     });
     Effect::new(move |_| {
-        value.get();
-        options.get();
+        value.track();
+        options.track();
         if let Some(field) = native.get() {
             let selected = value.get_untracked();
             field.set_value(if required && selected == "0" {
@@ -146,10 +172,12 @@ pub fn Select(
         }
         reveal.get();
         if let Some(panel) = panel.get()
-            && let Ok(Some(item)) = panel.query_selector(&format!(
-                "[data-option-index=\"{}\"]",
-                active.get_untracked()
-            ))
+            && let Some(item) = panel
+                .query_selector(&format!(
+                    "[data-option-index=\"{}\"]",
+                    active.get_untracked()
+                ))
+                .expect("invariant: an integer option index forms a valid CSS selector")
         {
             let rect = item.get_bounding_client_rect();
             let outer = panel.get_bounding_client_rect();
@@ -166,90 +194,94 @@ pub fn Select(
             panel.set_scroll_top(panel.scroll_top() + delta.round() as i32);
         }
     });
-    let outside = move |event: &web_sys::Event| {
-        if !open.get_untracked() {
+    Effect::new(move |_| {
+        if !open.get() {
             return;
         }
-        let target = event
-            .target()
-            .and_then(|t| t.dyn_into::<web_sys::Node>().ok());
-        let inside = target.as_ref().is_some_and(|t| {
-            trigger.get().is_some_and(|e| e.contains(Some(t)))
-                || panel.get().is_some_and(|e| e.contains(Some(t)))
-        });
-        if !inside {
-            close.run(());
-        }
-    };
-    let doc = web_sys::window().unwrap().document().unwrap();
-    let win = web_sys::window().unwrap();
-    let pointer = SendWrapper::new(blog_interface::events::EventListener::new_with_options(
-        &doc,
-        "pointerdown",
-        blog_interface::events::EventListenerOptions::run_in_capture_phase(),
-        outside,
-    ));
-    let focus = SendWrapper::new(blog_interface::events::EventListener::new(
-        &doc, "focusin", outside,
-    ));
-    let resize = SendWrapper::new(blog_interface::events::EventListener::new(
-        &win,
-        "resize",
-        move |_| {
-            if open.get_untracked() {
-                position.run(())
-            }
-        },
-    ));
-    let scroll = SendWrapper::new(blog_interface::events::EventListener::new_with_options(
-        &doc,
-        "scroll",
-        blog_interface::events::EventListenerOptions::run_in_capture_phase(),
-        move |event| {
-            // Scrolling options cannot change the anchor's viewport position.
-            if event
+        let outside = move |event: &web_sys::Event| {
+            let target = event
                 .target()
-                .and_then(|target| target.dyn_into::<web_sys::Node>().ok())
-                .is_some_and(|target| panel.get().is_some_and(|p| p.contains(Some(&target))))
-            {
-                return;
+                .and_then(|t| t.dyn_into::<web_sys::Node>().ok());
+            let inside = target.as_ref().is_some_and(|t| {
+                trigger.get().is_some_and(|e| e.contains(Some(t)))
+                    || panel.get().is_some_and(|e| e.contains(Some(t)))
+            });
+            if !inside {
+                close.run(());
             }
-            if open.get_untracked() {
+        };
+        let win =
+            web_sys::window().expect("invariant: the application is mounted in a browser window");
+        let doc = win
+            .document()
+            .expect("invariant: the application window owns its document");
+        let pointer = SendWrapper::new(blog_interface::events::EventListener::new_with_options(
+            &doc,
+            "pointerdown",
+            blog_interface::events::EventListenerOptions::run_in_capture_phase(),
+            outside,
+        ));
+        let focus = SendWrapper::new(blog_interface::events::EventListener::new(
+            &doc, "focusin", outside,
+        ));
+        let resize = SendWrapper::new(blog_interface::events::EventListener::new(
+            &win,
+            "resize",
+            move |_| position.run(()),
+        ));
+        let scroll = SendWrapper::new(blog_interface::events::EventListener::new_with_options(
+            &doc,
+            "scroll",
+            blog_interface::events::EventListenerOptions::run_in_capture_phase(),
+            move |event| {
+                // Scrolling options cannot change the anchor's viewport position.
+                if event
+                    .target()
+                    .and_then(|target| target.dyn_into::<web_sys::Node>().ok())
+                    .is_some_and(|target| panel.get().is_some_and(|p| p.contains(Some(&target))))
+                {
+                    return;
+                }
                 position.run(())
-            }
-        },
-    ));
-    let blur = SendWrapper::new(blog_interface::events::EventListener::new(
-        &win,
-        "blur",
-        move |_| close.run(()),
-    ));
-    on_cleanup(move || {
-        drop(pointer);
-        drop(focus);
-        drop(resize);
-        drop(scroll);
-        drop(blur);
+            },
+        ));
+        let blur = SendWrapper::new(blog_interface::events::EventListener::new(
+            &win,
+            "blur",
+            move |_| close.run(()),
+        ));
+        on_cleanup(move || {
+            drop(pointer);
+            drop(focus);
+            drop(resize);
+            drop(scroll);
+            drop(blur);
+        });
     });
     Effect::new(move |_| {
+        if !open.get() {
+            return;
+        }
         if let Some(field) = native.get() {
             let callback =
                 Closure::<dyn FnMut(js_sys::Array, web_sys::MutationObserver)>::new(move |_, _| {
-                    if native
-                        .get()
-                        .is_some_and(|f| f.matches(":disabled").unwrap_or(false))
-                    {
+                    if native.get().is_some_and(|f| {
+                        f.matches(":disabled")
+                            .expect("invariant: :disabled is a valid CSS selector")
+                    }) {
                         close.run(())
                     }
                 });
-            let observer =
-                web_sys::MutationObserver::new(callback.as_ref().unchecked_ref()).unwrap();
+            let observer = web_sys::MutationObserver::new(callback.as_ref().unchecked_ref())
+                .expect("invariant: a mutation observer callback is callable");
             let opts = web_sys::MutationObserverInit::new();
             opts.set_attributes(true);
             let mut ancestor = field.parent_element();
             while let Some(parent) = ancestor {
                 if parent.tag_name() == "FIELDSET" {
-                    let _ = observer.observe_with_options(&parent, &opts);
+                    observer.observe_with_options(&parent, &opts).expect(
+                        "invariant: the selector observes ancestor attributes with valid options",
+                    );
                 }
                 ancestor = parent.parent_element();
             }
@@ -291,14 +323,14 @@ pub fn Select(
         }
     });
     let keydown = move |event: web_sys::KeyboardEvent| {
-        if native
-            .get()
-            .is_none_or(|f| f.matches(":disabled").unwrap_or(true))
-        {
+        if native.get().is_none_or(|f| {
+            f.matches(":disabled")
+                .expect("invariant: :disabled is a valid CSS selector")
+        }) {
             return;
         }
-        let opts = options.get_untracked();
-        if opts.is_empty() {
+        let count = options.with_untracked(Vec::len);
+        if count == 0 {
             return;
         }
         let key = event.key();
@@ -309,7 +341,7 @@ pub fn Select(
                 show.run(if key == "Home" {
                     Some(0)
                 } else if key == "End" {
-                    Some(opts.len() - 1)
+                    Some(count - 1)
                 } else {
                     None
                 });
@@ -317,8 +349,8 @@ pub fn Select(
             }
             let next = match key.as_str() {
                 "Home" => 0,
-                "End" => opts.len() - 1,
-                "ArrowDown" => (active.get_untracked() + 1).min(opts.len() - 1),
+                "End" => count - 1,
+                "ArrowDown" => (active.get_untracked() + 1).min(count - 1),
                 _ => active.get_untracked().saturating_sub(1),
             };
             active.set(next);
@@ -366,23 +398,27 @@ pub fn Select(
                 .next()
                 .is_some_and(|first| text.chars().all(|c| c == first));
             let term = if repeated {
-                text.chars().next().unwrap().to_string()
+                text.chars()
+                    .next()
+                    .expect("invariant: the typeahead text contains the current character")
+                    .to_string()
             } else {
                 text
             };
-            let selected = opts
-                .iter()
-                .position(|(v, _)| *v == value.get_untracked())
-                .unwrap_or(0);
+            let selected = value.get_untracked();
+            let selected = options
+                .with_untracked(|opts| opts.iter().position(|(v, _)| *v == selected).unwrap_or(0));
             let from = if open.get_untracked() {
                 active.get_untracked()
             } else {
                 selected
             };
             let offset = if term.chars().count() == 1 { 1 } else { 0 };
-            let found = (0..opts.len())
-                .map(|n| (from + offset + n) % opts.len())
-                .find(|i| opts[*i].1.to_lowercase().starts_with(&term));
+            let found = options.with_untracked(|opts| {
+                (0..count)
+                    .map(|n| (from + offset + n) % count)
+                    .find(|i| opts[*i].1.to_lowercase().starts_with(&term))
+            });
             if open.get_untracked() {
                 if let Some(i) = found {
                     active.set(i);
@@ -400,12 +436,13 @@ pub fn Select(
                     .child((
                         blog_interface::html::span()
                             .child(move || {
-                                options
-                                    .get()
-                                    .into_iter()
-                                    .find(|(v, _)| *v == value.get())
-                                    .map(|(_, label)| label)
-                                    .unwrap_or_else(|| "\u{a0}".into())
+                                let selected = value.get();
+                                options.with(|opts| {
+                                    opts.iter()
+                                        .find(|(v, _)| *v == selected)
+                                        .map(|(_, label)| label.clone())
+                                        .unwrap_or_else(|| "\u{a0}".into())
+                                })
                             })
                             .class("blog-select-value"),
                         blog_interface::svg::svg()
@@ -498,14 +535,19 @@ pub fn Select(
                             }
                             let first = field.form().and_then(|f| {
                                 f.query_selector("input:invalid,select:invalid,textarea:invalid")
-                                    .ok()
-                                    .flatten()
+                                    .expect(
+                                        "invariant: the invalid form control selector is valid CSS",
+                                    )
                             });
                             if first.is_none_or(|e| {
                                 e == (*field).clone().unchecked_into::<web_sys::Element>()
                             }) && let Some(trigger) = trigger.get()
+                                && let Err(error) = trigger.focus()
                             {
-                                let _ = trigger.focus();
+                                web_sys::console::warn_2(
+                                    &"Unable to move browser focus".into(),
+                                    &error,
+                                );
                             }
                         })
                         .forget();
@@ -539,7 +581,6 @@ pub fn Select(
                                             .id(format!("{}-options-{i}", id.get_value()))
                                             .role("option")
                                             .aria_selected({
-                                                let v = v.clone();
                                                 move || (value.get() == v).to_string()
                                             })
                                             .attr("data-option-index", i)
@@ -572,7 +613,11 @@ pub fn Select(
                         if ev
                             .target()
                             .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
-                            .is_some_and(|t| t.closest("[role=option]").ok().flatten().is_some())
+                            .is_some_and(|t| {
+                                t.closest("[role=option]")
+                                    .expect("invariant: the option role selector is valid CSS")
+                                    .is_some()
+                            })
                         {
                             ev.prevent_default();
                         }

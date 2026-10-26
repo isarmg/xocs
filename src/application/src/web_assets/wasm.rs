@@ -32,8 +32,10 @@ pub fn response(
                 http::HeaderValue::from_static("application/wasm"),
             );
             compressed
-        } else {
+        } else if compressed.status() == http::StatusCode::NOT_FOUND {
             serve(path, method, headers)
+        } else {
+            compressed
         }
     } else {
         serve(path, method, headers)
@@ -54,24 +56,21 @@ pub fn response(
             .body(Bytes::new())
             .expect("constant encoding refusal headers");
     }
-    if successful {
-        let already_varies = result
-            .headers()
-            .get_all(http::header::VARY)
-            .iter()
-            .any(|value| {
-                value.to_str().is_ok_and(|v| {
-                    v.split(',').any(|s| {
-                        s.trim() == "*" || s.trim().eq_ignore_ascii_case("accept-encoding")
-                    })
-                })
-            });
-        if !already_varies {
-            result.headers_mut().append(
-                http::header::VARY,
-                http::HeaderValue::from_static("Accept-Encoding"),
-            );
-        }
+    let already_varies = result
+        .headers()
+        .get_all(http::header::VARY)
+        .iter()
+        .any(|value| {
+            value.to_str().is_ok_and(|v| {
+                v.split(',')
+                    .any(|s| s.trim() == "*" || s.trim().eq_ignore_ascii_case("accept-encoding"))
+            })
+        });
+    if !already_varies {
+        result.headers_mut().append(
+            http::header::VARY,
+            http::HeaderValue::from_static("Accept-Encoding"),
+        );
     }
     result
 }

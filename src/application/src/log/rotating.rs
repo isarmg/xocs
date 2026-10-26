@@ -1,27 +1,35 @@
-//! Application-owned Unix files use a dedicated private log directory and one
-//! writer lock. Other platforms can use the portable stream sink and delegate
-//! rotation to their service manager.
+//! A held private directory and an exclusive writer lease own log publication.
+//! Existing files are checked when the sink opens; subsequent operations use
+//! the directory descriptor and the writer's byte count.
 
-use crate::log::{LogError, LogRecord, LogRetention, MAX_RECORD_BYTES};
-use rustix::fs::{FlockOperation, OFlags, flock};
+use crate::log::{LogError, LogLine, LogRecord, LogRetention, MAX_RECORD_BYTES};
+use rustix::fs::{AtFlags, FlockOperation, Mode, OFlags, flock, openat, renameat, unlinkat};
 use std::{
-    fs::{self, File, Metadata, OpenOptions},
-    io::Write,
+    fs::{File, Metadata, OpenOptions},
+    io::{self, Write},
     os::unix::fs::{MetadataExt, OpenOptionsExt},
     path::{Path, PathBuf},
 };
 
 pub struct RotatingLogFile {
     directory: File,
-    path: PathBuf,
     stem: String,
     active_name: String,
     custom_name: bool,
     file: File,
-    _writer: File,
     bytes: u64,
-    rotation_pending: bool,
+    state: WriteState,
     retention: LogRetention,
+}
+
+#[derive(Clone, Copy)]
+enum WriteState {
+    Active,
+    MoveArchives { next: u8 },
+    ArchiveActive,
+    CreateActive,
+    SyncDirectory,
+    Failed,
 }
 
 impl RotatingLogFile {
@@ -95,21 +103,18 @@ impl RotatingLogFile {
         {
             return Err(LogError::UnsafeStorage);
         }
-        // The lease follows the active filename across both constructors.
-        // Otherwise open("events") and open_file("events.jsonl") could each
-        // hold a different lock while appending to the same active file.
-        let writer_path = path.join(format!(".{active_name}.writer.lock"));
-        let writer = open_private(&writer_path, false)?;
-        flock(&writer, FlockOperation::NonBlockingLockExclusive)
-            .map_err(|_| LogError::UnsafeStorage)?;
-        verify_named(&writer_path, &writer)?;
+        // Active names and archive names can overlap across constructors.
+        // One lease for the dedicated directory owns the entire namespace.
+        flock(&directory, FlockOperation::NonBlockingLockExclusive)
+            .map_err(|source| LogError::WriterLock(io::Error::from(source)))?;
         // Refuse a configuration that silently strands archives from an older
         // larger policy. Operators must change retention through an explicit
         // cleanup action, rather than normal startup deleting extra files.
-        for entry in fs::read_dir(path)? {
-            let name = entry?.file_name();
+        let mut entries = rustix::fs::Dir::read_from(&directory).map_err(io::Error::from)?;
+        while let Some(entry) = entries.read() {
+            let entry = entry.map_err(io::Error::from)?;
+            let name = entry.file_name().to_str().ok();
             let index = name
-                .to_str()
                 .and_then(|name| name.strip_prefix(&format!("{stem}.")))
                 .and_then(|name| {
                     if custom_name {
@@ -119,31 +124,27 @@ impl RotatingLogFile {
                     }
                 });
             if let Some(index) = index {
-                let index: u8 = index.parse().map_err(|_| LogError::UnsafeStorage)?;
+                let index: u8 = index.parse().map_err(LogError::ArchiveIndex)?;
                 if index == 0 || index > retention.archives {
                     return Err(LogError::UnsafeStorage);
                 }
             }
         }
-        let active_path = path.join(active_name);
-        let file = open_private(&active_path, false)?;
+        let file = open_private(&directory, active_name, false)?;
         let bytes = file.metadata()?.len();
         if bytes > retention.file_bytes {
             return Err(LogError::InvalidLimits);
         }
         let sink = Self {
             directory,
-            path: path.into(),
             stem: stem.into(),
             active_name: active_name.into(),
             custom_name,
             file,
-            _writer: writer,
             bytes,
-            rotation_pending: false,
+            state: WriteState::Active,
             retention,
         };
-        sink.verify_directory()?;
         for index in 1..=retention.archives {
             if let Some(metadata) = sink.archive_metadata(index)?
                 && metadata.len() > retention.file_bytes
@@ -155,116 +156,131 @@ impl RotatingLogFile {
     }
 
     pub fn write(&mut self, record: &LogRecord) -> Result<(), LogError> {
-        let line = record.json_line()?;
-        self.verify_directory()?;
-        verify_named(
-            &self.path.join(format!(".{}.writer.lock", self.active_name)),
-            &self._writer,
-        )?;
-        if self.rotation_pending {
-            self.finish_rotation()?;
-        }
-        verify_named(&self.active_path(), &self.file)?;
-        if self.file.metadata()?.len() != self.bytes {
-            return Err(LogError::UnsafeStorage);
-        }
-        if self
-            .bytes
-            .checked_add(line.len() as u64)
-            .is_none_or(|bytes| bytes > self.retention.file_bytes)
-        {
+        let line = record.encode()?;
+        self.write_line(&line)
+    }
+
+    pub(super) fn write_line(&mut self, line: &LogLine) -> Result<(), LogError> {
+        let line = line.0.as_slice();
+        self.finish_rotation()?;
+        // Both lengths are bounded when accepted, so subtraction also handles
+        // a retention limit of u64::MAX without overflow.
+        if line.len() as u64 > self.retention.file_bytes - self.bytes {
             self.rotate()?;
         }
-        if let Err(error) = self.file.write_all(&line) {
-            // A failed append may leave a prefix. Discard only this attempt;
-            // a failed rollback keeps the existing length check fail-closed.
-            self.file.set_len(self.bytes)?;
+        if let Err(error) = self.file.write_all(line) {
+            // Preserve complete records. A failed rollback makes this writer
+            // unusable until the caller opens and validates it again.
+            if let Err(rollback) = self.file.set_len(self.bytes) {
+                self.state = WriteState::Failed;
+                return Err(LogError::AppendRollback {
+                    source: error,
+                    rollback,
+                });
+            }
             return Err(error.into());
         }
-        self.file.flush()?;
         self.bytes += line.len() as u64;
         Ok(())
     }
 
     fn rotate(&mut self) -> Result<(), LogError> {
         self.file.sync_all()?;
-        let last = self.archive_path(self.retention.archives);
-        if self.archive_metadata(self.retention.archives)?.is_some() {
-            fs::remove_file(last)?;
+        match unlinkat(
+            &self.directory,
+            self.archive_path(self.retention.archives),
+            AtFlags::empty(),
+        ) {
+            Ok(()) | Err(rustix::io::Errno::NOENT) => {}
+            Err(error) => return Err(io::Error::from(error).into()),
         }
-        for index in (1..self.retention.archives).rev() {
-            if self.archive_metadata(index)?.is_some() {
-                fs::rename(self.archive_path(index), self.archive_path(index + 1))?;
-            }
-        }
-        verify_named(&self.active_path(), &self.file)?;
-        fs::rename(self.active_path(), self.archive_path(1))?;
-        self.rotation_pending = true;
+        self.state = WriteState::MoveArchives {
+            next: self.retention.archives - 1,
+        };
         self.finish_rotation()
     }
 
     fn finish_rotation(&mut self) -> Result<(), LogError> {
-        // Retain the archived handle until replacement creation succeeds.
-        verify_named(&self.archive_path(1), &self.file)?;
-        if self.file.metadata()?.len() != self.bytes {
-            return Err(LogError::UnsafeStorage);
+        loop {
+            self.state = match self.state {
+                WriteState::Active => return Ok(()),
+                WriteState::MoveArchives { next: 0 } => WriteState::ArchiveActive,
+                WriteState::MoveArchives { next } => {
+                    match renameat(
+                        &self.directory,
+                        self.archive_path(next),
+                        &self.directory,
+                        self.archive_path(next + 1),
+                    ) {
+                        Ok(()) | Err(rustix::io::Errno::NOENT) => {}
+                        Err(error) => return Err(io::Error::from(error).into()),
+                    }
+                    WriteState::MoveArchives { next: next - 1 }
+                }
+                WriteState::ArchiveActive => {
+                    renameat(
+                        &self.directory,
+                        &self.active_name,
+                        &self.directory,
+                        self.archive_path(1),
+                    )
+                    .map_err(io::Error::from)?;
+                    WriteState::CreateActive
+                }
+                WriteState::CreateActive => {
+                    // Keep the archived descriptor until creation succeeds.
+                    self.file = open_private(&self.directory, &self.active_name, true)?;
+                    self.bytes = 0;
+                    WriteState::SyncDirectory
+                }
+                WriteState::SyncDirectory => {
+                    self.directory.sync_all()?;
+                    WriteState::Active
+                }
+                WriteState::Failed => return Err(LogError::WriterFailed),
+            };
         }
-        self.file = open_private(&self.active_path(), true)?;
-        if self.file.metadata()?.len() != 0 {
-            return Err(LogError::UnsafeStorage);
-        }
-        self.bytes = 0;
-        self.rotation_pending = false;
-        self.directory.sync_all()?;
-        Ok(())
     }
 
-    fn active_path(&self) -> PathBuf {
-        self.path.join(&self.active_name)
-    }
     fn archive_path(&self, index: u8) -> PathBuf {
-        self.path.join(if self.custom_name {
+        PathBuf::from(if self.custom_name {
             format!("{}.{index}", self.stem)
         } else {
             format!("{}.{index}.jsonl", self.stem)
         })
     }
     fn archive_metadata(&self, index: u8) -> Result<Option<Metadata>, LogError> {
-        match fs::symlink_metadata(self.archive_path(index)) {
-            Ok(metadata) => {
+        match openat(
+            &self.directory,
+            self.archive_path(index),
+            OFlags::RDONLY | OFlags::NOFOLLOW | OFlags::NONBLOCK | OFlags::CLOEXEC,
+            Mode::empty(),
+        ) {
+            Ok(file) => {
+                let metadata = File::from(file).metadata()?;
                 require_private(&metadata)?;
                 Ok(Some(metadata))
             }
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
-            Err(error) => Err(error.into()),
-        }
-    }
-    fn verify_directory(&self) -> Result<(), LogError> {
-        let held = self.directory.metadata()?;
-        let named = fs::symlink_metadata(&self.path)?;
-        if !named.is_dir()
-            || named.dev() != held.dev()
-            || named.ino() != held.ino()
-            || named.mode() & 0o777 != 0o700
-            || named.uid() != rustix::process::geteuid().as_raw()
-        {
-            Err(LogError::UnsafeStorage)
-        } else {
-            Ok(())
+            Err(rustix::io::Errno::NOENT) => Ok(None),
+            Err(error) => Err(io::Error::from(error).into()),
         }
     }
 }
 
-fn open_private(path: &Path, create_new: bool) -> Result<File, LogError> {
-    let file = OpenOptions::new()
-        .read(true)
-        .append(true)
-        .create(true)
-        .create_new(create_new)
-        .mode(0o600)
-        .custom_flags((OFlags::NOFOLLOW | OFlags::NONBLOCK).bits() as i32)
-        .open(path)?;
-    verify_named(path, &file)?;
+fn open_private(directory: &File, name: &str, create_new: bool) -> Result<File, LogError> {
+    let mut flags = OFlags::RDWR
+        | OFlags::APPEND
+        | OFlags::CREATE
+        | OFlags::NOFOLLOW
+        | OFlags::NONBLOCK
+        | OFlags::CLOEXEC;
+    if create_new {
+        flags |= OFlags::EXCL;
+    }
+    let file = File::from(
+        openat(directory, name, flags, Mode::RUSR | Mode::WUSR).map_err(io::Error::from)?,
+    );
+    require_private(&file.metadata()?)?;
     Ok(file)
 }
 fn require_private(metadata: &Metadata) -> Result<(), LogError> {
@@ -278,18 +294,6 @@ fn require_private(metadata: &Metadata) -> Result<(), LogError> {
         Ok(())
     }
 }
-fn verify_named(path: &Path, file: &File) -> Result<(), LogError> {
-    let held = file.metadata()?;
-    let named = fs::symlink_metadata(path)?;
-    require_private(&held)?;
-    require_private(&named)?;
-    if held.dev() != named.dev() || held.ino() != named.ino() {
-        Err(LogError::UnsafeStorage)
-    } else {
-        Ok(())
-    }
-}
-
 #[path = "../../../../test/application/unit/log/rotating/recovery_tests.rs"]
 #[cfg(all(test, target_os = "linux"))]
 mod recovery_tests;

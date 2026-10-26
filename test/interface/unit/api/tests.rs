@@ -5,7 +5,7 @@ fn restore_does_not_touch_the_browser_during_revocation() {
         STATE.with(|state| {
             let mut state = state.borrow_mut();
             state.revoking = Some(state.generation);
-            state.phase = phase.clone();
+            state.phase = phase;
         });
         let error = futures::executor::block_on(restore()).unwrap_err();
         assert_eq!(
@@ -29,13 +29,16 @@ fn restore_does_not_touch_the_browser_during_revocation() {
 fn revocation_state(latest_intent: u64, latest_logout: u64) -> State {
     State {
         session: None,
-        transport: Some(AdministratorSession {
-            authenticated: true,
-            user_id: "admin-id".into(),
-            username: "admin".into(),
-            role: "admin".into(),
-            csrf_token: "A".repeat(43),
-        }),
+        transport: Some(
+            serde_json::from_value(json!({
+                "authenticated": true,
+                "user_id": "admin-id",
+                "username": "admin",
+                "role": "admin",
+                "csrf_token": "A".repeat(43),
+            }))
+            .expect("invariant: the revocation fixture is a valid administrator session"),
+        ),
         generation: latest_intent,
         phase: AuthPhase::Anonymous,
         error: None,

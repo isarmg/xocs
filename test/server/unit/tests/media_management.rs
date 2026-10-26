@@ -590,6 +590,41 @@ async fn deletion_quarantine_recovery_uses_committed_database_state_and_stays_pr
 }
 
 #[tokio::test]
+async fn recovery_rejects_malformed_deletion_journal_without_removing_it() {
+    let (directory, _app, pool) = setup().await;
+    let journal = directory.path().join(".blog-delete-not-media.png");
+    std::fs::write(&journal, b"pending bytes").unwrap();
+    assert!(matches!(
+        crate::media::recover_deletions(&pool, directory.path()).await,
+        Err(crate::AppError::InvalidDeletionJournal)
+    ));
+    assert_eq!(std::fs::read(journal).unwrap(), b"pending bytes");
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM resource")
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+        0
+    );
+}
+
+#[tokio::test]
+async fn recovery_reports_non_utf8_deletion_journal_instead_of_skipping_it() {
+    use std::{ffi::OsString, os::unix::ffi::OsStringExt};
+
+    let (directory, _app, pool) = setup().await;
+    let journal = directory.path().join(OsString::from_vec(
+        [b".blog-delete-".as_slice(), b"\xff.png"].concat(),
+    ));
+    std::fs::write(&journal, b"pending bytes").unwrap();
+    assert!(matches!(
+        crate::media::recover_deletions(&pool, directory.path()).await,
+        Err(crate::AppError::DeletionJournalEncoding(_))
+    ));
+    assert_eq!(std::fs::read(journal).unwrap(), b"pending bytes");
+}
+
+#[tokio::test]
 async fn removed_public_pages_and_member_management_routes_are_absent() {
     let (_directory, app, _pool) = setup().await;
     let session = login(&app).await;

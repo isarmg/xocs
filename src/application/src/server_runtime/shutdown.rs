@@ -34,7 +34,7 @@ pub trait LifecycleParticipant: Send + Sync + 'static {
     /// Close commit registration only after every possible producer has ended.
     async fn drain_commits(&self);
     /// Called only after all requests, ordinary work, and commits have drained.
-    async fn close_state(&self) -> Result<(), String>;
+    async fn close_state(&self) -> Result<(), crate::state_file::Error>;
 }
 
 /// Retains business state/locks after an incomplete shutdown. The executable

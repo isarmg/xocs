@@ -112,10 +112,18 @@ impl Captured {
             self.insert(key, value.clone());
         }
     }
-    fn text(&mut self, name: &str) -> Option<String> {
+    fn text(&mut self, name: &str) -> Result<Option<String>, LogError> {
         self.fields
             .remove(name)
-            .and_then(|value| value.as_str().map(str::to_owned))
+            .map(|value| match value {
+                Value::String(value) => Ok(value),
+                Value::Null
+                | Value::Bool(_)
+                | Value::Number(_)
+                | Value::Array(_)
+                | Value::Object(_) => Err(LogError::InvalidRecord),
+            })
+            .transpose()
     }
 }
 
@@ -208,18 +216,23 @@ where
             }
         }
         event.record(&mut captured);
-        let result = build_record(&self.service, event.metadata(), captured).and_then(|record| {
-            let mut output = self
-                .output
-                .lock()
-                .expect("structured log sink lock poisoned");
-            match &mut *output {
-                Sink::Process => record.emit(),
-                Sink::Stream(output) => record.write_to(output),
-                #[cfg(any(unix, windows))]
-                Sink::File(output) => output.write(&record),
-            }
-        });
+        let result = build_record(&self.service, event.metadata(), captured)
+            .and_then(|record| record.encode())
+            .and_then(|line| {
+                let mut output = self
+                    .output
+                    .lock()
+                    .expect("structured log sink lock poisoned");
+                match &mut *output {
+                    Sink::Process => {
+                        drop(output);
+                        super::emit_line(&line)
+                    }
+                    Sink::Stream(output) => super::write_line_to(&line, output),
+                    #[cfg(any(unix, windows))]
+                    Sink::File(output) => output.write_line(&line),
+                }
+            });
         if result.is_err() {
             self.rejected.fetch_add(1, Ordering::Relaxed);
         }
@@ -239,16 +252,16 @@ fn build_record(
         tracing::Level::ERROR => Level::Error,
     };
     let component = captured
-        .text("component")
+        .text("component")?
         .unwrap_or_else(|| metadata.target().to_owned());
     let event = captured
-        .text("event")
+        .text("event")?
         .unwrap_or_else(|| format!("{service}.diagnostic"));
-    let instance = captured.text("instance_id");
-    let instance_type = captured.text("instance_type");
-    let request = captured.text("request_id");
-    let task = captured.text("task_id");
-    let error = captured.text("error_code");
+    let instance = captured.text("instance_id")?;
+    let instance_type = captured.text("instance_type")?;
+    let request = captured.text("request_id")?;
+    let task = captured.text("task_id")?;
+    let error = captured.text("error_code")?;
     let mut record = if event.starts_with("common.") {
         let common = CommonEvent::from_name(&event).ok_or(LogError::InvalidRecord)?;
         if let Some(instance) = instance {

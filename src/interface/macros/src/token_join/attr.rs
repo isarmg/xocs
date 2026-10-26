@@ -1,4 +1,4 @@
-use crate::token_join::error::Result;
+use crate::token_join::error::{Error, Result};
 use crate::token_join::segment::{self, Segment};
 use proc_macro::{Delimiter, Group, Spacing, Span, TokenStream, TokenTree};
 use std::iter;
@@ -74,7 +74,10 @@ pub fn expand_attr(
                 expanded.extend(iter::once(tt));
                 nested_attr = TokenStream::new();
             }
-            _ => nested_attr.extend(iter::once(tt)),
+            TokenTree::Group(_)
+            | TokenTree::Ident(_)
+            | TokenTree::Punct(_)
+            | TokenTree::Literal(_) => nested_attr.extend(iter::once(tt)),
         }
     }
 
@@ -117,7 +120,10 @@ fn do_paste_name_value_attr(attr: TokenStream, span: Span, leading: usize) -> Re
                 string.value.remove(0);
             } else {
                 let begin = open_quote + 1;
-                let end = string.value.rfind('"').unwrap();
+                let end = string
+                    .value
+                    .rfind('"')
+                    .expect("invariant: find already found a quote in this string literal");
                 let raw_string = mem::take(&mut string.value);
                 for ch in raw_string[begin..end].chars() {
                     string.value.extend(ch.escape_default());
@@ -131,10 +137,10 @@ fn do_paste_name_value_attr(attr: TokenStream, span: Span, leading: usize) -> Re
     lit.push('"');
 
     let mut lit = TokenStream::from_str(&lit)
-        .unwrap()
+        .map_err(|error| Error::new(span, &format!("invalid pasted attribute literal: {error}")))?
         .into_iter()
         .next()
-        .unwrap();
+        .expect("invariant: a quoted literal produces one token");
     lit.set_span(span);
     expanded.extend(iter::once(lit));
     Ok(expanded)

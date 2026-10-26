@@ -385,13 +385,19 @@ impl serde::ser::SerializeMap for SerializeMap<'_> {
     where
         T: serde::Serialize + ?Sized,
     {
-        // FIXME this is too lenient - we should return an error if serde_json
-        // doesn't allow T to be a key of a map.
-        let json = serde_json::to_string(key)?;
+        let Value::Object(object) = serde::Serializer::collect_map(
+            serde_json::value::Serializer,
+            core::iter::once((key, ())),
+        )?
+        else {
+            unreachable!("invariant: the JSON map serializer returns an object");
+        };
         self.current_key = Some(
-            json.trim_start_matches('"')
-                .trim_end_matches('"')
-                .to_string(),
+            object
+                .into_iter()
+                .next()
+                .expect("invariant: serializing one map entry emits one key")
+                .0,
         );
 
         Ok(())
@@ -401,7 +407,10 @@ impl serde::ser::SerializeMap for SerializeMap<'_> {
     where
         T: serde::Serialize + ?Sized,
     {
-        let key = self.current_key.take().unwrap_or_default();
+        let key = self
+            .current_key
+            .take()
+            .expect("invariant: SerializeMap::serialize_key precedes serialize_value");
         let schema = value.serialize(Serializer {
             generator: self.generator,
             include_title: false,

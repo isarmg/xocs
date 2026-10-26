@@ -89,6 +89,12 @@ jobs:
           node ../../test/browser/language.mjs
           node ../../test/browser/admin-layout.mjs
           node ../../test/browser/style-contract.mjs
+          node ../../test/browser/corner-candidates.mjs
+          bash ../../test/interface/dom/browser/build.sh
+          node ../../test/interface/dom/browser/helper-contracts.mjs ../../target/verification/anti-defensive-review/dom-fixture/pkg
+          node ../../test/interface/dom/browser/dom-errors.mjs
+          bash ../../test/interface/browser/build.sh
+          node ../../test/interface/browser/corner-listener-lifecycle.mjs
           node ../../test/browser/configured-media.mjs
           node ../../test/browser/article-video.mjs
           node ../../test/browser/account-settings.mjs

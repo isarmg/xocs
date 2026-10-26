@@ -102,7 +102,8 @@ pub(crate) fn load_typed<T: DeserializeOwned + Clone + Send + Sync + 'static>(
             return;
         }
         data.busy.set(true);
-        let controller = web_sys::AbortController::new().unwrap();
+        let controller = web_sys::AbortController::new()
+            .expect("invariant: AbortController construction has no failure conditions");
         let signal = controller.signal();
         let cleanup = SendWrapper::new(controller);
         on_cleanup(move || cleanup.abort());

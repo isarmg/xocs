@@ -1,6 +1,10 @@
-use super::{AdminPageQuery, PageResult};
+use super::{
+    AdminPageQuery, PageResult,
+    input::{IdempotencyKey, ShortContent},
+};
 use crate::{ApiResult, AppError, AppState, absent, db_error, invalid};
 use axum::{Json, extract::State, http::HeaderMap};
+use blog_application::admin_core::AuthenticatedIdentity;
 use blog_application::error::HttpStatus;
 use blog_application::server_cli::{ContractPath as Path, ContractQuery as Query};
 use serde::{Deserialize, Serialize};
@@ -68,21 +72,13 @@ pub(super) struct AdminNote {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct AdminNoteInput {
-    content: String,
+    content: ShortContent,
     #[serde(deserialize_with = "Deserialize::deserialize")]
     image_path: Option<String>,
     is_public: bool,
 }
 
 const ADMIN_NOTE_SQL: &str = "SELECT w.id,w.user_id,u.username,w.content,w.image_path,w.is_public,w.create_time FROM wei_yan w LEFT JOIN user u ON u.id=w.user_id";
-
-fn validate_note_content(content: &str) -> Result<(), AppError> {
-    let content = content.trim();
-    if content.is_empty() || content.chars().count() > 1024 {
-        return Err(invalid("动态内容应为 1 至 1024 字"));
-    }
-    Ok(())
-}
 
 async fn validate_note_image(
     transaction: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
@@ -127,41 +123,23 @@ async fn load_admin_note(
 
 pub(super) async fn create_admin_note(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     headers: HeaderMap,
     crate::ContractJson(input): crate::ContractJson<AdminNoteInput>,
 ) -> ApiResult<AdminNote> {
-    validate_note_content(&input.content)?;
-    let request_id = headers
-        .get("Idempotency-Key")
-        .map(|value| {
-            value
-                .to_str()
-                .ok()
-                .filter(|key| {
-                    !key.is_empty()
-                        && key.len() <= 128
-                        && key.bytes().all(|byte| byte.is_ascii_graphic())
-                })
-                .map(str::to_owned)
-                .ok_or_else(|| invalid("动态请求标识无效"))
-        })
-        .transpose()?;
+    let request_id = IdempotencyKey::from_headers(&headers)?;
     use sha2::{Digest, Sha256};
     // Bind the initial normalized draft, independently of later edits to its row.
     let request_hash = Sha256::digest(
-        serde_json::to_vec(&(input.content.trim(), &input.image_path, input.is_public))
+        serde_json::to_vec(&(input.content.as_str(), &input.image_path, input.is_public))
             .expect("invariant: note strings and flags serialize to JSON"),
     )
     .to_vec();
-    let mut transaction = state
-        .pool
-        .begin_with("BEGIN IMMEDIATE")
-        .await
-        .map_err(db_error)?;
+    let mut transaction = crate::content::begin_mutation(&state.pool, &identity).await?;
     if let Some(key) = &request_id {
         let receipt: Option<(Vec<u8>, Option<i64>)> =
             sqlx::query_as("SELECT request_hash,note_id FROM note_submission WHERE request_id=?")
-                .bind(key)
+                .bind(key.as_str())
                 .fetch_optional(&mut *transaction)
                 .await
                 .map_err(db_error)?;
@@ -189,7 +167,7 @@ pub(super) async fn create_admin_note(
         "INSERT INTO wei_yan(user_id,content,image_path,type,is_public) VALUES(?,?,?,'friend',?)",
     )
     .bind(author)
-    .bind(input.content.trim())
+    .bind(input.content.as_str())
     .bind(input.image_path)
     .bind(i64::from(input.is_public))
     .execute(&mut *transaction)
@@ -198,7 +176,7 @@ pub(super) async fn create_admin_note(
     .last_insert_rowid();
     if let Some(key) = request_id {
         sqlx::query("INSERT INTO note_submission(request_id,request_hash,note_id) VALUES(?,?,?)")
-            .bind(key)
+            .bind(key.as_str())
             .bind(request_hash)
             .bind(id)
             .execute(&mut *transaction)
@@ -212,14 +190,11 @@ pub(super) async fn create_admin_note(
 
 pub(super) async fn update_admin_note(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     Path(id): Path<i64>,
     crate::ContractJson(input): crate::ContractJson<AdminNoteInput>,
 ) -> ApiResult<AdminNote> {
-    let mut transaction = state
-        .pool
-        .begin_with("BEGIN IMMEDIATE")
-        .await
-        .map_err(db_error)?;
+    let mut transaction = crate::content::begin_mutation(&state.pool, &identity).await?;
     let exists: bool =
         sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM wei_yan WHERE id=? AND type='friend')")
             .bind(id)
@@ -229,12 +204,11 @@ pub(super) async fn update_admin_note(
     if !exists {
         return Err(absent());
     }
-    validate_note_content(&input.content)?;
     validate_note_image(&mut transaction, &input.image_path).await?;
     sqlx::query(
         "UPDATE wei_yan SET content=?,image_path=?,is_public=? WHERE id=? AND type='friend'",
     )
-    .bind(input.content.trim())
+    .bind(input.content.as_str())
     .bind(input.image_path)
     .bind(i64::from(input.is_public))
     .bind(id)
@@ -267,15 +241,18 @@ pub(super) async fn content_notes(
 }
 pub(super) async fn delete_note(
     State(state): State<AppState>,
+    axum::Extension(identity): axum::Extension<AuthenticatedIdentity>,
     Path(id): Path<i64>,
 ) -> ApiResult<serde_json::Value> {
+    let mut transaction = crate::content::begin_mutation(&state.pool, &identity).await?;
     let changed = sqlx::query("DELETE FROM wei_yan WHERE id=? AND type='friend'")
         .bind(id)
-        .execute(&state.pool)
+        .execute(&mut *transaction)
         .await
         .map_err(db_error)?;
     if changed.rows_affected() == 0 {
         return Err(absent());
     }
+    transaction.commit().await.map_err(db_error)?;
     Ok(Json(serde_json::json!({"deleted":true})))
 }

@@ -5,7 +5,7 @@ use crate::error::{ErrorEnvelope, RequestId};
 use axum::{
     Json,
     extract::{FromRequest, FromRequestParts, Path, Query, Request, rejection::JsonRejection},
-    http::{Extensions, StatusCode, header, request::Parts},
+    http::{StatusCode, header, request::Parts},
     middleware::Next,
     response::{IntoResponse, Response},
 };
@@ -64,7 +64,7 @@ pub struct ContractQuery<T>(pub T);
 #[derive(Debug, Clone, Copy)]
 pub struct ContractPath<T>(pub T);
 
-fn rejected(status: StatusCode, reason: &'static str, extensions: &Extensions) -> Response {
+fn rejected(status: StatusCode, reason: &'static str, request_id: Option<&RequestId>) -> Response {
     let (code, message) = if status == StatusCode::REQUEST_TIMEOUT {
         (
             "request_timeout",
@@ -89,7 +89,7 @@ fn rejected(status: StatusCode, reason: &'static str, extensions: &Extensions) -
     let mut envelope = super::failure(code, message);
     envelope.retryable = status == StatusCode::REQUEST_TIMEOUT;
     envelope.details.insert("reason".into(), reason.into());
-    envelope.request_id = extensions.get::<RequestId>().cloned();
+    envelope.request_id = request_id.cloned();
     let mut response = error_response(status, envelope);
     if status == StatusCode::REQUEST_TIMEOUT {
         // The unfinished HTTP/1 request body must not keep the connection open.
@@ -117,14 +117,24 @@ where
     type Rejection = Response;
 
     async fn from_request(request: Request, state: &S) -> Result<Self, Self::Rejection> {
-        let extensions = request.extensions().clone();
+        let request_id = request.extensions().get::<RequestId>().cloned();
         // Bound only extraction. Once a handler starts, its transaction is not
         // interrupted by this deadline, avoiding uncertain write outcomes.
         tokio::time::timeout(JSON_BODY_TIMEOUT, Json::<T>::from_request(request, state))
             .await
-            .map_err(|_| rejected(StatusCode::REQUEST_TIMEOUT, "BODY_TIMEOUT", &extensions))?
+            .map_err(|_| {
+                rejected(
+                    StatusCode::REQUEST_TIMEOUT,
+                    "BODY_TIMEOUT",
+                    request_id.as_ref(),
+                )
+            })?
             .map(|Json(value)| Self(value))
             .map_err(|error| {
+                #[expect(
+                    clippy::wildcard_enum_match_arm,
+                    reason = "JsonRejection is an external non-exhaustive rejection type"
+                )]
                 let (status, reason) = match &error {
                     JsonRejection::JsonDataError(error) => {
                         (StatusCode::BAD_REQUEST, json_data_reason(error))
@@ -138,7 +148,7 @@ where
                     }
                     _ => (StatusCode::BAD_REQUEST, "INVALID_JSON"),
                 };
-                rejected(status, reason, &extensions)
+                rejected(status, reason, request_id.as_ref())
             })
     }
 }
@@ -154,7 +164,13 @@ where
         Query::<T>::from_request_parts(parts, state)
             .await
             .map(|Query(value)| Self(value))
-            .map_err(|_| rejected(StatusCode::BAD_REQUEST, "INVALID_QUERY", &parts.extensions))
+            .map_err(|_| {
+                rejected(
+                    StatusCode::BAD_REQUEST,
+                    "INVALID_QUERY",
+                    parts.extensions.get::<RequestId>(),
+                )
+            })
     }
 }
 
@@ -169,7 +185,13 @@ where
         Path::<T>::from_request_parts(parts, state)
             .await
             .map(|Path(value)| Self(value))
-            .map_err(|error| rejected(error.status(), "INVALID_PATH", &parts.extensions))
+            .map_err(|error| {
+                rejected(
+                    error.status(),
+                    "INVALID_PATH",
+                    parts.extensions.get::<RequestId>(),
+                )
+            })
     }
 }
 

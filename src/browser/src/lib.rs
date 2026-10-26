@@ -21,5 +21,5 @@ pub fn start() {
             View::new(public::Public()).into_any()
         }
     };
-    blog_interface::mount_server("root", app);
+    blog_interface::mount_server("root", app, include_str!("corner_surfaces.txt"));
 }

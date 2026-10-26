@@ -5,16 +5,13 @@ use super::*;
 #[derive(Clone, Debug)]
 pub struct AdministratorManagementContext {
     pub identity: AuthenticatedIdentity,
-    pub request_id: Option<String>,
+    pub request_id: Option<RequestId>,
     pub now_micros: u64,
 }
 
 impl AdministratorManagementContext {
     pub fn validate(&self) -> Result<(), Error> {
         require_persistable_time(self.now_micros)?;
-        if let Some(id) = &self.request_id {
-            crate::error::validate_request_id(id)?;
-        }
         Ok(())
     }
 }

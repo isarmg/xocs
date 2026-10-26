@@ -13,7 +13,7 @@ pub(super) fn Articles() -> impl IntoView {
     let action = Action::new();
     Effect::new(move |_| {
         if let Some(v) = data.value.get() {
-            let last = ((v.total + v.size - 1) / v.size.max(1)).max(1) as u64;
+            let last = ((v.total + v.size - 1) / v.size).max(1) as u64;
             if page.get_untracked() > last {
                 page.set(last);
             }
@@ -129,7 +129,7 @@ pub(super) fn Articles() -> impl IntoView {
                     "Delete")).class("blog-button blog-danger")
                     .disabled(move
                     | | action.busy.get()).on(blog_interface::ev::click,
-                    move | _ | if web_sys::window().unwrap().confirm_with_message(&
+                    move | _ | if web_sys::window().expect("invariant: the application is mounted in a browser window").confirm_with_message(&
                     t("确定删除这篇文章？", "Delete this article?"))
                     .unwrap_or(false) { action
                     .run(format!("/api/v1/content/articles/{id}"), "DELETE", None,
