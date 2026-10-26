@@ -61,7 +61,7 @@ impl LifecycleParticipant for ScopeParticipant {
 #[tokio::test]
 async fn shutdown_reports_the_original_state_close_failure() {
     use crate::state_file::PrivateStateDirectory;
-    use std::error::Error as _;
+    use std::{error::Error as _, os::unix::fs::PermissionsExt};
 
     struct FileParticipant(PrivateStateDirectory);
     #[async_trait::async_trait]
@@ -78,7 +78,10 @@ async fn shutdown_reports_the_original_state_close_failure() {
         }
     }
 
-    let directory = tempfile::tempdir().unwrap();
+    let directory = tempfile::Builder::new()
+        .permissions(std::fs::Permissions::from_mode(0o700))
+        .tempdir()
+        .unwrap();
     let state = PrivateStateDirectory::open(directory.path()).unwrap();
     state.create_file("cleanup-state").unwrap();
     std::fs::remove_file(directory.path().join("cleanup-state")).unwrap();

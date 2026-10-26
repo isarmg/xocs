@@ -3,7 +3,7 @@ use serde::Deserialize;
 
 #[test]
 fn parser_and_file_errors_keep_sources_outside_safe_diagnostics() {
-    use std::error::Error as _;
+    use std::{error::Error as _, os::unix::fs::PermissionsExt};
     let syntax = strict::parse_json(b"{\"private-input\":", ConfigSource::File).unwrap_err();
     assert!(
         syntax
@@ -27,7 +27,10 @@ fn parser_and_file_errors_keep_sources_outside_safe_diagnostics() {
             .unwrap()
             .is::<std::num::ParseIntError>()
     );
-    let directory = tempfile::tempdir().unwrap();
+    let directory = tempfile::Builder::new()
+        .permissions(std::fs::Permissions::from_mode(0o700))
+        .tempdir()
+        .unwrap();
     let missing = read_private_file(&directory.path().join("private-input.json")).unwrap_err();
     assert_eq!(missing.reason, Reason::MissingFile);
     let cause = missing
