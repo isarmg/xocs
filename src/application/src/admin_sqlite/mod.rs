@@ -190,10 +190,6 @@ impl AdministratorStore for SqliteAdministratorStore {
         Ok(self.authentication.get_or_init(|| state).clone())
     }
 
-    fn supports_account_updates(&self) -> bool {
-        true
-    }
-
     async fn manage_administrator(
         &self,
         context: &crate::admin_core::AdministratorManagementContext,

@@ -1624,6 +1624,7 @@ async fn paginated_content_keeps_counts_items_and_source_reads_in_one_snapshot()
         ("/api/v1/love-comments", 1),
         ("/api/v1/love-comments/5/replies", 1),
         ("/api/v1/content/comments", 6),
+        ("/api/v1/content/statistics", 1),
     ] {
         let (directory, app, fixture_pool) = setup().await;
         let auth = session(&app).await;
@@ -1678,12 +1679,19 @@ async fn paginated_content_keeps_counts_items_and_source_reads_in_one_snapshot()
         let response = admin(&app, &auth, "GET", path, Value::Null).await;
         assert_eq!(response.status(), StatusCode::OK, "{path}");
         let body = body_json(response).await;
-        assert_eq!(body["total"], expected_total, "{path}");
-        assert_eq!(
-            body["items"].as_array().unwrap().len(),
-            expected_total as usize,
-            "{path}"
-        );
+        if path.ends_with("/statistics") {
+            assert_eq!(
+                body,
+                json!({"articles":1,"comments":6,"members":1,"categories":0})
+            );
+        } else {
+            assert_eq!(body["total"], expected_total, "{path}");
+            assert_eq!(
+                body["items"].as_array().unwrap().len(),
+                expected_total as usize,
+                "{path}"
+            );
+        }
         // Pool return hooks run asynchronously. A subsequent checkout waits for
         // the edit to commit; closing immediately can skip that return hook.
         let mut connection = pool.acquire().await.unwrap();

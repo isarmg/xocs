@@ -24,7 +24,28 @@ use self::{
     references::referenced,
     storage::{UploadedMedia, not_found, reconcile_deletion, recover_failed_deletion},
 };
-use crate::{ApiResult, AppError, AppState, db_error};
+use crate::{ApiResult, AppError, AppState};
+
+pub(crate) async fn cache_response(
+    request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    let mut response = next.run(request).await;
+    // Only validated, content-addressed files reach this service. Failures must
+    // remain retryable when a missing upload is subsequently published.
+    if matches!(
+        response.status(),
+        axum::http::StatusCode::OK
+            | axum::http::StatusCode::PARTIAL_CONTENT
+            | axum::http::StatusCode::NOT_MODIFIED
+    ) {
+        response.headers_mut().insert(
+            axum::http::header::CACHE_CONTROL,
+            axum::http::HeaderValue::from_static("public, max-age=31536000, immutable"),
+        );
+    }
+    response
+}
 
 struct MediaUpload {
     body: Bytes,
@@ -114,7 +135,7 @@ async fn save_media(
             let mut transaction = crate::content::begin_mutation(&owned.pool, &identity).await?;
             let owner = crate::site_author_id(&mut *transaction).await?;
             let result = storage::save(&owned, &mut transaction, upload, owner).await?;
-            transaction.commit().await.map_err(db_error)?;
+            transaction.commit().await?;
             Ok::<_, AppError>(result)
         })?
         .await
@@ -147,12 +168,11 @@ async fn delete_resource(
             let row = sqlx::query("SELECT path,type,store_type FROM resource WHERE id=?")
                 .bind(id)
                 .fetch_optional(&mut *transaction)
-                .await
-                .map_err(db_error)?
+                .await?
                 .ok_or_else(crate::absent)?;
-            let path: Option<String> = row.try_get("path").map_err(db_error)?;
-            let kind: Option<String> = row.try_get("type").map_err(db_error)?;
-            let storage: Option<String> = row.try_get("store_type").map_err(db_error)?;
+            let path: Option<String> = row.try_get("path")?;
+            let kind: Option<String> = row.try_get("type")?;
+            let storage: Option<String> = row.try_get("store_type")?;
             let filename = path
                 .as_deref()
                 .and_then(|path| path.strip_prefix("/media/").and_then(MediaFilename::parse))
@@ -204,8 +224,7 @@ async fn delete_resource(
                 sqlx::query("DELETE FROM resource WHERE id=?")
                     .bind(id)
                     .execute(&mut *transaction)
-                    .await
-                    .map_err(db_error)?;
+                    .await?;
                 Ok::<_, AppError>(())
             }
             .await;
@@ -225,7 +244,7 @@ async fn delete_resource(
                     &owned.pool,
                     &directory,
                     &filename,
-                    db_error(error),
+                    error.into(),
                 )
                 .await);
             }

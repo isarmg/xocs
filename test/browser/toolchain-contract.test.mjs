@@ -47,9 +47,9 @@ test('retired npm package is rejected even with a consistent lockfile', () => fi
   json('package-lock.json', data => { data.packages[''].devDependencies['@xcss/web'] = '1.0.0'; });
   const result = check(); assert.notEqual(result.status, 0); assert.match(result.stderr, /@xcss\/web/);
 }));
-test('old npm font preload paths fail the production contract', () => fixture(({ directory, check }) => {
+test('old npm asset paths fail the production contract', () => fixture(({ directory, check }) => {
   const path = join(directory, 'index.html');
-  writeFileSync(path, readFileSync(path, 'utf8').replace('/styles/', '/node_modules/@xcss/web/dist/'));
+  writeFileSync(path, readFileSync(path, 'utf8').replace('</head>', '<link rel="preload" href="/node_modules/@xcss/web/dist/font.woff2"></head>'));
   const result = check(); assert.notEqual(result.status, 0); assert.match(result.stderr, /font preloads/);
 }));
 test('browser tests cannot silently import a second npm asset version', () => fixture(({ directory, check }) => {

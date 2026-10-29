@@ -2,7 +2,7 @@ use axum::{Json, Router, extract::State, routing::get};
 use blog_application::admin_core::AuthenticatedIdentity;
 use serde::{Deserialize, Serialize};
 
-use crate::{ApiResult, AppState, db_error, invalid};
+use crate::{ApiResult, AppState, invalid};
 
 #[derive(Clone, Copy, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -103,7 +103,7 @@ pub fn admin_routes() -> Router<AppState> {
 
 async fn public_sections(State(state): State<AppState>) -> ApiResult<Vec<HomeSection>> {
     Ok(Json(sqlx::query_as("SELECT id,title,kind,sort_id,priority,enabled FROM home_sections WHERE enabled=1 ORDER BY priority,id")
-        .fetch_all(&state.pool).await.map_err(db_error)?))
+        .fetch_all(&state.pool).await?))
 }
 
 async fn admin_sections(State(state): State<AppState>) -> ApiResult<Vec<HomeSection>> {
@@ -112,8 +112,7 @@ async fn admin_sections(State(state): State<AppState>) -> ApiResult<Vec<HomeSect
             "SELECT id,title,kind,sort_id,priority,enabled FROM home_sections ORDER BY priority,id",
         )
         .fetch_all(&state.pool)
-        .await
-        .map_err(db_error)?,
+        .await?,
     ))
 }
 
@@ -135,8 +134,7 @@ async fn save_sections(
             let exists: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM sort WHERE id=?")
                 .bind(id)
                 .fetch_one(&mut *tx)
-                .await
-                .map_err(db_error)?;
+                .await?;
             if exists == 0 {
                 return Err(invalid("栏目所选分类不存在"));
             }
@@ -144,8 +142,7 @@ async fn save_sections(
     }
     sqlx::query("DELETE FROM home_sections")
         .execute(&mut *tx)
-        .await
-        .map_err(db_error)?;
+        .await?;
     for item in sections {
         sqlx::query(
             "INSERT INTO home_sections(title,kind,sort_id,priority,enabled) VALUES(?,?,?,?,?)",
@@ -156,15 +153,13 @@ async fn save_sections(
         .bind(item.priority)
         .bind(item.enabled)
         .execute(&mut *tx)
-        .await
-        .map_err(db_error)?;
+        .await?;
     }
     let sections = sqlx::query_as(
         "SELECT id,title,kind,sort_id,priority,enabled FROM home_sections ORDER BY priority,id",
     )
     .fetch_all(&mut *tx)
-    .await
-    .map_err(db_error)?;
-    tx.commit().await.map_err(db_error)?;
+    .await?;
+    tx.commit().await?;
     Ok(Json(sections))
 }

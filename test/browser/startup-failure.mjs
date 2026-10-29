@@ -1,6 +1,6 @@
 import { chromium, firefox } from './dependencies.mjs';
 import { preview } from "../tools/assets/test-preview.mjs";
-import { verifyStartupFailures, verifyStartupTimeout } from "./startup-failures.mjs";
+import { verifyStartupFailures, verifyStartupTimeout, verifyDecorativeFonts } from "./startup-failures.mjs";
 
 const server = await preview({ preview: { host: "127.0.0.1", port: 0, strictPort: true } });
 try {
@@ -12,6 +12,7 @@ try {
         status: 401, contentType: "application/problem+json",
         body: JSON.stringify({ status: 401, code: "auth.required" }),
       }));
+      await verifyDecorativeFonts(browser, url, prepare);
       await verifyStartupFailures(browser, url, prepare);
       await verifyStartupTimeout(browser, url, prepare);
     } finally { await browser.close(); }

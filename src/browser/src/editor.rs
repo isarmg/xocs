@@ -163,6 +163,34 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
     });
     let ready = RwSignal::new(id == 0);
     let preview = RwSignal::new(false);
+    let preview_html = RwSignal::new(String::new());
+    let preview_timer = StoredValue::new(blog_interface::thread_bound::SendWrapper::new(
+        None::<blog_interface::timers::callback::Timeout>,
+    ));
+    let body = Memo::new(move |_| form.with(|form| form.article_content.clone()));
+    Effect::new(move |was_visible: Option<bool>| {
+        let visible = preview.get();
+        preview_timer.update_value(|timer| drop((**timer).take()));
+        if visible {
+            let content = body.get();
+            if was_visible != Some(true) {
+                preview_html.set(crate::browser::markdown_html(&content));
+            } else {
+                preview_timer.update_value(|timer| {
+                    **timer = Some(blog_interface::timers::callback::Timeout::new(
+                        200,
+                        move || {
+                            preview_html.set(crate::browser::markdown_html(&content));
+                        },
+                    ));
+                });
+            }
+        } else {
+            preview_html.set(String::new());
+        }
+        visible
+    });
+    on_cleanup(move || preview_timer.update_value(|timer| drop((**timer).take())));
     let body_area = NodeRef::<blog_interface::html::Textarea>::new();
     let body_touched = RwSignal::new(false);
     let body_video_url = RwSignal::new(String::new());
@@ -477,9 +505,7 @@ pub fn ArticleEditor(#[prop(default = 0)] id: i64) -> impl IntoView {
                                     View::new(
                                         blog_interface::html::div()
                                             .class("editor-markdown-preview blog-frame blog-frame--padded blog-stack blog-stack--spaced")
-                                            .inner_html(form.with(|form| {
-                                                crate::browser::markdown_html(&form.article_content)
-                                            })),
+                                            .inner_html(move || preview_html.get()),
                                     )
                                 })
                             },

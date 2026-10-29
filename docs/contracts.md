@@ -45,12 +45,14 @@
 
 `background_image`、`avatar` 和 `random_cover` 继续分别表示首页背景、站长头像和随机文章封面；家庭资料的 `bg_cover` 表示“家”页背景。空白媒体地址保存为 `null`，清空配置不会恢复内置图片或视频。媒体地址只接受 HTTP(S) 或站点根路径，拒绝其它协议、协议相对地址和控制字符。
 
-管理员图片上传入口为 `POST /api/v1/content/upload`，支持 PNG、JPEG、GIF、WebP，最大 10 MiB；视频上传入口为 `POST /api/v1/content/upload-video`，支持 MP4、WebM，最大 50 MiB。服务端按实际文件内容判断类型，使用内容摘要命名，不能用文件扩展名或请求 MIME 绕过类型检查。本地资源被站点外观或其它当前内容引用时，删除返回 `409 Conflict`。
+管理员图片上传入口为 `POST /api/v1/content/upload`，支持 PNG、JPEG、GIF、WebP，最大 10 MiB；视频上传入口为 `POST /api/v1/content/upload-video`，支持 MP4、WebM，最大 50 MiB。服务端按实际文件内容判断类型，使用内容摘要命名，不能用文件扩展名或请求 MIME 绕过类型检查。本地资源被站点外观、文章草稿或其它实际使用媒体的字段引用时，删除返回 `409 Conflict`；匿名评论与树洞消息中的纯文本提及不阻止删除。
+
+内容寻址的 `/media/<摘要>.<扩展名>` 成功响应使用 `Cache-Control: public, max-age=31536000, immutable`，包括 HEAD、范围请求和条件请求。删除文件后，源站返回 404，但浏览器或代理中已经缓存的副本仍可在有效期内使用；媒体删除不提供缓存撤回。
 
 文章顶部视频保存在 `video_url`，正文视频保存在 `article_content` 的独立 `video` fenced code block 中，每块一个 URL。两者共用 Rust 视频解析器：视频文件仅接受 HTTP(S) 或站点根路径的 MP4/WebM 地址；平台地址仅接受已知 B 站、YouTube 主机与有效视频标识，生成固定 HTTPS 播放器地址，不透传任意嵌入参数。原始 HTML 一律转义；不支持的视频代码块保持为代码。服务端的媒体引用检查同时识别视频块中的浏览器规范化路径，草稿引用也会阻止文件删除。
 
 ## 数据库与离线操作
 
-数据库身份为 `blog-db-v4`，结构修订号为 `4`。新实例按当前结构初始化。程序校验 `product_metadata`、全部 SQL 对象及当前结构摘要；结构不匹配时拒绝打开。服务启动只打开已初始化的实例。新数据库由显式 `blog-setup initialize` 创建，已有数据库不会被覆盖初始化。
+数据库身份为 `blog-db-v5`，结构修订号为 `5`。新实例按当前结构初始化。程序校验 `product_metadata`、全部 SQL 对象及当前结构摘要；结构不匹配时拒绝打开，不执行旧格式迁移。服务启动只打开已初始化的实例。新数据库由显式 `blog-setup initialize` 创建，已有数据库不会被覆盖初始化。
 
 服务与 `blog-setup` 共用实例锁。离线检查先创建 `ROOT/run` 下的受限临时快照，在快照上验证数据库结构、内容和凭据，不改写源数据库。密码重置使用事务更新管理员凭据并撤销会话。具体命令见[运行与排障](operations.md)。

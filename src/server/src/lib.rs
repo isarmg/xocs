@@ -17,7 +17,7 @@ pub use static_assets::AssetError;
 
 #[cfg(any(test, feature = "maintenance"))]
 pub(crate) use app::now_micros;
-pub(crate) use app::{ApiResult, AppError, AppState, absent, db_error, invalid, site_author_id};
+pub(crate) use app::{ApiResult, AppError, AppState, absent, invalid, site_author_id};
 pub use blog_application::server_cli::ContractJson;
 
 const PRODUCT_ID: &str = "blog";

@@ -25,6 +25,19 @@ pub(super) fn Chrome(
     children: ChildrenFn,
 ) -> impl IntoView {
     let site = site_data();
+    Effect::new(move |_| {
+        let name = site_name(site);
+        let page = title.get();
+        let title = if page.trim().is_empty() || page == name {
+            name
+        } else {
+            format!("{page} · {name}")
+        };
+        web_sys::window()
+            .and_then(|window| window.document())
+            .expect("invariant: public chrome is mounted in the browser document")
+            .set_title(&title);
+    });
     let random_cover = Memo::new(move |_| {
         let covers = site
             .value

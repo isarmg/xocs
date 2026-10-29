@@ -28,7 +28,7 @@ async fn media_parse_failures_retain_sources_without_echoing_values() {
 
 #[tokio::test]
 async fn database_failures_retain_the_source_and_return_a_safe_response() {
-    let error = db_error(sqlx::Error::Io(std::io::Error::other(
+    let error = AppError::from(sqlx::Error::Io(std::io::Error::other(
         "private-database-detail",
     )));
     assert!(matches!(

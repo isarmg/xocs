@@ -24,13 +24,17 @@ pub fn reading_markup(content: &str, copy: &str, image: &str, section: &str) -> 
         .and_then(|w| w.document())
         .expect("invariant: reading markup is built in the mounted browser document");
     let holder = doc
-        .create_element("div")
-        .expect("invariant: div is a valid HTML element name");
+        .create_element("template")
+        .expect("invariant: template is a valid HTML element name")
+        .unchecked_into::<web_sys::HtmlTemplateElement>();
     // Only escaped Markdown and the renderer's fixed, URL-validated video
     // elements enter this detached tree; authored HTML never becomes markup.
+    // Template contents stay inert, so offscreen images cannot start fetching
+    // before their loading policy is set and the final markup is mounted.
     holder.set_inner_html(&html);
+    let content = holder.content();
     let mut headings = Vec::new();
-    let nodes = holder
+    let nodes = content
         .query_selector_all("h2,h3,h4")
         .expect("invariant: heading selectors are valid CSS");
     for index in 0..nodes.length() {
@@ -53,7 +57,7 @@ pub fn reading_markup(content: &str, copy: &str, image: &str, section: &str) -> 
                 .expect("invariant: the selected heading level is 2, 3 or 4"),
         });
     }
-    let nodes = holder
+    let nodes = content
         .query_selector_all("pre")
         .expect("invariant: the code block selector is valid CSS");
     for index in 0..nodes.length() {
@@ -71,7 +75,7 @@ pub fn reading_markup(content: &str, copy: &str, image: &str, section: &str) -> 
         pre.prepend_with_node_1(&button)
             .expect("invariant: a new button can be inserted into its detached code block");
     }
-    let nodes = holder
+    let nodes = content
         .query_selector_all("img")
         .expect("invariant: the image selector is valid CSS");
     for index in 0..nodes.length() {
@@ -79,6 +83,10 @@ pub fn reading_markup(content: &str, copy: &str, image: &str, section: &str) -> 
             .item(index)
             .expect("invariant: the static image list contains each index")
             .unchecked_into::<web_sys::HtmlElement>();
+        img.set_attribute("loading", "lazy")
+            .expect("invariant: loading is a valid attribute name");
+        img.set_attribute("decoding", "async")
+            .expect("invariant: decoding is a valid attribute name");
         img.set_attribute("role", "button")
             .expect("invariant: role is a valid attribute name");
         img.set_tab_index(0);

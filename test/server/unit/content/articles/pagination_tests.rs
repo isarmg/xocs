@@ -69,7 +69,7 @@ async fn article_page_optimization_preserves_filters_rank_and_summaries() {
                     .fetch_one(&pool)
                     .await
                     .unwrap();
-                    let expected = sqlx::query_as::<_,ArticleSummary>(sqlx::AssertSqlSafe(format!("{ARTICLE_SUMMARY_SQL} WHERE {filter} ORDER BY CASE WHEN ?2<>'' AND article_title LIKE ?3 ESCAPE '\\' THEN 0 ELSE 1 END,create_time DESC,id DESC LIMIT ?7 OFFSET ?8")))
+                    let expected = sqlx::query_as::<_,ArticleSummary>(sqlx::AssertSqlSafe(format!("{ARTICLE_SUMMARY_COLUMNS} FROM article WHERE {filter} ORDER BY CASE WHEN ?2<>'' AND article_title LIKE ?3 ESCAPE '\\' THEN 0 ELSE 1 END,create_time DESC,id DESC LIMIT ?7 OFFSET ?8")))
                             .bind(sort_id).bind(search).bind(&pattern).bind(recommended.map(i64::from)).bind(&phrase).bind(label_id).bind(5).bind((page-1)*5)
                             .fetch_all(&pool).await.unwrap();
                     let actual = list_articles(

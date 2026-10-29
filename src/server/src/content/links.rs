@@ -1,5 +1,5 @@
 use super::{AdminPageQuery, PageResult};
-use crate::{ApiResult, AppError, AppState, absent, db_error, invalid};
+use crate::{ApiResult, AppError, AppState, absent, invalid};
 use axum::{Json, extract::State};
 use blog_application::admin_core::AuthenticatedIdentity;
 use blog_application::server_cli::{ContractPath as Path, ContractQuery as Query};
@@ -58,14 +58,14 @@ pub(super) async fn link_page(
     }
     let page = query.page.unwrap_or(1).clamp(1, 100_000);
     let size = query.size.unwrap_or(12).clamp(1, 100);
-    let mut transaction = state.pool.begin().await.map_err(db_error)?;
+    let mut transaction = state.pool.begin().await?;
     let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM resource_path WHERE type=? AND status=1 AND (? IS NULL OR classify=?)")
         .bind(query.kind.as_str()).bind(&query.classify).bind(&query.classify)
-        .fetch_one(&mut *transaction).await.map_err(db_error)?;
+        .fetch_one(&mut *transaction).await?;
     let items=sqlx::query_as::<_,Link>("SELECT id,title,classify,cover,url,introduction,type AS link_type,create_time FROM resource_path WHERE type=? AND status=1 AND (? IS NULL OR classify=?) ORDER BY id DESC LIMIT ? OFFSET ?")
         .bind(query.kind.as_str()).bind(&query.classify).bind(&query.classify).bind(size).bind((page-1)*size)
-        .fetch_all(&mut *transaction).await.map_err(db_error)?;
-    transaction.commit().await.map_err(db_error)?;
+        .fetch_all(&mut *transaction).await?;
+    transaction.commit().await?;
     Ok(Json(PageResult {
         items,
         total,
@@ -84,7 +84,7 @@ pub(super) async fn link_classes(
 ) -> ApiResult<Vec<LinkClass>> {
     let kind = query.kind.unwrap_or(LinkKind::LovePhoto);
     Ok(Json(sqlx::query_as::<_,LinkClass>("SELECT classify,COUNT(*) AS count FROM resource_path WHERE type=? AND status=1 AND classify IS NOT NULL AND classify<>'' GROUP BY classify ORDER BY MAX(id) DESC")
-        .bind(kind.as_str()).fetch_all(&state.pool).await.map_err(db_error)?))
+        .bind(kind.as_str()).fetch_all(&state.pool).await?))
 }
 
 #[derive(Deserialize)]
@@ -125,7 +125,7 @@ pub(super) async fn content_links(
     if query.status.is_some_and(|status| !matches!(status, 0 | 1)) {
         return Err(invalid("资源状态无效"));
     }
-    let mut transaction = state.pool.begin().await.map_err(db_error)?;
+    let mut transaction = state.pool.begin().await?;
     let total: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM resource_path WHERE (? IS NULL OR type=?) AND (? IS NULL OR status=?)",
     )
@@ -134,11 +134,10 @@ pub(super) async fn content_links(
     .bind(query.status)
     .bind(query.status)
     .fetch_one(&mut *transaction)
-    .await
-    .map_err(db_error)?;
+    .await?;
     let items = sqlx::query_as::<_, AdminLink>("SELECT id,title,classify,cover,url,introduction,type AS link_type,status,create_time FROM resource_path WHERE (? IS NULL OR type=?) AND (? IS NULL OR status=?) ORDER BY id DESC LIMIT ? OFFSET ?")
-        .bind(kind).bind(kind).bind(query.status).bind(query.status).bind(size).bind((page-1)*size).fetch_all(&mut *transaction).await.map_err(db_error)?;
-    transaction.commit().await.map_err(db_error)?;
+        .bind(kind).bind(kind).bind(query.status).bind(query.status).bind(size).bind((page-1)*size).fetch_all(&mut *transaction).await?;
+    transaction.commit().await?;
     Ok(Json(PageResult {
         items,
         total,
@@ -185,7 +184,7 @@ async fn load_link(
     id: i64,
 ) -> Result<AdminLink, AppError> {
     sqlx::query_as("SELECT id,title,classify,cover,url,introduction,type AS link_type,status,create_time FROM resource_path WHERE id=?")
-        .bind(id).fetch_optional(connection).await.map_err(db_error)?.ok_or_else(absent)
+        .bind(id).fetch_optional(connection).await?.ok_or_else(absent)
 }
 pub(super) async fn create_link(
     State(state): State<AppState>,
@@ -196,9 +195,9 @@ pub(super) async fn create_link(
     let mut transaction = crate::content::begin_mutation(&state.pool, &identity).await?;
     let id = sqlx::query("INSERT INTO resource_path(title,classify,cover,url,introduction,type,status) VALUES(?,?,?,?,?,?,?)")
         .bind(input.title).bind(input.classify).bind(input.cover).bind(input.url).bind(input.introduction).bind(input.link_type.as_str()).bind(i64::from(input.status))
-        .execute(&mut *transaction).await.map_err(db_error)?.last_insert_rowid();
+        .execute(&mut *transaction).await?.last_insert_rowid();
     let link = load_link(&mut transaction, id).await?;
-    transaction.commit().await.map_err(db_error)?;
+    transaction.commit().await?;
     Ok(Json(link))
 }
 pub(super) async fn update_link(
@@ -211,12 +210,12 @@ pub(super) async fn update_link(
     let mut transaction = crate::content::begin_mutation(&state.pool, &identity).await?;
     let changed = sqlx::query("UPDATE resource_path SET title=?,classify=?,cover=?,url=?,introduction=?,type=?,status=? WHERE id=?")
         .bind(input.title).bind(input.classify).bind(input.cover).bind(input.url).bind(input.introduction).bind(input.link_type.as_str()).bind(i64::from(input.status)).bind(id)
-        .execute(&mut *transaction).await.map_err(db_error)?;
+        .execute(&mut *transaction).await?;
     if changed.rows_affected() == 0 {
         return Err(absent());
     }
     let link = load_link(&mut transaction, id).await?;
-    transaction.commit().await.map_err(db_error)?;
+    transaction.commit().await?;
     Ok(Json(link))
 }
 pub(super) async fn change_link_status(
@@ -230,13 +229,12 @@ pub(super) async fn change_link_status(
         .bind(i64::from(input.active))
         .bind(id)
         .execute(&mut *transaction)
-        .await
-        .map_err(db_error)?;
+        .await?;
     if changed.rows_affected() == 0 {
         return Err(absent());
     }
     let link = load_link(&mut transaction, id).await?;
-    transaction.commit().await.map_err(db_error)?;
+    transaction.commit().await?;
     Ok(Json(link))
 }
 pub(super) async fn delete_link(
@@ -248,11 +246,10 @@ pub(super) async fn delete_link(
     let changed = sqlx::query("DELETE FROM resource_path WHERE id=?")
         .bind(id)
         .execute(&mut *transaction)
-        .await
-        .map_err(db_error)?;
+        .await?;
     if changed.rows_affected() == 0 {
         return Err(absent());
     }
-    transaction.commit().await.map_err(db_error)?;
+    transaction.commit().await?;
     Ok(Json(serde_json::json!({"deleted": true})))
 }

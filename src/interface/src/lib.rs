@@ -17,7 +17,7 @@ pub use web_sys;
 
 use wasm_bindgen::{JsCast, JsValue};
 
-/// Mount only after fonts have decoded, preserving the existing startup contract.
+/// Mount the application while decorative fonts load independently.
 pub fn mount<F, V>(root_id: &str, app: F)
 where
     F: FnOnce() -> V + 'static,
@@ -51,62 +51,43 @@ where
     blog_dom::browser_panic::set_once();
     i18n::initialize();
     theme::initialize();
-    let root_id = root_id.to_owned();
-    wasm_bindgen_futures::spawn_local(async move {
-        let result: Result<(), JsValue> = async {
-            let document = web_sys::window()
-                .and_then(|window| window.document())
-                .ok_or_else(|| JsValue::from_str("Browser document is unavailable"))?;
-            let fonts = document.fonts();
-            // Loading both weights up front also covers glyphs absent from the first view.
-            let regular = fonts.load("16px \"Sarmg Maple\"");
-            let bold = fonts.load("bold 16px \"Sarmg Maple\"");
-            let (regular, bold) = futures::try_join!(
-                wasm_bindgen_futures::JsFuture::from(regular),
-                wasm_bindgen_futures::JsFuture::from(bold)
-            )?;
-            if js_sys::Array::from(&regular).length() == 0
-                || js_sys::Array::from(&bold).length() == 0
-            {
-                return Err(JsValue::from_str("Application font styles are missing"));
-            }
-            wasm_bindgen_futures::JsFuture::from(fonts.ready()?).await?;
-            let root = document
-                .get_element_by_id(&root_id)
-                .ok_or_else(|| JsValue::from_str("Application root is missing"))?
-                .dyn_into::<web_sys::HtmlElement>()?;
-            let html = document
-                .document_element()
-                .ok_or_else(|| JsValue::from_str("Browser document root is missing"))?;
-            // A timed-out startup cannot later replace its visible failure page.
-            if html.get_attribute("data-blog-startup").as_deref() == Some("failed") {
-                return Err(JsValue::from_str("Application startup has already failed"));
-            }
-            blog_interface::mount::mount_to(root, app).forget();
-            html.set_attribute("data-blog-appearance", "content-blocks")?;
-            html.set_attribute("data-blog-selection", "underline")?;
-            #[cfg(target_arch = "wasm32")]
-            if let Some(surfaces) = corner_surfaces {
-                let controller = crate::server_corners::start(&document, surfaces)?;
-                SERVER_CORNERS.with(|value| *value.borrow_mut() = Some(controller));
-            }
-            #[cfg(not(target_arch = "wasm32"))]
-            let _ = corner_surfaces;
-            html.set_attribute("data-blog-fonts", "ready")?;
-            html.set_attribute("data-blog-runtime", "blog-interface")?;
-            document.dispatch_event(&web_sys::Event::new("blog-startup-ready")?)?;
-            Ok(())
+    let result: Result<(), JsValue> = (|| {
+        let document = web_sys::window()
+            .and_then(|window| window.document())
+            .ok_or_else(|| JsValue::from_str("Browser document is unavailable"))?;
+        let root = document
+            .get_element_by_id(root_id)
+            .ok_or_else(|| JsValue::from_str("Application root is missing"))?
+            .dyn_into::<web_sys::HtmlElement>()?;
+        let html = document
+            .document_element()
+            .ok_or_else(|| JsValue::from_str("Browser document root is missing"))?;
+        // A timed-out startup cannot later replace its visible failure page.
+        if html.get_attribute("data-blog-startup").as_deref() == Some("failed") {
+            return Err(JsValue::from_str("Application startup has already failed"));
         }
-        .await;
-        if let Err(error) = result {
-            web_sys::console::error_2(&JsValue::from_str("Application startup failed"), &error);
-            if let Some(document) = web_sys::window().and_then(|window| window.document())
-                && let Ok(event) = web_sys::Event::new("blog-startup-failed")
-            {
-                document
-                    .dispatch_event(&event)
-                    .expect("invariant: an initialized startup failure event can be dispatched");
-            }
+        blog_interface::mount::mount_to(root, app).forget();
+        html.set_attribute("data-blog-appearance", "content-blocks")?;
+        html.set_attribute("data-blog-selection", "underline")?;
+        #[cfg(target_arch = "wasm32")]
+        if let Some(surfaces) = corner_surfaces {
+            let controller = crate::server_corners::start(&document, surfaces)?;
+            SERVER_CORNERS.with(|value| *value.borrow_mut() = Some(controller));
         }
-    });
+        #[cfg(not(target_arch = "wasm32"))]
+        let _ = corner_surfaces;
+        html.set_attribute("data-blog-runtime", "blog-interface")?;
+        document.dispatch_event(&web_sys::Event::new("blog-startup-ready")?)?;
+        Ok(())
+    })();
+    if let Err(error) = result {
+        web_sys::console::error_2(&JsValue::from_str("Application startup failed"), &error);
+        if let Some(document) = web_sys::window().and_then(|window| window.document())
+            && let Ok(event) = web_sys::Event::new("blog-startup-failed")
+        {
+            document
+                .dispatch_event(&event)
+                .expect("invariant: an initialized startup failure event can be dispatched");
+        }
+    }
 }

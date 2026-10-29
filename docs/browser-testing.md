@@ -29,6 +29,8 @@ npm run test:browser:blog-interface
 
 `test/browser/pending-comment-binding.mjs` 检查会话存储中的待确认评论与当前文章或评论区绑定，拒绝缺失、错绑及未知字段，同时保留有效提交的原幂等标识。
 
+`test/browser/editor-preview.mjs` 用真实输入和暂停时钟验证预览的 200ms 防抖、关闭与卸载取消，公开页和后台页的文档标题，以及屏外正文图片滚动到视口前后的实际请求。`test/browser/startup-failure.mjs` 验证字体失败或持续等待时页面仍可用，同时保留 WASM 加载失败、超时和手动重载恢复。
+
 `test/browser/article-video.mjs` 在真实编辑器和公开文章中检查视频上传、正文光标插入、多播放器预览、保存与重新加载、受限平台嵌入和上传失败恢复。平台播放器请求使用本地响应，测试不依赖第三方服务；实际编码与媒体响应由视频输入和原生服务测试覆盖。
 
 `test/browser/style-contract.mjs` 在 390px、1280px、2560px 的明暗主题中检查后台全部页面，包括有数据的表格和横向滚动操作、分页、多行字段、Markdown 预览、媒体查看器、通知与认证错误，以及下拉菜单的正常绘制和回退交互。它同时测量实际页面边距、控件尺寸、自然换行导航和 G4 轮廓状态。`test/browser/public-style-baseline.mjs` 可通过 `BLOG_PUBLIC_BASELINE_DIST` 指定修改前的独立产物，对照公开页的布局、尺寸、字体、颜色与圆角边缘。

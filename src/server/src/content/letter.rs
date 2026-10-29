@@ -1,4 +1,4 @@
-use crate::{ApiResult, AppError, AppState, db_error, invalid};
+use crate::{ApiResult, AppError, AppState, invalid};
 use axum::{Json, extract::State};
 use blog_application::admin_core::AuthenticatedIdentity;
 use blog_application::error::HttpStatus;
@@ -94,8 +94,7 @@ async fn load_stored_letter(
     .bind(MAX_STORED_LETTER_BYTES as i64)
     .bind(author)
     .fetch_all(connection)
-    .await
-    .map_err(db_error)?;
+    .await?;
     if rows.len() > 1 {
         return Err(AppError::Public(
             HttpStatus::Conflict,
@@ -109,7 +108,7 @@ pub(super) async fn public_letter(
     State(state): State<AppState>,
 ) -> ApiResult<Option<LetterContent>> {
     let author = crate::site_author_id(&state.pool).await?;
-    let mut connection = state.pool.acquire().await.map_err(db_error)?;
+    let mut connection = state.pool.acquire().await?;
     let Some(stored) = load_stored_letter(&mut connection, author).await? else {
         return Ok(Json(None));
     };
@@ -119,7 +118,7 @@ pub(super) async fn public_letter(
 
 pub(super) async fn admin_letter(State(state): State<AppState>) -> ApiResult<ManagedLetter> {
     let author = crate::site_author_id(&state.pool).await?;
-    let mut connection = state.pool.acquire().await.map_err(db_error)?;
+    let mut connection = state.pool.acquire().await?;
     let Some(stored) = load_stored_letter(&mut connection, author).await? else {
         // A read has no side effects. An empty private draft is only a UI model.
         return Ok(Json(ManagedLetter {
@@ -166,8 +165,7 @@ pub(super) async fn save_letter(
         .bind(stored.id)
         .bind(author)
         .execute(&mut *transaction)
-        .await
-        .map_err(db_error)?;
+        .await?;
     } else {
         // BEGIN IMMEDIATE serializes check-and-insert, providing singleton
         // semantics without changing the immutable database schema.
@@ -176,10 +174,9 @@ pub(super) async fn save_letter(
             .bind(encoded)
             .bind(i64::from(input.is_public))
             .execute(&mut *transaction)
-            .await
-            .map_err(db_error)?;
+            .await?;
     }
-    transaction.commit().await.map_err(db_error)?;
+    transaction.commit().await?;
     Ok(Json(ManagedLetter {
         recipient: content.recipient,
         sender: content.sender,

@@ -28,9 +28,8 @@ fn debug_never_exposes_password_hashes_or_session_secrets() {
 
 #[test]
 fn policy_and_cookie_contract_are_fixed() {
-    let policy = AdministratorPolicy;
-    assert_eq!(policy.session_idle_micros(), 1_800_000_000);
-    assert_eq!(policy.sessions_global(), 1_024);
+    assert_eq!(SESSION_IDLE_MICROS, 1_800_000_000);
+    assert_eq!(SESSIONS_GLOBAL, 1_024);
     let token = "A".repeat(43);
     assert_eq!(
         session_set_cookie(

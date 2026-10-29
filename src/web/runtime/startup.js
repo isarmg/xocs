@@ -1,5 +1,5 @@
 // Keep startup failures visible even when the Rust/WASM module cannot load.
-// Successful application rendering and font readiness remain owned by Rust.
+// Successful application rendering remains owned by Rust.
 export function startApplication(initialize) {
   const html = document.documentElement;
   if (html.dataset.blogStartup) throw new Error("Application startup already began");
@@ -9,7 +9,7 @@ export function startApplication(initialize) {
   let settled = false;
   const timeout = setTimeout(() => fail("timeout"), 30_000);
   const ready = () => {
-    if (html.dataset.blogRuntime !== "blog-interface" || html.dataset.blogFonts !== "ready") {
+    if (html.dataset.blogRuntime !== "blog-interface") {
       fail("runtime");
       return;
     }
@@ -32,7 +32,6 @@ export function startApplication(initialize) {
   function fail(stage, error) {
     if (!settle()) return;
     html.dataset.blogStartup = "failed";
-    html.dataset.blogFonts = "failed";
     delete html.dataset.blogRuntime;
     const language = new URL(window.location.href).searchParams.get("lang") ?? html.lang;
     const chinese = language.toLowerCase().startsWith("zh");

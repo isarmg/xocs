@@ -153,6 +153,16 @@ impl Route {
         }
     }
 
+    fn title(self) -> String {
+        match self {
+            Self::Page(page) => page.label(),
+            Self::Account => t("账号设置", "Account settings"),
+            Self::NewArticle => t("新增文章", "Add article"),
+            Self::EditArticle(_) => t("编辑文章", "Edit article"),
+            Self::NotFound => t("页面不存在", "Page not found"),
+        }
+    }
+
     fn active_page(self) -> Option<Page> {
         match self {
             Self::Page(page) => Some(page),
@@ -181,6 +191,12 @@ pub fn Admin() -> impl IntoView {
 fn Workspace() -> impl IntoView {
     let hash = hash_signal();
     let route = Memo::new(move |_| Route::parse(&hash.get()));
+    Effect::new(move |_| {
+        web_sys::window()
+            .and_then(|window| window.document())
+            .expect("invariant: the admin workspace is mounted in the browser document")
+            .set_title(&format!("{} · blog", route.get().title()));
+    });
     View::new(
         blog_interface::html::div()
             .class("blog-admin-workspace blog-content-stack blog-stack")

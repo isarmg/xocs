@@ -27,8 +27,6 @@ pub enum AdministratorMutation {
 
 #[derive(Debug, thiserror::Error)]
 pub enum ManagementError<StoreError: std::error::Error + Send + Sync + 'static> {
-    #[error("administrator management is not supported by this profile")]
-    Unsupported,
     #[error("administrator authorization is no longer valid")]
     Unauthorized,
     #[error("administrator already exists or cannot be changed in this state")]
@@ -57,9 +55,6 @@ impl<Store: AdministratorStore + 'static> AdministratorService<Store> {
         current_password: &str,
         new_password: Option<&str>,
     ) -> Result<(), ManagementError<Store::StoreError>> {
-        if !self.store.supports_account_updates() {
-            return Err(ManagementError::Unsupported);
-        }
         context.validate()?;
         let username = crate::admin_auth::normalize_administrator_username(username)?;
         if current_password.len() > 1024 {

@@ -199,9 +199,6 @@ impl IntoResponse for AppError {
 }
 pub(crate) type ApiResult<T> = Result<Json<T>, AppError>;
 
-pub(crate) fn db_error(error: sqlx::Error) -> AppError {
-    AppError::Database(error)
-}
 pub(crate) fn invalid(message: &'static str) -> AppError {
     AppError::Public(HttpStatus::BadRequest, message)
 }
@@ -216,8 +213,7 @@ where
         "SELECT id FROM user WHERE user_type=0 AND deleted=0 AND user_status=1 ORDER BY id LIMIT 1",
     )
     .fetch_optional(executor)
-    .await
-    .map_err(db_error)?
+    .await?
     .ok_or(AppError::Public(HttpStatus::Conflict, "缺少站点作者账号"))
 }
 #[cfg(any(test, feature = "maintenance"))]
@@ -260,7 +256,14 @@ pub(crate) fn router(state: AppState, web: Option<PathBuf>) -> Result<Router, cr
         .route("/readyz", get(readiness).with_state(state.pool.clone()))
         .route("/api/v1/health", get(health).with_state(state.pool.clone()))
         .merge(public_routes)
-        .nest_service("/media", ServeDir::new(&state.media))
+        .nest(
+            "/media",
+            Router::new()
+                .fallback_service(
+                    ServeDir::new(&state.media).append_index_html_on_directories(false),
+                )
+                .layer(axum::middleware::from_fn(media::cache_response)),
+        )
         .merge(admin_routes)
         .merge(blog_application::admin_axum::administrator_router(
             PRODUCT_ID,

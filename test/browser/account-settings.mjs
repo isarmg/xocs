@@ -37,7 +37,7 @@ try {
           await page.goto(`${base}/admin?lang=${language}`);
           const login = page.locator('.blog-auth-card');
           await expect(login).toBeVisible();
-          await expect(page.locator('html')).toHaveAttribute('data-blog-fonts', 'ready');
+          await expect(page.locator('html')).toHaveAttribute('data-blog-runtime', 'blog-interface');
           await page.evaluate(() => document.fonts.ready);
           const loginStyle = await login.evaluate(appearance);
           loginStyle.background = await paintedSurfaceColor(login);

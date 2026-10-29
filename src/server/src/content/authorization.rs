@@ -3,13 +3,13 @@ use blog_application::{admin_core::AuthenticatedIdentity, error::HttpStatus};
 use sqlx::{Sqlite, SqlitePool, Transaction};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::{AppError, db_error};
+use crate::AppError;
 
 pub(crate) async fn begin_mutation(
     pool: &SqlitePool,
     identity: &AuthenticatedIdentity,
 ) -> Result<Transaction<'static, Sqlite>, AppError> {
-    let mut transaction = pool.begin_with("BEGIN IMMEDIATE").await.map_err(db_error)?;
+    let mut transaction = pool.begin_with("BEGIN IMMEDIATE").await?;
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_err(AppError::Clock)?

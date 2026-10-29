@@ -8,7 +8,7 @@ use super::{
     MediaUpload,
     formats::{MediaFilename, MediaKind},
 };
-use crate::{AppError, AppState, db_error};
+use crate::{AppError, AppState};
 
 #[derive(Serialize)]
 pub(super) struct UploadedMedia {
@@ -61,12 +61,11 @@ pub(super) async fn save(
     sqlx::query("INSERT INTO resource(user_id,type,path,size,original_name,mime_type,status,store_type) VALUES(?,?,?,?,?,?,1,'local') ON CONFLICT(path) DO NOTHING")
         .bind(owner).bind(kind.resource_type())
         .bind(&path).bind(size as i64).bind(original_name.as_deref()).bind(mime_type)
-        .execute(&mut *connection).await.map_err(db_error)?;
+        .execute(&mut *connection).await?;
     let id: i64 = sqlx::query_scalar("SELECT id FROM resource WHERE path=?")
         .bind(&path)
         .fetch_one(connection)
-        .await
-        .map_err(db_error)?;
+        .await?;
     Ok(UploadedMedia {
         id,
         path,
@@ -90,8 +89,7 @@ pub(super) async fn reconcile_deletion(
     let retained: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM resource WHERE path=?)")
         .bind(path)
         .fetch_one(pool)
-        .await
-        .map_err(db_error)?;
+        .await?;
     let directory = Arc::clone(directory);
     let filename = filename.clone();
     tokio::task::spawn_blocking(move || -> Result<(), blog_application::fs_safety::Error> {

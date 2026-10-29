@@ -1,4 +1,4 @@
-use crate::{ApiResult, AppError, AppState, absent, db_error, invalid};
+use crate::{ApiResult, AppError, AppState, absent, invalid};
 use axum::{Json, extract::State};
 use blog_application::admin_core::AuthenticatedIdentity;
 use blog_application::error::HttpStatus;
@@ -20,7 +20,7 @@ pub(super) struct PublicSiteStats {
 }
 pub(super) async fn public_site_stats(State(state): State<AppState>) -> ApiResult<PublicSiteStats> {
     Ok(Json(sqlx::query_as::<_, PublicSiteStats>("SELECT COUNT(*) AS article_count,COALESCE(SUM(view_count),0) AS view_count FROM article WHERE deleted=0 AND (view_status=1 OR password IS NOT NULL)")
-        .fetch_one(&state.pool).await.map_err(db_error)?))
+        .fetch_one(&state.pool).await?))
 }
 pub(super) async fn categories(State(state): State<AppState>) -> ApiResult<Vec<Category>> {
     Ok(Json(
@@ -28,8 +28,7 @@ pub(super) async fn categories(State(state): State<AppState>) -> ApiResult<Vec<C
             "SELECT id,sort_name,sort_description,priority,(SELECT COUNT(*) FROM article a WHERE a.sort_id=sort.id AND a.deleted=0 AND (a.view_status=1 OR a.password IS NOT NULL)) AS article_count FROM sort ORDER BY priority DESC,id",
         )
         .fetch_all(&state.pool)
-        .await
-        .map_err(db_error)?,
+        .await?,
     ))
 }
 #[derive(Deserialize)]
@@ -50,7 +49,7 @@ pub(super) async fn public_labels(
     Query(query): Query<LabelQuery>,
 ) -> ApiResult<Vec<PublicLabel>> {
     Ok(Json(sqlx::query_as::<_, PublicLabel>("SELECT l.id,l.sort_id,l.label_name,l.label_description,(SELECT COUNT(*) FROM article a WHERE a.label_id=l.id AND a.deleted=0 AND (a.view_status=1 OR a.password IS NOT NULL)) AS article_count FROM label l WHERE ? IS NULL OR l.sort_id=? ORDER BY l.id")
-        .bind(query.sort_id).bind(query.sort_id).fetch_all(&state.pool).await.map_err(db_error)?))
+        .bind(query.sort_id).bind(query.sort_id).fetch_all(&state.pool).await?))
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -73,17 +72,15 @@ pub(super) async fn create_category(
         .bind(input.description)
         .bind(input.priority.unwrap_or(0))
         .execute(&mut *transaction)
-        .await
-        .map_err(db_error)?
+        .await?
         .last_insert_rowid();
     let category = sqlx::query_as(
         "SELECT id,sort_name,sort_description,priority,0 AS article_count FROM sort WHERE id=?",
     )
     .bind(id)
     .fetch_one(&mut *transaction)
-    .await
-    .map_err(db_error)?;
-    transaction.commit().await.map_err(db_error)?;
+    .await?;
+    transaction.commit().await?;
     Ok(Json(category))
 }
 pub(super) async fn update_category(
@@ -103,17 +100,15 @@ pub(super) async fn update_category(
             .bind(input.priority.unwrap_or(0))
             .bind(id)
             .execute(&mut *transaction)
-            .await
-            .map_err(db_error)?;
+            .await?;
     if changed.rows_affected() == 0 {
         return Err(absent());
     }
     let category = sqlx::query_as("SELECT id,sort_name,sort_description,priority,(SELECT COUNT(*) FROM article a WHERE a.sort_id=sort.id AND a.deleted=0 AND (a.view_status=1 OR a.password IS NOT NULL)) AS article_count FROM sort WHERE id=?")
         .bind(id)
         .fetch_one(&mut *transaction)
-        .await
-        .map_err(db_error)?;
-    transaction.commit().await.map_err(db_error)?;
+        .await?;
+    transaction.commit().await?;
     Ok(Json(category))
 }
 pub(super) async fn delete_category(
@@ -126,8 +121,7 @@ pub(super) async fn delete_category(
         sqlx::query_scalar("SELECT COUNT(*) FROM article WHERE sort_id=? AND deleted=0")
             .bind(id)
             .fetch_one(&mut *transaction)
-            .await
-            .map_err(db_error)?;
+            .await?;
     if used > 0 {
         return Err(AppError::Public(HttpStatus::Conflict, "分类中还有文章"));
     }
@@ -137,8 +131,7 @@ pub(super) async fn delete_category(
     .bind(id)
     .bind(id)
     .fetch_one(&mut *transaction)
-    .await
-    .map_err(db_error)?;
+    .await?;
     if removes_last_section != 0 {
         return Err(AppError::Public(
             HttpStatus::Conflict,
@@ -148,8 +141,7 @@ pub(super) async fn delete_category(
     let result = sqlx::query("DELETE FROM sort WHERE id=?")
         .bind(id)
         .execute(&mut *transaction)
-        .await
-        .map_err(db_error)?;
+        .await?;
     if result.rows_affected() == 0 {
         return Err(absent());
     }
@@ -158,9 +150,8 @@ pub(super) async fn delete_category(
     sqlx::query("DELETE FROM label WHERE sort_id=?")
         .bind(id)
         .execute(&mut *transaction)
-        .await
-        .map_err(db_error)?;
-    transaction.commit().await.map_err(db_error)?;
+        .await?;
+    transaction.commit().await?;
     Ok(Json(serde_json::json!({"deleted":true})))
 }
 
@@ -177,8 +168,7 @@ pub(super) async fn admin_labels(State(state): State<AppState>) -> ApiResult<Vec
             "SELECT id,sort_id,label_name,label_description FROM label ORDER BY sort_id,id",
         )
         .fetch_all(&state.pool)
-        .await
-        .map_err(db_error)?,
+        .await?,
     ))
 }
 #[derive(Deserialize)]
@@ -200,8 +190,7 @@ pub(super) async fn create_label(
     let exists: Option<i64> = sqlx::query_scalar("SELECT id FROM sort WHERE id=?")
         .bind(input.sort_id)
         .fetch_optional(&mut *transaction)
-        .await
-        .map_err(db_error)?;
+        .await?;
     if exists.is_none() {
         return Err(invalid("分类不存在"));
     }
@@ -210,16 +199,14 @@ pub(super) async fn create_label(
         .bind(input.name.trim())
         .bind(input.description)
         .execute(&mut *transaction)
-        .await
-        .map_err(db_error)?
+        .await?
         .last_insert_rowid();
     let label =
         sqlx::query_as("SELECT id,sort_id,label_name,label_description FROM label WHERE id=?")
             .bind(id)
             .fetch_one(&mut *transaction)
-            .await
-            .map_err(db_error)?;
-    transaction.commit().await.map_err(db_error)?;
+            .await?;
+    transaction.commit().await?;
     Ok(Json(label))
 }
 pub(super) async fn update_label(
@@ -235,8 +222,7 @@ pub(super) async fn update_label(
     let previous: i64 = sqlx::query_scalar("SELECT sort_id FROM label WHERE id=?")
         .bind(id)
         .fetch_optional(&mut *transaction)
-        .await
-        .map_err(db_error)?
+        .await?
         .ok_or_else(absent)?;
     if previous != input.sort_id {
         let used: bool = sqlx::query_scalar(
@@ -244,8 +230,7 @@ pub(super) async fn update_label(
         )
         .bind(id)
         .fetch_one(&mut *transaction)
-        .await
-        .map_err(db_error)?;
+        .await?;
         if used {
             return Err(AppError::Public(
                 HttpStatus::Conflict,
@@ -256,8 +241,7 @@ pub(super) async fn update_label(
     let category: Option<i64> = sqlx::query_scalar("SELECT id FROM sort WHERE id=?")
         .bind(input.sort_id)
         .fetch_optional(&mut *transaction)
-        .await
-        .map_err(db_error)?;
+        .await?;
     if category.is_none() {
         return Err(invalid("分类不存在"));
     }
@@ -267,15 +251,13 @@ pub(super) async fn update_label(
         .bind(input.description)
         .bind(id)
         .execute(&mut *transaction)
-        .await
-        .map_err(db_error)?;
+        .await?;
     let label =
         sqlx::query_as("SELECT id,sort_id,label_name,label_description FROM label WHERE id=?")
             .bind(id)
             .fetch_one(&mut *transaction)
-            .await
-            .map_err(db_error)?;
-    transaction.commit().await.map_err(db_error)?;
+            .await?;
+    transaction.commit().await?;
     Ok(Json(label))
 }
 pub(super) async fn delete_label(
@@ -288,19 +270,17 @@ pub(super) async fn delete_label(
         sqlx::query_scalar("SELECT COUNT(*) FROM article WHERE label_id=? AND deleted=0")
             .bind(id)
             .fetch_one(&mut *transaction)
-            .await
-            .map_err(db_error)?;
+            .await?;
     if used > 0 {
         return Err(AppError::Public(HttpStatus::Conflict, "标签中还有文章"));
     }
     let changed = sqlx::query("DELETE FROM label WHERE id=?")
         .bind(id)
         .execute(&mut *transaction)
-        .await
-        .map_err(db_error)?;
+        .await?;
     if changed.rows_affected() == 0 {
         return Err(absent());
     }
-    transaction.commit().await.map_err(db_error)?;
+    transaction.commit().await?;
     Ok(Json(serde_json::json!({"deleted":true})))
 }

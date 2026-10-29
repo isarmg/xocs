@@ -2,7 +2,7 @@ use super::{
     AdminPageQuery, PageResult,
     input::{IdempotencyKey, ShortContent},
 };
-use crate::{ApiResult, AppError, AppState, absent, db_error, invalid};
+use crate::{ApiResult, AppError, AppState, absent, invalid};
 use axum::{Json, extract::State, http::HeaderMap};
 use blog_application::admin_core::AuthenticatedIdentity;
 use blog_application::error::HttpStatus;
@@ -32,19 +32,18 @@ async fn list_note_page(
 ) -> Result<PageResult<Note>, AppError> {
     let page = query.page.unwrap_or(1).clamp(1, 100_000);
     let size = query.size.unwrap_or(10).clamp(1, 50);
-    let mut transaction = state.pool.begin().await.map_err(db_error)?;
+    let mut transaction = state.pool.begin().await?;
     let author = crate::site_author_id(&mut *transaction).await?;
     let total: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM wei_yan WHERE type='friend' AND user_id=? AND is_public=1",
     )
     .bind(author)
     .fetch_one(&mut *transaction)
-    .await
-    .map_err(db_error)?;
+    .await?;
     let items=sqlx::query_as::<_,Note>("SELECT w.id,w.user_id,u.username,w.content,w.image_path,w.like_count,w.is_public,w.create_time FROM wei_yan w LEFT JOIN user u ON u.id=w.user_id WHERE w.type='friend' AND w.user_id=? AND w.is_public=1 ORDER BY w.id DESC LIMIT ? OFFSET ?")
         .bind(author).bind(size).bind((page-1)*size)
-        .fetch_all(&mut *transaction).await.map_err(db_error)?;
-    transaction.commit().await.map_err(db_error)?;
+        .fetch_all(&mut *transaction).await?;
+    transaction.commit().await?;
     Ok(PageResult {
         items,
         total,
@@ -99,7 +98,7 @@ async fn validate_note_image(
             return Err(invalid("动态图片必须选择已上传的本地图片"));
         }
         let valid: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM resource WHERE path=? AND type='image' AND store_type='local' AND status=1 AND mime_type IN ('image/png','image/jpeg','image/gif','image/webp'))")
-            .bind(path).fetch_one(&mut **transaction).await.map_err(db_error)?;
+            .bind(path).fetch_one(&mut **transaction).await?;
         if !valid {
             return Err(invalid("动态图片必须选择已上传的本地图片"));
         }
@@ -116,8 +115,7 @@ async fn load_admin_note(
     )))
     .bind(id)
     .fetch_optional(connection)
-    .await
-    .map_err(db_error)?
+    .await?
     .ok_or_else(absent)
 }
 
@@ -141,8 +139,7 @@ pub(super) async fn create_admin_note(
             sqlx::query_as("SELECT request_hash,note_id FROM note_submission WHERE request_id=?")
                 .bind(key.as_str())
                 .fetch_optional(&mut *transaction)
-                .await
-                .map_err(db_error)?;
+                .await?;
         if let Some((hash, id)) = receipt {
             if hash != request_hash {
                 return Err(AppError::Public(
@@ -157,7 +154,7 @@ pub(super) async fn create_admin_note(
             // A removed original image need not remain available after an edit.
             // Recovery returns the current row without revalidating old uploads.
             let note = load_admin_note(&mut transaction, id).await?;
-            transaction.commit().await.map_err(db_error)?;
+            transaction.commit().await?;
             return Ok(Json(note));
         }
     }
@@ -171,8 +168,7 @@ pub(super) async fn create_admin_note(
     .bind(input.image_path)
     .bind(i64::from(input.is_public))
     .execute(&mut *transaction)
-    .await
-    .map_err(db_error)?
+    .await?
     .last_insert_rowid();
     if let Some(key) = request_id {
         sqlx::query("INSERT INTO note_submission(request_id,request_hash,note_id) VALUES(?,?,?)")
@@ -180,11 +176,10 @@ pub(super) async fn create_admin_note(
             .bind(request_hash)
             .bind(id)
             .execute(&mut *transaction)
-            .await
-            .map_err(db_error)?;
+            .await?;
     }
     let note = load_admin_note(&mut transaction, id).await?;
-    transaction.commit().await.map_err(db_error)?;
+    transaction.commit().await?;
     Ok(Json(note))
 }
 
@@ -199,8 +194,7 @@ pub(super) async fn update_admin_note(
         sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM wei_yan WHERE id=? AND type='friend')")
             .bind(id)
             .fetch_one(&mut *transaction)
-            .await
-            .map_err(db_error)?;
+            .await?;
     if !exists {
         return Err(absent());
     }
@@ -213,10 +207,9 @@ pub(super) async fn update_admin_note(
     .bind(i64::from(input.is_public))
     .bind(id)
     .execute(&mut *transaction)
-    .await
-    .map_err(db_error)?;
+    .await?;
     let note = load_admin_note(&mut transaction, id).await?;
-    transaction.commit().await.map_err(db_error)?;
+    transaction.commit().await?;
     Ok(Json(note))
 }
 pub(super) async fn content_notes(
@@ -224,14 +217,13 @@ pub(super) async fn content_notes(
     Query(query): Query<AdminPageQuery>,
 ) -> ApiResult<PageResult<AdminNote>> {
     let (page, size) = query.bounds();
-    let mut transaction = state.pool.begin().await.map_err(db_error)?;
+    let mut transaction = state.pool.begin().await?;
     let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM wei_yan WHERE type='friend'")
         .fetch_one(&mut *transaction)
-        .await
-        .map_err(db_error)?;
+        .await?;
     let items = sqlx::query_as::<_,AdminNote>("SELECT w.id,w.user_id,u.username,w.content,w.image_path,w.is_public,w.create_time FROM wei_yan w LEFT JOIN user u ON u.id=w.user_id WHERE w.type='friend' ORDER BY w.id DESC LIMIT ? OFFSET ?")
-        .bind(size).bind((page-1)*size).fetch_all(&mut *transaction).await.map_err(db_error)?;
-    transaction.commit().await.map_err(db_error)?;
+        .bind(size).bind((page-1)*size).fetch_all(&mut *transaction).await?;
+    transaction.commit().await?;
     Ok(Json(PageResult {
         items,
         total,
@@ -248,11 +240,10 @@ pub(super) async fn delete_note(
     let changed = sqlx::query("DELETE FROM wei_yan WHERE id=? AND type='friend'")
         .bind(id)
         .execute(&mut *transaction)
-        .await
-        .map_err(db_error)?;
+        .await?;
     if changed.rows_affected() == 0 {
         return Err(absent());
     }
-    transaction.commit().await.map_err(db_error)?;
+    transaction.commit().await?;
     Ok(Json(serde_json::json!({"deleted":true})))
 }

@@ -1,5 +1,53 @@
 use super::*;
 use tower::ServiceExt;
+
+#[tokio::test]
+#[ignore = "manual request-boundary throughput measurement"]
+async fn measure_nested_request_boundaries() {
+    let router = Router::new()
+        .route(
+            "/",
+            get(|| async {
+                (
+                    StatusCode::CONFLICT,
+                    Json(serde_json::json!({
+                        "code": "conflict", "message": "The operation conflicts.",
+                        "retryable": false, "request_id": null, "details": {}
+                    })),
+                )
+            }),
+        )
+        .layer(axum::middleware::from_fn(
+            crate::server_cli::request_context_middleware,
+        ));
+    for (name, app) in [
+        (
+            "router",
+            tower::util::BoxCloneSyncService::new(router.clone()),
+        ),
+        ("transport_and_router", request_service(router)),
+    ] {
+        let started = std::time::Instant::now();
+        for _ in 0..5_000 {
+            let response = app
+                .clone()
+                .oneshot(
+                    Request::get("/")
+                        .header("x-request-id", "measure-123")
+                        .body(axum::body::Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::CONFLICT);
+            let bytes = axum::body::to_bytes(response.into_body(), 16 * 1024)
+                .await
+                .unwrap();
+            std::hint::black_box(bytes);
+        }
+        eprintln!("{name}: 5000 requests in {:?}", started.elapsed());
+    }
+}
 struct Ready;
 #[async_trait]
 impl HealthCheck for Ready {
@@ -88,7 +136,10 @@ async fn request_policy_injects_one_id_and_redacts_handler_panics() {
                 #[allow(unreachable_code)]
                 StatusCode::OK
             }),
-        );
+        )
+        .layer(axum::middleware::from_fn(
+            crate::server_cli::request_context_middleware,
+        ));
     let app = request_service(app);
     let response = app
         .clone()
@@ -133,6 +184,11 @@ async fn invalid_and_duplicate_ids_use_strict_error_envelopes() {
     let app = request_service(app);
     for duplicate in [false, true] {
         let mut request = Request::get("/").body(axum::body::Body::empty()).unwrap();
+        // A public ID extension is not proof that the wire headers passed the
+        // outer boundary; standalone router callers cannot bypass that policy.
+        request
+            .extensions_mut()
+            .insert(RequestId::new("untrusted-extension").unwrap());
         request.headers_mut().insert(
             "x-request-id",
             HeaderValue::from_static(if duplicate {
@@ -227,7 +283,10 @@ async fn product_error_correlation_is_consistent_and_bounded() {
                     )
                         .into_response()
                 }),
-            ),
+            )
+            .layer(axum::middleware::from_fn(
+                crate::server_cli::request_context_middleware,
+            )),
     );
     for path in ["/error", "/large", "/stalled", "/other"] {
         let response = app
@@ -465,44 +524,6 @@ async fn slow_or_panicking_checks_fail_closed_without_locking_diagnostics() {
     );
 }
 
-#[tokio::test(start_paused = true)]
-async fn diagnostic_metrics_are_bounded_and_never_retain_stale_values() {
-    let readings = Arc::new(AtomicU64::new(0));
-    let probe_readings = readings.clone();
-    let runtime = ServerRuntime::builder(descriptor())
-        .with_schema_identity(
-            crate::schema_identity::SchemaIdentity::new("example", "1.0.0", 1, "a".repeat(64))
-                .unwrap(),
-        )
-        .register_metric(DiagnosticMetric::AuditBacklog, move || {
-            let readings = probe_readings.clone();
-            async move {
-                if readings.fetch_add(1, Ordering::Relaxed) == 0 {
-                    Some(7)
-                } else {
-                    std::future::pending().await
-                }
-            }
-        })
-        .register_metric(DiagnosticMetric::OperationBacklog, || async {
-            panic!("secret diagnostic")
-        })
-        .build()
-        .await
-        .unwrap();
-    runtime.refresh_health().await;
-    let first = runtime.handle().diagnostics().await;
-    assert_eq!(first.schema_identity.unwrap().schema_revision, 1);
-    assert_eq!(first.metrics[&DiagnosticMetric::AuditBacklog], Some(7));
-    assert_eq!(first.metrics[&DiagnosticMetric::OperationBacklog], None);
-    assert_eq!(first.metrics[&DiagnosticMetric::SpoolPendingBytes], None);
-    runtime.refresh_health().await;
-    assert_eq!(
-        runtime.handle().diagnostics().await.metrics[&DiagnosticMetric::AuditBacklog],
-        None
-    );
-}
-
 #[tokio::test]
 async fn patch_release_reports_its_version_while_retaining_the_data_format_identity() {
     let mut product = descriptor();
@@ -520,7 +541,7 @@ async fn patch_release_reports_its_version_while_retaining_the_data_format_ident
 }
 
 #[tokio::test]
-async fn schema_must_match_product_and_diagnostic_probes_are_unique() {
+async fn schema_must_match_product_and_health_checks_are_unique() {
     let invalid = ServerRuntime::builder(descriptor())
         .with_schema_identity(
             crate::schema_identity::SchemaIdentity::new("different", "1.0.0", 1, "a".repeat(64))
@@ -533,8 +554,8 @@ async fn schema_must_match_product_and_diagnostic_probes_are_unique() {
         Err(Error::InvalidDescriptor("schema_identity"))
     ));
     let duplicate = ServerRuntime::builder(descriptor())
-        .register_metric(DiagnosticMetric::AuditBacklog, || async { Some(0) })
-        .register_metric(DiagnosticMetric::AuditBacklog, || async { Some(0) })
+        .register_health_check("database", Arc::new(Ready))
+        .register_health_check("database", Arc::new(Ready))
         .build()
         .await;
     assert!(matches!(duplicate, Err(Error::DuplicateName(_))));
@@ -551,7 +572,6 @@ async fn diagnostics_are_absent_for_both_anonymous_and_authenticated_requests() 
                 .unwrap(),
         )
         .register_health_check("database", health_check(|| async { true }))
-        .register_metric(DiagnosticMetric::AuditBacklog, || async { Some(5) })
         .build()
         .await
         .unwrap();

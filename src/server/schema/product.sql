@@ -43,6 +43,7 @@ CREATE TABLE article (
 );
 CREATE INDEX article_public_latest ON article(deleted,view_status,create_time DESC,id DESC);
 CREATE INDEX article_sort ON article(sort_id,label_id,deleted,create_time DESC);
+CREATE INDEX article_label ON article(label_id,deleted,create_time DESC,id DESC);
 CREATE VIRTUAL TABLE article_search USING fts5(article_title,article_content,content='article',content_rowid='id',tokenize='trigram');
 CREATE TRIGGER article_search_insert AFTER INSERT ON article BEGIN
     INSERT INTO article_search(rowid,article_title,article_content) VALUES(new.id,new.article_title,new.article_content);
@@ -68,6 +69,7 @@ CREATE TABLE comment (
     create_time TEXT DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX comment_source ON comment(source,type,create_time,id);
+CREATE INDEX comment_floor ON comment(floor_comment_id,type,create_time,id);
 -- A durable receipt prevents a retried submission from being inserted twice,
 -- including after a moderator removes the original comment.
 CREATE TABLE comment_submission (
@@ -90,6 +92,7 @@ INSERT INTO home_sections(title,kind,priority) VALUES('最新', 'latest', 0),('�
 CREATE TABLE label (id INTEGER PRIMARY KEY AUTOINCREMENT,sort_id INTEGER NOT NULL,label_name TEXT NOT NULL,label_description TEXT);
 CREATE TABLE tree_hole (id INTEGER PRIMARY KEY AUTOINCREMENT,avatar TEXT,message TEXT,image_path TEXT REFERENCES resource(path),user_id INTEGER REFERENCES user(id),create_time TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE wei_yan (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER,like_count INTEGER NOT NULL DEFAULT 0,content TEXT,image_path TEXT REFERENCES resource(path),type TEXT,source INTEGER,is_public INTEGER,create_time TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE INDEX wei_yan_source ON wei_yan(type,source,create_time DESC,id DESC);
 CREATE TABLE web_info (id INTEGER PRIMARY KEY,web_name TEXT,web_title TEXT,notices TEXT,footer TEXT,background_image TEXT,avatar TEXT,random_cover TEXT,media TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(media) AND json_type(media)='object'),status INTEGER);
 CREATE TABLE resource_path (id INTEGER PRIMARY KEY AUTOINCREMENT,title TEXT,classify TEXT,cover TEXT,url TEXT,introduction TEXT,type TEXT,status INTEGER,remark TEXT,create_time TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE resource (id INTEGER PRIMARY KEY,user_id INTEGER,type TEXT,path TEXT UNIQUE,size INTEGER,original_name TEXT,mime_type TEXT,status INTEGER,store_type TEXT,create_time TEXT DEFAULT CURRENT_TIMESTAMP);

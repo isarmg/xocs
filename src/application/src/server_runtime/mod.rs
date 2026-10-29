@@ -116,52 +116,10 @@ pub struct HealthSnapshot {
 pub struct Diagnostics {
     pub request_id: Option<String>,
     pub schema_identity: Option<crate::schema_identity::SchemaIdentity>,
-    pub metrics: BTreeMap<DiagnosticMetric, Option<u64>>,
     pub product: ProductDescriptor,
     pub health: HealthSnapshot,
     pub checks: BTreeMap<String, bool>,
     pub tasks: BTreeMap<String, TaskSnapshot>,
-}
-
-/// Closed, numeric diagnostic fields: no arbitrary path, secret or error text
-/// can be supplied by a product probe. Null means unsupported or unavailable.
-#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum DiagnosticMetric {
-    AuditBacklog,
-    OperationBacklog,
-    SpoolPendingBytes,
-    SpoolPendingRecords,
-}
-
-fn empty_metrics() -> BTreeMap<DiagnosticMetric, Option<u64>> {
-    [
-        DiagnosticMetric::AuditBacklog,
-        DiagnosticMetric::OperationBacklog,
-        DiagnosticMetric::SpoolPendingBytes,
-        DiagnosticMetric::SpoolPendingRecords,
-    ]
-    .into_iter()
-    .map(|metric| (metric, None))
-    .collect()
-}
-
-#[async_trait]
-trait MetricProbe: Send + Sync {
-    async fn read(&self) -> Option<u64>;
-}
-
-struct ClosureMetricProbe<F>(F);
-
-#[async_trait]
-impl<F, Fut> MetricProbe for ClosureMetricProbe<F>
-where
-    F: Fn() -> Fut + Send + Sync,
-    Fut: Future<Output = Option<u64>> + Send,
-{
-    async fn read(&self) -> Option<u64> {
-        (self.0)().await
-    }
 }
 
 #[async_trait]
@@ -217,7 +175,6 @@ impl RuntimeHandle {
 struct RuntimeState {
     product: ProductDescriptor,
     schema_identity: Option<crate::schema_identity::SchemaIdentity>,
-    metrics: BTreeMap<DiagnosticMetric, Option<u64>>,
     checks: BTreeMap<String, bool>,
     tasks: BTreeMap<String, TaskSnapshot>,
     shutting_down: bool,
@@ -245,7 +202,6 @@ impl RuntimeState {
         Diagnostics {
             request_id: None,
             schema_identity: self.schema_identity.clone(),
-            metrics: self.metrics.clone(),
             product: self.product.clone(),
             health: self.health(),
             checks: self.checks.clone(),
@@ -257,7 +213,6 @@ impl RuntimeState {
 pub struct ServerRuntime {
     handle: RuntimeHandle,
     checks: Vec<(String, Arc<dyn HealthCheck>)>,
-    metrics: Vec<(DiagnosticMetric, Arc<dyn MetricProbe>)>,
     tasks: Vec<TaskRegistration>,
 }
 struct TaskRegistration {
@@ -271,7 +226,6 @@ type SupervisedTask = dyn FnOnce(watch::Receiver<bool>) -> Pin<Box<dyn Future<Ou
 pub struct ServerRuntimeBuilder {
     product: ProductDescriptor,
     schema_identity: Option<crate::schema_identity::SchemaIdentity>,
-    metrics: Vec<(DiagnosticMetric, Arc<dyn MetricProbe>)>,
     checks: Vec<(String, Arc<dyn HealthCheck>)>,
     tasks: Vec<TaskRegistration>,
 }
@@ -281,7 +235,6 @@ impl ServerRuntime {
         ServerRuntimeBuilder {
             product,
             schema_identity: None,
-            metrics: vec![],
             checks: vec![],
             tasks: vec![],
         }
@@ -348,7 +301,6 @@ impl ServerRuntime {
 
     pub fn refresh_health(&self) -> impl Future<Output = ()> + Send + use<> {
         let checks = self.checks.clone();
-        let metrics = self.metrics.clone();
         let handle = self.handle.clone();
         async move {
             let checks = checks.into_iter().map(|(name, check)| async move {
@@ -360,27 +312,10 @@ impl ServerRuntime {
                 .is_ok_and(|result| matches!(result, Ok(true)));
                 (name, ready)
             });
-            let metrics = metrics.into_iter().map(|(name, probe)| async move {
-                let value = tokio::time::timeout(
-                    HEALTH_CHECK_TIMEOUT,
-                    std::panic::AssertUnwindSafe(async { probe.read().await }).catch_unwind(),
-                )
-                .await
-                .ok()
-                .and_then(Result::ok)
-                .flatten();
-                (name, value)
-            });
-            let (checks, metrics) = tokio::join!(
-                futures::future::join_all(checks),
-                futures::future::join_all(metrics),
-            );
+            let checks = futures::future::join_all(checks).await;
             let mut state = handle.state.write().await;
             for (name, ready) in checks {
                 state.checks.insert(name, ready);
-            }
-            for (name, value) in metrics {
-                state.metrics.insert(name, value);
             }
         }
     }
@@ -406,7 +341,6 @@ pub fn platform_handle(product: ProductDescriptor) -> Result<RuntimeHandle, Erro
         state: Arc::new(RwLock::new(RuntimeState {
             product,
             schema_identity: None,
-            metrics: empty_metrics(),
             checks: BTreeMap::new(),
             tasks: BTreeMap::new(),
             shutting_down: false,
@@ -421,16 +355,6 @@ impl ServerRuntimeBuilder {
         identity: crate::schema_identity::SchemaIdentity,
     ) -> Self {
         self.schema_identity = Some(identity);
-        self
-    }
-
-    pub fn register_metric<F, Fut>(mut self, metric: DiagnosticMetric, read: F) -> Self
-    where
-        F: Fn() -> Fut + Send + Sync + 'static,
-        Fut: Future<Output = Option<u64>> + Send + 'static,
-    {
-        self.metrics
-            .push((metric, Arc::new(ClosureMetricProbe(read))));
         self
     }
 
@@ -466,12 +390,6 @@ impl ServerRuntimeBuilder {
         {
             return Err(Error::InvalidDescriptor("schema_identity"));
         }
-        let mut seen_metrics = std::collections::BTreeSet::new();
-        for (metric, _) in &self.metrics {
-            if !seen_metrics.insert(*metric) {
-                return Err(Error::DuplicateName(format!("{metric:?}")));
-            }
-        }
         let mut task_states = BTreeMap::new();
         for task in &self.tasks {
             if task_states
@@ -499,7 +417,6 @@ impl ServerRuntimeBuilder {
                 state: Arc::new(RwLock::new(RuntimeState {
                     product: self.product,
                     schema_identity: self.schema_identity,
-                    metrics: empty_metrics(),
                     checks: check_states,
                     tasks: task_states,
                     shutting_down: false,
@@ -507,7 +424,6 @@ impl ServerRuntimeBuilder {
                 shutdown,
             },
             checks: self.checks,
-            metrics: self.metrics,
             tasks: self.tasks,
         })
     }
@@ -661,11 +577,26 @@ where
     }))
 }
 
+/// Only the outer request boundary can create this proof. A router used on its
+/// own still applies the policy; behind our transport it reuses that boundary.
+#[derive(Clone)]
+struct RequestContextInstalled;
+
 async fn request_id_boundary<S>(mut request: Request, inner: S) -> Response
 where
     S: tower::Service<Request, Response = Response, Error = std::convert::Infallible>,
 {
     use tower::ServiceExt;
+    if request
+        .extensions()
+        .get::<RequestContextInstalled>()
+        .is_some()
+    {
+        return match inner.oneshot(request).await {
+            Ok(response) => response,
+            Err(never) => match never {},
+        };
+    }
     static HEADER: axum::http::HeaderName = axum::http::HeaderName::from_static("x-request-id");
     let request_id = {
         let values = request.headers().get_all(&HEADER);
@@ -686,6 +617,7 @@ where
             }
         }
     };
+    request.extensions_mut().insert(RequestContextInstalled);
     request.extensions_mut().insert(request_id.clone());
     let header = request_id_header(&request_id);
     request.headers_mut().insert(HEADER.clone(), header.clone());

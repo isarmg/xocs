@@ -38,45 +38,6 @@ pub const ADMIN_BODY_READERS_GLOBAL: usize = 32;
 pub const ADMINISTRATORS_REQUIRED: usize = 1;
 pub const AUDIT_DETAILS_MAX_BYTES: usize = 16 * 1024;
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub struct AdministratorPolicy;
-
-impl AdministratorPolicy {
-    pub const fn revision(self) -> u32 {
-        POLICY_REVISION
-    }
-    pub const fn session_idle_micros(self) -> u64 {
-        SESSION_IDLE_MICROS
-    }
-    pub const fn session_absolute_micros(self) -> u64 {
-        SESSION_ABSOLUTE_MICROS
-    }
-    pub const fn sessions_per_administrator(self) -> usize {
-        SESSIONS_PER_ADMINISTRATOR
-    }
-    pub const fn sessions_global(self) -> usize {
-        SESSIONS_GLOBAL
-    }
-    pub const fn argon2_concurrency(self) -> usize {
-        ARGON2_CONCURRENCY
-    }
-    pub const fn login_attempts_max(self) -> u32 {
-        LOGIN_ATTEMPTS_MAX
-    }
-    pub const fn login_attempts_window(self) -> Duration {
-        LOGIN_ATTEMPTS_WINDOW
-    }
-    pub const fn login_attempts_scopes_max(self) -> usize {
-        LOGIN_ATTEMPTS_SCOPES_MAX
-    }
-    pub const fn argon2_acquire_timeout_micros(self) -> u64 {
-        ARGON2_ACQUIRE_TIMEOUT_MICROS
-    }
-    pub const fn last_seen_write_interval_micros(self) -> u64 {
-        SESSION_LAST_SEEN_WRITE_INTERVAL_MICROS
-    }
-}
-
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Identifier(String);
 
@@ -315,7 +276,6 @@ pub trait AdministratorStore: Send + Sync {
     async fn authentication_state(
         &self,
     ) -> Result<Arc<AuthenticationState>, AuthenticationStateError<Self::StoreError>>;
-    fn supports_account_updates(&self) -> bool;
     async fn manage_administrator(
         &self,
         context: &AdministratorManagementContext,

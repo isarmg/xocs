@@ -16,6 +16,7 @@ Rust 单元测试通过 `#[cfg(test)]` 和模块路径声明挂接到原业务�
 ```sh
 python3 test/check-layout.py
 python3 -I -B test/tools/test-layout.py
+python3 -I -B test/server/query-indexes.py
 cargo +1.99.0 test --locked --offline
 cargo +1.99.0 test --locked --offline -p blog-assets -p blog-browser-domain-tests
 bash test/run-maintained.sh

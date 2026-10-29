@@ -48,6 +48,7 @@ static REQUEST_ID_HEADER: HeaderName = HeaderName::from_static("x-request-id");
 
 struct AdapterState<Store> {
     product_id: String,
+    cookie_name: Arc<str>,
     mode: AdministratorOriginMode,
     service: Arc<AdministratorService<Store>>,
     body_admission: body::BodyAdmission,
@@ -57,6 +58,7 @@ impl<Store> Clone for AdapterState<Store> {
     fn clone(&self) -> Self {
         Self {
             product_id: self.product_id.clone(),
+            cookie_name: Arc::clone(&self.cookie_name),
             mode: self.mode,
             service: Arc::clone(&self.service),
             body_admission: self.body_admission.clone(),
@@ -85,9 +87,10 @@ where
     Store: AdministratorStore + 'static,
 {
     let product_id = product_id.into();
-    crate::admin_core::session_cookie_name(&product_id, mode)?;
+    let cookie_name = crate::admin_core::session_cookie_name(&product_id, mode)?;
     let state = AdapterState {
         product_id,
+        cookie_name: cookie_name.into(),
         mode,
         service,
         body_admission,
@@ -96,12 +99,7 @@ where
         .route(ADMIN_LOGIN_PATH, post(login::<Store>))
         .route(ADMIN_SESSION_PATH, get(session::<Store>))
         .route(ADMIN_LOGOUT_PATH, post(logout::<Store>));
-    let router = if state.service.store().supports_account_updates() {
-        management::account_routes(router)
-    } else {
-        router
-    };
-    Ok(router.with_state(state))
+    Ok(management::account_routes(router).with_state(state))
 }
 
 pub async fn authenticate_request<Store>(
@@ -116,7 +114,15 @@ where
     Store: AdministratorStore + 'static,
 {
     let id = request_id(headers)?;
-    let token = session_cookie(headers, product_id, mode, id.as_ref())?;
+    let cookie_name = crate::admin_core::session_cookie_name(product_id, mode).map_err(|_| {
+        Box::new(error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "platform.cookie_failed",
+            false,
+            id.as_ref(),
+        ))
+    })?;
+    let token = session_cookie(headers, &cookie_name, id.as_ref())?;
     let now = now_micros()?;
     let identity = service
         .authenticate_session(&token, now)
@@ -156,12 +162,9 @@ where
     {
         return *response;
     }
-    if let Err(response) = validate_login_cookie(
-        &parts.headers,
-        &state.product_id,
-        state.mode,
-        request_id.as_ref(),
-    ) {
+    if let Err(response) =
+        validate_login_cookie(&parts.headers, &state.cookie_name, request_id.as_ref())
+    {
         return *response;
     }
     let bytes = match state
@@ -230,12 +233,7 @@ where
         Ok(value) => value,
         Err(response) => return *response,
     };
-    let token = match session_cookie(
-        request.headers(),
-        &state.product_id,
-        state.mode,
-        request_id.as_ref(),
-    ) {
+    let token = match session_cookie(request.headers(), &state.cookie_name, request_id.as_ref()) {
         Ok(value) => value,
         Err(response) => return *response,
     };
@@ -273,12 +271,7 @@ where
         Ok(identity) => identity,
         Err(response) => return *response,
     };
-    let token = match session_cookie(
-        request.headers(),
-        &state.product_id,
-        state.mode,
-        request_id.as_ref(),
-    ) {
+    let token = match session_cookie(request.headers(), &state.cookie_name, request_id.as_ref()) {
         Ok(value) => value,
         Err(response) => return *response,
     };
@@ -395,8 +388,7 @@ fn header_values(headers: &HeaderMap, name: &'static str) -> Vec<Vec<u8>> {
 
 fn validate_login_cookie(
     headers: &HeaderMap,
-    product_id: &str,
-    mode: AdministratorOriginMode,
+    name: &str,
     request_id: Option<&RequestId>,
 ) -> Result<(), Box<Response>> {
     let invalid = || {
@@ -415,14 +407,6 @@ fn validate_login_cookie(
         return Err(invalid());
     };
     let header = value.to_str().map_err(|_| invalid())?;
-    let name = crate::admin_core::session_cookie_name(product_id, mode).map_err(|_| {
-        Box::new(error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "platform.cookie_failed",
-            false,
-            request_id,
-        ))
-    })?;
     let mut found = false;
     for part in header.split(';') {
         let (key, token) = part.trim().split_once('=').ok_or_else(invalid)?;
@@ -438,8 +422,7 @@ fn validate_login_cookie(
 
 fn session_cookie(
     headers: &HeaderMap,
-    product_id: &str,
-    mode: AdministratorOriginMode,
+    name: &str,
     request_id: Option<&RequestId>,
 ) -> Result<String, Box<Response>> {
     let values: Vec<_> = headers.get_all(header::COOKIE).iter().collect();
@@ -459,15 +442,7 @@ fn session_cookie(
             request_id,
         ))
     })?;
-    let name = crate::admin_core::session_cookie_name(product_id, mode).map_err(|_| {
-        Box::new(error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "platform.cookie_failed",
-            false,
-            request_id,
-        ))
-    })?;
-    let token = crate::admin_auth::parse_cookie_value(header, &name)
+    let token = crate::admin_auth::parse_cookie_value(header, name)
         .filter(|value| crate::admin_auth::is_token_shape(value))
         .ok_or_else(|| {
             Box::new(error(

@@ -1,5 +1,5 @@
 use super::{AdminPageQuery, PageResult};
-use crate::{ApiResult, AppState, absent, db_error, invalid};
+use crate::{ApiResult, AppState, absent, invalid};
 use axum::{Json, extract::State};
 use blog_application::admin_core::AuthenticatedIdentity;
 use blog_application::server_cli::{ContractPath as Path, ContractQuery as Query};
@@ -21,8 +21,7 @@ pub(super) async fn tree_hole(State(state): State<AppState>) -> ApiResult<Vec<Tr
             "SELECT t.id,t.user_id,u.username,t.avatar,t.message,t.image_path,t.create_time FROM tree_hole t LEFT JOIN user u ON u.id=t.user_id ORDER BY t.id DESC LIMIT 100",
         )
         .fetch_all(&state.pool)
-        .await
-        .map_err(db_error)?,
+        .await?,
     ))
 }
 #[derive(Deserialize)]
@@ -36,28 +35,18 @@ pub(super) async fn create_guest_tree_hole(
     crate::ContractJson(input): crate::ContractJson<TreeHoleInput>,
 ) -> ApiResult<TreeHole> {
     let message = input.message.trim();
-    if message.is_empty()
-        || message.chars().count() > 60
-        || message.contains('<')
-        || message.contains('>')
-        || input.image_path.is_some()
-    {
+    if message.is_empty() || message.chars().count() > 60 || input.image_path.is_some() {
         return Err(invalid("留言不能为空、不能超过 60 个字，也不能包含图片"));
     }
-    let mut transaction = state
-        .pool
-        .begin_with("BEGIN IMMEDIATE")
-        .await
-        .map_err(db_error)?;
+    let mut transaction = state.pool.begin_with("BEGIN IMMEDIATE").await?;
     let id = sqlx::query("INSERT INTO tree_hole(message) VALUES(?)")
         .bind(message)
         .execute(&mut *transaction)
-        .await
-        .map_err(db_error)?
+        .await?
         .last_insert_rowid();
     let entry = sqlx::query_as("SELECT t.id,t.user_id,u.username,t.avatar,t.message,t.image_path,t.create_time FROM tree_hole t LEFT JOIN user u ON u.id=t.user_id WHERE t.id=?")
-        .bind(id).fetch_one(&mut *transaction).await.map_err(db_error)?;
-    transaction.commit().await.map_err(db_error)?;
+        .bind(id).fetch_one(&mut *transaction).await?;
+    transaction.commit().await?;
     Ok(Json(entry))
 }
 
@@ -66,20 +55,18 @@ pub(super) async fn content_tree_hole(
     Query(query): Query<AdminPageQuery>,
 ) -> ApiResult<PageResult<TreeHole>> {
     let (page, size) = query.bounds();
-    let mut transaction = state.pool.begin().await.map_err(db_error)?;
+    let mut transaction = state.pool.begin().await?;
     let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM tree_hole")
         .fetch_one(&mut *transaction)
-        .await
-        .map_err(db_error)?;
+        .await?;
     let items = sqlx::query_as::<_, TreeHole>(
         "SELECT t.id,t.user_id,u.username,t.avatar,t.message,t.image_path,t.create_time FROM tree_hole t LEFT JOIN user u ON u.id=t.user_id ORDER BY t.id DESC LIMIT ? OFFSET ?",
     )
     .bind(size)
     .bind((page - 1) * size)
     .fetch_all(&mut *transaction)
-    .await
-    .map_err(db_error)?;
-    transaction.commit().await.map_err(db_error)?;
+    .await?;
+    transaction.commit().await?;
     Ok(Json(PageResult {
         items,
         total,
@@ -96,11 +83,10 @@ pub(super) async fn delete_tree_hole(
     let changed = sqlx::query("DELETE FROM tree_hole WHERE id=?")
         .bind(id)
         .execute(&mut *transaction)
-        .await
-        .map_err(db_error)?;
+        .await?;
     if changed.rows_affected() == 0 {
         return Err(absent());
     }
-    transaction.commit().await.map_err(db_error)?;
+    transaction.commit().await?;
     Ok(Json(serde_json::json!({"deleted": true})))
 }

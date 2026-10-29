@@ -95,7 +95,6 @@ fn management_error<E: std::error::Error + Send + Sync + 'static>(
     id: Option<&RequestId>,
 ) -> Response {
     let (status, code, retryable) = match failure {
-        ManagementError::Unsupported => (StatusCode::NOT_FOUND, "admin.unsupported", false),
         ManagementError::Unauthorized => (StatusCode::UNAUTHORIZED, "auth.session_required", false),
         ManagementError::Conflict => (StatusCode::CONFLICT, "admin.conflict", false),
         ManagementError::InvalidInput

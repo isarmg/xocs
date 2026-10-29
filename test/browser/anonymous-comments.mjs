@@ -89,6 +89,11 @@ try {
           const visible = items.filter(item => root ? item.floor_comment_id === Number(root[1]) : !item.parent_comment_id);
           return route.fulfill({ json: pageOf(visible, url) });
         });
+        await page.route('**/api/v1/tree-hole/guest', route => {
+          const payload = route.request().postDataJSON();
+          return route.fulfill({ json: { id: 10000, user_id: null, username: null, avatar: null,
+            message: payload.message, image_path: null, create_time: null } });
+        });
         const english = language === 'en';
         const button = english ? 'Post anonymous comment' : '匿名发表评论';
         for (const path of ['/article/1', '/love', '/message']) {
@@ -98,6 +103,12 @@ try {
           const form = page.locator('.comment-form'), comments = page.locator('.article-comments');
           await expect(page.locator('a[href="/im"],a[href="/user"],.public-login-link,.family-apply-dialog')).toHaveCount(0);
           const input = form.getByRole('textbox', { name: english ? 'Write your thoughts' : '写下你的想法', exact: true });
+          const literal = `a < b; <3; <img src=x onerror="window.commentXss=1"> ${path}`;
+          await input.fill(literal);
+          await form.getByRole('button', { name: button, exact: true }).click();
+          await expect(comments.locator('.public-comment').first()).toContainText(literal);
+          await expect(comments.locator('.public-comment img[src="x"]')).toHaveCount(0);
+          assert.equal(await page.evaluate(() => window.commentXss), undefined);
           await input.fill(`Anonymous comment on ${path}`);
           await form.getByRole('button', { name: button, exact: true }).click();
           await expect(comments.locator('.public-comment').first()).toContainText(`Anonymous comment on ${path}`);
@@ -105,7 +116,7 @@ try {
           await comments.locator('.public-comment').first().getByRole('button', { name: english ? 'Reply' : '回复', exact: true }).click();
           await input.fill('Anonymous reply');
           await form.getByRole('button', { name: button, exact: true }).click();
-          await expect(comments.locator('.comment-replies')).toContainText('Anonymous reply');
+          await expect(comments.locator('.comment-floor').filter({ hasText: `Anonymous comment on ${path}` }).locator('.comment-replies')).toContainText('Anonymous reply');
           failNext = true; await input.fill('Keep this draft on failure');
           await form.getByRole('button', { name: button, exact: true }).click();
           await expect(comments.getByRole('alert')).toBeVisible();
@@ -113,6 +124,14 @@ try {
           await form.getByRole('button', { name: button, exact: true }).click();
           await expect(comments.getByRole('alert')).toHaveCount(0);
           await expect(comments.locator('.public-comment').first()).toContainText('Keep this draft on failure');
+          if (path === '/message') {
+            const literal = 'a < b; <3; <img src=x onerror="window.commentXss=1">';
+            await page.getByRole('textbox', { name: english ? 'Send a message' : '发送弹幕', exact: true }).fill(literal);
+            await page.getByRole('button', { name: english ? 'Send' : '发射', exact: true }).click();
+            await expect(page.locator('.message-barrage-item').first()).toHaveText(literal);
+            await expect(page.locator('.message-barrage-item img[src="x"]')).toHaveCount(0);
+            assert.equal(await page.evaluate(() => window.commentXss), undefined);
+          }
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
           const header = await page.locator('.public-header').evaluate(element => {
             const surface = element.querySelector(':scope > [data-blog-server-corner-decoration]') || element;

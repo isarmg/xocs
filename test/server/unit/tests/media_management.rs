@@ -109,6 +109,122 @@ fn image_file(directory: &std::path::Path, image: &Value) -> std::path::PathBuf 
 }
 
 #[tokio::test]
+async fn media_cache_covers_successful_get_head_and_ranges_but_not_missing_files() {
+    let (_directory, app, _pool) = setup().await;
+    let session = login(&app).await;
+    let image = upload(&app, &session, "cache fixture").await;
+    let path = image["path"].as_str().unwrap();
+    let mut modified = None;
+    for (method, range, status) in [
+        ("GET", None, StatusCode::OK),
+        ("HEAD", None, StatusCode::OK),
+        ("GET", Some("bytes=0-3"), StatusCode::PARTIAL_CONTENT),
+    ] {
+        let mut request = Request::builder().method(method).uri(path);
+        if let Some(range) = range {
+            request = request.header(header::RANGE, range);
+        }
+        let response = app
+            .clone()
+            .oneshot(request.body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), status);
+        assert_eq!(
+            response.headers().get(header::CACHE_CONTROL),
+            Some(&header::HeaderValue::from_static(
+                "public, max-age=31536000, immutable"
+            ))
+        );
+        if method == "GET" && range.is_none() {
+            modified = response.headers().get(header::LAST_MODIFIED).cloned();
+        }
+        if let Some(range) = range {
+            assert_eq!(range, "bytes=0-3");
+            assert_eq!(to_bytes(response.into_body(), 1024).await.unwrap().len(), 4);
+        }
+    }
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri(path)
+                .header(header::IF_MODIFIED_SINCE, modified.unwrap())
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::NOT_MODIFIED);
+    assert!(
+        response.headers()[header::CACHE_CONTROL]
+            .to_str()
+            .unwrap()
+            .contains("immutable")
+    );
+
+    assert_eq!(
+        remove(&app, &session, &image).await.status(),
+        StatusCode::OK
+    );
+    for path in [
+        path.to_owned(),
+        "/media".to_owned(),
+        "/media/".to_owned(),
+        "/media/.blog-delete-hidden.png".to_owned(),
+    ] {
+        let response = get(&app, &path).await;
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        assert!(
+            !response
+                .headers()
+                .get(header::CACHE_CONTROL)
+                .is_some_and(|value| { value.to_str().unwrap().contains("immutable") })
+        );
+    }
+}
+
+#[tokio::test]
+async fn anonymous_text_cannot_pin_media_by_mentioning_its_path() {
+    let (directory, app, pool) = setup().await;
+    let session = login(&app).await;
+    let image = upload(&app, &session, "anonymous mentions").await;
+    let path = image["path"].as_str().unwrap();
+    sqlx::query(
+        "INSERT INTO comment(source,type,comment_content,comment_info) VALUES(1,'article',?,?)",
+    )
+    .bind(path)
+    .bind(format!("{{\"nickname\":\"{path}\"}}"))
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query("INSERT INTO tree_hole(message) VALUES(?)")
+        .bind(path)
+        .execute(&pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        remove(&app, &session, &image).await.status(),
+        StatusCode::OK
+    );
+    assert!(!image_file(directory.path(), &image).exists());
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM comment")
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+        1
+    );
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tree_hole")
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+        1
+    );
+}
+
+#[tokio::test]
 async fn unused_media_requires_auth_csrf_and_current_object_identity_then_really_disappears() {
     let (directory, app, pool) = setup().await;
     let session = login(&app).await;
@@ -244,9 +360,9 @@ async fn saved_draft_and_every_active_media_field_block_deletion_even_after_nul_
             "DELETE FROM tree_hole",
         ),
         (
-            "comment content",
-            "INSERT INTO comment(id,source,type,comment_content) VALUES(1,1,'article',?)",
-            "DELETE FROM comment",
+            "guest message avatar",
+            "INSERT INTO tree_hole(id,message,avatar) VALUES(1,'Avatar',?)",
+            "DELETE FROM tree_hole",
         ),
     ];
     for (label, insert, cleanup) in cases {

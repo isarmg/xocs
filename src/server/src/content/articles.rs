@@ -2,7 +2,7 @@ use super::{
     PageResult,
     input::{IdempotencyKey, ShortContent},
 };
-use crate::{ApiResult, AppError, AppState, absent, db_error, invalid};
+use crate::{ApiResult, AppError, AppState, absent, invalid};
 use axum::{Json, extract::State, http::HeaderMap};
 use blog_application::admin_core::AuthenticatedIdentity;
 use blog_application::server_cli::{ContractPath as Path, ContractQuery as Query};
@@ -54,8 +54,25 @@ pub(super) struct Article {
     update_time: Option<String>,
 }
 
-const ARTICLE_SUMMARY_SQL: &str = "SELECT id,article_title,article_cover,sort_id,label_id,(SELECT sort_name FROM sort WHERE sort.id=article.sort_id) AS sort_name,(SELECT label_name FROM label WHERE label.id=article.label_id) AS label_name,view_count,like_count,(SELECT COUNT(*) FROM comment WHERE source=article.id AND type='article') AS comment_count,recommend_status,view_status,create_time,CASE WHEN password IS NULL THEN substr(article_content,1,400) ELSE NULL END AS excerpt,CASE WHEN ?2<>'' AND password IS NULL AND article_title NOT LIKE ?3 ESCAPE '\\' THEN substr(article_content,max(1,instr(lower(article_content),lower(?2))-48),160) ELSE NULL END AS search_snippet FROM article";
-const ARTICLE_SQL: &str = "SELECT id,user_id,article_title,article_content,article_cover,video_url,sort_id,label_id,view_count,like_count,(SELECT COUNT(*) FROM comment WHERE source=article.id AND type='article') AS comment_count,(SELECT username FROM user WHERE user.id=article.user_id) AS username,(SELECT sort_name FROM sort WHERE sort.id=article.sort_id) AS sort_name,(SELECT label_name FROM label WHERE label.id=article.label_id) AS label_name,recommend_status,comment_status,view_status,CASE WHEN password IS NULL THEN 0 ELSE 1 END AS password_required,tips,create_time,update_time FROM article";
+const ARTICLE_SUMMARY_COLUMNS: &str = r#"SELECT id,article_title,article_cover,sort_id,label_id,
+    (SELECT sort_name FROM sort WHERE sort.id=article.sort_id) AS sort_name,
+    (SELECT label_name FROM label WHERE label.id=article.label_id) AS label_name,
+    view_count,like_count,
+    (SELECT COUNT(*) FROM comment WHERE source=article.id AND type='article') AS comment_count,
+    recommend_status,view_status,create_time,
+    CASE WHEN password IS NULL THEN substr(article_content,1,400) ELSE NULL END AS excerpt,
+    CASE WHEN ?2<>'' AND password IS NULL AND article_title NOT LIKE ?3 ESCAPE '\'
+        THEN substr(article_content,max(1,instr(lower(article_content),lower(?2))-48),160)
+        ELSE NULL END AS search_snippet"#;
+const ARTICLE_SQL: &str = "SELECT id,user_id,article_title,article_content,article_cover,video_url,
+    sort_id,label_id,view_count,like_count,
+    (SELECT COUNT(*) FROM comment WHERE source=article.id AND type='article') AS comment_count,
+    (SELECT username FROM user WHERE user.id=article.user_id) AS username,
+    (SELECT sort_name FROM sort WHERE sort.id=article.sort_id) AS sort_name,
+    (SELECT label_name FROM label WHERE label.id=article.label_id) AS label_name,
+    recommend_status,comment_status,view_status,
+    CASE WHEN password IS NULL THEN 0 ELSE 1 END AS password_required,
+    tips,create_time,update_time FROM article";
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -143,7 +160,7 @@ async fn list_articles(
         }
     };
     let (count_sql, list_sql) = article_page_sql(&filter, &filters, audience, search_mode);
-    let mut transaction = pool.begin().await.map_err(db_error)?;
+    let mut transaction = pool.begin().await?;
     let total: i64 = sqlx::query_scalar(sqlx::AssertSqlSafe(count_sql))
         .bind(query.sort_id)
         .bind(search)
@@ -152,8 +169,7 @@ async fn list_articles(
         .bind(&phrase)
         .bind(query.label_id)
         .fetch_one(&mut *transaction)
-        .await
-        .map_err(db_error)?;
+        .await?;
     let items = sqlx::query_as::<_, ArticleSummary>(sqlx::AssertSqlSafe(list_sql))
         .bind(query.sort_id)
         .bind(search)
@@ -164,9 +180,8 @@ async fn list_articles(
         .bind(size)
         .bind((page - 1) * size)
         .fetch_all(&mut *transaction)
-        .await
-        .map_err(db_error)?;
-    transaction.commit().await.map_err(db_error)?;
+        .await?;
+    transaction.commit().await?;
     Ok(PageResult {
         items,
         total,
@@ -222,10 +237,8 @@ fn article_page_sql(
     // Materialize only a page of IDs before reading body excerpts, taxonomy and
     // comment counts. CROSS JOIN fixes the page as the outer loop, so OFFSET
     // and sorting never process full article summaries for discarded rows.
-    let summaries =
-        ARTICLE_SUMMARY_SQL.replace(" FROM article", " FROM article_page CROSS JOIN article");
     let list = format!(
-        "WITH article_page AS MATERIALIZED ({page}) {summaries} WHERE article.id=article_page.article_id ORDER BY article_page.page_search_rank,article_page.page_created_at DESC,article_page.article_id DESC"
+        "WITH article_page AS MATERIALIZED ({page}) {ARTICLE_SUMMARY_COLUMNS} FROM article_page CROSS JOIN article WHERE article.id=article_page.article_id ORDER BY article_page.page_search_rank,article_page.page_created_at DESC,article_page.article_id DESC"
     );
     (count, list)
 }
@@ -264,8 +277,7 @@ where
     )))
     .bind(id)
     .fetch_optional(executor)
-    .await
-    .map_err(db_error)?
+    .await?
     .ok_or_else(absent)
 }
 
@@ -277,8 +289,7 @@ pub(super) async fn public_article(
     sqlx::query("UPDATE article SET view_count=view_count+1 WHERE id=?")
         .bind(id)
         .execute(&state.pool)
-        .await
-        .map_err(db_error)?;
+        .await?;
     Ok(Json(article))
 }
 #[derive(Serialize, sqlx::FromRow)]
@@ -300,20 +311,19 @@ pub(super) async fn article_news(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> ApiResult<Vec<ArticleNews>> {
-    let mut transaction = state.pool.begin().await.map_err(db_error)?;
+    let mut transaction = state.pool.begin().await?;
     let visible: bool = sqlx::query_scalar(
         "SELECT EXISTS(SELECT 1 FROM article WHERE id=? AND deleted=0 AND view_status=1 AND password IS NULL)",
     )
     .bind(id)
     .fetch_one(&mut *transaction)
-    .await
-    .map_err(db_error)?;
+    .await?;
     if !visible {
         return Err(absent());
     }
     let rows=sqlx::query_as::<_,ArticleNews>(sqlx::AssertSqlSafe(format!("{ARTICLE_NEWS_SQL} WHERE w.type='news' AND w.source=? AND w.is_public=1 ORDER BY w.create_time DESC,w.id DESC LIMIT 100")))
-        .bind(id).fetch_all(&mut *transaction).await.map_err(db_error)?;
-    transaction.commit().await.map_err(db_error)?;
+        .bind(id).fetch_all(&mut *transaction).await?;
+    transaction.commit().await?;
     Ok(Json(rows))
 }
 pub(super) async fn admin_article_news(
@@ -323,17 +333,16 @@ pub(super) async fn admin_article_news(
 ) -> ApiResult<PageResult<ArticleNews>> {
     let page = query.page.unwrap_or(1).clamp(1, 100_000);
     let size = query.size.unwrap_or(20).clamp(1, 100);
-    let mut transaction = state.pool.begin().await.map_err(db_error)?;
+    let mut transaction = state.pool.begin().await?;
     article_author(&mut transaction, id).await?;
     let total: i64 =
         sqlx::query_scalar("SELECT COUNT(*) FROM wei_yan WHERE type='news' AND source=?")
             .bind(id)
             .fetch_one(&mut *transaction)
-            .await
-            .map_err(db_error)?;
+            .await?;
     let items = sqlx::query_as::<_, ArticleNews>(sqlx::AssertSqlSafe(format!("{ARTICLE_NEWS_SQL} WHERE w.type='news' AND w.source=? ORDER BY w.create_time DESC,w.id DESC LIMIT ? OFFSET ?")))
-        .bind(id).bind(size).bind((page - 1) * size).fetch_all(&mut *transaction).await.map_err(db_error)?;
-    transaction.commit().await.map_err(db_error)?;
+        .bind(id).bind(size).bind((page - 1) * size).fetch_all(&mut *transaction).await?;
+    transaction.commit().await?;
     Ok(Json(PageResult {
         items,
         total,
@@ -369,12 +378,11 @@ pub(super) async fn admin_delete_article_news(
         .bind(news_id)
         .bind(article_id)
         .execute(&mut *transaction)
-        .await
-        .map_err(db_error)?;
+        .await?;
     if changed.rows_affected() == 0 {
         return Err(absent());
     }
-    transaction.commit().await.map_err(db_error)?;
+    transaction.commit().await?;
     Ok(Json(serde_json::json!({"deleted":true})))
 }
 
@@ -388,13 +396,12 @@ pub(super) async fn admin_update_article_news(
     sqlx::query_scalar::<_, i64>("SELECT id FROM article WHERE id=? AND deleted=0")
         .bind(article_id)
         .fetch_optional(&mut *transaction)
-        .await
-        .map_err(db_error)?
+        .await?
         .ok_or_else(absent)?;
     let time = normalize_news_time(input.create_time)?;
     let changed = sqlx::query("UPDATE wei_yan SET content=?,create_time=COALESCE(?,create_time) WHERE id=? AND source=? AND type='news'")
         .bind(input.content.as_str()).bind(time).bind(news_id).bind(article_id)
-        .execute(&mut *transaction).await.map_err(db_error)?;
+        .execute(&mut *transaction).await?;
     if changed.rows_affected() == 0 {
         return Err(absent());
     }
@@ -404,9 +411,8 @@ pub(super) async fn admin_update_article_news(
     .bind(news_id)
     .bind(article_id)
     .fetch_one(&mut *transaction)
-    .await
-    .map_err(db_error)?;
-    transaction.commit().await.map_err(db_error)?;
+    .await?;
+    transaction.commit().await?;
     Ok(Json(result))
 }
 
@@ -446,8 +452,7 @@ async fn article_author(connection: &mut sqlx::SqliteConnection, id: i64) -> Res
     sqlx::query_scalar("SELECT user_id FROM article WHERE id=? AND deleted=0")
         .bind(id)
         .fetch_optional(connection)
-        .await
-        .map_err(db_error)?
+        .await?
         .ok_or_else(absent)
 }
 
@@ -475,8 +480,7 @@ async fn insert_article_news(
         )
         .bind(key.as_str())
         .fetch_optional(&mut *transaction)
-        .await
-        .map_err(db_error)?
+        .await?
     } else {
         None
     };
@@ -493,10 +497,10 @@ async fn insert_article_news(
         ))?
     } else {
         let news_id = sqlx::query("INSERT INTO wei_yan(user_id,content,type,source,is_public,create_time) VALUES(?,?,'news',?,1,COALESCE(?,CURRENT_TIMESTAMP))")
-            .bind(author).bind(content).bind(id).bind(time).execute(&mut *transaction).await.map_err(db_error)?.last_insert_rowid();
+            .bind(author).bind(content).bind(id).bind(time).execute(&mut *transaction).await?.last_insert_rowid();
         if let Some(key) = request_id {
             sqlx::query("INSERT INTO article_news_submission(request_id,request_hash,news_id) VALUES(?,?,?)")
-                .bind(key.as_str()).bind(request_hash).bind(news_id).execute(&mut *transaction).await.map_err(db_error)?;
+                .bind(key.as_str()).bind(request_hash).bind(news_id).execute(&mut *transaction).await?;
         }
         news_id
     };
@@ -506,9 +510,8 @@ async fn insert_article_news(
     .bind(news_id)
     .bind(id)
     .fetch_one(&mut *transaction)
-    .await
-    .map_err(db_error)?;
-    transaction.commit().await.map_err(db_error)?;
+    .await?;
+    transaction.commit().await?;
     Ok(result)
 }
 #[derive(Serialize, sqlx::FromRow)]
@@ -521,7 +524,7 @@ pub(super) async fn article_access(
     Path(id): Path<i64>,
 ) -> ApiResult<ArticleAccess> {
     Ok(Json(sqlx::query_as::<_,ArticleAccess>("SELECT CASE WHEN password IS NULL THEN 0 ELSE 1 END AS password_required,tips FROM article WHERE id=? AND deleted=0 AND (view_status=1 OR password IS NOT NULL)")
-        .bind(id).fetch_optional(&state.pool).await.map_err(db_error)?.ok_or_else(absent)?))
+        .bind(id).fetch_optional(&state.pool).await?.ok_or_else(absent)?))
 }
 pub(super) async fn admin_article(
     State(state): State<AppState>,
@@ -550,8 +553,7 @@ pub(super) async fn unlock_article(
     )
     .bind(id)
     .fetch_optional(&state.pool)
-    .await
-    .map_err(db_error)?
+    .await?
     .ok_or_else(absent)?;
     let permit = tokio::time::timeout(
         std::time::Duration::from_secs(2),
@@ -582,19 +584,14 @@ pub(super) async fn unlock_article(
     }
     // Recheck access after waiting/hashing, and read the body under the same
     // writer boundary so a concurrent password change cannot expose new content.
-    let mut transaction = state
-        .pool
-        .begin_with("BEGIN IMMEDIATE")
-        .await
-        .map_err(db_error)?;
+    let mut transaction = state.pool.begin_with("BEGIN IMMEDIATE").await?;
     let changed = sqlx::query(
         "UPDATE article SET view_count=view_count+1 WHERE id=? AND deleted=0 AND password=?",
     )
     .bind(id)
     .bind(stored)
     .execute(&mut *transaction)
-    .await
-    .map_err(db_error)?;
+    .await?;
     if changed.rows_affected() != 1 {
         return Err(AppError::Public(
             HttpStatus::Forbidden,
@@ -606,9 +603,8 @@ pub(super) async fn unlock_article(
     )))
     .bind(id)
     .fetch_one(&mut *transaction)
-    .await
-    .map_err(db_error)?;
-    transaction.commit().await.map_err(db_error)?;
+    .await?;
+    transaction.commit().await?;
     Ok(Json(article))
 }
 
@@ -713,8 +709,7 @@ async fn validate_article_taxonomy(
     .bind(input.label_id)
     .bind(input.sort_id)
     .fetch_one(&mut **transaction)
-    .await
-    .map_err(db_error)?;
+    .await?;
     if !matches {
         return Err(invalid("标签不属于所选分类，请重新选择分类和标签"));
     }
@@ -746,7 +741,7 @@ pub(super) async fn create_article(
     let mut transaction = crate::content::begin_mutation(&state.pool, &identity).await?;
     if let Some(key) = &request_id {
         let receipt: Option<(Vec<u8>, i64, i64)> = sqlx::query_as("SELECT s.request_hash,s.article_id,a.deleted FROM article_submission s JOIN article a ON a.id=s.article_id WHERE s.request_id=?")
-            .bind(key.as_str()).fetch_optional(&mut *transaction).await.map_err(db_error)?;
+            .bind(key.as_str()).fetch_optional(&mut *transaction).await?;
         if let Some((hash, id, deleted)) = receipt {
             if hash != request_hash || deleted != 0 {
                 return Err(AppError::Public(
@@ -756,7 +751,7 @@ pub(super) async fn create_article(
             }
             let article =
                 load_article(&mut *transaction, id, ArticleAudience::Administrator).await?;
-            transaction.commit().await.map_err(db_error)?;
+            transaction.commit().await?;
             return Ok(Json(article));
         }
     }
@@ -766,7 +761,7 @@ pub(super) async fn create_article(
         .bind(author)
         .bind(input.sort_id).bind(input.label_id).bind(input.article_cover).bind(input.article_title).bind(input.article_content).bind(input.video_url)
         .bind(i64::from(input.view_status)).bind(i64::from(input.recommend_status)).bind(i64::from(input.comment_status)).bind(password).bind(input.tips)
-        .execute(&mut *transaction).await.map_err(db_error)?.last_insert_rowid();
+        .execute(&mut *transaction).await?.last_insert_rowid();
     if let Some(key) = request_id {
         sqlx::query(
             "INSERT INTO article_submission(request_id,request_hash,article_id) VALUES(?,?,?)",
@@ -775,11 +770,10 @@ pub(super) async fn create_article(
         .bind(request_hash)
         .bind(id)
         .execute(&mut *transaction)
-        .await
-        .map_err(db_error)?;
+        .await?;
     }
     let article = load_article(&mut *transaction, id, ArticleAudience::Administrator).await?;
-    transaction.commit().await.map_err(db_error)?;
+    transaction.commit().await?;
     Ok(Json(article))
 }
 
@@ -831,8 +825,7 @@ pub(super) async fn update_article(
         sqlx::query_scalar("SELECT password IS NOT NULL FROM article WHERE id=? AND deleted=0")
             .bind(id)
             .fetch_optional(&mut *transaction)
-            .await
-            .map_err(db_error)?
+            .await?
             .ok_or_else(absent)?;
     if !input.view_status && input.password.is_none() && !has_password {
         return Err(invalid("加密文章必须设置访问密码"));
@@ -842,9 +835,9 @@ pub(super) async fn update_article(
     sqlx::query("UPDATE article SET sort_id=?,label_id=?,article_cover=?,article_title=?,article_content=?,video_url=?,view_status=?,recommend_status=?,comment_status=?,password=CASE WHEN ?=1 THEN NULL ELSE COALESCE(?,password) END,tips=?,update_time=CURRENT_TIMESTAMP WHERE id=? AND deleted=0")
         .bind(input.sort_id).bind(input.label_id).bind(input.article_cover).bind(input.article_title).bind(input.article_content).bind(input.video_url)
         .bind(i64::from(input.view_status)).bind(i64::from(input.recommend_status)).bind(i64::from(input.comment_status)).bind(i64::from(input.view_status)).bind(password).bind(input.tips).bind(id)
-        .execute(&mut *transaction).await.map_err(db_error)?;
+        .execute(&mut *transaction).await?;
     let article = load_article(&mut *transaction, id, ArticleAudience::Administrator).await?;
-    transaction.commit().await.map_err(db_error)?;
+    transaction.commit().await?;
     Ok(Json(article))
 }
 
@@ -859,12 +852,11 @@ pub(super) async fn delete_article(
     )
     .bind(id)
     .execute(&mut *transaction)
-    .await
-    .map_err(db_error)?;
+    .await?;
     if result.rows_affected() == 0 {
         return Err(absent());
     }
-    transaction.commit().await.map_err(db_error)?;
+    transaction.commit().await?;
     Ok(Json(serde_json::json!({"deleted":true})))
 }
 

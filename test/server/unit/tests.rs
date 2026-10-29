@@ -682,12 +682,7 @@ async fn anonymous_comments_enforce_content_and_article_visibility() {
             StatusCode::FORBIDDEN
         );
     }
-    for content in [
-        "".to_string(),
-        " ".to_string(),
-        "<script>alert(1)</script>".to_string(),
-        "x".repeat(1025),
-    ] {
+    for content in ["".to_string(), " ".to_string(), "x".repeat(1025)] {
         assert_eq!(
             anonymous_post(
                 &app,
@@ -990,8 +985,8 @@ async fn comment_submission_requires_current_identity_and_current_ddl() {
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     }
     let identity = crate::schema::current_identity();
-    assert_eq!(identity.application_version, "blog-db-v4");
-    assert_eq!(identity.schema_revision, 4);
+    assert_eq!(identity.application_version, "blog-db-v5");
+    assert_eq!(identity.schema_revision, 5);
     crate::schema::validate(&pool).await.unwrap();
     sqlx::query("DROP TABLE comment_submission")
         .execute(&pool)
@@ -1052,6 +1047,9 @@ mod news_timestamps;
 mod media_management;
 #[path = "tests/slow_body.rs"]
 mod slow_body;
+
+#[path = "tests/comment_contracts.rs"]
+mod comment_contracts;
 
 #[tokio::test]
 async fn article_password_checks_ignore_forwarding_headers_and_failure_history() {

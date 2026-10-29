@@ -7,7 +7,7 @@ use sqlx::{Row, SqliteConnection};
 use url_encoding::address::Url;
 
 use super::formats::MediaFilename;
-use crate::{AppError, db_error};
+use crate::AppError;
 
 enum TextContext {
     Prose,
@@ -239,17 +239,17 @@ pub(super) async fn referenced(
     filename: &MediaFilename,
 ) -> Result<bool, AppError> {
     let path = filename.path();
-    // Inspect all current content, including drafts, so removing an unused
-    // upload cannot break a saved article, profile, album, note or letter.
+    // Inspect saved content, including drafts, so removing an unused upload
+    // cannot break an article, profile, album, note or letter. Anonymous comment
+    // and guestbook text renders as text nodes and does not retain media.
     const QUERIES: &[&str] = &[
         "SELECT id,coalesce(article_cover,'')||char(0)||coalesce(video_url,'')||char(0)||coalesce(article_content,'')||char(0)||coalesce(tips,'') AS value FROM article NOT INDEXED WHERE deleted=0",
         "SELECT id,coalesce(background_image,'')||char(0)||coalesce(avatar,'')||char(0)||coalesce(random_cover,'')||char(0)||coalesce(notices,'')||char(0)||coalesce(media,'') AS value FROM web_info",
         "SELECT id,coalesce(bg_cover,'')||char(0)||coalesce(man_cover,'')||char(0)||coalesce(woman_cover,'')||char(0)||coalesce(family_info,'') AS value FROM family",
         "SELECT id,coalesce(cover,'')||char(0)||coalesce(url,'')||char(0)||coalesce(introduction,'')||char(0)||coalesce(remark,'') AS value FROM resource_path",
         "SELECT id,coalesce(image_path,'')||char(0)||coalesce(content,'') AS value FROM wei_yan",
-        "SELECT id,coalesce(image_path,'')||char(0)||coalesce(avatar,'')||char(0)||coalesce(message,'') AS value FROM tree_hole",
+        "SELECT id,coalesce(image_path,'')||char(0)||coalesce(avatar,'') AS value FROM tree_hole",
         "SELECT id,coalesce(avatar,'') AS value FROM user WHERE deleted=0",
-        "SELECT id,coalesce(comment_content,'')||char(0)||coalesce(comment_info,'') AS value FROM comment",
     ];
     for query in QUERIES {
         // Every browser-normalized alias retains the uploaded filename, unless
@@ -261,13 +261,13 @@ pub(super) async fn referenced(
         let mut after = i64::MIN;
         loop {
             let rows = sqlx::query(sqlx::AssertSqlSafe(format!("SELECT id,value FROM ({query}) WHERE id>? AND (instr(value,?)>0 OR instr(value,'%')>0 OR instr(value,'&')>0 OR instr(value,char(92))>0) ORDER BY id LIMIT 8")))
-                .bind(after).bind(filename.as_str()).fetch_all(&mut *connection).await.map_err(db_error)?;
+                .bind(after).bind(filename.as_str()).fetch_all(&mut *connection).await?;
             if rows.is_empty() {
                 break;
             }
             for row in rows {
-                after = row.try_get("id").map_err(db_error)?;
-                let value: String = row.try_get("value").map_err(db_error)?;
+                after = row.try_get("id")?;
+                let value: String = row.try_get("value")?;
                 if contains_reference(&value, &path) {
                     return Ok(true);
                 }

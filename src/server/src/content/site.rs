@@ -2,7 +2,7 @@ use blog_application::admin_core::AuthenticatedIdentity;
 use blog_application::error::HttpStatus;
 mod media;
 
-use crate::{ApiResult, AppError, AppState, db_error, invalid};
+use crate::{ApiResult, AppError, AppState, invalid};
 use axum::{Json, extract::State};
 use serde::{Deserialize, Serialize};
 
@@ -18,7 +18,7 @@ pub(super) struct SiteInfo {
 }
 pub(super) async fn site_info(State(state): State<AppState>) -> ApiResult<SiteInfo> {
     Ok(Json(sqlx::query_as::<_,SiteInfo>("SELECT web_name,web_title,notices,background_image,avatar,random_cover,media FROM web_info ORDER BY id LIMIT 1")
-        .fetch_optional(&state.pool).await.map_err(db_error)?.unwrap_or(SiteInfo {web_name:Some("blog".into()),web_title:Some("相信记录的力量".into()),notices:None,background_image:None,avatar:None,random_cover:None,media:Default::default()})))
+        .fetch_optional(&state.pool).await?.unwrap_or(SiteInfo {web_name:Some("blog".into()),web_title:Some("相信记录的力量".into()),notices:None,background_image:None,avatar:None,random_cover:None,media:Default::default()})))
 }
 
 #[derive(Serialize, sqlx::FromRow)]
@@ -33,15 +33,14 @@ pub(super) struct AdminSite {
     media: sqlx::types::Json<media::SiteMedia>,
 }
 pub(super) async fn admin_site(State(state): State<AppState>) -> ApiResult<AdminSite> {
-    let mut transaction = state.pool.begin().await.map_err(db_error)?;
+    let mut transaction = state.pool.begin().await?;
     let author = crate::site_author_id(&mut *transaction).await?;
     let author_name: Option<String> = sqlx::query_scalar("SELECT username FROM user WHERE id=?")
         .bind(author)
         .fetch_one(&mut *transaction)
-        .await
-        .map_err(db_error)?;
+        .await?;
     let site = load_admin_site(&mut transaction, author_name.unwrap_or_default()).await?;
-    transaction.commit().await.map_err(db_error)?;
+    transaction.commit().await?;
     Ok(Json(site))
 }
 
@@ -51,7 +50,7 @@ async fn load_admin_site(
 ) -> Result<AdminSite, AppError> {
     Ok(sqlx::query_as::<_,AdminSite>("SELECT ? AS author_name,web_name,web_title,notices,background_image,avatar,random_cover,media FROM web_info ORDER BY id LIMIT 1")
         .bind(&author_name)
-        .fetch_optional(connection).await.map_err(db_error)?.unwrap_or(AdminSite{author_name,web_name:None,web_title:None,notices:None,background_image:None,avatar:None,random_cover:None,media:Default::default()}))
+        .fetch_optional(connection).await?.unwrap_or(AdminSite{author_name,web_name:None,web_title:None,notices:None,background_image:None,avatar:None,random_cover:None,media:Default::default()}))
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -96,8 +95,7 @@ pub(super) async fn update_site(
             .bind(&author_name)
             .bind(author)
             .fetch_one(&mut *transaction)
-            .await
-            .map_err(db_error)?;
+            .await?;
     if name_used {
         return Err(AppError::Public(HttpStatus::Conflict, "作者展示名已被使用"));
     }
@@ -105,22 +103,20 @@ pub(super) async fn update_site(
         .bind(&author_name)
         .bind(author)
         .execute(&mut *transaction)
-        .await
-        .map_err(db_error)?;
+        .await?;
     let id: Option<i64> = sqlx::query_scalar("SELECT id FROM web_info ORDER BY id LIMIT 1")
         .fetch_optional(&mut *transaction)
-        .await
-        .map_err(db_error)?;
+        .await?;
     if let Some(id) = id {
         sqlx::query("UPDATE web_info SET web_name=?,web_title=?,notices=?,background_image=?,avatar=?,random_cover=?,media=? WHERE id=?")
             .bind(input.web_name).bind(input.web_title).bind(input.notices).bind(input.background_image).bind(input.avatar).bind(input.random_cover).bind(sqlx::types::Json(input.media)).bind(id)
-            .execute(&mut *transaction).await.map_err(db_error)?;
+            .execute(&mut *transaction).await?;
     } else {
         sqlx::query("INSERT INTO web_info(web_name,web_title,notices,background_image,avatar,random_cover,media,status) VALUES(?,?,?,?,?,?,?,1)")
             .bind(input.web_name).bind(input.web_title).bind(input.notices).bind(input.background_image).bind(input.avatar).bind(input.random_cover).bind(sqlx::types::Json(input.media))
-            .execute(&mut *transaction).await.map_err(db_error)?;
+            .execute(&mut *transaction).await?;
     }
     let site = load_admin_site(&mut transaction, author_name).await?;
-    transaction.commit().await.map_err(db_error)?;
+    transaction.commit().await?;
     Ok(Json(site))
 }

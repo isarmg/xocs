@@ -37,7 +37,7 @@ test('server and browser groups are independent and preserve every gate', () => 
     'bash test/run-maintained.sh',
   ]) assert.ok(server.includes(command), `missing server check: ${command}`);
   const expected = [
-    'language', 'admin-layout', 'corner-candidates', 'configured-media', 'article-video', 'account-settings', 'admin-cleanup',
+    'language', 'admin-layout', 'corner-candidates', 'configured-media', 'article-video', 'editor-preview', 'account-settings', 'admin-cleanup',
     'management', 'contract-fixes', 'admin-recovery', 'blog-interface-runtime', 'async-state', 'transport-lifecycle', 'startup-failure', 'rust-native-domain', 'public-footer', 'public-layout', 'style-contract', 'public-recovery', 'anonymous-comments', 'pending-comment-binding',
   ];
   const actual = [...browser.matchAll(/node \.\.\/\.\.\/test\/browser\/([a-z-]+)\.mjs/g)].map(match => match[1]);
@@ -114,6 +114,7 @@ test('both matrix branches execute every UI script exactly once', () => {
       '../../test/interface/browser/corner-listener-lifecycle.mjs',
       '../../test/browser/configured-media.mjs',
       '../../test/browser/article-video.mjs',
+      '../../test/browser/editor-preview.mjs',
       '../../test/browser/account-settings.mjs', '../../test/browser/admin-cleanup.mjs', '../../test/browser/management.mjs',
       '../../test/browser/contract-fixes.mjs', '../../test/browser/admin-recovery.mjs', '../../test/browser/blog-interface-runtime.mjs', '../../test/browser/async-state.mjs', '../../test/browser/transport-lifecycle.mjs', '../../test/browser/startup-failure.mjs', '../../test/browser/rust-native-domain.mjs',
       '../../test/browser/public-footer.mjs', '../../test/browser/public-layout.mjs', '../../test/browser/style-contract.mjs', '../../test/browser/public-recovery.mjs', '../../test/browser/anonymous-comments.mjs', '../../test/browser/pending-comment-binding.mjs',
@@ -125,7 +126,7 @@ test('both matrix branches execute every UI script exactly once', () => {
     assert.equal(unknown.status, 1);
     assert.equal(unknown.stdout, '');
     // Every new Rust/WASM regression gate must propagate failures.
-    for (const script of ['rust-native-domain', 'startup-failure', 'async-state', 'configured-media', 'article-video', 'admin-recovery', 'public-recovery', 'style-contract', 'corner-candidates', 'pending-comment-binding']) {
+    for (const script of ['rust-native-domain', 'startup-failure', 'async-state', 'configured-media', 'article-video', 'editor-preview', 'admin-recovery', 'public-recovery', 'style-contract', 'corner-candidates', 'pending-comment-binding']) {
       writeFileSync(join(directory, 'node'), `#!/bin/sh\nif [ "$*" = "../../test/browser/${script}.mjs" ]; then exit 9; fi\nprintf "%s\\n" "$*"\n`);
       const failed = spawnSync('/bin/bash', ['-c', run], {
         encoding: 'utf8',

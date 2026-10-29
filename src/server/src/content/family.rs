@@ -1,4 +1,4 @@
-use crate::{ApiResult, AppError, AppState, absent, db_error, invalid};
+use crate::{ApiResult, AppError, AppState, absent, invalid};
 use axum::{Json, extract::State};
 use blog_application::admin_core::AuthenticatedIdentity;
 use blog_application::error::HttpStatus;
@@ -21,7 +21,7 @@ pub(super) struct Family {
 pub(super) async fn family(State(state): State<AppState>) -> ApiResult<Vec<Family>> {
     let author = crate::site_author_id(&state.pool).await?;
     Ok(Json(sqlx::query_as::<_,Family>("SELECT id,bg_cover,man_cover,woman_cover,man_name,woman_name,timing,countdown_title,countdown_time,family_info FROM family WHERE user_id=? AND status=1")
-        .bind(author).fetch_all(&state.pool).await.map_err(db_error)?))
+        .bind(author).fetch_all(&state.pool).await?))
 }
 
 #[derive(Serialize, sqlx::FromRow)]
@@ -48,8 +48,7 @@ pub(super) async fn content_family(State(state): State<AppState>) -> ApiResult<V
         )))
         .bind(author)
         .fetch_all(&state.pool)
-        .await
-        .map_err(db_error)?,
+        .await?,
     ))
 }
 #[derive(Deserialize)]
@@ -109,8 +108,7 @@ async fn load_family(
     .bind(id)
     .bind(author)
     .fetch_optional(connection)
-    .await
-    .map_err(db_error)?
+    .await?
     .ok_or_else(absent)
 }
 pub(super) async fn create_family(
@@ -124,8 +122,7 @@ pub(super) async fn create_family(
     let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM family WHERE user_id=?)")
         .bind(author)
         .fetch_one(&mut *transaction)
-        .await
-        .map_err(db_error)?;
+        .await?;
     if exists {
         return Err(AppError::Public(
             HttpStatus::Conflict,
@@ -136,9 +133,9 @@ pub(super) async fn create_family(
         .bind(author)
         .bind(input.bg_cover).bind(input.man_cover).bind(input.woman_cover).bind(input.man_name).bind(input.woman_name).bind(input.timing)
         .bind(input.countdown_title).bind(input.countdown_time).bind(input.family_info).bind(i64::from(input.status))
-        .execute(&mut *transaction).await.map_err(db_error)?.last_insert_rowid();
+        .execute(&mut *transaction).await?.last_insert_rowid();
     let family = load_family(&mut transaction, id, author).await?;
-    transaction.commit().await.map_err(db_error)?;
+    transaction.commit().await?;
     Ok(Json(family))
 }
 pub(super) async fn update_family(
@@ -153,12 +150,12 @@ pub(super) async fn update_family(
     let changed=sqlx::query(sqlx::AssertSqlSafe(format!("UPDATE family SET bg_cover=?,man_cover=?,woman_cover=?,man_name=?,woman_name=?,timing=?,countdown_title=?,countdown_time=?,family_info=?,status=?,update_time=CURRENT_TIMESTAMP WHERE id=? AND {FAMILY_OWNER}")))
         .bind(input.bg_cover).bind(input.man_cover).bind(input.woman_cover).bind(input.man_name).bind(input.woman_name).bind(input.timing)
         .bind(input.countdown_title).bind(input.countdown_time).bind(input.family_info).bind(i64::from(input.status)).bind(id).bind(author)
-        .execute(&mut *transaction).await.map_err(db_error)?;
+        .execute(&mut *transaction).await?;
     if changed.rows_affected() == 0 {
         return Err(absent());
     }
     let family = load_family(&mut transaction, id, author).await?;
-    transaction.commit().await.map_err(db_error)?;
+    transaction.commit().await?;
     Ok(Json(family))
 }
 pub(super) async fn delete_family(
@@ -174,11 +171,10 @@ pub(super) async fn delete_family(
     .bind(id)
     .bind(author)
     .execute(&mut *transaction)
-    .await
-    .map_err(db_error)?;
+    .await?;
     if changed.rows_affected() == 0 {
         return Err(absent());
     }
-    transaction.commit().await.map_err(db_error)?;
+    transaction.commit().await?;
     Ok(Json(serde_json::json!({"deleted":true})))
 }
