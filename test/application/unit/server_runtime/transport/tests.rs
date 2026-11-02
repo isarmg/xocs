@@ -330,3 +330,41 @@ async fn slow_request_headers_expire_on_real_socket() {
     handle.shutdown();
     assert!(serving.await.unwrap().unwrap().clean);
 }
+
+#[tokio::test]
+async fn repeated_chunked_transfer_codings_are_rejected_before_handler_dispatch() {
+    let app = Router::new().route("/", axum::routing::post(|body: String| async move { body }));
+    let (address, handle, serving) = launch(Http1Limits::default(), app).await;
+    for field in [
+        "Transfer-Encoding: chunked, chunked",
+        "Transfer-Encoding: ChUnKeD, gzip, chunked",
+        "Transfer-Encoding: chunked;invalid=1, chunked",
+        "Transfer-Encoding: chunked\r\nTransfer-Encoding: chunked",
+        "Transfer-Encoding: gzip, chunked\r\nTransfer-Encoding: chunked",
+        "Transfer-Encoding: chunked\r\nTransfer-Encoding: gzip\r\nTransfer-Encoding: chunked",
+        "Transfer-Encoding: chunked, gzip;parameter=\"é\"\r\nTransfer-Encoding: chunked",
+    ] {
+        let bytes = format!(
+            "POST / HTTP/1.1\r\nHost: localhost\r\n{field}\r\nConnection: close\r\n\r\n4\r\ndata\r\n0\r\n\r\n"
+        );
+        let response = request(address, bytes.as_bytes()).await;
+        assert!(response.starts_with(b"HTTP/1.1 400"), "{field}");
+    }
+    for field in [
+        "Transfer-Encoding: chunked",
+        "Transfer-Encoding: ChUnKeD",
+        "Transfer-Encoding: gzip, chunked",
+        "Transfer-Encoding: gzip\r\nTransfer-Encoding: chunked",
+        "Transfer-Encoding: gzip;parameter=\"a,chunked,b\", chunked",
+        "Transfer-Encoding: gzip;parameter=\"a\\\",chunked,b\", chunked",
+    ] {
+        let bytes = format!(
+            "POST / HTTP/1.1\r\nHost: localhost\r\n{field}\r\nConnection: close\r\n\r\n4\r\ndata\r\n0\r\n\r\n"
+        );
+        let response = request(address, bytes.as_bytes()).await;
+        assert!(response.starts_with(b"HTTP/1.1 200"), "{field}");
+        assert!(response.ends_with(b"data"), "{field}");
+    }
+    handle.shutdown();
+    assert!(serving.await.unwrap().unwrap().clean);
+}

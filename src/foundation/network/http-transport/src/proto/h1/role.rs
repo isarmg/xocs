@@ -272,6 +272,12 @@ impl Http1Transaction for Server {
                         debug!("HTTP/1.0 cannot have Transfer-Encoding header");
                         return Err(Parse::transfer_encoding_unexpected());
                     }
+                    // RFC 9112 section 6.1 forbids applying chunked more than
+                    // once. A chunked coding must end the combined field list,
+                    // including when that list spans multiple field lines.
+                    if is_te_chunked || headers::has_nonfinal_chunked(&value) {
+                        return Err(Parse::transfer_encoding_invalid());
+                    }
                     is_te = true;
                     if is_cl && con_len.take().is_some() {
                         headers.remove(header::CONTENT_LENGTH);

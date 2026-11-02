@@ -5,6 +5,10 @@ mod formats;
 mod references;
 mod storage;
 
+#[cfg(test)]
+#[path = "../../../test/server/unit/media/performance.rs"]
+mod performance;
+
 pub(crate) use formats::is_media_filename;
 pub(crate) use storage::recover_deletions;
 
@@ -106,7 +110,7 @@ async fn upload(
     headers: HeaderMap,
     body: Bytes,
 ) -> ApiResult<UploadedMedia> {
-    save_media(&state, &headers, body, identity, MediaKind::Image).await
+    save_media(&state, headers, body, identity, MediaKind::Image).await
 }
 
 async fn upload_video(
@@ -115,23 +119,30 @@ async fn upload_video(
     headers: HeaderMap,
     body: Bytes,
 ) -> ApiResult<UploadedMedia> {
-    save_media(&state, &headers, body, identity, MediaKind::Video).await
+    save_media(&state, headers, body, identity, MediaKind::Video).await
 }
 
 async fn save_media(
     state: &AppState,
-    headers: &HeaderMap,
+    headers: HeaderMap,
     body: Bytes,
     identity: AuthenticatedIdentity,
     kind: MediaKind,
 ) -> ApiResult<UploadedMedia> {
-    let upload = MediaUpload::parse(kind, headers, body)?;
     let owned = state.clone();
     let result = state
         .scope
         .commit_tasks
         .try_spawn(async move {
             let _operation = owned.media_operations.lock().await;
+            // Serializing parsing also bounds the blocking work for large uploads.
+            let upload =
+                tokio::task::spawn_blocking(move || MediaUpload::parse(kind, &headers, body))
+                    .await
+                    .map_err(|source| AppError::Task {
+                        message: "媒体校验失败",
+                        source,
+                    })??;
             let mut transaction = crate::content::begin_mutation(&owned.pool, &identity).await?;
             let owner = crate::site_author_id(&mut *transaction).await?;
             let result = storage::save(&owned, &mut transaction, upload, owner).await?;

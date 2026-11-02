@@ -30,7 +30,7 @@
 | --- | --- |
 | `ROOT/config/config.json` | 实例配置 |
 | `data_dir/site.sqlite` | 业务数据、管理员密码哈希、会话和安全审计 |
-| `media` 或 `ROOT/media` | 上传图片 |
+| `media` 或 `ROOT/media` | 上传图片和视频 |
 | `ROOT/logs` | 结构化日志 |
 | `ROOT/run` | 数据库检查的临时快照 |
 

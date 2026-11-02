@@ -4442,6 +4442,21 @@
       "file": "src/autolink/finder.rs",
       "reason": "Make the maintained autolink kind a closed enum so product consumers exhaustively handle URL and email links and newly added kinds require compiler-checked decisions.",
       "production_behavior_change": false
+    },
+    {
+      "directory": "src/foundation/storage/sqlite-access",
+      "file": "src/sqlite/options/parse.rs",
+      "reason": "Preserve literal SQLite filenames across URL serialization by encoding authority and path delimiters, and retain read-only precedence over create-if-missing to match actual connection flags.",
+      "production_behavior_change": true
+    },
+    {
+      "directory": "src/foundation/network/http-transport",
+      "files": [
+        "src/headers.rs",
+        "src/proto/h1/role.rs"
+      ],
+      "reason": "Reject repeated or non-final chunked transfer codings across HTTP/1 request fields before handler dispatch, while preserving quoted transfer parameters and valid coding lists.",
+      "production_behavior_change": true
     }
   ]
 }

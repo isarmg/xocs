@@ -89,7 +89,7 @@ G4 圆角控制器由产品传入 `src/browser/src/corner_surfaces.txt` 中的�
 
 管理后台复用一组布局与控件几何角色；公开页面保留独立布局与尺寸，只共享 Rust 实现的 G4 连续圆角。尺寸、来源与验证入口见[界面样式](interface-design.md)。
 
-`src/web/src/main.js` 导入样式、加载绑定并启动 WASM；`src/web/runtime/startup.js` 提供 WASM 或字体准备失败时的错误面板及重载按钮。`src/web/pkg` 中的 JavaScript 由绑定工具生成，`.mjs` 脚本用于测试与工具检查。
+`src/web/src/main.js` 导入样式、加载绑定并启动 WASM；`src/web/runtime/startup.js` 在 WASM 加载、应用挂载失败或启动超时时显示错误面板及重载按钮。装饰字体独立加载，字体失败或持续等待时页面仍可使用后备字体。`src/web/pkg` 中的 JavaScript 由绑定工具生成，`.mjs` 脚本用于测试与工具检查。
 
 ## 资源构建
 

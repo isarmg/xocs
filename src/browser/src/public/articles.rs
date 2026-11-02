@@ -327,11 +327,16 @@ pub(super) fn Article(id: i64) -> impl IntoView {
 }
 
 fn reading_action(
-    target: Option<web_sys::Element>,
+    event: &web_sys::Event,
     lightbox: RwSignal<Option<String>>,
     copy_status: RwSignal<String>,
 ) {
-    let Some(target) = target else { return };
+    let Some(target) = event
+        .target()
+        .and_then(|target| target.dyn_into::<web_sys::Element>().ok())
+    else {
+        return;
+    };
     if let Some(button) = target
         .closest(".article-copy-code")
         .expect("invariant: the code copy selector is valid CSS")
@@ -377,6 +382,7 @@ fn reading_action(
         .closest("img")
         .expect("invariant: img is a valid CSS selector")
     {
+        event.prevent_default();
         lightbox.set(img.get_attribute("src").and_then(|s| safe_url(&s, false)));
     }
 }
@@ -513,12 +519,7 @@ fn Reading(article: ArticleModel) -> impl IntoView {
                                 .class("article-markdown")
                                 .inner_html(rendered.html)
                                 .on(ev::click, move |ev| {
-                                    reading_action(
-                                        ev.target()
-                                            .and_then(|t| t.dyn_into::<web_sys::Element>().ok()),
-                                        lightbox,
-                                        copied,
-                                    )
+                                    reading_action(ev.as_ref(), lightbox, copied)
                                 })
                                 .on(ev::keydown, move |ev| {
                                     if ["Enter", " "].contains(&ev.key().as_str())
@@ -526,14 +527,7 @@ fn Reading(article: ArticleModel) -> impl IntoView {
                                             e.is_instance_of::<web_sys::HtmlImageElement>()
                                         })
                                     {
-                                        ev.prevent_default();
-                                        reading_action(
-                                            ev.target().and_then(|t| {
-                                                t.dyn_into::<web_sys::Element>().ok()
-                                            }),
-                                            lightbox,
-                                            copied,
-                                        )
+                                        reading_action(ev.as_ref(), lightbox, copied)
                                     }
                                 }),
                             move || {

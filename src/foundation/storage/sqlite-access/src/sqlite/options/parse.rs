@@ -116,21 +116,17 @@ impl SqliteConnectOptions {
     }
 
     pub(crate) fn build_url(&self) -> Url {
-        // https://url.spec.whatwg.org/#path-percent-encode-set
-        static PATH_ENCODE_SET: AsciiSet = url_encoding::percent::CONTROLS
-            .add(b' ')
-            .add(b'"')
-            .add(b'#')
-            .add(b'<')
-            .add(b'>')
-            .add(b'?')
-            .add(b'`')
-            .add(b'{')
-            .add(b'}');
+        // Encode the filename as one component: URL authority delimiters and
+        // path normalization must not reinterpret a valid SQLite filename.
+        static FILENAME_ENCODE_SET: AsciiSet = url_encoding::percent::NON_ALPHANUMERIC
+            .remove(b'-')
+            .remove(b'.')
+            .remove(b'_')
+            .remove(b'~');
 
         let filename_encoded = percent_encode(
             self.filename.as_os_str().as_encoded_bytes(),
-            &PATH_ENCODE_SET,
+            &FILENAME_ENCODE_SET,
         );
 
         let mut url = Url::parse(&format!("sqlite://{filename_encoded}"))
@@ -138,8 +134,8 @@ impl SqliteConnectOptions {
 
         let mode = match (self.in_memory, self.create_if_missing, self.read_only) {
             (true, _, _) => "memory",
-            (false, true, _) => "rwc",
-            (false, false, true) => "ro",
+            (false, _, true) => "ro",
+            (false, true, false) => "rwc",
             (false, false, false) => "rw",
         };
         url.query_pairs_mut().append_pair("mode", mode);

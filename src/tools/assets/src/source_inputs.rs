@@ -29,11 +29,18 @@ fn invalid(message: impl Into<String>) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, message.into())
 }
 
+fn hex_digest(bytes: &[u8]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut output = String::with_capacity(bytes.len() * 2);
+    for &byte in bytes {
+        output.push(char::from(HEX[usize::from(byte >> 4)]));
+        output.push(char::from(HEX[usize::from(byte & 0xf)]));
+    }
+    output
+}
+
 pub(crate) fn sha(bytes: &[u8]) -> String {
-    Sha256::digest(bytes)
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
+    hex_digest(&Sha256::digest(bytes))
 }
 
 pub(crate) fn relative(path: &Path) -> io::Result<String> {
@@ -261,11 +268,7 @@ pub(crate) fn digest(files: &Files) -> String {
         digest.update(hash.as_bytes());
         digest.update(b"\n");
     }
-    digest
-        .finalize()
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
+    hex_digest(&digest.finalize())
 }
 
 /// A cache belongs to one snapshot only; subsequent snapshots reread all bytes.

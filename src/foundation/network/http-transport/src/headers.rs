@@ -151,6 +151,40 @@ pub(super) fn is_chunked_(value: &HeaderValue) -> bool {
     false
 }
 
+#[cfg(all(feature = "server", feature = "http1"))]
+pub(super) fn has_nonfinal_chunked(value: &HeaderValue) -> bool {
+    let value = value.as_bytes();
+    let mut start = 0;
+    let mut quoted = false;
+    let mut escaped = false;
+    for (index, &byte) in value.iter().enumerate() {
+        if escaped {
+            escaped = false;
+            continue;
+        }
+        match byte {
+            b'\\' if quoted => escaped = true,
+            b'"' => quoted = !quoted,
+            b',' if !quoted => {
+                let coding = &value[start..index];
+                let name_end = coding
+                    .iter()
+                    .position(|&b| b == b';')
+                    .unwrap_or(coding.len());
+                if coding[..name_end]
+                    .trim_ascii()
+                    .eq_ignore_ascii_case(b"chunked")
+                {
+                    return true;
+                }
+                start = index + 1;
+            }
+            _ => {}
+        }
+    }
+    false
+}
+
 #[cfg(all(feature = "client", feature = "http1"))]
 pub(super) fn add_chunked(mut entry: http::header::OccupiedEntry<'_, HeaderValue>) {
     const CHUNKED: &str = "chunked";

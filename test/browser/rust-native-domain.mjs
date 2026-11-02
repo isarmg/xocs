@@ -16,13 +16,15 @@ if (external) {
 }
 const server = external ? null : await preview({preview:{host:'127.0.0.1',port:0,strictPort:true}});
 const base = external || `http://127.0.0.1:${server.httpServer.address().port}`;
-const pixel = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64');
+// Give pointer activation a stable target in both browsers, including linked images.
+const pixel = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAmElEQVR4nO3QMREAIBDAsJeDMCTiD2RkoEP2Xmftc382OkBrgA7QGqADtAboAK0BOkBrgA7QGqADtAboAK0BOkBrgA7QGqADtAboAK0BOkBrgA7QGqADtAboAK0BOkBrgA7QGqADtAboAK0BOkBrgA7QGqADtAboAK0BOkBrgA7QGqADtAboAK0BOkBrgA7QGqADtAboAO0BQEXyDk1jVl8AAAAASUVORK5CYII=', 'base64');
 const code = `const literal = '<img src=x onerror=alert(1)>';`;
 const markdown = [
   '## Chapter **One**', 'A line\nA second line',
   '### A smaller chapter', '#### Details',
   `\`\`\`js\n${code}\n\`\`\``,
   '![A " photo](/media/domain-test.png)',
+  '[![Linked photo](/media/domain-test.png)](/sort?linked_image=1)',
   '| First | Second |\n| --- | --- |\n| one | ~~old~~ |',
   'Visit https://example.org/path, www.example.com or test@example.org.',
   'Bare links: example.org:8080/docs, www.example.com/docs/part:one and example.org/search?url=https://example.net.',
@@ -116,21 +118,33 @@ try {
 
       const image=body.getByRole('button',{name:'View image: A " photo',exact:true});
       await expect(image).toHaveAttribute('tabindex','0');
-      await expect.poll(()=>image.evaluate(node=>node.complete&&node.naturalWidth===1)).toBe(true);
+      await expect.poll(()=>image.evaluate(node=>node.complete&&node.naturalWidth===64)).toBe(true);
       await image.focus();await page.keyboard.press('Enter');
       const dialog=page.getByRole('dialog',{name:'View image',exact:true});
       await expect(dialog).toBeVisible();await expect(dialog.locator('img')).toHaveAttribute('src',`${base}/media/domain-test.png`);
       await dialog.getByRole('button',{name:'Close image',exact:true}).click();await expect(dialog).toHaveCount(0);
       await expect(image).toBeFocused();
-      result.groups.push('image alt escaping, keyboard activation, lightbox and focus restoration');
+      const articleUrl=page.url();
+      const linkedImage=body.getByRole('button',{name:'View image: Linked photo',exact:true});
+      await linkedImage.click();
+      await expect(dialog).toBeVisible();
+      assert.equal(page.url(),articleUrl,'Opening a linked image must keep the current article');
+      await dialog.getByRole('button',{name:'Close image',exact:true}).click();await expect(dialog).toHaveCount(0);
+      await expect(linkedImage).toBeFocused();
+      result.groups.push('image alt escaping, keyboard and pointer activation, linked-image navigation suppression, lightbox and focus restoration');
 
       await expect(body.locator('script,svg,math,style,iframe,object,embed')).toHaveCount(0);
-      await expect(body.locator('img')).toHaveCount(1);
+      await expect(body.locator('img')).toHaveCount(2);
       assert.equal(await page.evaluate(()=>window.__domainXss),0);
       const dangerous=await body.evaluate(node=>[...node.querySelectorAll('*')].flatMap(element=>[...element.attributes].filter(attr=>/^on/i.test(attr.name)||['href','src'].includes(attr.name)&&!['http:','https:','mailto:','ftp:','ftps:','tel:'].includes(new URL(attr.value,location.href).protocol)).map(attr=>`${element.tagName}:${attr.name}=${attr.value}`)));
       assert.deepEqual(dangerous,[]);
       for(let i=1;i<=6;i++)await expect(body.getByRole('link',{name:`blocked-${i}`,exact:true})).toHaveCount(0);
       result.groups.push('raw HTML/SVG/MathML and entity/control-character/dangerous-protocol XSS guards');
+
+      await body.getByRole('link',{name:'Local link',exact:true}).click();
+      await expect.poll(()=>new URL(page.url()).pathname).toBe('/sort');
+      assert.equal(new URL(page.url()).searchParams.get('q'),'rust');
+      assert.equal(new URL(page.url()).hash,'#top');
 
       await page.goto(`${base}/admin?lang=en#labels`);await waitForApplication(page);
       await page.getByLabel('Tag name',{exact:true}).fill('Rust tag');

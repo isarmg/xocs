@@ -155,3 +155,70 @@ fn verification_rejects_linked_sources_and_special_objects() -> io::Result<()> {
     assert!(verification_paths(root).is_err());
     Ok(())
 }
+
+#[test]
+fn source_hashes_preserve_sha256_lowercase_and_leading_zeroes() {
+    assert_eq!(
+        sha(b""),
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    );
+    assert_eq!(
+        sha(b"abc"),
+        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    );
+    let bytes: Vec<_> = (0..=u8::MAX).collect();
+    let encoded = hex_digest(&bytes);
+    assert_eq!(encoded.len(), bytes.len() * 2);
+    for (byte, pair) in bytes.iter().zip(encoded.as_bytes().as_chunks::<2>().0) {
+        assert_eq!(pair, format!("{byte:02x}").as_bytes());
+    }
+}
+
+#[test]
+#[ignore = "manual release-profile source digest benchmark"]
+fn source_digest_benchmark() {
+    use std::{hint::black_box, time::Instant};
+
+    fn previous_hex(bytes: &[u8]) -> String {
+        bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+    }
+    fn previous_sha(bytes: &[u8]) -> String {
+        previous_hex(&Sha256::digest(bytes))
+    }
+    fn measure(operation: fn(&[u8]) -> String, bytes: &[u8]) -> u128 {
+        let started = Instant::now();
+        for _ in 0..20_000 {
+            black_box(operation(black_box(bytes)));
+        }
+        started.elapsed().as_micros()
+    }
+
+    let digest = Sha256::digest(b"source digest benchmark");
+    let small = b"pub fn main() {}\n";
+    let file = vec![b'x'; 4096];
+    for (label, bytes, previous, current) in [
+        (
+            "hex-only",
+            digest.as_slice(),
+            previous_hex as fn(&[u8]) -> String,
+            hex_digest as fn(&[u8]) -> String,
+        ),
+        ("sha-empty", b"".as_slice(), previous_sha, sha),
+        ("sha-small", small.as_slice(), previous_sha, sha),
+        ("sha-4096", file.as_slice(), previous_sha, sha),
+    ] {
+        assert_eq!(previous(bytes), current(bytes));
+        for round in 0..5 {
+            let (before, after) = if round % 2 == 0 {
+                (measure(previous, bytes), measure(current, bytes))
+            } else {
+                let after = measure(current, bytes);
+                (measure(previous, bytes), after)
+            };
+            eprintln!(
+                "{label}: round={round} samples=20000 bytes={} previous_us={before} current_us={after}",
+                bytes.len()
+            );
+        }
+    }
+}

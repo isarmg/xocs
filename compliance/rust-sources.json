@@ -5502,11 +5502,26 @@
         "file": "src/autolink/finder.rs",
         "production_behavior_change": false,
         "reason": "Make the maintained autolink kind a closed enum so product consumers exhaustively handle URL and email links and newly added kinds require compiler-checked decisions."
+      },
+      {
+        "directory": "src/foundation/storage/sqlite-access",
+        "file": "src/sqlite/options/parse.rs",
+        "production_behavior_change": true,
+        "reason": "Preserve literal SQLite filenames across URL serialization by encoding authority and path delimiters, and retain read-only precedence over create-if-missing to match actual connection flags."
+      },
+      {
+        "directory": "src/foundation/network/http-transport",
+        "files": [
+          "src/headers.rs",
+          "src/proto/h1/role.rs"
+        ],
+        "production_behavior_change": true,
+        "reason": "Reject repeated or non-final chunked transfer codings across HTTP/1 request fields before handler dispatch, while preserving quoted transfer parameters and valid coding lists."
       }
     ],
     "schema": 1
   },
-  "local_modifications_sha256": "3d1b531db034e3f808c278ffe99e8352bdc9aac21374ef1f5483e71d442ac31e",
+  "local_modifications_sha256": "bb3bd6e28cbfff6edf7640df3d598f0b1fbfd0afa15a90ffb00104bdc6e9ab34",
   "lockfiles_sha256": {
     "Cargo.lock": "431585aa5472dd5a50aa6059872f7f27f91f400d7e8fbba13a8da0e3a0c19e96"
   },
@@ -33298,7 +33313,7 @@
         "test/application/unit/server_runtime/listeners/tests.rs": "136b6da246ab30cd4c579b7944ac48f16dddb210d5bd885f2ac03e1470dcf970",
         "test/application/unit/server_runtime/tasks/tests.rs": "df1414bfb5a3f09834270091dfed3d0baf19133972856d507959d5a3a857c473",
         "test/application/unit/server_runtime/tests.rs": "87ee7e44e1c2cf9c65025f1b29812b577b6ca0ed90de1d601a75ec4d505e345e",
-        "test/application/unit/server_runtime/transport/tests.rs": "2950d87aa095225934a71a514d6a7e0ea4100abe77400bdf7d1305f4d10c92ff",
+        "test/application/unit/server_runtime/transport/tests.rs": "fa09e7c4b768250f9429202d33669d2a9b7b8c8574341e0cc5ab32ba7fd8c094",
         "test/application/unit/server_target/tests.rs": "154f38bf87bf7c101e00232fd5506d08a3c62fa4f620170d2ea22915bdfed376",
         "test/application/unit/sqlite/blocking/tests.rs": "c9a0c8b32302fd764a7b52ee231a667196ed4166c411e1be2377e10b6b81f4b5",
         "test/application/unit/sqlite/native_limits/tests.rs": "8eb918b320523ed9c621b7410fbd90cffec8dd1d4986eac261722ec9f7009e8d",
@@ -33363,7 +33378,7 @@
         "src/markdown/video.rs": "dddd60e7d2131f0659d9c592950c2b66eefd0a59cb5bbb9b1db7d394c4d14ec9",
         "src/models.rs": "c0444b7f101dfb8e23591c1a39e3ce07d0593b0bab88ce7400d64068d8ef18b8",
         "src/public/appearance.rs": "f5d38d333769717d6c28491db7a3ab6d5fcbf28bc2cf75c031d3ea36feae208f",
-        "src/public/articles.rs": "cf77f53039b2bd73e063022a1abc34fa72082209d423095bbb15d4e56f98dd30",
+        "src/public/articles.rs": "98222f32a91e4fffbe2cbb6c1269f043e737136b76138ecfe66f2ce3d2b63a7f",
         "src/public/guestbook.rs": "e5de7640660ef8cf658900cdc7d13cbb7d7c77936467f367cd8a86eb97a45aa1",
         "src/public/home.rs": "a437567a520dab9fbf0c9aa20f2c21486a1d8bafe1e6167d87da7799b0ad0744",
         "src/public/journal.rs": "7ac992e243112e4a98e763d6eb9645c8d78aadaed4b6ee8bf78c5fc2b024926d",
@@ -33408,7 +33423,7 @@
         "test/browser/public-layout.mjs": "14e1bbe7ce0a0fc3a9fbd75a2f26b354213de94db23d4c819960d966ab5cf31e",
         "test/browser/public-recovery.mjs": "d6219e65949c97be299d50b82fcd74302a12bf4acdc13585a3dbd8e04a1baddb",
         "test/browser/public-style-baseline.mjs": "6095aed2f6366188fd7b435953d610650d4bb1c976beb423d903ee14c84fb57a",
-        "test/browser/rust-native-domain.mjs": "b1f841e636115e07f88a67cfd40440655b57983cff4f337d4df5777dfda7cc2b",
+        "test/browser/rust-native-domain.mjs": "00e01879358196163f0595ccdbec593a2dde236a7645ee3cfb03ad016a05b40b",
         "test/browser/startup-failure.mjs": "1212d90b717cad063a4fe61d625e552bbe4f31372abf5d9f82ffb5e2c794b269",
         "test/browser/startup-failures.mjs": "20bb985f9ee579aedd6cf5ab6f4a52e314c8a599a38b81fab46249c20c140ecf",
         "test/browser/style-contract.mjs": "fe657369babe3e7cc690fdc96b85ba03611c07d002b530ced9b6fdbd1b3dc40e",
@@ -42215,7 +42230,7 @@
         "src/ext/h1_reason_phrase.rs": "3aa5a47abcf6064174f4d9d4ce71c96750e1502c99650852fa671524053e6fba",
         "src/ext/informational.rs": "647ad6cff8e086f1ac96202e88f0728aa7a75ec03c2031f60ba0fd90996c796e",
         "src/ext/mod.rs": "e9c85c4976ccaa191961a381b0563555182a6af779745836daeff857429ceec9",
-        "src/headers.rs": "d8ad325348ddf49a971c01f283515cdb71e5c3352527fdf65d5f37c2016f31d3",
+        "src/headers.rs": "ed03977bb9a7c86ba4729d9c29c285f46d1522e301c902edd495598e41c60b23",
         "src/lib.rs": "ce303657b0fbfda1097b7cc1a31c0b3ad05e3e705215aebe1903a704dc8d64d3",
         "src/proto/h1/conn.rs": "a47582cc829d4986d68329729721b274281af93c3b9c04402e3244c8f6003057",
         "src/proto/h1/decode.rs": "252881181e951a03983e0a70bb28e169b0927630db05b80ead3874949f6b9bd7",
@@ -42223,7 +42238,7 @@
         "src/proto/h1/encode.rs": "67f84fc50232250b403994de3ff25c0df4474cff30ff265f220d923cb24815cb",
         "src/proto/h1/io.rs": "653c13f812672150c6aca8ee3a2a8ee83506f830a9e0fc26d7224ac985725b65",
         "src/proto/h1/mod.rs": "eb9195369b7ea5dca87100a3298370fd472c0aa6bab7b428a8a1badb73cabe97",
-        "src/proto/h1/role.rs": "295e6a61db48a00aac3003c9adb6725702f75b73d5c62055a6e22ed91a5bd212",
+        "src/proto/h1/role.rs": "a4dfcbd443364b5b14a0c39ceff4d3c8c9381371b1f46bc2fa16cbf4a65f43c4",
         "src/proto/mod.rs": "c24f0810fb449ce69d6a36e935358964807f628f9ffa4426b13536edddfffbd0",
         "src/rt/io.rs": "66cafbf5956fcc67be05684d1cd31964a0815b318670e1411883713c075cc99b",
         "src/rt/mod.rs": "5f058b590aab32289f0ca01cfdf4da1132e8ea4bb4066cb7357128892d4fc0ac",
@@ -45121,7 +45136,7 @@
         "src/sqlite/options/journal_mode.rs": "e2621add6bf0f97d2a2c8aab5e896e168bbb2d3fa15a25d6665c6aba467fc8aa",
         "src/sqlite/options/locking_mode.rs": "b488fa79f83fd6196316f4a1cdfd8da963bb7199eb1934ec45789f315b1e16e0",
         "src/sqlite/options/mod.rs": "e25e1f8fd895955e797daeee04abe64e5134fe8bc6fbcd4427eae506db7ca7c2",
-        "src/sqlite/options/parse.rs": "b931a2e24a39966945e79e45f270d1a8ccea8d3aa3ebdf3c1f03a017407f84c9",
+        "src/sqlite/options/parse.rs": "14f50a72b5e16761f26ab9ef35af2ef7d56d60e3cef693f37b4d578a7c174fef",
         "src/sqlite/options/synchronous.rs": "b0760eac136041e2fd25c0f8c4fd8161d515c168dd0e7a1b153d5cb7c2c3f13a",
         "src/sqlite/query_result.rs": "9cff47b8f77ea6502d1e965e07574a756807b34c01144865a00236151f26d1c5",
         "src/sqlite/row.rs": "69807c7da9116043e3bebdb728c9fa20ffc773cc32ad93eea3c8bb66e3238bae",
@@ -45173,7 +45188,7 @@
         "test/foundation/storage/sqlite-access/unit/src/sqlite/options/parse/6353.rs": "5971e2e823908eac73da4f104eb246196f25c0d8d4101fd277f4ed812d0b4bcd",
         "test/foundation/storage/sqlite-access/unit/src/sqlite/options/parse/6997.rs": "b5a720778f514f69f28da59804cf226ad4c13f0fe592f5b1408fcebfedfef3a0",
         "test/foundation/storage/sqlite-access/unit/src/sqlite/options/parse/7237.rs": "5ddd2554ee9b9f4e9266ad6ebf881e4bbd01224e767ca8f109e278dc6bd66e1a",
-        "test/foundation/storage/sqlite-access/unit/src/sqlite/options/parse/7492.rs": "58dd1db4708fe0c90db8bdbc8f665ea8b4054d26cf501c034de1f554b025040d"
+        "test/foundation/storage/sqlite-access/unit/src/sqlite/options/parse/7492.rs": "181465613e834c3c9aef0a2ea205453e23598d79cbb6e13750aecfd3faf01692"
       },
       "version": "0.0.0"
     },
@@ -49515,7 +49530,7 @@
         "src/lifecycle.rs": "8757492cf14a15f3635a2225960d3f17118fc184a280d197c8a498a5a37c4f34",
         "src/main.rs": "1c6b11e386dcf69c2fc292276b450b29b321d681089caedb6b67044f0ddcf4a4",
         "src/maintenance.rs": "2036652603ee0da79400c543633b272d3293e72998c20649df5d3e72a4e72807",
-        "src/media.rs": "276e277a4dd1d82e1b0890887119ba9fed2cfad0ce8ee1d325969e02e938b833",
+        "src/media.rs": "d784b4d41dff8ae9d2b7f20fd16e604691e4110503fd7b841f6a7fe2d78fdd77",
         "src/media/formats.rs": "ebbb7517230fa8b426407d558139f9c903e6082185181ae5be7cb2ec36773a51",
         "src/media/references.rs": "44ed2d254be85fa320fa1fcff2535c1b1ae7471b864ad1eee4545a294caab622",
         "src/media/storage.rs": "3612e2835a4aeab6bcfaf08cb0514de209446a7690457771a4e0156d1b88f5ad",
@@ -49551,6 +49566,7 @@
         "test/server/unit/lifecycle.rs": "fb009dc49b2686c53357004b2ed518321df83d069d8450f31505ef0b3d225f8e",
         "test/server/unit/maintenance.rs": "1ffa4f939428a6cb8ebbf1e5cbbdbdfc43548d25095364e55e694da2bb19d4ad",
         "test/server/unit/media/formats.rs": "e124b7f13ca28399fc2f98540b9b1b853acf44cb74c8c2922bbcb9c2debe88ec",
+        "test/server/unit/media/performance.rs": "47e7680acdb651727a7846b9f97274710499fdd6b3803f2c679d192052240895",
         "test/server/unit/media/references.rs": "2c71aa8af8b9fbe4528e3b43ab8aa52d25d134edd5f92bf38fa3dd013cdc1464",
         "test/server/unit/static_assets/identity_tests.rs": "497ac09fcb5a9a9d988b9b354f71b83ec197d8501adc98d18b51b6755313ccfe",
         "test/server/unit/tests.rs": "08651cfb9f49c24302e33fb65a607241243bc3ee9c29b561f474fdabe8fdbdc9",
@@ -49618,7 +49634,7 @@
         "src/process.rs": "154524de4e0625bed5ad59500a9b8518c2617bc96b49d7bb31e1761a747f221e",
         "src/server_build.rs": "9b0c58d1bce7cd810c6fabb923203c66057fba7ff1cee81db3f5f7f677c48695",
         "src/server_build/error.rs": "a3b4444b3b1701cad774f0c7b52c13611ba9e6129e0a4d8a9ef12e9a3e46da9f",
-        "src/source_inputs.rs": "994369d95aeb2ae29e7f13619b0b07aebed244309d3ad383c3a8467599c02f5a"
+        "src/source_inputs.rs": "a135b818e7d6291c8412512a99465e4591007470925a189cfe7c90ba195029d6"
       },
       "layer": "build",
       "name": "blog-assets",
@@ -49642,7 +49658,7 @@
         "test/tools/assets/unit/platform_contract.rs": "bd919ed27af4b30f7cdd8955f24d61280aa87eb1a01834b7fb528697b41338d9",
         "test/tools/assets/unit/process.rs": "fc2abbfb6b50fcf3ac8a119c0ffeb66fe70737215616b4cf80cafe0902305932",
         "test/tools/assets/unit/server_build.rs": "2a8ccdcee3e1a03209f93ce2a1b5eac645d20302ead8161f66099f912a53dec5",
-        "test/tools/assets/unit/source_inputs.rs": "6656eacf37b66cd047721bb3eb6a7936ab361d2868f38fd03a7910f17e095dd3"
+        "test/tools/assets/unit/source_inputs.rs": "91223ad705152e148dd08e24e9c36dffd3ba1fbba373c8393152cee1547f5c23"
       },
       "version": "0.0.0"
     },
